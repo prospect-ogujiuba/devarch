@@ -1,0 +1,379 @@
+version: "3.8"
+
+# =================================================================
+# MONITORING AND ANALYTICS SERVICES
+# =================================================================
+# This compose file defines monitoring, metrics collection, and
+# analytics services for the DevArch development environment.
+
+networks:
+  devarch-network:
+    external: true
+
+volumes:
+  # Monitoring Data
+  grafana_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  alertmanager_data:
+    driver: local
+  
+  # Log aggregation
+  loki_data:
+    driver: local
+
+services:
+  # =================================================================
+  # METRICS COLLECTION
+  # =================================================================
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: prometheus
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT}:9090"
+    volumes:
+      - prometheus_data:${PROMETHEUS_STORAGE_PATH}
+      - ${CONFIG_PATH}/monitoring/prometheus:/etc/prometheus:ro
+    networks:
+      - devarch-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME}'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--web.external-url=https://prometheus.test'
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # =================================================================
+  # VISUALIZATION AND DASHBOARDS
+  # =================================================================
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+      - GF_INSTALL_PLUGINS=${GF_INSTALL_PLUGINS}
+      - GF_DATABASE_TYPE=${GF_DATABASE_TYPE}
+      - GF_DATABASE_HOST=${GF_DATABASE_HOST}
+      - GF_DATABASE_NAME=${GF_DATABASE_NAME}
+      - GF_DATABASE_USER=${GF_DATABASE_USER}
+      - GF_DATABASE_PASSWORD=${GF_DATABASE_PASSWORD}
+      - GF_SERVER_ROOT_URL=https://grafana.test
+      - GF_SERVER_SERVE_FROM_SUB_PATH=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_SECURITY_COOKIE_SECURE=true
+      - GF_SECURITY_COOKIE_SAMESITE=lax
+      - GF_LOG_LEVEL=info
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ${CONFIG_PATH}/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ${CONFIG_PATH}/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - devarch-network
+    depends_on:
+      - prometheus
+      - postgres
+    user: "472:472"  # Grafana user
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # =================================================================
+  # ALERTING
+  # =================================================================
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: alertmanager
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - alertmanager_data:/alertmanager
+      - ${CONFIG_PATH}/monitoring/alertmanager:/etc/alertmanager:ro
+    networks:
+      - devarch-network
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=https://alertmanager.test'
+      - '--web.route-prefix=/'
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # =================================================================
+  # LOG AGGREGATION
+  # =================================================================
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: loki
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - loki_data:/loki
+      - ${CONFIG_PATH}/monitoring/loki:/etc/loki:ro
+    networks:
+      - devarch-network
+    command: -config.file=/etc/loki/loki.yml
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  promtail:
+    image: grafana/promtail:2.9.3
+    container_name: promtail
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_PATH}/monitoring/promtail:/etc/promtail:ro
+      - ${LOGS_DIR}:/var/log/devarch:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - devarch-network
+    depends_on:
+      - loki
+    command: -config.file=/etc/promtail/promtail.yml
+
+  # =================================================================
+  # SYSTEM MONITORING
+  # =================================================================
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: node-exporter
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    ports:
+      - "127.0.0.1:9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - devarch-network
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9100/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # =================================================================
+  # APPLICATION PERFORMANCE MONITORING
+  # =================================================================
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    container_name: cadvisor
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - devarch-network
+    privileged: true
+    devices:
+      - /dev/kmsg
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # =================================================================
+  # DATABASE MONITORING
+  # =================================================================
+  mysql-exporter:
+    image: prom/mysqld-exporter:v0.15.1
+    container_name: mysql-exporter
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - DATA_SOURCE_NAME=${MYSQL_USER}:${MYSQL_PASSWORD}@(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DATABASE}
+    ports:
+      - "127.0.0.1:9104:9104"
+    networks:
+      - devarch-network
+    depends_on:
+      - mariadb
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9104/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: postgres-exporter
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable
+    ports:
+      - "127.0.0.1:9187:9187"
+    networks:
+      - devarch-network
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9187/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: redis-exporter
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - REDIS_ADDR=redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}
+    ports:
+      - "127.0.0.1:9121:9121"
+    networks:
+      - devarch-network
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9121/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # =================================================================
+  # APPLICATION MONITORING
+  # =================================================================
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.24.0
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    ports:
+      - "127.0.0.1:9115:9115"
+    volumes:
+      - ${CONFIG_PATH}/monitoring/blackbox:/config:ro
+    networks:
+      - devarch-network
+    command:
+      - '--config.file=/config/blackbox.yml'
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9115/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # =================================================================
+  # PERFORMANCE TESTING (Optional)
+  # =================================================================
+  k6:
+    image: grafana/k6:0.47.0
+    container_name: k6
+    restart: "no"
+    environment:
+      - TZ=${TZ}
+      - K6_PROMETHEUS_RW_SERVER_URL=http://prometheus:9090/api/v1/write
+      - K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM=true
+    volumes:
+      - ${CONFIG_PATH}/monitoring/k6:/scripts:ro
+      - ${LOGS_DIR}/k6:/tmp/k6:rw
+    networks:
+      - devarch-network
+    depends_on:
+      - prometheus
+    profiles:
+      - testing
+    command: ["sleep", "infinity"]
+
+# =================================================================
+# MONITORING SERVICES SUMMARY
+# =================================================================
+# Services included in this monitoring stack:
+#
+# Core Monitoring:
+#   - Prometheus (metrics collection) - :9090
+#   - Grafana (visualization) - :3000
+#   - Alertmanager (alerting) - :9093
+#
+# Log Aggregation:
+#   - Loki (log storage) - :3100
+#   - Promtail (log collection)
+#
+# System Monitoring:
+#   - Node Exporter (host metrics) - :9100
+#   - cAdvisor (container metrics) - :8080
+#
+# Database Monitoring:
+#   - MySQL Exporter - :9104
+#   - PostgreSQL Exporter - :9187
+#   - Redis Exporter - :9121
+#
+# Application Monitoring:
+#   - Blackbox Exporter (uptime/SSL) - :9115
+#
+# Performance Testing:
+#   - K6 (load testing) - optional profile
+#
+# Access URLs (via proxy):
+#   - https://grafana.test - Main dashboard
+#   - https://prometheus.test - Metrics browser
+#   - https://alertmanager.test - Alert management
+#
+# To start monitoring services:
+#   podman compose -f monitoring.docker-compose.yml up -d
+#
+# To include performance testing:
+#   podman compose --profile testing -f monitoring.docker-compose.yml up -d

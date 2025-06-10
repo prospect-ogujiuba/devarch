@@ -1,211 +1,154 @@
-# Multi-Stack Microservices Development Architecture
+# Development Architecture Environment Roadmap
 
-## 🏗️ Core Architecture Overview
+## Overview
+Create a streamlined, secure, and modern development environment using Podman with microservices architecture. The goal is to provide a flexible platform where any application stack (WordPress, Laravel, Next.js, Django, Go, etc.) can be developed in the `./apps` folder and accessed via `[folderName].test` domains.
 
-This architecture creates a unified development environment where any application stack can be deployed as microservices with consistent tooling, networking, and domain access.
-
-## 📁 Enhanced Directory Structure
-
+## Project Structure (Refined)
 ```
-project-root/
-├── apps/                          # All applications (your existing structure)
-│   ├── wordpress-blog/
-│   ├── laravel-api/
-│   ├── nextjs-frontend/
-│   ├── django-admin/
-│   └── go-microservice/
-├── compose/                       # Service groups (enhanced)
-│   ├── core/                      # Essential infrastructure
-│   │   ├── traefik.yml           # Reverse proxy & load balancer
-│   │   ├── registry.yml          # Private container registry
-│   │   └── monitoring.yml        # Prometheus, Grafana
-│   ├── databases/
-│   │   ├── postgres.yml
-│   │   ├── mysql.yml
-│   │   ├── mongodb.yml
-│   │   └── redis.yml
-│   ├── services/                  # Shared microservices
-│   │   ├── auth.yml              # Authentication service
-│   │   ├── api-gateway.yml       # API gateway
-│   │   ├── file-storage.yml      # MinIO/S3-compatible storage
-│   │   └── message-queue.yml     # RabbitMQ/Redis pub/sub
-│   ├── development/
-│   │   ├── mailhog.yml           # Email testing
-│   │   ├── phpmyadmin.yml
-│   │   └── pgadmin.yml
-│   └── apps/                     # Auto-generated app compositions
-├── config/                        # Configurations (enhanced)
-│   ├── traefik/
-│   │   ├── traefik.yml
-│   │   └── dynamic/
-│   ├── templates/                 # App scaffolding templates
-│   │   ├── wordpress/
-│   │   ├── laravel/
-│   │   ├── nextjs/
-│   │   └── django/
-│   ├── shared/                    # Shared configurations
-│   │   ├── nginx/
-│   │   ├── php/
-│   │   └── node/
-│   └── ssl/                       # SSL certificates for .test domains
-├── scripts/                       # Enhanced scripts
-│   ├── app-create.sh             # Create new app from template
-│   ├── app-deploy.sh             # Deploy app to environment
-│   ├── domain-setup.sh           # Configure .test domain
-│   ├── backup.sh                 # Backup databases/volumes
-│   ├── logs.sh                   # Centralized logging
-│   └── health-check.sh           # System health monitoring
-├── data/                         # Persistent data (NEW)
-│   ├── databases/
-│   ├── uploads/
-│   └── logs/
+dev-environment/
+├── apps/                          # All applications regardless of stack
+│   ├── my-laravel-app/           # Laravel application
+│   ├── wordpress-site/           # WordPress site
+│   ├── nextjs-project/           # Next.js application
+│   └── django-api/               # Django API
+├── compose/                       # Docker Compose files by service group
+│   ├── core.docker-compose.yml          # Essential services (nginx, databases)
+│   ├── development.docker-compose.yml   # Development tools (adminer, mailpit)
+│   ├── monitoring.docker-compose.yml    # Analytics & monitoring
+│   ├── ai.docker-compose.yml           # AI/ML services
+│   └── extras.docker-compose.yml       # Additional services
+├── config/                        # Configuration files
+│   ├── nginx/                    # Nginx configurations
+│   ├── php/                      # PHP configurations
+│   ├── databases/                # Database configurations
+│   └── ssl/                      # SSL certificates
+├── scripts/                       # Management scripts
+│   ├── install.sh               # Main installation script
+│   ├── manage.sh                # Service management
+│   ├── ssl-setup.sh             # SSL certificate setup
+│   └── app-create.sh            # New app creation helper
 ├── .env                          # Environment variables
-├── docker-compose.override.yml   # Local development overrides
-├── Makefile                      # Common commands (NEW)
-└── README.md
+├── .gitignore                   # Git ignore rules
+└── README.md                    # Documentation
 ```
 
-## 🔧 Key Architectural Components
+## Implementation Phases
 
-### 1. **Traefik Reverse Proxy**
-- **Purpose**: Routes traffic to apps via `[folderName].test` domains
-- **Features**: SSL termination, load balancing, automatic service discovery
-- **Configuration**: Automatically detects new services with labels
+### Phase 1: Foundation & Core Services
+**Artifacts to Create:**
+1. **Core Infrastructure**
+   - Main `.env` file with secure defaults
+   - `core.docker-compose.yml` (Nginx Proxy, MariaDB, PostgreSQL, Redis)
+   - Network and volume definitions
 
-### 2. **Shared Microservices**
-- **Auth Service**: JWT-based authentication for all apps
-- **API Gateway**: Rate limiting, API versioning, request routing  
-- **File Storage**: MinIO for consistent file handling across apps
-- **Message Queue**: Event-driven communication between services
+2. **Nginx Configuration**
+   - Wildcard SSL setup for `*.test` domains
+   - Dynamic routing for `./apps` folder structure
+   - Security headers and modern configuration
 
-### 3. **Multi-Database Support**
-- PostgreSQL, MySQL, MongoDB, Redis running simultaneously
-- Apps connect to appropriate database via environment variables
-- Automatic backup and restore capabilities
+### Phase 2: Development Environment
+**Artifacts to Create:**
+3. **Development Tools Compose**
+   - `development.docker-compose.yml` (Adminer, phpMyAdmin, Mailpit)
+   - Development-focused configurations
 
-### 4. **Development Tools**
-- **Mailhog**: Catch all emails in development
-- **Monitoring**: Prometheus + Grafana for metrics
-- **Registry**: Private container registry for custom images
+4. **PHP/Runtime Environment**
+   - Multi-language support container (PHP, Node.js, Python)
+   - Optimized Dockerfile with security practices
 
-## 🚀 Workflow: Adding New Applications
+### Phase 3: Management & Automation
+**Artifacts to Create:**
+5. **Core Management Scripts**
+   - `install.sh` - Complete environment setup
+   - `manage.sh` - Start/stop/restart services
+   - `ssl-setup.sh` - SSL certificate generation and trust
 
-### Step 1: Create App Structure
-```bash
-./scripts/app-create.sh laravel my-api
-```
-This creates:
-```
-apps/my-api/
-├── src/                 # Your Laravel code
-├── Dockerfile
-├── docker-compose.yml   # App-specific services
-└── .env.app            # App-specific variables
-```
+6. **App Creation Helper**
+   - `app-create.sh` - Template-based app creation
+   - Support for multiple frameworks
 
-### Step 2: Auto-Registration
-The script automatically:
-- Generates `compose/apps/my-api.yml`
-- Configures Traefik routing for `my-api.test`
-- Sets up database connections
-- Configures shared services integration
+### Phase 4: Extended Services
+**Artifacts to Create:**
+7. **Monitoring & Analytics**
+   - `monitoring.docker-compose.yml` (Grafana, Prometheus, etc.)
+   - Pre-configured dashboards
 
-### Step 3: Deploy
-```bash
-make deploy app=my-api
-```
+8. **AI & Additional Services**
+   - `ai.docker-compose.yml` (Optional AI/ML tools)
+   - `extras.docker-compose.yml` (Project management, etc.)
 
-## 🌐 Domain & Networking Strategy
+### Phase 5: Documentation & Polish
+**Artifacts to Create:**
+9. **Documentation**
+   - Comprehensive `README.md`
+   - Configuration guides
+   - Troubleshooting guide
 
-### Local Development Domains
-- **Pattern**: `[folderName].test`
-- **Examples**: 
-  - `wordpress-blog.test`
-  - `laravel-api.test`  
-  - `nextjs-frontend.test`
+10. **Security & Best Practices**
+    - Security hardening configurations
+    - Backup and restore scripts
+    - Performance optimizations
 
-### Service Communication
-- **Internal Network**: `microservices-network`
-- **Service Discovery**: Automatic via Traefik
-- **Load Balancing**: Round-robin by default
-- **Health Checks**: Built into each service
+## Key Improvements from Original
 
-## 🔒 Security & Auth Integration
+### Security Enhancements
+- Non-root container execution where possible
+- Secure default passwords with environment variables
+- Modern SSL/TLS configuration
+- Network isolation and security headers
 
-### Shared Authentication
-```yaml
-# All apps can use the shared auth service
-auth:
-  service: auth-service
-  endpoint: http://auth.internal
-  jwt_secret: ${JWT_SECRET}
-```
+### Modern Practices
+- Health checks for all services
+- Resource limits and constraints
+- Logging standardization
+- Service discovery improvements
 
-### SSL/TLS
-- Automatic SSL for `.test` domains
-- Let's Encrypt integration for production
-- Certificate management via Traefik
+### Developer Experience
+- Hot reload support for development
+- Automatic SSL certificate generation and trust
+- Framework-agnostic app creation
+- Unified logging and monitoring
 
-## 📊 Monitoring & Logging
+### Performance Optimizations
+- Efficient image layering
+- Shared volumes optimization
+- Connection pooling where applicable
+- Caching strategies
 
-### Centralized Logging
-- **ELK Stack**: Elasticsearch, Logstash, Kibana
-- **Log Aggregation**: All container logs collected
-- **Search**: Full-text search across all applications
+## Technologies & Tools Included
 
-### Metrics & Monitoring  
-- **Prometheus**: Metrics collection
-- **Grafana**: Visualization dashboards
-- **Alerting**: Email/Slack notifications
+### Core Services
+- **Nginx** - Web server and reverse proxy
+- **MariaDB** - Primary SQL database
+- **PostgreSQL** - Secondary SQL database for specific needs
+- **Redis** - Caching and session storage
 
-## 🛠️ Enhanced Scripts
+### Development Tools
+- **Adminer** - Universal database management
+- **phpMyAdmin** - MySQL/MariaDB specific management
+- **Mailpit** - Email testing and development
 
-### Key Commands
-```bash
-# Create new app from template
-make create-app stack=laravel name=my-api
+### Monitoring (Optional)
+- **Grafana** - Dashboards and visualization
+- **Prometheus** - Metrics collection
 
-# Deploy specific app
-make deploy app=my-api
+### Runtime Support
+- **PHP-FPM** - PHP applications
+- **Node.js** - JavaScript applications
+- **Python** - Python applications
+- **Multi-runtime** container with version management
 
-# View all running services
-make status
+## Success Criteria
+1. Any application can be placed in `./apps/[name]` and accessed via `[name].test`
+2. SSL certificates work automatically for all domains
+3. Database connections work out of the box
+4. Email testing works via Mailpit
+5. Development tools are easily accessible
+6. Environment can be set up with a single command
+7. Services can be managed individually or as groups
+8. Security best practices are implemented throughout
 
-# Access logs for specific app
-make logs app=my-api
+---
 
-# Backup all databases
-make backup
-
-# Health check all services
-make health-check
-```
-
-## 🔄 CI/CD Integration Points
-
-### Git Hooks
-- Pre-commit: Code quality checks
-- Post-receive: Automatic deployment
-
-### Container Registry
-- Private registry for custom images
-- Automated builds on code changes
-- Image scanning for vulnerabilities
-
-## 🎯 Benefits of This Architecture
-
-1. **Consistency**: Same development experience across all stacks
-2. **Scalability**: Easy to add new apps and scale existing ones
-3. **Isolation**: Each app runs in its own container with shared services
-4. **Flexibility**: Support for any programming language/framework
-5. **Production-Ready**: Same architecture works in production
-6. **Developer Experience**: Simple commands for complex operations
-
-## 🚀 Getting Started
-
-1. Clone the repository structure
-2. Run `make setup` to initialize core services
-3. Create your first app: `make create-app stack=laravel name=test-api`
-4. Access at `test-api.test`
-
-This architecture gives you the flexibility you want while providing the structure and tooling needed for serious microservices development.
+**Ready to proceed?** 
+Please review this roadmap and let me know if you'd like any adjustments before we start with Phase 1: Foundation & Core Services.

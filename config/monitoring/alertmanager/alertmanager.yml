@@ -1,0 +1,178 @@
+# =================================================================
+# DEVARCH ALERTMANAGER CONFIGURATION
+# =================================================================
+# file: config/monitoring/alertmanager/alertmanager.yml
+
+global:
+  smtp_smarthost: 'mailpit:1025'
+  smtp_from: 'alerts@devarch.test'
+  smtp_require_tls: false
+
+# Templates for custom alert formatting
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# The root route with all parameters
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'devarch-default'
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: 'devarch-critical'
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 15m
+    
+    # Warning alerts - less frequent notifications
+    - match:
+        severity: warning
+      receiver: 'devarch-warning'
+      group_wait: 10s
+      group_interval: 10m
+      repeat_interval: 1h
+    
+    # Database alerts
+    - match:
+        service: database
+      receiver: 'devarch-database'
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 30m
+    
+    # Application alerts
+    - match:
+        alertname: ApplicationDown
+      receiver: 'devarch-application'
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 30m
+
+# Inhibition rules allow to mute a set of alerts given that another alert is firing
+inhibit_rules:
+  # Mute warning if critical alert is firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster', 'service']
+  
+  # Mute info if warning alert is firing
+  - source_match:
+      severity: 'warning'
+    target_match:
+      severity: 'info'
+    equal: ['alertname', 'cluster', 'service']
+
+# Notification receivers
+receivers:
+  # Default receiver
+  - name: 'devarch-default'
+    email_configs:
+      - to: 'admin@devarch.test'
+        subject: '[DevArch] Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          
+          Labels:
+          {{ range .Labels.SortedPairs }}  {{ .Name }} = {{ .Value }}
+          {{ end }}
+          
+          {{ if .Annotations.runbook_url }}
+          Runbook: {{ .Annotations.runbook_url }}
+          {{ end }}
+          {{ end }}
+        headers:
+          Priority: 'normal'
+
+  # Critical alerts
+  - name: 'devarch-critical'
+    email_configs:
+      - to: 'admin@devarch.test'
+        subject: '[DevArch] 🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        body: |
+          🚨 CRITICAL ALERT 🚨
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Started: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          
+          Labels:
+          {{ range .Labels.SortedPairs }}  {{ .Name }} = {{ .Value }}
+          {{ end }}
+          
+          {{ if .Annotations.runbook_url }}
+          Runbook: {{ .Annotations.runbook_url }}
+          {{ end }}
+          {{ end }}
+        headers:
+          Priority: 'high'
+
+  # Warning alerts
+  - name: 'devarch-warning'
+    email_configs:
+      - to: 'admin@devarch.test'
+        subject: '[DevArch] ⚠️  WARNING: {{ .GroupLabels.alertname }}'
+        body: |
+          ⚠️  WARNING ALERT
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Started: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          
+          Labels:
+          {{ range .Labels.SortedPairs }}  {{ .Name }} = {{ .Value }}
+          {{ end }}
+          {{ end }}
+        headers:
+          Priority: 'normal'
+
+  # Database alerts
+  - name: 'devarch-database'
+    email_configs:
+      - to: 'admin@devarch.test'
+        subject: '[DevArch] 🗄️  DATABASE: {{ .GroupLabels.alertname }}'
+        body: |
+          🗄️  DATABASE ALERT
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Database: {{ .Labels.instance }}
+          Started: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          
+          Labels:
+          {{ range .Labels.SortedPairs }}  {{ .Name }} = {{ .Value }}
+          {{ end }}
+          {{ end }}
+        headers:
+          Priority: 'high'
+
+  # Application alerts
+  - name: 'devarch-application'
+    email_configs:
+      - to: 'admin@devarch.test'
+        subject: '[DevArch] 📱 APPLICATION: {{ .GroupLabels.alertname }}'
+        body: |
+          📱 APPLICATION ALERT
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Application: {{ .Labels.job }}
+          Started: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          
+          Labels:
+          {{ range .Labels.SortedPairs }}  {{ .Name }} = {{ .Value }}
+          {{ end }}
+          {{ end }}
+        headers:
+          Priority: 'normal'

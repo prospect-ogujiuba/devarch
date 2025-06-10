@@ -1,0 +1,58 @@
+# =================================================================
+# GRAFANA ALERTING PROVISIONING
+# =================================================================
+# file: config/monitoring/grafana/provisioning/alerting/alerting.yml
+
+apiVersion: 1
+
+# Contact points
+contactPoints:
+  - orgId: 1
+    name: devarch-notifications
+    receivers:
+      - uid: devarch-email
+        type: email
+        settings:
+          addresses: admin@devarch.test
+          subject: '[DevArch] Alert: {{ .GroupLabels.alertname }}'
+          message: |
+            {{ range .Alerts }}
+            Alert: {{ .Annotations.summary }}
+            Description: {{ .Annotations.description }}
+            Labels: {{ range .Labels.SortedPairs }}{{ .Name }}={{ .Value }} {{ end }}
+            {{ end }}
+        disableResolveMessage: false
+
+# Notification policies
+policies:
+  - orgId: 1
+    receiver: devarch-notifications
+    group_by: ['alertname', 'cluster', 'service']
+    group_wait: 10s
+    group_interval: 10s
+    repeat_interval: 1h
+    routes:
+      - receiver: devarch-notifications
+        matchers:
+          - severity = critical
+        group_wait: 10s
+        group_interval: 5m
+        repeat_interval: 12h
+      - receiver: devarch-notifications
+        matchers:
+          - severity = warning
+        group_wait: 10s
+        group_interval: 10m
+        repeat_interval: 24h
+
+# Mute timings
+muteTimes:
+  - orgId: 1
+    name: devarch-maintenance
+    time_intervals:
+      - times:
+        - start_time: '02:00'
+          end_time: '04:00'
+        weekdays: ['sunday']
+        months: ['1:12']
+        days_of_month: ['1:31']

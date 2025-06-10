@@ -1,0 +1,188 @@
+# =================================================================
+# DEVARCH PROMETHEUS CONFIGURATION
+# =================================================================
+# Comprehensive monitoring configuration for the DevArch
+# development environment with all services and applications.
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'devarch-development'
+    environment: 'local'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  - "rules/*.yml"
+
+# Scrape configuration
+scrape_configs:
+  # =================================================================
+  # PROMETHEUS SELF-MONITORING
+  # =================================================================
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # =================================================================
+  # SYSTEM MONITORING
+  # =================================================================
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # =================================================================
+  # DATABASE MONITORING
+  # =================================================================
+  - job_name: 'mysql'
+    static_configs:
+      - targets: ['mysql-exporter:9104']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # =================================================================
+  # APPLICATION MONITORING
+  # =================================================================
+  - job_name: 'blackbox-http'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - https://welcome.test
+        - https://mailpit.test
+        - https://adminer.test
+        - https://phpmyadmin.test
+        - https://metabase.test
+        - https://redis.test
+        - https://swagger.test
+        - https://grafana.test
+        - https://prometheus.test
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  - job_name: 'blackbox-ssl'
+    metrics_path: /probe
+    params:
+      module: [tcp_connect]
+    static_configs:
+      - targets:
+        - nginx-proxy-manager:443
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # =================================================================
+  # DEVELOPMENT TOOLS MONITORING
+  # =================================================================
+  - job_name: 'nginx-proxy-manager'
+    static_configs:
+      - targets: ['nginx-proxy-manager:81']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: http
+
+  - job_name: 'mailpit'
+    static_configs:
+      - targets: ['mailpit:8025']
+    scrape_interval: 60s
+    metrics_path: /metrics
+    scheme: http
+
+  # =================================================================
+  # PHP APPLICATION MONITORING
+  # =================================================================
+  - job_name: 'php-fpm'
+    static_configs:
+      - targets: ['php-runtime:9000']
+    scrape_interval: 30s
+    metrics_path: /status
+    params:
+      format: ['prometheus']
+
+  # =================================================================
+  # DYNAMIC APPLICATION DISCOVERY
+  # =================================================================
+  # File-based service discovery for dynamically created applications
+  - job_name: 'devarch-apps'
+    file_sd_configs:
+      - files:
+        - '/etc/prometheus/targets/*.json'
+        refresh_interval: 30s
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # =================================================================
+  # ALERTMANAGER MONITORING
+  # =================================================================
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # =================================================================
+  # LOG SYSTEM MONITORING
+  # =================================================================
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['loki:3100']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+# =================================================================
+# REMOTE WRITE (Optional - for external storage)
+# =================================================================
+# remote_write:
+#   - url: "https://prometheus-remote-write-endpoint/api/v1/write"
+#     basic_auth:
+#       username: "username"
+#       password: "password"
+
+# =================================================================
+# STORAGE CONFIGURATION
+# =================================================================
+storage:
+  tsdb:
+    retention.time: 15d
+    retention.size: 10GB
+    wal-compression: true
