@@ -1,0 +1,8 @@
+apps/*
+!apps/
+config/*
+!config/
+scripts/*
+!scripts/
+.env
+.DS_Store
