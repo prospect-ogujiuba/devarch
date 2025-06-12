@@ -1,0 +1,16 @@
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+services:
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:8.12.2
+    restart: unless-stopped
+    env_file: ../.env
+    ports:
+      - "127.0.0.1:9120:5601"  # Local access to Kibana
+    networks:
+      - microservices-net

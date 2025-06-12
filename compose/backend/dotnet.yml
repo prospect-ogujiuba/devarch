@@ -1,0 +1,25 @@
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+services:
+  dotnet:
+    container_name: dotnet
+    build:
+      context: ../config/dotnet
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    ports:
+      - "127.0.0.1:8010:80"     # HTTP
+      - "127.0.0.1:8011:443"    # HTTPS
+    volumes:
+      - ../apps/dotnet:/app
+      - ../logs/dotnet:/var/log/dotnet
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+    networks:
+      - microservices-net

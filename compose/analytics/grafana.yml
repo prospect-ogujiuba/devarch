@@ -1,0 +1,21 @@
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  grafana_data:
+
+services:
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    user: "0"
+    env_file: ../.env
+    ports:
+      - "127.0.0.1:9001:3000"  # Local access to Grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - microservices-net

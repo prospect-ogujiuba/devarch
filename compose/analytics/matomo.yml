@@ -1,0 +1,20 @@
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  matomo_data:
+
+services:
+  matomo:
+    container_name: matomo
+    image: matomo:apache
+    env_file: ../.env
+    ports:
+      - "127.0.0.1:9010:80"  # Local access to Matomo
+    volumes:
+      - matomo_data:/var/www/html
+    networks:
+      - microservices-net

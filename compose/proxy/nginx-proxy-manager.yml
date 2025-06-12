@@ -1,0 +1,30 @@
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  npm_data:
+  npm_letsencrypt:
+
+services:
+  npm:
+    container_name: nginx-proxy-manager
+    build:
+        context: ../config/nginx
+        dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"
+    volumes:
+      - ../apps:/var/www/html
+      - ../config/nginx/custom:/data/nginx/custom
+      - /etc/localtime:/etc/localtime:ro
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+    networks:
+      - microservices-net

@@ -1,0 +1,21 @@
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  mailpit_data:
+
+services:
+  mailpit:
+    container_name: mailpit
+    image: axllent/mailpit
+    env_file: ../.env
+    volumes:
+      - mailpit_data:/data
+    ports:
+      - "127.0.0.1:9201:1025"  # Local access to SMTP
+      - "127.0.0.1:9200:8025"  # Local access to web UI
+    networks:
+      - microservices-net

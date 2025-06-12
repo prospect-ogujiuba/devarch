@@ -1,0 +1,21 @@
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  langflow_data:
+
+services:
+  langflow:
+    container_name: langflow
+    image: langflowai/langflow:latest
+    restart: unless-stopped
+    env_file: ../.env
+    ports:
+      - "127.0.0.1:9110:7860"  # Local access to Langflow
+    volumes:
+      - langflow_data:/app/data
+    networks:
+      - microservices-net

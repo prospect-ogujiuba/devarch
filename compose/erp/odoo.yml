@@ -1,0 +1,21 @@
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  odoo_data:
+  odoo_addons:
+
+services:
+  odoo:
+    container_name: odoo
+    image: odoo:latest
+    restart: unless-stopped
+    env_file: ../.env
+    ports:
+      - "127.0.0.1:9300:8069"  # Local access to Odoo web
+      - "127.0.0.1:9301:8072"  # Local access to Odoo longpolling
+    networks:
+      - microservices-net

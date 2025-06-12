@@ -1,0 +1,20 @@
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  nocodb_data:
+
+services:
+  nocodb:
+    container_name: nocodb
+    image: nocodb/nocodb:latest
+    env_file: ../.env
+    ports:
+      - "127.0.0.1:8086:8080"  # Local access to NocoDB
+    volumes:
+      - nocodb_data:/usr/app/data
+    networks:
+      - microservices-net

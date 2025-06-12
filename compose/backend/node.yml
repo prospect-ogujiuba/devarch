@@ -1,0 +1,24 @@
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+services:
+  node:
+    container_name: node
+    build:
+      context: ../config/node
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    ports:
+      - "127.0.0.1:8030:3000"   # Node.js application port
+    volumes:
+      - ../apps/node:/app
+      - ../logs/node:/var/log/node
+      - /app/node_modules  # Anonymous volume for node_modules
+    working_dir: /app
+    command: ["npm", "start"]
+    networks:
+      - microservices-net

@@ -1,0 +1,30 @@
+version: '3.8'
+
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  mongodb_data:
+  mongodb_dump:
+
+services:
+  mongodb:
+    container_name: mongodb
+    image: mongo:latest
+    restart: unless-stopped
+    env_file: ../.env
+    ports:
+      - "127.0.0.1:8503:27017"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - mongodb_data:/data/db
+      - mongodb_dump:/dump
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - microservices-net
