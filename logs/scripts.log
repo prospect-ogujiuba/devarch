@@ -75,3 +75,1187 @@
 [2025-06-13 09:29:56] [ERROR] [log] Installation failed with exit code 1
 [2025-06-13 09:29:56] [INFO] [log] You can retry with: cleanup cleanup -se
 [2025-06-13 09:29:56] [INFO] [log] Or check logs in: /home/fhcadmin/Projects/devarch/logs/scripts.log
+[2025-06-13 09:53:22] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 09:53:22] [DEBUG] [log] Configuration: runtime=podman, sudo=false, errors=false, verbose=true, dry_run=true
+[2025-06-13 09:53:22] [INFO] [log] Installing all categories
+[2025-06-13 09:53:22] [INFO] [log] Performing pre-installation checks...
+[2025-06-13 09:53:22] [DEBUG] [log] Container runtime: podman
+[2025-06-13 09:53:22] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml
+[2025-06-13 09:53:22] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml
+[2025-06-13 09:53:22] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml
+[2025-06-13 09:53:22] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml
+[2025-06-13 09:53:22] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml
+[2025-06-13 09:53:22] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml
+[2025-06-13 09:53:22] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml
+[2025-06-13 09:53:22] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml
+[2025-06-13 09:53:22] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml
+[2025-06-13 09:53:22] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml
+[2025-06-13 09:53:22] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml
+[2025-06-13 09:53:22] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml
+[2025-06-13 09:53:23] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/proxy/keycloak.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml
+[2025-06-13 09:53:23] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml
+[2025-06-13 09:53:23] [INFO] [log] Compose file validation: 28/29 files valid
+[2025-06-13 09:53:23] [ERROR] [log] Some compose files are invalid. Please check the errors above.
+[2025-06-13 09:53:23] [INFO] [log] 🚀 Starting microservices installation...
+[2025-06-13 09:53:23] [INFO] [log] Installing all categories
+[2025-06-13 09:53:23] [INFO] [log] Starting installation of 16 categories...
+[2025-06-13 09:53:23] [DEBUG] [log] Checking if network 'microservices-net' exists
+[2025-06-13 09:53:23] [DEBUG] [log] Executing: Check network existence
+[2025-06-13 09:53:23] [DEBUG] [log] Command: podman network exists microservices-net
+[2025-06-13 09:53:24] [WARN] [log] ⚠️  Check network existence - Failed (exit code: 1), continuing...
+[2025-06-13 09:53:24] [DEBUG] [log] Executing: Create network
+[2025-06-13 09:53:24] [DEBUG] [log] Command: podman network create --driver bridge microservices-net
+[2025-06-13 09:53:24] [INFO] [log] ✅ Create network - Success
+[2025-06-13 09:53:24] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13
+[2025-06-13 09:53:27] [INFO] [log] 📦 Installing category: 09:53:23]
+[2025-06-13 09:53:30] [INFO] [log] 📦 Installing category: [INFO]
+[2025-06-13 09:53:33] [INFO] [log] 📦 Installing category: [log]
+[2025-06-13 09:53:36] [INFO] [log] 📦 Installing category: Installing
+[2025-06-13 09:53:39] [INFO] [log] 📦 Installing category: all
+[2025-06-13 09:53:42] [INFO] [log] 📦 Installing category: categories[0m
+[2025-06-13 09:53:45] [INFO] [log] 📦 Installing category: database
+[2025-06-13 09:53:45] [INFO] [log]   🚀 Starting service: postgres
+[2025-06-13 09:53:45] [INFO] [log]   [DRY RUN] Would execute: podman compose -f /home/fhcadmin/Projects/devarch/compose/database/postgres.yml up -d
+[2025-06-13 09:53:45] [INFO] [log]   🚀 Starting service: mysql
+[2025-06-13 09:53:45] [INFO] [log]   [DRY RUN] Would execute: podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mysql.yml up -d
+[2025-06-13 09:53:46] [INFO] [log]   🚀 Starting service: mariadb
+[2025-06-13 09:53:46] [INFO] [log]   [DRY RUN] Would execute: podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml up -d
+[2025-06-13 09:53:46] [INFO] [log]   🚀 Starting service: mongodb
+[2025-06-13 09:53:46] [INFO] [log]   [DRY RUN] Would execute: podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml up -d
+[2025-06-13 09:53:46] [INFO] [log]   🚀 Starting service: redis
+[2025-06-13 09:53:46] [INFO] [log]   [DRY RUN] Would execute: podman compose -f /home/fhcadmin/Projects/devarch/compose/database/redis.yml up -d
+[2025-06-13 09:53:46] [INFO] [log]   🔍 Performing health checks for database services...
+[2025-06-13 09:53:51] [INFO] [log] Checking health of service: postgres
+[2025-06-13 09:53:51] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:53:51] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:53:51] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:53:51] [DEBUG] [log] Service postgres not ready, attempt 1/15
+[2025-06-13 09:53:54] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:53:54] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:53:55] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:53:55] [DEBUG] [log] Service postgres not ready, attempt 2/15
+[2025-06-13 09:53:58] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:53:58] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:53:58] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:53:58] [DEBUG] [log] Service postgres not ready, attempt 3/15
+[2025-06-13 09:54:01] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:54:01] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:54:02] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:02] [DEBUG] [log] Service postgres not ready, attempt 4/15
+[2025-06-13 09:54:05] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:54:05] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:54:05] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:05] [DEBUG] [log] Service postgres not ready, attempt 5/15
+[2025-06-13 09:54:08] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:54:08] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:54:09] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:09] [DEBUG] [log] Service postgres not ready, attempt 6/15
+[2025-06-13 09:54:12] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:54:12] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:54:12] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:12] [DEBUG] [log] Service postgres not ready, attempt 7/15
+[2025-06-13 09:54:15] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:54:15] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:54:16] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:16] [DEBUG] [log] Service postgres not ready, attempt 8/15
+[2025-06-13 09:54:19] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:54:19] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:54:19] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:19] [DEBUG] [log] Service postgres not ready, attempt 9/15
+[2025-06-13 09:54:22] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:54:22] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:54:23] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:23] [DEBUG] [log] Service postgres not ready, attempt 10/15
+[2025-06-13 09:54:26] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:54:26] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:54:27] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:27] [DEBUG] [log] Service postgres not ready, attempt 11/15
+[2025-06-13 09:54:30] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:54:30] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:54:30] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:30] [DEBUG] [log] Service postgres not ready, attempt 12/15
+[2025-06-13 09:54:33] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:54:33] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:54:34] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:34] [DEBUG] [log] Service postgres not ready, attempt 13/15
+[2025-06-13 09:54:37] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:54:37] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:54:37] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:37] [DEBUG] [log] Service postgres not ready, attempt 14/15
+[2025-06-13 09:54:40] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:54:40] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:54:41] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:41] [DEBUG] [log] Service postgres not ready, attempt 15/15
+[2025-06-13 09:54:44] [WARN] [log] Service postgres health check timed out after 15 attempts
+[2025-06-13 09:54:44] [INFO] [log] Checking health of service: mysql
+[2025-06-13 09:54:44] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:54:44] [DEBUG] [log] Command: podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:54:44] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:44] [DEBUG] [log] Service mysql not ready, attempt 1/15
+[2025-06-13 09:54:47] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:54:47] [DEBUG] [log] Command: podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:54:48] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:48] [DEBUG] [log] Service mysql not ready, attempt 2/15
+[2025-06-13 09:54:51] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:54:51] [DEBUG] [log] Command: podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:54:52] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:52] [DEBUG] [log] Service mysql not ready, attempt 3/15
+[2025-06-13 09:54:55] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:54:55] [DEBUG] [log] Command: podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:54:55] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:55] [DEBUG] [log] Service mysql not ready, attempt 4/15
+[2025-06-13 09:54:58] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:54:58] [DEBUG] [log] Command: podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:54:59] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:54:59] [DEBUG] [log] Service mysql not ready, attempt 5/15
+[2025-06-13 09:55:02] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:55:02] [DEBUG] [log] Command: podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:55:02] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:55:02] [DEBUG] [log] Service mysql not ready, attempt 6/15
+[2025-06-13 09:55:05] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:55:05] [DEBUG] [log] Command: podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:55:06] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:55:06] [DEBUG] [log] Service mysql not ready, attempt 7/15
+[2025-06-13 09:55:09] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:55:09] [DEBUG] [log] Command: podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:55:09] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:55:09] [DEBUG] [log] Service mysql not ready, attempt 8/15
+[2025-06-13 09:55:12] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:55:12] [DEBUG] [log] Command: podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:55:13] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:55:13] [DEBUG] [log] Service mysql not ready, attempt 9/15
+[2025-06-13 09:55:16] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:55:16] [DEBUG] [log] Command: podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:55:17] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:55:17] [DEBUG] [log] Service mysql not ready, attempt 10/15
+[2025-06-13 09:55:20] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:55:20] [DEBUG] [log] Command: podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:55:20] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:55:20] [DEBUG] [log] Service mysql not ready, attempt 11/15
+[2025-06-13 09:55:23] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:55:23] [DEBUG] [log] Command: podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:55:24] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:55:24] [DEBUG] [log] Service mysql not ready, attempt 12/15
+[2025-06-13 09:55:27] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:55:27] [DEBUG] [log] Command: podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:55:27] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:55:27] [DEBUG] [log] Service mysql not ready, attempt 13/15
+[2025-06-13 09:55:30] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:55:30] [DEBUG] [log] Command: podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:55:31] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:55:31] [DEBUG] [log] Service mysql not ready, attempt 14/15
+[2025-06-13 09:55:34] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:55:34] [DEBUG] [log] Command: podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:55:34] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:55:34] [DEBUG] [log] Service mysql not ready, attempt 15/15
+[2025-06-13 09:55:37] [WARN] [log] Service mysql health check timed out after 15 attempts
+[2025-06-13 09:55:37] [INFO] [log] Checking health of service: mariadb
+[2025-06-13 09:55:37] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 09:55:37] [DEBUG] [log] Command: podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 09:55:38] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 09:55:38] [DEBUG] [log] Service mariadb not ready, attempt 1/15
+[2025-06-13 09:55:41] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 09:55:41] [DEBUG] [log] Command: podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 09:55:41] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 09:55:41] [DEBUG] [log] Service mariadb not ready, attempt 2/15
+[2025-06-13 09:55:46] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 09:55:46] [DEBUG] [log] Configuration: runtime=podman, sudo=false, errors=false, verbose=true, dry_run=true
+[2025-06-13 09:55:46] [INFO] [log] Installing all categories
+[2025-06-13 09:55:46] [INFO] [log] Performing pre-installation checks...
+[2025-06-13 09:55:46] [DEBUG] [log] Container runtime: podman
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml
+[2025-06-13 09:55:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml
+[2025-06-13 09:55:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml
+[2025-06-13 09:55:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml
+[2025-06-13 09:55:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml
+[2025-06-13 09:55:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml
+[2025-06-13 09:55:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml
+[2025-06-13 09:55:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml
+[2025-06-13 09:55:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml
+[2025-06-13 09:55:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml
+[2025-06-13 09:55:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml
+[2025-06-13 09:55:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml
+[2025-06-13 09:55:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml
+[2025-06-13 09:55:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml
+[2025-06-13 09:55:48] [INFO] [log] Compose file validation: 29/29 files valid
+[2025-06-13 09:55:48] [INFO] [log] 🚀 Starting microservices installation...
+[2025-06-13 09:55:48] [INFO] [log] Installing all categories
+[2025-06-13 09:55:48] [INFO] [log] Starting installation of 17 categories...
+[2025-06-13 09:55:48] [DEBUG] [log] Checking if network 'microservices-net' exists
+[2025-06-13 09:55:48] [DEBUG] [log] Executing: Check network existence
+[2025-06-13 09:55:48] [DEBUG] [log] Command: podman network exists microservices-net
+[2025-06-13 09:55:49] [INFO] [log] ✅ Check network existence - Success
+[2025-06-13 09:55:49] [INFO] [log] Network 'microservices-net' already exists
+[2025-06-13 09:55:49] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13
+[2025-06-13 09:55:52] [INFO] [log] 📦 Installing category: 09:55:48]
+[2025-06-13 09:55:55] [INFO] [log] 📦 Installing category: [INFO]
+[2025-06-13 09:55:58] [INFO] [log] 📦 Installing category: [log]
+[2025-06-13 09:56:01] [INFO] [log] 📦 Installing category: Installing
+[2025-06-13 09:56:04] [INFO] [log] 📦 Installing category: all
+[2025-06-13 09:56:07] [INFO] [log] 📦 Installing category: categories[0m
+[2025-06-13 09:56:10] [INFO] [log] 📦 Installing category: database
+[2025-06-13 09:56:10] [INFO] [log]   🚀 Starting service: postgres
+[2025-06-13 09:56:10] [INFO] [log]   [DRY RUN] Would execute: podman compose -f /home/fhcadmin/Projects/devarch/compose/database/postgres.yml up -d
+[2025-06-13 09:56:10] [INFO] [log]   🚀 Starting service: mysql
+[2025-06-13 09:56:10] [INFO] [log]   [DRY RUN] Would execute: podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mysql.yml up -d
+[2025-06-13 09:56:10] [INFO] [log]   🚀 Starting service: mariadb
+[2025-06-13 09:56:10] [INFO] [log]   [DRY RUN] Would execute: podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml up -d
+[2025-06-13 09:56:10] [INFO] [log]   🚀 Starting service: mongodb
+[2025-06-13 09:56:10] [INFO] [log]   [DRY RUN] Would execute: podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml up -d
+[2025-06-13 09:56:10] [INFO] [log]   🚀 Starting service: redis
+[2025-06-13 09:56:10] [INFO] [log]   [DRY RUN] Would execute: podman compose -f /home/fhcadmin/Projects/devarch/compose/database/redis.yml up -d
+[2025-06-13 09:56:10] [INFO] [log]   🔍 Performing health checks for database services...
+[2025-06-13 09:56:15] [INFO] [log] Checking health of service: postgres
+[2025-06-13 09:56:15] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:56:15] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:56:15] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:56:15] [DEBUG] [log] Service postgres not ready, attempt 1/15
+[2025-06-13 09:56:18] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:56:18] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:56:19] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:56:19] [DEBUG] [log] Service postgres not ready, attempt 2/15
+[2025-06-13 09:56:22] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:56:22] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:56:22] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:56:22] [DEBUG] [log] Service postgres not ready, attempt 3/15
+[2025-06-13 09:56:25] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:56:25] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:56:26] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:56:26] [DEBUG] [log] Service postgres not ready, attempt 4/15
+[2025-06-13 09:56:29] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:56:29] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:56:29] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:56:29] [DEBUG] [log] Service postgres not ready, attempt 5/15
+[2025-06-13 09:56:33] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:56:33] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:56:33] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:56:33] [DEBUG] [log] Service postgres not ready, attempt 6/15
+[2025-06-13 09:56:36] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:56:36] [DEBUG] [log] Command: podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:56:37] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:56:37] [DEBUG] [log] Service postgres not ready, attempt 7/15
+[2025-06-13 09:56:44] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 09:56:44] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=false, dry_run=false
+[2025-06-13 09:56:44] [INFO] [log] Installing all categories
+[2025-06-13 09:56:47] [INFO] [log] Performing pre-installation checks...
+[2025-06-13 09:56:47] [DEBUG] [log] Container runtime: podman
+[2025-06-13 09:56:47] [WARN] [log] Sudo access required but not available. Some operations may fail.
+[2025-06-13 09:56:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml
+[2025-06-13 09:56:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml
+[2025-06-13 09:56:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml
+[2025-06-13 09:56:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml
+[2025-06-13 09:56:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml
+[2025-06-13 09:56:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml
+[2025-06-13 09:56:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml
+[2025-06-13 09:56:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml
+[2025-06-13 09:56:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml
+[2025-06-13 09:56:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml
+[2025-06-13 09:56:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml
+[2025-06-13 09:56:47] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml
+[2025-06-13 09:56:48] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml
+[2025-06-13 09:56:48] [INFO] [log] Compose file validation: 29/29 files valid
+[2025-06-13 09:56:48] [INFO] [log] 🚀 Starting microservices installation...
+[2025-06-13 09:56:48] [INFO] [log] Installing all categories
+[2025-06-13 09:56:48] [INFO] [log] Starting installation of 17 categories...
+[2025-06-13 09:56:48] [DEBUG] [log] Checking if network 'microservices-net' exists
+[2025-06-13 09:56:48] [DEBUG] [log] Executing: Check network existence
+[2025-06-13 09:56:48] [DEBUG] [log] Command: sudo podman network exists microservices-net
+[2025-06-13 09:56:56] [WARN] [log] ⚠️  Check network existence - Failed (exit code: 1), continuing...
+[2025-06-13 09:56:56] [DEBUG] [log] Executing: Create network
+[2025-06-13 09:56:56] [DEBUG] [log] Command: sudo podman network create --driver bridge microservices-net
+[2025-06-13 09:56:56] [INFO] [log] ✅ Create network - Success
+[2025-06-13 09:56:56] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13
+[2025-06-13 09:56:59] [INFO] [log] 📦 Installing category: 09:56:48]
+[2025-06-13 09:57:02] [INFO] [log] 📦 Installing category: [INFO]
+[2025-06-13 09:57:05] [INFO] [log] 📦 Installing category: [log]
+[2025-06-13 09:57:08] [INFO] [log] 📦 Installing category: Installing
+[2025-06-13 09:57:11] [INFO] [log] 📦 Installing category: all
+[2025-06-13 09:57:14] [INFO] [log] 📦 Installing category: categories[0m
+[2025-06-13 09:57:17] [INFO] [log] 📦 Installing category: database
+[2025-06-13 09:57:17] [INFO] [log]   🚀 Starting service: postgres
+[2025-06-13 09:57:17] [DEBUG] [log] Executing: Start postgres
+[2025-06-13 09:57:17] [DEBUG] [log] Command: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/postgres.yml up -d
+[2025-06-13 09:57:18] [WARN] [log] ⚠️  Start postgres - Failed (exit code: 1), continuing...
+[2025-06-13 09:57:20] [INFO] [log]   🚀 Starting service: mysql
+[2025-06-13 09:57:20] [DEBUG] [log] Executing: Start mysql
+[2025-06-13 09:57:20] [DEBUG] [log] Command: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mysql.yml up -d
+[2025-06-13 09:57:20] [WARN] [log] ⚠️  Start mysql - Failed (exit code: 1), continuing...
+[2025-06-13 09:57:22] [INFO] [log]   🚀 Starting service: mariadb
+[2025-06-13 09:57:22] [DEBUG] [log] Executing: Start mariadb
+[2025-06-13 09:57:22] [DEBUG] [log] Command: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml up -d
+[2025-06-13 09:57:23] [WARN] [log] ⚠️  Start mariadb - Failed (exit code: 1), continuing...
+[2025-06-13 09:57:25] [INFO] [log]   🚀 Starting service: mongodb
+[2025-06-13 09:57:25] [DEBUG] [log] Executing: Start mongodb
+[2025-06-13 09:57:25] [DEBUG] [log] Command: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml up -d
+[2025-06-13 09:57:25] [WARN] [log] ⚠️  Start mongodb - Failed (exit code: 1), continuing...
+[2025-06-13 09:57:27] [INFO] [log]   🚀 Starting service: redis
+[2025-06-13 09:57:27] [DEBUG] [log] Executing: Start redis
+[2025-06-13 09:57:27] [DEBUG] [log] Command: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/redis.yml up -d
+[2025-06-13 09:57:34] [INFO] [log] ✅ Start redis - Success
+[2025-06-13 09:57:36] [INFO] [log]   🔍 Performing health checks for database services...
+[2025-06-13 09:57:41] [INFO] [log] Checking health of service: postgres
+[2025-06-13 09:57:41] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:57:41] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:57:42] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:57:42] [DEBUG] [log] Service postgres not ready, attempt 1/15
+[2025-06-13 09:57:45] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:57:45] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:57:45] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:57:45] [DEBUG] [log] Service postgres not ready, attempt 2/15
+[2025-06-13 09:57:48] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:57:48] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:57:48] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:57:48] [DEBUG] [log] Service postgres not ready, attempt 3/15
+[2025-06-13 09:57:51] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:57:51] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:57:51] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:57:51] [DEBUG] [log] Service postgres not ready, attempt 4/15
+[2025-06-13 09:57:54] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:57:54] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:57:54] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:57:54] [DEBUG] [log] Service postgres not ready, attempt 5/15
+[2025-06-13 09:57:57] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:57:57] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:57:57] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:57:57] [DEBUG] [log] Service postgres not ready, attempt 6/15
+[2025-06-13 09:58:00] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:58:00] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:58:00] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:00] [DEBUG] [log] Service postgres not ready, attempt 7/15
+[2025-06-13 09:58:03] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:58:03] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:58:03] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:03] [DEBUG] [log] Service postgres not ready, attempt 8/15
+[2025-06-13 09:58:06] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:58:06] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:58:06] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:06] [DEBUG] [log] Service postgres not ready, attempt 9/15
+[2025-06-13 09:58:09] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:58:09] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:58:09] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:09] [DEBUG] [log] Service postgres not ready, attempt 10/15
+[2025-06-13 09:58:12] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:58:12] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:58:12] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:12] [DEBUG] [log] Service postgres not ready, attempt 11/15
+[2025-06-13 09:58:16] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:58:16] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:58:16] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:16] [DEBUG] [log] Service postgres not ready, attempt 12/15
+[2025-06-13 09:58:19] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:58:19] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:58:19] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:19] [DEBUG] [log] Service postgres not ready, attempt 13/15
+[2025-06-13 09:58:22] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:58:22] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:58:22] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:22] [DEBUG] [log] Service postgres not ready, attempt 14/15
+[2025-06-13 09:58:25] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:58:25] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:58:25] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:25] [DEBUG] [log] Service postgres not ready, attempt 15/15
+[2025-06-13 09:58:28] [WARN] [log] Service postgres health check timed out after 15 attempts
+[2025-06-13 09:58:28] [INFO] [log] Checking health of service: mysql
+[2025-06-13 09:58:28] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:58:28] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:58:28] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:28] [DEBUG] [log] Service mysql not ready, attempt 1/15
+[2025-06-13 09:58:31] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:58:31] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:58:31] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:31] [DEBUG] [log] Service mysql not ready, attempt 2/15
+[2025-06-13 09:58:34] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:58:34] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:58:34] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:34] [DEBUG] [log] Service mysql not ready, attempt 3/15
+[2025-06-13 09:58:37] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:58:37] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:58:37] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:37] [DEBUG] [log] Service mysql not ready, attempt 4/15
+[2025-06-13 09:58:40] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:58:40] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:58:40] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:40] [DEBUG] [log] Service mysql not ready, attempt 5/15
+[2025-06-13 09:58:43] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:58:43] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:58:43] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:43] [DEBUG] [log] Service mysql not ready, attempt 6/15
+[2025-06-13 09:58:46] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 09:58:46] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 09:58:46] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 09:58:46] [DEBUG] [log] Service mysql not ready, attempt 7/15
+[2025-06-13 09:58:59] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 09:58:59] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true
+[2025-06-13 09:58:59] [INFO] [log] Installing all categories
+[2025-06-13 09:58:59] [INFO] [log] Performing pre-installation checks...
+[2025-06-13 09:58:59] [DEBUG] [log] Container runtime: podman
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml
+[2025-06-13 09:58:59] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml
+[2025-06-13 09:59:00] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml
+[2025-06-13 09:59:00] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml
+[2025-06-13 09:59:00] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml
+[2025-06-13 09:59:00] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml
+[2025-06-13 09:59:00] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml
+[2025-06-13 09:59:00] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml
+[2025-06-13 09:59:00] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml
+[2025-06-13 09:59:00] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml
+[2025-06-13 09:59:00] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml
+[2025-06-13 09:59:00] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml
+[2025-06-13 09:59:00] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml
+[2025-06-13 09:59:00] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml
+[2025-06-13 09:59:00] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml
+[2025-06-13 09:59:00] [INFO] [log] Compose file validation: 29/29 files valid
+[2025-06-13 09:59:00] [INFO] [log] 🚀 Starting microservices installation...
+[2025-06-13 09:59:00] [INFO] [log] Installing all categories
+[2025-06-13 09:59:00] [INFO] [log] Starting installation of 17 categories...
+[2025-06-13 09:59:00] [DEBUG] [log] Checking if network 'microservices-net' exists
+[2025-06-13 09:59:00] [DEBUG] [log] Executing: Check network existence
+[2025-06-13 09:59:00] [DEBUG] [log] Command: sudo podman network exists microservices-net
+[2025-06-13 09:59:00] [INFO] [log] ✅ Check network existence - Success
+[2025-06-13 09:59:00] [INFO] [log] Network 'microservices-net' already exists
+[2025-06-13 09:59:00] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13
+[2025-06-13 09:59:03] [INFO] [log] 📦 Installing category: 09:59:00]
+[2025-06-13 09:59:06] [INFO] [log] 📦 Installing category: [INFO]
+[2025-06-13 09:59:09] [INFO] [log] 📦 Installing category: [log]
+[2025-06-13 09:59:12] [INFO] [log] 📦 Installing category: Installing
+[2025-06-13 09:59:15] [INFO] [log] 📦 Installing category: all
+[2025-06-13 09:59:19] [INFO] [log] 📦 Installing category: categories[0m
+[2025-06-13 09:59:22] [INFO] [log] 📦 Installing category: database
+[2025-06-13 09:59:22] [INFO] [log]   🚀 Starting service: postgres
+[2025-06-13 09:59:22] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/postgres.yml up -d
+[2025-06-13 09:59:22] [INFO] [log]   🚀 Starting service: mysql
+[2025-06-13 09:59:22] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mysql.yml up -d
+[2025-06-13 09:59:22] [INFO] [log]   🚀 Starting service: mariadb
+[2025-06-13 09:59:22] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml up -d
+[2025-06-13 09:59:22] [INFO] [log]   🚀 Starting service: mongodb
+[2025-06-13 09:59:22] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml up -d
+[2025-06-13 09:59:22] [INFO] [log]   🚀 Starting service: redis
+[2025-06-13 09:59:22] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/redis.yml up -d
+[2025-06-13 09:59:22] [INFO] [log]   🔍 Performing health checks for database services...
+[2025-06-13 09:59:27] [INFO] [log] Checking health of service: postgres
+[2025-06-13 09:59:27] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:59:27] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:59:27] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:59:27] [DEBUG] [log] Service postgres not ready, attempt 1/15
+[2025-06-13 09:59:30] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:59:30] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:59:30] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:59:30] [DEBUG] [log] Service postgres not ready, attempt 2/15
+[2025-06-13 09:59:33] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:59:33] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:59:33] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:59:33] [DEBUG] [log] Service postgres not ready, attempt 3/15
+[2025-06-13 09:59:36] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:59:36] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:59:36] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:59:36] [DEBUG] [log] Service postgres not ready, attempt 4/15
+[2025-06-13 09:59:39] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:59:39] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:59:39] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:59:39] [DEBUG] [log] Service postgres not ready, attempt 5/15
+[2025-06-13 09:59:42] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:59:42] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:59:42] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:59:42] [DEBUG] [log] Service postgres not ready, attempt 6/15
+[2025-06-13 09:59:45] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:59:45] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:59:45] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:59:45] [DEBUG] [log] Service postgres not ready, attempt 7/15
+[2025-06-13 09:59:48] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:59:48] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:59:48] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:59:48] [DEBUG] [log] Service postgres not ready, attempt 8/15
+[2025-06-13 09:59:51] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:59:51] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:59:51] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:59:51] [DEBUG] [log] Service postgres not ready, attempt 9/15
+[2025-06-13 09:59:54] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:59:54] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:59:54] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:59:54] [DEBUG] [log] Service postgres not ready, attempt 10/15
+[2025-06-13 09:59:57] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 09:59:57] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 09:59:58] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 09:59:58] [DEBUG] [log] Service postgres not ready, attempt 11/15
+[2025-06-13 10:00:01] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:00:01] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:00:01] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:01] [DEBUG] [log] Service postgres not ready, attempt 12/15
+[2025-06-13 10:00:04] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:00:04] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:00:04] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:04] [DEBUG] [log] Service postgres not ready, attempt 13/15
+[2025-06-13 10:00:07] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:00:07] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:00:07] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:07] [DEBUG] [log] Service postgres not ready, attempt 14/15
+[2025-06-13 10:00:10] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:00:10] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:00:10] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:10] [DEBUG] [log] Service postgres not ready, attempt 15/15
+[2025-06-13 10:00:13] [WARN] [log] Service postgres health check timed out after 15 attempts
+[2025-06-13 10:00:13] [INFO] [log] Checking health of service: mysql
+[2025-06-13 10:00:13] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 10:00:13] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 10:00:13] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:13] [DEBUG] [log] Service mysql not ready, attempt 1/15
+[2025-06-13 10:00:16] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 10:00:16] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 10:00:16] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:16] [DEBUG] [log] Service mysql not ready, attempt 2/15
+[2025-06-13 10:00:19] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 10:00:19] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 10:00:19] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:19] [DEBUG] [log] Service mysql not ready, attempt 3/15
+[2025-06-13 10:00:22] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 10:00:22] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 10:00:22] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:22] [DEBUG] [log] Service mysql not ready, attempt 4/15
+[2025-06-13 10:00:25] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 10:00:25] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 10:00:26] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:26] [DEBUG] [log] Service mysql not ready, attempt 5/15
+[2025-06-13 10:00:29] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 10:00:29] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 10:00:29] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:29] [DEBUG] [log] Service mysql not ready, attempt 6/15
+[2025-06-13 10:00:32] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 10:00:32] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 10:00:32] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:32] [DEBUG] [log] Service mysql not ready, attempt 7/15
+[2025-06-13 10:00:35] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 10:00:35] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 10:00:35] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:35] [DEBUG] [log] Service mysql not ready, attempt 8/15
+[2025-06-13 10:00:38] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 10:00:38] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 10:00:38] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:38] [DEBUG] [log] Service mysql not ready, attempt 9/15
+[2025-06-13 10:00:41] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 10:00:41] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 10:00:41] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:41] [DEBUG] [log] Service mysql not ready, attempt 10/15
+[2025-06-13 10:00:44] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 10:00:44] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 10:00:44] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:44] [DEBUG] [log] Service mysql not ready, attempt 11/15
+[2025-06-13 10:00:47] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 10:00:47] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 10:00:47] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:47] [DEBUG] [log] Service mysql not ready, attempt 12/15
+[2025-06-13 10:00:50] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 10:00:50] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 10:00:50] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:50] [DEBUG] [log] Service mysql not ready, attempt 13/15
+[2025-06-13 10:00:53] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 10:00:53] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 10:00:53] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:53] [DEBUG] [log] Service mysql not ready, attempt 14/15
+[2025-06-13 10:00:56] [DEBUG] [log] Executing: Check mysql status
+[2025-06-13 10:00:56] [DEBUG] [log] Command: sudo podman container inspect mysql --format '{{.State.Status}}'
+[2025-06-13 10:00:56] [WARN] [log] ⚠️  Check mysql status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:56] [DEBUG] [log] Service mysql not ready, attempt 15/15
+[2025-06-13 10:00:59] [WARN] [log] Service mysql health check timed out after 15 attempts
+[2025-06-13 10:00:59] [INFO] [log] Checking health of service: mariadb
+[2025-06-13 10:00:59] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 10:00:59] [DEBUG] [log] Command: sudo podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 10:00:59] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:00:59] [DEBUG] [log] Service mariadb not ready, attempt 1/15
+[2025-06-13 10:01:02] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 10:01:02] [DEBUG] [log] Command: sudo podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 10:01:03] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:03] [DEBUG] [log] Service mariadb not ready, attempt 2/15
+[2025-06-13 10:01:06] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 10:01:06] [DEBUG] [log] Command: sudo podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 10:01:06] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:06] [DEBUG] [log] Service mariadb not ready, attempt 3/15
+[2025-06-13 10:01:09] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 10:01:09] [DEBUG] [log] Command: sudo podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 10:01:09] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:09] [DEBUG] [log] Service mariadb not ready, attempt 4/15
+[2025-06-13 10:01:12] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 10:01:12] [DEBUG] [log] Command: sudo podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 10:01:12] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:12] [DEBUG] [log] Service mariadb not ready, attempt 5/15
+[2025-06-13 10:01:15] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 10:01:15] [DEBUG] [log] Command: sudo podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 10:01:15] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:15] [DEBUG] [log] Service mariadb not ready, attempt 6/15
+[2025-06-13 10:01:18] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 10:01:18] [DEBUG] [log] Command: sudo podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 10:01:18] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:18] [DEBUG] [log] Service mariadb not ready, attempt 7/15
+[2025-06-13 10:01:21] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 10:01:21] [DEBUG] [log] Command: sudo podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 10:01:21] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:21] [DEBUG] [log] Service mariadb not ready, attempt 8/15
+[2025-06-13 10:01:24] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 10:01:24] [DEBUG] [log] Command: sudo podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 10:01:24] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:24] [DEBUG] [log] Service mariadb not ready, attempt 9/15
+[2025-06-13 10:01:27] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 10:01:27] [DEBUG] [log] Command: sudo podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 10:01:27] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:27] [DEBUG] [log] Service mariadb not ready, attempt 10/15
+[2025-06-13 10:01:30] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 10:01:30] [DEBUG] [log] Command: sudo podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 10:01:30] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:30] [DEBUG] [log] Service mariadb not ready, attempt 11/15
+[2025-06-13 10:01:33] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 10:01:33] [DEBUG] [log] Command: sudo podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 10:01:34] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:34] [DEBUG] [log] Service mariadb not ready, attempt 12/15
+[2025-06-13 10:01:37] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 10:01:37] [DEBUG] [log] Command: sudo podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 10:01:37] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:37] [DEBUG] [log] Service mariadb not ready, attempt 13/15
+[2025-06-13 10:01:40] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 10:01:40] [DEBUG] [log] Command: sudo podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 10:01:40] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:40] [DEBUG] [log] Service mariadb not ready, attempt 14/15
+[2025-06-13 10:01:43] [DEBUG] [log] Executing: Check mariadb status
+[2025-06-13 10:01:43] [DEBUG] [log] Command: sudo podman container inspect mariadb --format '{{.State.Status}}'
+[2025-06-13 10:01:43] [WARN] [log] ⚠️  Check mariadb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:43] [DEBUG] [log] Service mariadb not ready, attempt 15/15
+[2025-06-13 10:01:46] [WARN] [log] Service mariadb health check timed out after 15 attempts
+[2025-06-13 10:01:46] [INFO] [log] Checking health of service: mongodb
+[2025-06-13 10:01:46] [DEBUG] [log] Executing: Check mongodb status
+[2025-06-13 10:01:46] [DEBUG] [log] Command: sudo podman container inspect mongodb --format '{{.State.Status}}'
+[2025-06-13 10:01:46] [WARN] [log] ⚠️  Check mongodb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:46] [DEBUG] [log] Service mongodb not ready, attempt 1/15
+[2025-06-13 10:01:49] [DEBUG] [log] Executing: Check mongodb status
+[2025-06-13 10:01:49] [DEBUG] [log] Command: sudo podman container inspect mongodb --format '{{.State.Status}}'
+[2025-06-13 10:01:49] [WARN] [log] ⚠️  Check mongodb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:49] [DEBUG] [log] Service mongodb not ready, attempt 2/15
+[2025-06-13 10:01:52] [DEBUG] [log] Executing: Check mongodb status
+[2025-06-13 10:01:52] [DEBUG] [log] Command: sudo podman container inspect mongodb --format '{{.State.Status}}'
+[2025-06-13 10:01:52] [WARN] [log] ⚠️  Check mongodb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:52] [DEBUG] [log] Service mongodb not ready, attempt 3/15
+[2025-06-13 10:01:55] [DEBUG] [log] Executing: Check mongodb status
+[2025-06-13 10:01:55] [DEBUG] [log] Command: sudo podman container inspect mongodb --format '{{.State.Status}}'
+[2025-06-13 10:01:55] [WARN] [log] ⚠️  Check mongodb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:55] [DEBUG] [log] Service mongodb not ready, attempt 4/15
+[2025-06-13 10:01:58] [DEBUG] [log] Executing: Check mongodb status
+[2025-06-13 10:01:58] [DEBUG] [log] Command: sudo podman container inspect mongodb --format '{{.State.Status}}'
+[2025-06-13 10:01:58] [WARN] [log] ⚠️  Check mongodb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:01:58] [DEBUG] [log] Service mongodb not ready, attempt 5/15
+[2025-06-13 10:02:01] [DEBUG] [log] Executing: Check mongodb status
+[2025-06-13 10:02:01] [DEBUG] [log] Command: sudo podman container inspect mongodb --format '{{.State.Status}}'
+[2025-06-13 10:02:01] [WARN] [log] ⚠️  Check mongodb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:02:01] [DEBUG] [log] Service mongodb not ready, attempt 6/15
+[2025-06-13 10:02:04] [DEBUG] [log] Executing: Check mongodb status
+[2025-06-13 10:02:04] [DEBUG] [log] Command: sudo podman container inspect mongodb --format '{{.State.Status}}'
+[2025-06-13 10:02:04] [WARN] [log] ⚠️  Check mongodb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:02:04] [DEBUG] [log] Service mongodb not ready, attempt 7/15
+[2025-06-13 10:02:07] [DEBUG] [log] Executing: Check mongodb status
+[2025-06-13 10:02:07] [DEBUG] [log] Command: sudo podman container inspect mongodb --format '{{.State.Status}}'
+[2025-06-13 10:02:08] [WARN] [log] ⚠️  Check mongodb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:02:08] [DEBUG] [log] Service mongodb not ready, attempt 8/15
+[2025-06-13 10:02:11] [DEBUG] [log] Executing: Check mongodb status
+[2025-06-13 10:02:11] [DEBUG] [log] Command: sudo podman container inspect mongodb --format '{{.State.Status}}'
+[2025-06-13 10:02:11] [WARN] [log] ⚠️  Check mongodb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:02:11] [DEBUG] [log] Service mongodb not ready, attempt 9/15
+[2025-06-13 10:02:14] [DEBUG] [log] Executing: Check mongodb status
+[2025-06-13 10:02:14] [DEBUG] [log] Command: sudo podman container inspect mongodb --format '{{.State.Status}}'
+[2025-06-13 10:02:14] [WARN] [log] ⚠️  Check mongodb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:02:14] [DEBUG] [log] Service mongodb not ready, attempt 10/15
+[2025-06-13 10:02:17] [DEBUG] [log] Executing: Check mongodb status
+[2025-06-13 10:02:17] [DEBUG] [log] Command: sudo podman container inspect mongodb --format '{{.State.Status}}'
+[2025-06-13 10:02:17] [WARN] [log] ⚠️  Check mongodb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:02:17] [DEBUG] [log] Service mongodb not ready, attempt 11/15
+[2025-06-13 10:02:20] [DEBUG] [log] Executing: Check mongodb status
+[2025-06-13 10:02:20] [DEBUG] [log] Command: sudo podman container inspect mongodb --format '{{.State.Status}}'
+[2025-06-13 10:02:20] [WARN] [log] ⚠️  Check mongodb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:02:20] [DEBUG] [log] Service mongodb not ready, attempt 12/15
+[2025-06-13 10:02:23] [DEBUG] [log] Executing: Check mongodb status
+[2025-06-13 10:02:23] [DEBUG] [log] Command: sudo podman container inspect mongodb --format '{{.State.Status}}'
+[2025-06-13 10:02:23] [WARN] [log] ⚠️  Check mongodb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:02:23] [DEBUG] [log] Service mongodb not ready, attempt 13/15
+[2025-06-13 10:02:26] [DEBUG] [log] Executing: Check mongodb status
+[2025-06-13 10:02:26] [DEBUG] [log] Command: sudo podman container inspect mongodb --format '{{.State.Status}}'
+[2025-06-13 10:02:26] [WARN] [log] ⚠️  Check mongodb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:02:26] [DEBUG] [log] Service mongodb not ready, attempt 14/15
+[2025-06-13 10:02:29] [DEBUG] [log] Executing: Check mongodb status
+[2025-06-13 10:02:29] [DEBUG] [log] Command: sudo podman container inspect mongodb --format '{{.State.Status}}'
+[2025-06-13 10:02:29] [WARN] [log] ⚠️  Check mongodb status - Failed (exit code: 125), continuing...
+[2025-06-13 10:02:29] [DEBUG] [log] Service mongodb not ready, attempt 15/15
+[2025-06-13 10:02:32] [WARN] [log] Service mongodb health check timed out after 15 attempts
+[2025-06-13 10:02:32] [INFO] [log] Checking health of service: redis
+[2025-06-13 10:02:32] [DEBUG] [log] Executing: Check redis status
+[2025-06-13 10:02:32] [DEBUG] [log] Command: sudo podman container inspect redis --format '{{.State.Status}}'
+[2025-06-13 10:02:32] [INFO] [log] ✅ Check redis status - Success
+[2025-06-13 10:15:02] [DEBUG] [debug-categories.sh] Configuration loaded successfully
+[2025-06-13 10:16:48] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:17:34] [DEBUG] [debug-categories.sh] Configuration loaded successfully
+[2025-06-13 10:20:18] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:20:44] [DEBUG] [install.sh] Configuration loaded successfully
+[2025-06-13 10:21:04] [DEBUG] [install.sh] Configuration loaded successfully
+[2025-06-13 10:21:04] [DEBUG] [install.sh] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true
+[2025-06-13 10:22:31] [DEBUG] [install.sh] Configuration loaded successfully
+[2025-06-13 10:22:31] [DEBUG] [install.sh] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true
+[2025-06-13 10:23:12] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:23:12] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true
+[2025-06-13 10:23:12] [INFO] [log] Installing all categories
+[2025-06-13 10:23:12] [INFO] [log] Performing pre-installation checks...
+[2025-06-13 10:23:12] [DEBUG] [log] Container runtime: podman
+[2025-06-13 10:23:12] [WARN] [log] Sudo access required but not available. Some operations may fail.
+[2025-06-13 10:23:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml
+[2025-06-13 10:23:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml
+[2025-06-13 10:23:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml
+[2025-06-13 10:23:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml
+[2025-06-13 10:23:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml
+[2025-06-13 10:23:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml
+[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml
+[2025-06-13 10:23:14] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml
+[2025-06-13 10:23:14] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml
+[2025-06-13 10:23:14] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml
+[2025-06-13 10:23:14] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml
+[2025-06-13 10:23:14] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml
+[2025-06-13 10:23:14] [INFO] [log] Compose file validation: 29/29 files valid
+[2025-06-13 10:23:14] [INFO] [log] 🚀 Starting microservices installation...
+[2025-06-13 10:23:14] [INFO] [log] Installing all categories
+[2025-06-13 10:23:14] [INFO] [log] Starting installation of 17 categories...
+[2025-06-13 10:23:14] [DEBUG] [log] Checking if network 'microservices-net' exists
+[2025-06-13 10:23:14] [DEBUG] [log] Executing: Check network existence
+[2025-06-13 10:23:14] [DEBUG] [log] Command: sudo podman network exists microservices-net
+[2025-06-13 10:23:27] [INFO] [log] ✅ Check network existence - Success
+[2025-06-13 10:23:27] [INFO] [log] Network 'microservices-net' already exists
+[2025-06-13 10:23:27] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13
+[2025-06-13 10:23:30] [INFO] [log] 📦 Installing category: 10:23:14]
+[2025-06-13 10:23:33] [INFO] [log] 📦 Installing category: [INFO]
+[2025-06-13 10:23:36] [INFO] [log] 📦 Installing category: [log]
+[2025-06-13 10:23:39] [INFO] [log] 📦 Installing category: Installing
+[2025-06-13 10:23:42] [INFO] [log] 📦 Installing category: all
+[2025-06-13 10:23:45] [INFO] [log] 📦 Installing category: categories[0m
+[2025-06-13 10:23:48] [INFO] [log] 📦 Installing category: database
+[2025-06-13 10:23:48] [INFO] [log]   🚀 Starting service: postgres
+[2025-06-13 10:23:48] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/postgres.yml up -d
+[2025-06-13 10:23:48] [INFO] [log]   🚀 Starting service: mysql
+[2025-06-13 10:23:48] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mysql.yml up -d
+[2025-06-13 10:23:48] [INFO] [log]   🚀 Starting service: mariadb
+[2025-06-13 10:23:48] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml up -d
+[2025-06-13 10:23:48] [INFO] [log]   🚀 Starting service: mongodb
+[2025-06-13 10:23:48] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml up -d
+[2025-06-13 10:23:48] [INFO] [log]   🚀 Starting service: redis
+[2025-06-13 10:23:48] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/redis.yml up -d
+[2025-06-13 10:23:48] [INFO] [log]   🔍 Performing health checks for database services...
+[2025-06-13 10:23:53] [INFO] [log] Checking health of service: postgres
+[2025-06-13 10:23:53] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:23:53] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:23:53] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:23:53] [DEBUG] [log] Service postgres not ready, attempt 1/15
+[2025-06-13 10:23:56] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:23:56] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:23:57] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:23:57] [DEBUG] [log] Service postgres not ready, attempt 2/15
+[2025-06-13 10:24:00] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:24:00] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:24:00] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:24:00] [DEBUG] [log] Service postgres not ready, attempt 3/15
+[2025-06-13 10:24:03] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:24:03] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:24:03] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:24:03] [DEBUG] [log] Service postgres not ready, attempt 4/15
+[2025-06-13 10:24:06] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:24:06] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:24:06] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:24:06] [DEBUG] [log] Service postgres not ready, attempt 5/15
+[2025-06-13 10:24:09] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:24:09] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:24:09] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:24:09] [DEBUG] [log] Service postgres not ready, attempt 6/15
+[2025-06-13 10:24:48] [DEBUG] [debug-categories.sh] Configuration loaded successfully
+[] [] [] 
+[] [] [] 
+[] [] [] 
+[] [] [] 
+[2025-06-13 10:31:26] [DEBUG] [install.sh] Configuration loaded successfully
+[2025-06-13 10:31:26] [DEBUG] [install.sh] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true
+[2025-06-13 10:31:41] [DEBUG] [install.sh] Configuration loaded successfully
+[2025-06-13 10:31:41] [DEBUG] [install.sh] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true
+[2025-06-13 10:31:51] [DEBUG] [install.sh] Configuration loaded successfully
+[2025-06-13 10:31:51] [DEBUG] [install.sh] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true
+[2025-06-13 10:32:16] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:32:16] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true
+[2025-06-13 10:32:16] [INFO] [log] Installing all categories
+[2025-06-13 10:32:16] [INFO] [log] Performing pre-installation checks...
+[2025-06-13 10:32:16] [DEBUG] [log] Container runtime: podman
+[2025-06-13 10:32:16] [WARN] [log] Sudo access required but not available. Some operations may fail.
+[2025-06-13 10:32:16] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml
+[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml
+[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml
+[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml
+[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml
+[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml
+[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml
+[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml
+[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml
+[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml
+[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml
+[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml
+[2025-06-13 10:32:18] [INFO] [log] Compose file validation: 29/29 files valid
+[2025-06-13 10:32:18] [INFO] [log] 🚀 Starting microservices installation...
+[2025-06-13 10:32:18] [INFO] [log] Installing all categories
+[2025-06-13 10:32:18] [INFO] [log] Starting installation of 17 categories...
+[2025-06-13 10:32:18] [DEBUG] [log] Checking if network 'microservices-net' exists
+[2025-06-13 10:32:18] [DEBUG] [log] Executing: Check network existence
+[2025-06-13 10:32:18] [DEBUG] [log] Command: sudo podman network exists microservices-net
+[2025-06-13 10:32:26] [INFO] [log] ✅ Check network existence - Success
+[2025-06-13 10:32:26] [INFO] [log] Network 'microservices-net' already exists
+[2025-06-13 10:32:26] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13
+[2025-06-13 10:32:29] [INFO] [log] 📦 Installing category: 10:32:18]
+[2025-06-13 10:32:32] [INFO] [log] 📦 Installing category: [INFO]
+[2025-06-13 10:32:35] [INFO] [log] 📦 Installing category: [log]
+[2025-06-13 10:32:38] [INFO] [log] 📦 Installing category: Installing
+[2025-06-13 10:32:41] [INFO] [log] 📦 Installing category: all
+[2025-06-13 10:32:44] [INFO] [log] 📦 Installing category: categories[0m
+[2025-06-13 10:32:47] [INFO] [log] 📦 Installing category: database
+[2025-06-13 10:32:47] [INFO] [log]   🚀 Starting service: postgres
+[2025-06-13 10:32:47] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/postgres.yml up -d
+[2025-06-13 10:32:47] [INFO] [log]   🚀 Starting service: mysql
+[2025-06-13 10:32:47] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mysql.yml up -d
+[2025-06-13 10:32:47] [INFO] [log]   🚀 Starting service: mariadb
+[2025-06-13 10:32:47] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml up -d
+[2025-06-13 10:32:47] [INFO] [log]   🚀 Starting service: mongodb
+[2025-06-13 10:32:47] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml up -d
+[2025-06-13 10:32:47] [INFO] [log]   🚀 Starting service: redis
+[2025-06-13 10:32:47] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/redis.yml up -d
+[2025-06-13 10:32:47] [INFO] [log]   🔍 Performing health checks for database services...
+[2025-06-13 10:32:52] [INFO] [log] Checking health of service: postgres
+[2025-06-13 10:32:52] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:32:52] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:32:52] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:32:52] [DEBUG] [log] Service postgres not ready, attempt 1/15
+[2025-06-13 10:32:55] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:32:55] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:32:55] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:32:55] [DEBUG] [log] Service postgres not ready, attempt 2/15
+[2025-06-13 10:32:58] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:32:58] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:32:58] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:32:58] [DEBUG] [log] Service postgres not ready, attempt 3/15
+[2025-06-13 10:33:01] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:33:01] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:33:02] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:33:02] [DEBUG] [log] Service postgres not ready, attempt 4/15
+[2025-06-13 10:33:05] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:33:05] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:33:05] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:33:05] [DEBUG] [log] Service postgres not ready, attempt 5/15
+[2025-06-13 10:33:08] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:33:08] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:33:08] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:33:08] [DEBUG] [log] Service postgres not ready, attempt 6/15
+[2025-06-13 10:33:11] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:33:11] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:33:11] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:33:11] [DEBUG] [log] Service postgres not ready, attempt 7/15
+[2025-06-13 10:33:14] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:33:14] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:33:14] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:33:14] [DEBUG] [log] Service postgres not ready, attempt 8/15
+[2025-06-13 10:33:17] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:33:17] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:33:17] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:33:17] [DEBUG] [log] Service postgres not ready, attempt 9/15
+[2025-06-13 10:33:20] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:33:20] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:33:20] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:33:20] [DEBUG] [log] Service postgres not ready, attempt 10/15
+[2025-06-13 10:33:23] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:33:23] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:33:23] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:33:23] [DEBUG] [log] Service postgres not ready, attempt 11/15
+[2025-06-13 10:33:26] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:33:26] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:33:26] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:33:26] [DEBUG] [log] Service postgres not ready, attempt 12/15
+[2025-06-13 10:33:29] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:33:29] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:33:29] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:33:29] [DEBUG] [log] Service postgres not ready, attempt 13/15
+[2025-06-13 10:33:32] [DEBUG] [log] Executing: Check postgres status
+[2025-06-13 10:33:32] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'
+[2025-06-13 10:33:33] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...
+[2025-06-13 10:33:33] [DEBUG] [log] Service postgres not ready, attempt 14/15
+[2025-06-13 10:34:05] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:35:07] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:35:07] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true
+[2025-06-13 10:35:07] [INFO] [log] Installing all categories
+[2025-06-13 10:35:07] [INFO] [log] Performing pre-installation checks...
+[2025-06-13 10:35:07] [DEBUG] [log] Container runtime: podman
+[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml
+[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml
+[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml
+[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml
+[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml
+[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml
+[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml
+[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml
+[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml
+[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml
+[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml
+[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml
+[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml
+[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml
+[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml
+[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml
+[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml
+[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml
+[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml
+[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml
+[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml
+[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml
+[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml
+[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml
+[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml
+[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml
+[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml
+[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml
+[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml
+[2025-06-13 10:35:08] [INFO] [log] Compose file validation: 29/29 files valid
+[2025-06-13 10:35:08] [INFO] [log] 🚀 Starting microservices installation...
+[2025-06-13 10:35:08] [INFO] [log] Installing all categories
+[2025-06-13 10:35:08] [INFO] [log] Starting installation of 17 categories...
+[2025-06-13 10:35:08] [DEBUG] [log] Checking if network 'microservices-net' exists
+[2025-06-13 10:35:08] [DEBUG] [log] Executing: Check network existence
+[2025-06-13 10:35:08] [DEBUG] [log] Command: sudo podman network exists microservices-net
+[2025-06-13 10:35:08] [INFO] [log] ✅ Check network existence - Success
+[2025-06-13 10:35:08] [INFO] [log] Network 'microservices-net' already exists
+[2025-06-13 10:35:08] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13
+[2025-06-13 10:35:11] [INFO] [log] 📦 Installing category: 10:35:08]
+[2025-06-13 10:35:14] [INFO] [log] 📦 Installing category: [INFO]
+[2025-06-13 10:35:17] [INFO] [log] 📦 Installing category: [log]
+[2025-06-13 10:35:20] [INFO] [log] 📦 Installing category: Installing
+[2025-06-13 10:35:23] [INFO] [log] 📦 Installing category: all
+[2025-06-13 10:35:26] [INFO] [log] 📦 Installing category: categories[0m
+[2025-06-13 10:35:29] [INFO] [log] 📦 Installing category: database
+[2025-06-13 10:35:29] [INFO] [log]   🚀 Starting service: postgres
+[2025-06-13 10:35:29] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/postgres.yml up -d
+[2025-06-13 10:35:29] [INFO] [log]   🚀 Starting service: mysql
+[2025-06-13 10:35:29] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mysql.yml up -d
+[2025-06-13 10:35:29] [INFO] [log]   🚀 Starting service: mariadb
+[2025-06-13 10:35:29] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml up -d
+[2025-06-13 10:35:29] [INFO] [log]   🚀 Starting service: mongodb
+[2025-06-13 10:35:29] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml up -d
+[2025-06-13 10:35:29] [INFO] [log]   🚀 Starting service: redis
+[2025-06-13 10:35:29] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/redis.yml up -d
+[2025-06-13 10:35:29] [INFO] [log]   [DRY RUN] Would perform health checks for database services
+[2025-06-13 10:35:32] [INFO] [log] 📦 Installing category: dbms
+[2025-06-13 10:35:33] [INFO] [log]   🚀 Starting service: adminer
+[2025-06-13 10:35:33] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml up -d
+[2025-06-13 10:35:33] [INFO] [log]   🚀 Starting service: pgadmin
+[2025-06-13 10:35:33] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml up -d
+[2025-06-13 10:35:33] [INFO] [log]   🚀 Starting service: phpmyadmin
+[2025-06-13 10:35:33] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml up -d
+[2025-06-13 10:35:33] [INFO] [log]   🚀 Starting service: mongo-express
+[2025-06-13 10:35:33] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml up -d
+[2025-06-13 10:35:33] [INFO] [log]   🚀 Starting service: metabase
+[2025-06-13 10:35:33] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml up -d
+[2025-06-13 10:35:33] [INFO] [log]   🚀 Starting service: nocodb
+[2025-06-13 10:35:33] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml up -d
+[2025-06-13 10:35:36] [INFO] [log] 📦 Installing category: backend
+[2025-06-13 10:35:36] [INFO] [log]   🚀 Starting service: php
+[2025-06-13 10:35:36] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/backend/php.yml up -d
+[2025-06-13 10:35:36] [INFO] [log]   🚀 Starting service: node
+[2025-06-13 10:35:36] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/backend/node.yml up -d
+[2025-06-13 10:35:36] [INFO] [log]   🚀 Starting service: python
+[2025-06-13 10:35:36] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/backend/python.yml up -d
+[2025-06-13 10:35:36] [INFO] [log]   🚀 Starting service: go
+[2025-06-13 10:35:36] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/backend/go.yml up -d
+[2025-06-13 10:35:36] [INFO] [log]   🚀 Starting service: dotnet
+[2025-06-13 10:35:36] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml up -d
+[2025-06-13 10:35:39] [INFO] [log] 📦 Installing category: analytics
+[2025-06-13 10:35:39] [INFO] [log]   🚀 Starting service: elasticsearch
+[2025-06-13 10:35:39] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml up -d
+[2025-06-13 10:35:39] [INFO] [log]   🚀 Starting service: kibana
+[2025-06-13 10:35:39] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml up -d
+[2025-06-13 10:35:39] [INFO] [log]   🚀 Starting service: logstash
+[2025-06-13 10:35:39] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml up -d
+[2025-06-13 10:35:39] [INFO] [log]   🚀 Starting service: grafana
+[2025-06-13 10:35:39] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml up -d
+[2025-06-13 10:35:39] [INFO] [log]   🚀 Starting service: prometheus
+[2025-06-13 10:35:39] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml up -d
+[2025-06-13 10:35:39] [INFO] [log]   🚀 Starting service: matomo
+[2025-06-13 10:35:39] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml up -d
+[2025-06-13 10:35:42] [INFO] [log] 📦 Installing category: ai
+[2025-06-13 10:35:42] [INFO] [log]   🚀 Starting service: langflow
+[2025-06-13 10:35:42] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml up -d
+[2025-06-13 10:35:42] [INFO] [log]   🚀 Starting service: n8n
+[2025-06-13 10:35:42] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml up -d
+[2025-06-13 10:35:45] [INFO] [log] 📦 Installing category: mail
+[2025-06-13 10:35:45] [INFO] [log]   🚀 Starting service: mailpit
+[2025-06-13 10:35:45] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml up -d
+[2025-06-13 10:35:48] [INFO] [log] 📦 Installing category: project
+[2025-06-13 10:35:48] [INFO] [log]   🚀 Starting service: gitea
+[2025-06-13 10:35:48] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/project/gitea.yml up -d
+[2025-06-13 10:35:51] [INFO] [log] 📦 Installing category: erp
+[2025-06-13 10:35:51] [INFO] [log]   🚀 Starting service: odoo
+[2025-06-13 10:35:51] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml up -d
+[2025-06-13 10:35:54] [INFO] [log] 📦 Installing category: auth
+[2025-06-13 10:35:54] [INFO] [log]   🚀 Starting service: keycloak
+[2025-06-13 10:35:54] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml up -d
+[2025-06-13 10:35:57] [INFO] [log] 📦 Installing category: proxy
+[2025-06-13 10:35:57] [INFO] [log]   🚀 Starting service: nginx-proxy-manager
+[2025-06-13 10:35:57] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml up -d
+[2025-06-13 10:36:00] [INFO] [log] 🗄️ Setting up databases...
+[2025-06-13 10:36:00] [INFO] [log] Waiting for database services to initialize...
+[2025-06-13 10:36:15] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/setup-databases.sh -s -e
+[2025-06-13 10:36:15] [INFO] [log] 🔐 Setting up SSL certificates...
+[2025-06-13 10:36:15] [INFO] [log] Waiting for nginx-proxy-manager to start...
+[2025-06-13 10:36:25] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/setup-ssl.sh -s -e
+[2025-06-13 10:36:25] [INFO] [log] 🛡️ Installing SSL certificates in system trust store...
+[2025-06-13 10:36:25] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/trust-host.sh -s -e
+[2025-06-13 10:36:25] [INFO] [log] 🔍 Dry run completed successfully!
+[2025-06-13 10:36:25] [INFO] [log] ✅ Installation process completed!
+[2025-06-13 10:42:50] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:42:50] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true
+[2025-06-13 10:42:50] [INFO] [log] Installing all categories
+[2025-06-13 10:42:50] [INFO] [log] Performing pre-installation checks...
+[2025-06-13 10:42:50] [DEBUG] [log] Container runtime: podman
+[2025-06-13 10:42:50] [WARN] [log] Sudo access required but not available. Some operations may fail.
+[2025-06-13 10:42:50] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml
+[2025-06-13 10:42:50] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml
+[2025-06-13 10:42:50] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml
+[2025-06-13 10:42:50] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml
+[2025-06-13 10:42:50] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml
+[2025-06-13 10:42:50] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml
+[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml
+[2025-06-13 10:42:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml
+[2025-06-13 10:42:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml
+[2025-06-13 10:42:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml
+[2025-06-13 10:42:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml
+[2025-06-13 10:42:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml
+[2025-06-13 10:42:52] [INFO] [log] Compose file validation: 29/29 files valid
+[2025-06-13 10:42:52] [INFO] [log] 🚀 Starting microservices installation...
+[2025-06-13 10:42:52] [INFO] [log] Installing all categories
+[2025-06-13 10:42:52] [INFO] [log] Starting installation of 1 categories...
+[2025-06-13 10:42:52] [INFO] [log] Starting installation of 1 categories...
+[2025-06-13 10:42:52] [DEBUG] [log] Checking if network 'microservices-net' exists
+[2025-06-13 10:42:52] [DEBUG] [log] Executing: Check network existence
+[2025-06-13 10:42:52] [DEBUG] [log] Command: sudo podman network exists microservices-net
+[2025-06-13 10:43:04] [INFO] [log] ✅ Check network existence - Success
+[2025-06-13 10:43:04] [INFO] [log] Network 'microservices-net' already exists
+[2025-06-13 10:43:04] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13 10:42:52] [INFO] [log] Installing all categories[0m
+database dbms backend analytics ai mail project erp auth proxy
+[2025-06-13 10:43:07] [INFO] [log] 🗄️ Setting up databases...
+[2025-06-13 10:43:07] [INFO] [log] Waiting for database services to initialize...
+[2025-06-13 10:43:22] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/setup-databases.sh -s -e
+[2025-06-13 10:43:22] [INFO] [log] 🔐 Setting up SSL certificates...
+[2025-06-13 10:43:22] [INFO] [log] Waiting for nginx-proxy-manager to start...
+[2025-06-13 10:43:32] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/setup-ssl.sh -s -e
+[2025-06-13 10:43:32] [INFO] [log] 🛡️ Installing SSL certificates in system trust store...
+[2025-06-13 10:43:32] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/trust-host.sh -s -e
+[2025-06-13 10:43:32] [INFO] [log] 🔍 Dry run completed successfully!
+[2025-06-13 10:43:32] [INFO] [log] ✅ Installation process completed!

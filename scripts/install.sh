@@ -177,7 +177,7 @@ determine_install_categories() {
     else
         # Use all categories except excluded ones
         for category in "${SERVICE_STARTUP_ORDER[@]}"; do
-            if [[ ! " ${EXCLUDE_CATEGORIES[@]} " =~ " ${category} " ]]; then
+            if [[ ! " ${EXCLUDE_CATEGORIES[*]} " =~ " ${category} " ]]; then
                 categories_to_install+=("$category")
             fi
         done
@@ -189,9 +189,8 @@ determine_install_categories() {
         fi
     fi
     
-    echo "${categories_to_install[@]}"
+    echo "${categories_to_install[*]}"
 }
-
 install_category() {
     local category="$1"
     local files=(${=SERVICE_CATEGORIES[$category]})
@@ -227,8 +226,8 @@ install_category() {
         [ "$PARALLEL_INSTALL" = false ] && sleep 2
     done
     
-    # Health check for critical services
-    if [[ "$category" == "database" ]]; then
+    # Health check for critical services (skip in dry run)
+    if [[ "$category" == "database" ]] && [ "$DRY_RUN" = false ]; then
         log "INFO" "  🔍 Performing health checks for database services..."
         sleep 5  # Give databases time to initialize
         
@@ -236,11 +235,18 @@ install_category() {
             local service_name=$(basename "$file" .yml)
             check_service_health "$service_name" "$CONTAINER_RUNTIME" "$SUDO_PREFIX" 15 3
         done
+    elif [[ "$category" == "database" ]] && [ "$DRY_RUN" = true ]; then
+        log "INFO" "  [DRY RUN] Would perform health checks for database services"
     fi
 }
 
 install_services() {
-    local categories_to_install=($(determine_install_categories))
+     # Get categories as a string and convert to array
+    local categories_string=$(determine_install_categories)
+    local categories_to_install=($categories_string)
+    
+    log "INFO" "Starting installation of ${#categories_to_install[@]} categories..."
+    
     
     log "INFO" "Starting installation of ${#categories_to_install[@]} categories..."
     

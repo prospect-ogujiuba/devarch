@@ -38,19 +38,21 @@ declare -A SERVICE_CATEGORIES=(
     ["mail"]="mail/mailpit.yml"
     ["project"]="project/gitea.yml"
     ["erp"]="erp/odoo.yml"
-    ["proxy"]="proxy/nginx-proxy-manager.yml proxy/keycloak.yml"
+    ["auth"]="auth/keycloak.yml"
+    ["proxy"]="proxy/nginx-proxy-manager.yml"
 )
 
 # Service startup order (dependencies first)
 SERVICE_STARTUP_ORDER=(
     "database"
-    "dbms" 
+    "dbms"
     "backend"
     "analytics"
     "ai"
     "mail"
     "project"
     "erp"
+    "auth"
     "proxy"
 )
 
@@ -274,19 +276,19 @@ parse_common_args() {
     log "DEBUG" "Configuration: runtime=$CONTAINER_RUNTIME, sudo=$USE_SUDO, errors=$SHOW_ERRORS, verbose=$VERBOSE, dry_run=$DRY_RUN"
 }
 
-# Export all variables and functions for use in other scripts
+# =============================================================================
+# EXPORT VARIABLES AND FUNCTIONS
+# =============================================================================
+
+# Export all variables for use in other scripts
 export PROJECT_ROOT SCRIPT_DIR COMPOSE_DIR APPS_DIR CONFIG_DIR LOGS_DIR
 export NETWORK_NAME COMPOSE_PROJECT_NAME
 export DEFAULT_DB_PASSWORD DEFAULT_ADMIN_USER DEFAULT_ADMIN_PASSWORD DEFAULT_ADMIN_EMAIL
 export CURRENT_LOG_LEVEL LOG_LEVEL_DEBUG LOG_LEVEL_INFO LOG_LEVEL_WARN LOG_LEVEL_ERROR
-export -f log
-export -f execute_command  
-export -f detect_container_runtime
-export -f ensure_network
-export -f check_service_health
-export -f validate_compose_file
-export -f setup_environment
-export -f parse_common_args
+
+# For zsh, we need to handle function exports differently
+# Functions will be available when this script is sourced
+# Other scripts should source this file rather than rely on exported functions
 
 # Initialize environment on source
 setup_environment
