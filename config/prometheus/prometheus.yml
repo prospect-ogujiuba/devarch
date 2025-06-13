@@ -1,0 +1,44 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Grafana
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+
+  # Node exporter (if you add it later)
+  # - job_name: 'node-exporter'
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']
+
+  # Application metrics (customize as needed)
+  # - job_name: 'node-app'
+  #   static_configs:
+  #     - targets: ['node:3000']
+  #   metrics_path: '/metrics'
+
+  # - job_name: 'python-app'
+  #   static_configs:
+  #     - targets: ['python:8000']
+  #   metrics_path: '/metrics'
+
+  # - job_name: 'go-app'
+  #   static_configs:
+  #     - targets: ['go:8080']
+  #   metrics_path: '/metrics'
+
+  # - job_name: 'dotnet-app'
+  #   static_configs:
+  #     - targets: ['dotnet:80']
+  #   metrics_path: '/metrics'
