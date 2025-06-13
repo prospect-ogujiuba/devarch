@@ -99,6 +99,7 @@ stop_category() {
     log "INFO" "🛑 Stopping category: $category"
     
     for file in "${files[@]}"; do
+        # file now includes category path
         local compose_path="$COMPOSE_DIR/$file"
         local service_name=$(basename "$file" .yml)
         
@@ -129,7 +130,6 @@ stop_category() {
         sleep 1  # Brief pause between services
     done
 }
-
 cleanup_resources() {
     if [ "$REMOVE_VOLUMES" = true ]; then
         log "INFO" "🗑️ Removing unused volumes..."

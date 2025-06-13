@@ -48,7 +48,7 @@ OPTIONS:
     -h              Show this help message
 
 CATEGORIES:
-    database        PostgreSQL, MySQL, MariaDB, MongoDB, Redis
+    database       PostgreSQL, MySQL, MariaDB, MongoDB, Redis
     dbms           Adminer, pgAdmin, phpMyAdmin, Mongo Express, Metabase, NocoDB
     backend        PHP, Node.js, Python, Go, .NET development environments
     analytics      Elasticsearch, Kibana, Grafana, Prometheus, Matomo
@@ -199,8 +199,9 @@ install_category() {
     log "INFO" "📦 Installing category: $category"
     
     for file in "${files[@]}"; do
+        # file now includes category path like "database/postgres.yml"
         local compose_path="$COMPOSE_DIR/$file"
-        local service_name=$(basename "$file" .yml)
+        local service_name=$(basename "$file" .yml)  # Still works correctly
         
         if [ ! -f "$compose_path" ]; then
             log "WARN" "Compose file not found: $compose_path, skipping"

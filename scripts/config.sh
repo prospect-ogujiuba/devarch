@@ -30,15 +30,15 @@ DEFAULT_ADMIN_EMAIL="admin@site.test"
 
 # Define service categories with their compose files
 declare -A SERVICE_CATEGORIES=(
-    ["database"]="postgres.yml mysql.yml mariadb.yml mongodb.yml redis.yml"
-    ["dbms"]="adminer.yml pgadmin.yml phpmyadmin.yml mongo-express.yml metabase.yml nocodb.yml"
-    ["backend"]="php.yml node.yml python.yml go.yml dotnet.yml"
-    ["analytics"]="elasticsearch.yml kibana.yml logstash.yml grafana.yml prometheus.yml matomo.yml"
-    ["ai"]="langflow.yml n8n.yml"
-    ["mail"]="mailpit.yml"
-    ["project"]="gitea.yml"
-    ["erp"]="odoo.yml"
-    ["proxy"]="nginx-proxy-manager.yml"
+    ["database"]="database/postgres.yml database/mysql.yml database/mariadb.yml database/mongodb.yml database/redis.yml"
+    ["dbms"]="dbms/adminer.yml dbms/pgadmin.yml dbms/phpmyadmin.yml dbms/mongo-express.yml dbms/metabase.yml dbms/nocodb.yml"
+    ["backend"]="backend/php.yml backend/node.yml backend/python.yml backend/go.yml backend/dotnet.yml"
+    ["analytics"]="analytics/elasticsearch.yml analytics/kibana.yml analytics/logstash.yml analytics/grafana.yml analytics/prometheus.yml analytics/matomo.yml"
+    ["ai"]="ai/langflow.yml ai/n8n.yml"
+    ["mail"]="mail/mailpit.yml"
+    ["project"]="project/gitea.yml"
+    ["erp"]="erp/odoo.yml"
+    ["proxy"]="proxy/nginx-proxy-manager.yml proxy/keycloak.yml"
 )
 
 # Service startup order (dependencies first)
@@ -279,8 +279,14 @@ export PROJECT_ROOT SCRIPT_DIR COMPOSE_DIR APPS_DIR CONFIG_DIR LOGS_DIR
 export NETWORK_NAME COMPOSE_PROJECT_NAME
 export DEFAULT_DB_PASSWORD DEFAULT_ADMIN_USER DEFAULT_ADMIN_PASSWORD DEFAULT_ADMIN_EMAIL
 export CURRENT_LOG_LEVEL LOG_LEVEL_DEBUG LOG_LEVEL_INFO LOG_LEVEL_WARN LOG_LEVEL_ERROR
-export -f log execute_command detect_container_runtime ensure_network check_service_health
-export -f validate_compose_file setup_environment parse_common_args
+export -f log
+export -f execute_command  
+export -f detect_container_runtime
+export -f ensure_network
+export -f check_service_health
+export -f validate_compose_file
+export -f setup_environment
+export -f parse_common_args
 
 # Initialize environment on source
 setup_environment

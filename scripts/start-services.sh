@@ -92,6 +92,7 @@ start_category() {
     log "INFO" "🚀 Starting category: $category"
     
     for file in "${files[@]}"; do
+        # file now includes category path
         local compose_path="$COMPOSE_DIR/$file"
         local service_name=$(basename "$file" .yml)
         

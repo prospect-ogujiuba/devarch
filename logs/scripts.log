@@ -1,0 +1,77 @@
+[2025-06-13 09:29:21] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 09:29:21] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=false, dry_run=false
+[2025-06-13 09:29:21] [INFO] [log] Installing all categories
+[2025-06-13 09:29:32] [INFO] [log] Performing pre-installation checks...
+[2025-06-13 09:29:32] [DEBUG] [log] Container runtime: podman
+[2025-06-13 09:29:32] [WARN] [log] Sudo access required but not available. Some operations may fail.
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/gitea.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/php.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/node.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/python.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/go.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/dotnet.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/adminer.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/pgadmin.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/phpmyadmin.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/mongo-express.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/metabase.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/nocodb.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/nginx-proxy-manager.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/mailpit.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/langflow.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/n8n.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/elasticsearch.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/kibana.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/logstash.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/grafana.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/prometheus.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/matomo.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/postgres.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/mysql.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/mariadb.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/mongodb.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/redis.yml
+[2025-06-13 09:29:32] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/odoo.yml
+[2025-06-13 09:29:32] [INFO] [log] Compose file validation: 0/28 files valid
+[2025-06-13 09:29:32] [ERROR] [log] Some compose files are invalid. Please check the errors above.
+[2025-06-13 09:29:32] [ERROR] [log] Installation failed with exit code 1
+[2025-06-13 09:29:32] [INFO] [log] You can retry with: cleanup -se
+[2025-06-13 09:29:32] [INFO] [log] Or check logs in: /home/fhcadmin/Projects/devarch/logs/scripts.log
+[2025-06-13 09:29:51] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 09:29:51] [DEBUG] [log] Configuration: runtime=podman, sudo=false, errors=false, verbose=false, dry_run=false
+[2025-06-13 09:29:51] [INFO] [log] Installing all categories
+[2025-06-13 09:29:56] [INFO] [log] Performing pre-installation checks...
+[2025-06-13 09:29:56] [DEBUG] [log] Container runtime: podman
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/gitea.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/php.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/node.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/python.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/go.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/dotnet.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/adminer.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/pgadmin.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/phpmyadmin.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/mongo-express.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/metabase.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/nocodb.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/nginx-proxy-manager.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/mailpit.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/langflow.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/n8n.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/elasticsearch.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/kibana.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/logstash.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/grafana.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/prometheus.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/matomo.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/postgres.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/mysql.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/mariadb.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/mongodb.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/redis.yml
+[2025-06-13 09:29:56] [ERROR] [log] Compose file not found: /home/fhcadmin/Projects/devarch/compose/odoo.yml
+[2025-06-13 09:29:56] [INFO] [log] Compose file validation: 0/28 files valid
+[2025-06-13 09:29:56] [ERROR] [log] Some compose files are invalid. Please check the errors above.
+[2025-06-13 09:29:56] [ERROR] [log] Installation failed with exit code 1
+[2025-06-13 09:29:56] [INFO] [log] You can retry with: cleanup cleanup -se
+[2025-06-13 09:29:56] [INFO] [log] Or check logs in: /home/fhcadmin/Projects/devarch/logs/scripts.log

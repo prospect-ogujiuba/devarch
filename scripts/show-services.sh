@@ -459,6 +459,7 @@ get_services_to_show() {
         # Show only services from specified category
         local files=(${=SERVICE_CATEGORIES[$SHOW_ONLY_CATEGORY]})
         for file in "${files[@]}"; do
+            # file includes category path, extract just service name
             local service_name=$(basename "$file" .yml)
             services_to_show+=("$service_name")
         done
@@ -467,6 +468,7 @@ get_services_to_show() {
         for category in "${(k)SERVICE_CATEGORIES[@]}"; do
             local files=(${=SERVICE_CATEGORIES[$category]})
             for file in "${files[@]}"; do
+                # file includes category path, extract just service name
                 local service_name=$(basename "$file" .yml)
                 services_to_show+=("$service_name")
             done
