@@ -8,15 +8,15 @@ services:
   python:
     container_name: python
     build:
-      context: ../config/python
+      context: ../../config/python
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: ../../.env
     ports:
       - "127.0.0.1:8040:8000" # Python application port (FastAPI/Django)
     volumes:
-      - ../apps/python:/app
-      - ../logs/python:/var/log/python
+      - ../../apps/python:/app
+      - ../../logs/python:/var/log/python
     working_dir: /app
     command: ["python", "main.py"]
     networks:

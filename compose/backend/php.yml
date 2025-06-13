@@ -8,15 +8,15 @@ services:
   php:
     container_name: php
     build:
-      context: ../config/php
+      context: ../../config/php
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
       - "5173:5173"
     volumes:
-      - ../apps:/var/www/html
-      - ../scripts:/var/www/scripts
+      - ../../apps:/var/www/html
+      - ../../scripts:/var/www/scripts
       - ../../.env:/var/www/.env
-      - ../config/php/php.ini:/usr/local/etc/php/php.ini:ro
+      - ../../config/php/php.ini:/usr/local/etc/php/php.ini:ro
     networks:
       - microservices-net

@@ -29,8 +29,8 @@ WORKDIR /app
 COPY smart-entrypoint.sh /usr/local/bin/smart-entrypoint.sh
 RUN chmod +x /usr/local/bin/smart-entrypoint.sh
 
-# Create non-root user
-RUN useradd --create-home --shell /bin/bash app
+# Create non-root user (with proper error handling)
+RUN useradd --create-home --shell /bin/bash app || echo "User app already exists"
 RUN chown -R app:app /app
 
 # Expose common .NET ports

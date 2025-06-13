@@ -11,14 +11,27 @@ services:
   keycloak:
     container_name: keycloak
     build:
-      context: ../config/keycloak
+      context: ../../config/keycloak
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: ../../.env
+    environment:
+      # Basic admin setup
+      - KEYCLOAK_ADMIN=${ADMIN_USER}
+      - KEYCLOAK_ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      # Most configuration is handled via keycloak.conf file
+      # These environment variables override or supplement the config file
     ports:
-      - "127.0.0.1:9400:8443" # Local access to Keycloak HTTPS
-      - "127.0.0.1:9401:9000" # Local access to Keycloak health/metrics
+      - "127.0.0.1:9400:8080"   # Local access to Keycloak HTTP
+      - "127.0.0.1:9401:9000"   # Local access to Keycloak health/metrics
     volumes:
       - keycloak_data:/opt/keycloak/data
     networks:
       - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    command: ["start", "--optimized"]

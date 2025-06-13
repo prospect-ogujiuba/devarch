@@ -1,2096 +1,0 @@
-Script started on 2025-06-13 10:14:27-04:00 [TERM="xterm-256color" TTY="/dev/pts/12" COLUMNS="163" LINES="15"]
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [Kscripts[?1l>[?2004l
-]2;scripts]1;scripts[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch/scripts]1;..varch/scripts]7;file://FHCDT32/home/fhcadmin/Projects/devarch/scripts\[0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004hscripts chmod +x comprehensive-fix.sh
-./comprehensive-fix.sh[K[A[33C[?1l>[?2004l[1B
-]2;chmod +x comprehensive-fix.sh; ./comprehensive-fix.sh]1;chmod🔧 Applying comprehensive fixes...
-📝 Fixing config.sh export statements...
-✅ config.sh exports fixed
-📝 Fixing install.sh category determination...
-✅ install.sh category determination fixed
-📝 Fixing install.sh health checks in dry mode...
-✅ install.sh health checks fixed
-📝 Updating SERVICE_CATEGORIES in config.sh...
-✅ SERVICE_CATEGORIES updated
-📝 Cleaning up syntax issues...
-✅ Syntax cleanup completed
-🔍 Verifying fixes...
-📁 Category structure:
-  ✅ database: 5 files
-  ✅ dbms: 6 files
-  ✅ backend: 5 files
-  ✅ analytics: 6 files
-  ✅ ai: 2 files
-  ✅ mail: 1 files
-  ✅ project: 1 files
-  ✅ erp: 1 files
-  ✅ auth: 1 files
-  ✅ proxy: 1 files
-
-🎉 Comprehensive fixes completed!
-
-📋 Summary of fixes:
-  ✅ Fixed config.sh export statements
-  ✅ Fixed install.sh category determination
-  ✅ Fixed health checks in dry run mode
-  ✅ Updated SERVICE_CATEGORIES paths
-  ✅ Updated SERVICE_STARTUP_ORDER
-  ✅ Cleaned up syntax issues
-
-💡 Test with: ./scripts/install.sh -sed -v
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch/scripts]1;..varch/scripts]7;file://FHCDT32/home/fhcadmin/Projects/devarch/scripts\[0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[7mchmod +x debug-categories.sh[27m
-[7m./debug-categories.sh[27m[K[A[5C[27mc[27mh[27mm[27mo[27md[27m [27m+[27mx[27m [27md[27me[27mb[27mu[27mg[27m-[27mc[27ma[27mt[27me[27mg[27mo[27mr[27mi[27me[27ms[27m.[27ms[27mh[1B[27m.[27m/[27md[27me[27mb[27mu[27mg[27m-[27mc[27ma[27mt[27me[27mg[27mo[27mr[27mi[27me[27ms[27m.[27ms[27mh[?1l>[?2004l
-]2;chmod +x debug-categories.sh; ./debug-categories.sh]1;chmod🔍 Debugging category parsing...
-
-📋 SERVICE_CATEGORIES definition:
-./debug-categories.sh: line 13: Keys: ${(k)SERVICE_CATEGORIES[*]}: bad substitution
-
-📋 SERVICE_STARTUP_ORDER:
-  [0] database
-  [1] dbms
-  [2] backend
-  [3] analytics
-  [4] ai
-  [5] mail
-  [6] project
-  [7] erp
-  [8] auth
-  [9] proxy
-
-📋 Individual category contents:
-./debug-categories.sh: line 23: ${(k)SERVICE_CATEGORIES[@]}: bad substitution
-📁 Actual compose directory structure:
-find: 'compose': No such file or directory
-
-🔍 Testing determine_install_categories function...
-Installing all categories: database dbms backend analytics ai mail project erp auth proxy
-
-🎯 Final categories to install:
-  - database
-  - dbms
-  - backend
-  - analytics
-  - ai
-  - mail
-  - project
-  - erp
-  - auth
-  - proxy
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch/scripts]1;..varch/scripts]7;file://FHCDT32/home/fhcadmin/Projects/devarch/scripts\[0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [Kchmod +x debug-categories.sh
-./debug-categories.sh[K[A[33C[?1l>[?2004l[1B
-]2;chmod +x debug-categories.sh; ./debug-categories.sh]1;chmod/home/fhcadmin/Projects/devarch/scripts/config.sh:export:284: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:291: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:292: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:293: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:294: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:295: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:296: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:297: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:298: invalid option(s)
-🔍 Debugging category parsing...
-
-📋 SERVICE_CATEGORIES definition:
-Keys: project backend dbms proxy auth mail ai analytics database erp
-
-📋 SERVICE_STARTUP_ORDER:
-./debug-categories.sh:17: bad substitution
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch/scripts]1;..varch/scripts]7;file://FHCDT32/home/fhcadmin/Projects/devarch/scripts\[0m[27m[24m[J[01;31m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004hchmod +x debug-categories.sh
-./debug-categories.sh[K[A[33C[?1l>[?2004l[1B
-]2;chmod +x debug-categories.sh; ./debug-categories.sh]1;chmod🔍 Debugging category parsing...
-Script Dir: /home/fhcadmin/Projects/devarch/scripts
-Project Root: /home/fhcadmin/Projects/devarch
-Compose Dir: /home/fhcadmin/Projects/devarch/compose
-
-📋 SERVICE_CATEGORIES definition:
-Keys: project erp ai analytics database dbms proxy mail backend auth
-
-📋 SERVICE_STARTUP_ORDER:
-  [0] database
-  [1] dbms
-  [2] backend
-  [3] analytics
-  [4] ai
-  [5] mail
-  [6] project
-  [7] erp
-  [8] auth
-  [9] proxy
-
-📋 Individual category contents:
-Category: project
-  - project/gitea.yml
-    ✅ File exists
-
-Category: erp
-  - erp/odoo.yml
-    ✅ File exists
-
-Category: ai
-  - ai/langflow.yml
-    ✅ File exists
-  - ai/n8n.yml
-    ✅ File exists
-
-Category: analytics
-  - analytics/elasticsearch.yml
-    ✅ File exists
-  - analytics/kibana.yml
-    ✅ File exists
-  - analytics/logstash.yml
-    ✅ File exists
-  - analytics/grafana.yml
-    ✅ File exists
-  - analytics/prometheus.yml
-    ✅ File exists
-  - analytics/matomo.yml
-    ✅ File exists
-
-Category: database
-  - database/postgres.yml
-    ✅ File exists
-  - database/mysql.yml
-    ✅ File exists
-  - database/mariadb.yml
-    ✅ File exists
-  - database/mongodb.yml
-    ✅ File exists
-  - database/redis.yml
-    ✅ File exists
-
-Category: dbms
-  - dbms/adminer.yml
-    ✅ File exists
-  - dbms/pgadmin.yml
-    ✅ File exists
-  - dbms/phpmyadmin.yml
-    ✅ File exists
-  - dbms/mongo-express.yml
-    ✅ File exists
-  - dbms/metabase.yml
-    ✅ File exists
-  - dbms/nocodb.yml
-    ✅ File exists
-
-Category: proxy
-  - proxy/nginx-proxy-manager.yml
-    ✅ File exists
-
-Category: mail
-  - mail/mailpit.yml
-    ✅ File exists
-
-Category: backend
-  - backend/php.yml
-    ✅ File exists
-  - backend/node.yml
-    ✅ File exists
-  - backend/python.yml
-    ✅ File exists
-  - backend/go.yml
-    ✅ File exists
-  - backend/dotnet.yml
-    ✅ File exists
-
-Category: auth
-  - auth/keycloak.yml
-    ✅ File exists
-
-📁 Actual compose directory structure:
-/home/fhcadmin/Projects/devarch/compose/ai/langflow.yml
-/home/fhcadmin/Projects/devarch/compose/ai/n8n.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml
-/home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml
-/home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml
-/home/fhcadmin/Projects/devarch/compose/backend/go.yml
-/home/fhcadmin/Projects/devarch/compose/backend/node.yml
-/home/fhcadmin/Projects/devarch/compose/backend/php.yml
-/home/fhcadmin/Projects/devarch/compose/backend/python.yml
-/home/fhcadmin/Projects/devarch/compose/database/mariadb.yml
-/home/fhcadmin/Projects/devarch/compose/database/mongodb.yml
-/home/fhcadmin/Projects/devarch/compose/database/mysql.yml
-/home/fhcadmin/Projects/devarch/compose/database/postgres.yml
-/home/fhcadmin/Projects/devarch/compose/database/redis.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml
-/home/fhcadmin/Projects/devarch/compose/erp/odoo.yml
-/home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml
-/home/fhcadmin/Projects/devarch/compose/project/gitea.yml
-/home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml
-
-🔍 Testing determine_install_categories function...
-Installing all categories: database dbms backend analytics ai mail project erp auth proxy
-
-🎯 Final categories to install:
-  - database
-  - dbms
-  - backend
-  - analytics
-  - ai
-  - mail
-  - project
-  - erp
-  - auth
-  - proxy
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch/scripts]1;..varch/scripts]7;file://FHCDT32/home/fhcadmin/Projects/devarch/scripts\[0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mscripts[00m [01;34mgit:([31mmaster[34m) [33m✗[00m chmod +x debug-categories.sh
-./debug-categories.sh[K[A[33C[19Dcomprehensive-fix.sh[1B[53Dcomprehensive-fix.sh[A[33C[20Ddebug-categories.sh [1B[53Ddebug-categories.sh [A[32C[28D                            [1B[K[A[26Cccd ..[?1l>[?2004l[1B]2;cd ..]1;cd[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004hcd ..chmod +x debug-categories.sh
-./debug-categories.sh[K[A[33C[19Dcomprehensive-fix.sh[1B[53Dcomprehensive-fix.sh[A[33C[29Dscripts                      [1B[K[A[33C chmod +x comprehensive-fix.sh[1B./comprehensive-fix.sh[K[A[33C[29D./scripts/install.sh -sed -v [1B[K[A[54C[?1l>[?2004l[1B]2;./scripts/install.sh -sed -v]1;./scripts/install.sh/home/fhcadmin/Projects/devarch/scripts/config.sh:export:284: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:291: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:292: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:293: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:294: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:295: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:296: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:297: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:298: invalid option(s)
-./scripts/install.sh:242: parse error near `fi'
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/install.sh -sed -v[?1l>[?2004l
-]2;./scripts/install.sh -sed -v]1;./scripts/install.sh./scripts/install.sh: line 242: syntax error near unexpected token `fi'
-./scripts/install.sh: line 242: `    fi'
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/install.sh -sed -v[?1l>[?2004l
-]2;./scripts/install.sh -sed -v]1;./scripts/install.sh[0;36m[2025-06-13 10:21:04] [DEBUG] [install.sh] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true[0m
-./scripts/install.sh: line 101: ${(k)SERVICE_CATEGORIES}: bad substitution
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/install.sh -sed -v[?1l>[?2004l
-]2;./scripts/install.sh -sed -v]1;./scripts/install.sh[0;36m[2025-06-13 10:22:31] [DEBUG] [install.sh] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true[0m
-./scripts/install.sh: line 101: ${(k)SERVICE_CATEGORIES}: bad substitution
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/install.sh -sed -v[?1l>[?2004l
-]2;./scripts/install.sh -sed -v]1;./scripts/install.sh/home/fhcadmin/Projects/devarch/scripts/config.sh:export:284: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:285: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:286: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:287: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:288: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:289: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:290: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:291: invalid option(s)
-[0;36m[2025-06-13 10:23:12] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true[0m
-
-📋 INSTALLATION SUMMARY
-======================
-
-Project Root: /home/fhcadmin/Projects/devarch
-Container Runtime: podman
-Categories to Install: [0;32m[2025-06-13 10:23:12] [INFO] [log] Installing all categories[0m database dbms backend analytics ai mail project erp auth proxy
-
-
-Installation Options:
-- Skip Confirmation: false
-- Skip Database Setup: false
-- Skip SSL Setup: false
-- Skip Trust Setup: false
-- Parallel Install: false
-- Use Sudo: true
-- Show Errors: true
-- Dry Run: true
-
-Estimated Installation Time: 10-15 minutes
-
-[0;32m[2025-06-13 10:23:12] [INFO] [log] Performing pre-installation checks...[0m
-[0;36m[2025-06-13 10:23:12] [DEBUG] [log] Container runtime: podman[0m
-[0;33m[2025-06-13 10:23:12] [WARN] [log] Sudo access required but not available. Some operations may fail.[0m
-[0;36m[2025-06-13 10:23:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml[0m
-[0;36m[2025-06-13 10:23:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml[0m
-[0;36m[2025-06-13 10:23:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml[0m
-[0;36m[2025-06-13 10:23:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml[0m
-[0;36m[2025-06-13 10:23:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml[0m
-[0;36m[2025-06-13 10:23:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml[0m
-[0;36m[2025-06-13 10:23:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml[0m
-[0;36m[2025-06-13 10:23:14] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml[0m
-[0;36m[2025-06-13 10:23:14] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml[0m
-[0;36m[2025-06-13 10:23:14] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml[0m
-[0;36m[2025-06-13 10:23:14] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml[0m
-[0;36m[2025-06-13 10:23:14] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml[0m
-[0;32m[2025-06-13 10:23:14] [INFO] [log] Compose file validation: 29/29 files valid[0m
-[0;32m[2025-06-13 10:23:14] [INFO] [log] 🚀 Starting microservices installation...[0m
-[0;32m[2025-06-13 10:23:14] [INFO] [log] Starting installation of 17 categories...[0m
-[0;36m[2025-06-13 10:23:14] [DEBUG] [log] Checking if network 'microservices-net' exists[0m
-[0;36m[2025-06-13 10:23:14] [DEBUG] [log] Executing: Check network existence[0m
-[0;36m[2025-06-13 10:23:14] [DEBUG] [log] Command: sudo podman network exists microservices-net[0m
-[sudo] password for fhcadmin: 
-[0;32m[2025-06-13 10:23:27] [INFO] [log] ✅ Check network existence - Success[0m
-[0;32m[2025-06-13 10:23:27] [INFO] [log] Network 'microservices-net' already exists[0m
-[0;32m[2025-06-13 10:23:27] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13[0m
-[0;32m[2025-06-13 10:23:30] [INFO] [log] 📦 Installing category: 10:23:14][0m
-[0;32m[2025-06-13 10:23:33] [INFO] [log] 📦 Installing category: [INFO][0m
-[0;32m[2025-06-13 10:23:36] [INFO] [log] 📦 Installing category: [log][0m
-[0;32m[2025-06-13 10:23:39] [INFO] [log] 📦 Installing category: Installing[0m
-[0;32m[2025-06-13 10:23:42] [INFO] [log] 📦 Installing category: all[0m
-[0;32m[2025-06-13 10:23:45] [INFO] [log] 📦 Installing category: categories[0m[0m
-[0;32m[2025-06-13 10:23:48] [INFO] [log] 📦 Installing category: database[0m
-[0;32m[2025-06-13 10:23:48] [INFO] [log]   🚀 Starting service: postgres[0m
-[0;32m[2025-06-13 10:23:48] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/postgres.yml up -d[0m
-[0;32m[2025-06-13 10:23:48] [INFO] [log]   🚀 Starting service: mysql[0m
-[0;32m[2025-06-13 10:23:48] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mysql.yml up -d[0m
-[0;32m[2025-06-13 10:23:48] [INFO] [log]   🚀 Starting service: mariadb[0m
-[0;32m[2025-06-13 10:23:48] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml up -d[0m
-[0;32m[2025-06-13 10:23:48] [INFO] [log]   🚀 Starting service: mongodb[0m
-[0;32m[2025-06-13 10:23:48] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml up -d[0m
-[0;32m[2025-06-13 10:23:48] [INFO] [log]   🚀 Starting service: redis[0m
-[0;32m[2025-06-13 10:23:48] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/redis.yml up -d[0m
-[0;32m[2025-06-13 10:23:48] [INFO] [log]   🔍 Performing health checks for database services...[0m
-[0;32m[2025-06-13 10:23:53] [INFO] [log] Checking health of service: postgres[0m
-[0;36m[2025-06-13 10:23:53] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:23:53] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:23:53] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:23:53] [DEBUG] [log] Service postgres not ready, attempt 1/15[0m
-[0;36m[2025-06-13 10:23:56] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:23:56] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:23:57] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:23:57] [DEBUG] [log] Service postgres not ready, attempt 2/15[0m
-[0;36m[2025-06-13 10:24:00] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:24:00] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:24:00] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:24:00] [DEBUG] [log] Service postgres not ready, attempt 3/15[0m
-[0;36m[2025-06-13 10:24:03] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:24:03] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:24:03] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:24:03] [DEBUG] [log] Service postgres not ready, attempt 4/15[0m
-[0;36m[2025-06-13 10:24:06] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:24:06] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:24:06] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:24:06] [DEBUG] [log] Service postgres not ready, attempt 5/15[0m
-[0;36m[2025-06-13 10:24:09] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:24:09] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:24:09] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:24:09] [DEBUG] [log] Service postgres not ready, attempt 6/15[0m
-^C
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/install.sh -sed -v[28Dcd ..                       [23D./scripts/install.sh -sed -v[1C                debug-categories.sh[1m [0m[0m [?1l>[?2004l
-]2;./scripts/debug-categories.sh]1;./scripts/debug-categories.sh🔍 Debugging category parsing...
-Script Dir: /home/fhcadmin/Projects/devarch/scripts
-Project Root: /home/fhcadmin/Projects/devarch
-Compose Dir: /home/fhcadmin/Projects/devarch/compose
-
-📋 SERVICE_CATEGORIES definition:
-Keys: project erp ai analytics database dbms proxy mail backend auth
-
-📋 SERVICE_STARTUP_ORDER:
-  [0] database
-  [1] dbms
-  [2] backend
-  [3] analytics
-  [4] ai
-  [5] mail
-  [6] project
-  [7] erp
-  [8] auth
-  [9] proxy
-
-📋 Individual category contents:
-Category: project
-  - project/gitea.yml
-    ✅ File exists
-
-Category: erp
-  - erp/odoo.yml
-    ✅ File exists
-
-Category: ai
-  - ai/langflow.yml
-    ✅ File exists
-  - ai/n8n.yml
-    ✅ File exists
-
-Category: analytics
-  - analytics/elasticsearch.yml
-    ✅ File exists
-  - analytics/kibana.yml
-    ✅ File exists
-  - analytics/logstash.yml
-    ✅ File exists
-  - analytics/grafana.yml
-    ✅ File exists
-  - analytics/prometheus.yml
-    ✅ File exists
-  - analytics/matomo.yml
-    ✅ File exists
-
-Category: database
-  - database/postgres.yml
-    ✅ File exists
-  - database/mysql.yml
-    ✅ File exists
-  - database/mariadb.yml
-    ✅ File exists
-  - database/mongodb.yml
-    ✅ File exists
-  - database/redis.yml
-    ✅ File exists
-
-Category: dbms
-  - dbms/adminer.yml
-    ✅ File exists
-  - dbms/pgadmin.yml
-    ✅ File exists
-  - dbms/phpmyadmin.yml
-    ✅ File exists
-  - dbms/mongo-express.yml
-    ✅ File exists
-  - dbms/metabase.yml
-    ✅ File exists
-  - dbms/nocodb.yml
-    ✅ File exists
-
-Category: proxy
-  - proxy/nginx-proxy-manager.yml
-    ✅ File exists
-
-Category: mail
-  - mail/mailpit.yml
-    ✅ File exists
-
-Category: backend
-  - backend/php.yml
-    ✅ File exists
-  - backend/node.yml
-    ✅ File exists
-  - backend/python.yml
-    ✅ File exists
-  - backend/go.yml
-    ✅ File exists
-  - backend/dotnet.yml
-    ✅ File exists
-
-Category: auth
-  - auth/keycloak.yml
-    ✅ File exists
-
-📁 Actual compose directory structure:
-/home/fhcadmin/Projects/devarch/compose/ai/langflow.yml
-/home/fhcadmin/Projects/devarch/compose/ai/n8n.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml
-/home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml
-/home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml
-/home/fhcadmin/Projects/devarch/compose/backend/go.yml
-/home/fhcadmin/Projects/devarch/compose/backend/node.yml
-/home/fhcadmin/Projects/devarch/compose/backend/php.yml
-/home/fhcadmin/Projects/devarch/compose/backend/python.yml
-/home/fhcadmin/Projects/devarch/compose/database/mariadb.yml
-/home/fhcadmin/Projects/devarch/compose/database/mongodb.yml
-/home/fhcadmin/Projects/devarch/compose/database/mysql.yml
-/home/fhcadmin/Projects/devarch/compose/database/postgres.yml
-/home/fhcadmin/Projects/devarch/compose/database/redis.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml
-/home/fhcadmin/Projects/devarch/compose/erp/odoo.yml
-/home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml
-/home/fhcadmin/Projects/devarch/compose/project/gitea.yml
-/home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml
-
-🔍 Testing determine_install_categories function...
-Installing all categories: database dbms backend analytics ai mail project erp auth proxy
-
-🎯 Final categories to install:
-  - database
-  - dbms
-  - backend
-  - analytics
-  - ai
-  - mail
-  - project
-  - erp
-  - auth
-  - proxy
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[7mchmod +x targeted-fix.sh[27m
-[7m./targeted-fix.sh[27m[K[A[9C[27mc[27mh[27mm[27mo[27md[27m [27m+[27mx[27m [27mt[27ma[27mr[27mg[27me[27mt[27me[27md[27m-[27mf[27mi[27mx[27m.[27ms[27mh[1B[27m.[27m/[27mt[27ma[27mr[27mg[27me[27mt[27me[27md[27m-[27mf[27mi[27mx[27m.[27ms[27mh[?1l>[?2004l
-]2;chmod +x targeted-fix.sh; ./targeted-fix.sh]1;chmodchmod: cannot access 'targeted-fix.sh': No such file or directory
-zsh: no such file or directory: ./targeted-fix.sh
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004hsscr
-[0mScriptRunner.exe  scrcons.mof       script            scripto.dll       [01;34mscripts[0m/          scrobj.dll        scrrun.dll                                        
-[Jscrcons.exe       [Jscreendump        [Jscriptlive        [Jscriptreplay      [Jscrnsave.scr      [Jscrptadm.dll      [J                                                [A[A[0m[27m[24m[26Cscr[K s  [?2004l
-[J[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[?2004l
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[?2004l
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[7mchmod +x targeted-fix.sh[27m
-[7m./targeted-fix.sh[27m[K[A[9C[27mc[27mh[27mm[27mo[27md[27m [27m+[27mx[27m [27mt[27ma[27mr[27mg[27me[27mt[27me[27md[27m-[27mf[27mi[27mx[27m.[27ms[27mh[1B[27m.[27m/[27mt[27ma[27mr[27mg[27me[27mt[27me[27md[27m-[27mf[27mi[27mx[27m.[27ms[27mh.s/targeted-fix.sh[16Dc/targeted-fix.sh[16Dr/targeted-fix.sh[16Di/targeted-fix.sh[16Dp/targeted-fix.sh[16Dt/targeted-fix.sh[16Ds/targeted-fix.sh[16D[1C[A[26C[1C.targeted-fix.sh[15D/targeted-fix.sh[15Dstargeted-fix.sh[15Dctargeted-fix.sh[15Drtargeted-fix.sh[15Ditargeted-fix.sh[15Dptargeted-fix.sh[15D[1Ctargeted-fix.sh[15Dstargeted-fix.sh[15D/targeted-fix.sh[15D[?1l>[?2004l[1B
-]2;chmod +x ./scripts/targeted-fix.sh; .scripts/targeted-fix.sh]1;chmodzsh: no such file or directory: .scripts/targeted-fix.sh
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004hchmod +x ./scripts/targeted-fix.sh
-.scripts/targeted-fix.sh[K[A[36C[1B[26D[1C./scripts/targeted-fix.sh[23D[?1l>[?2004l
-]2;chmod +x ./scripts/targeted-fix.sh; ./scripts/targeted-fix.sh]1;chmod🔧 Applying targeted fix for category parsing...
-📝 Examining install.sh for the issue...
-186:            log "INFO" "Installing all categories except: ${EXCLUDE_CATEGORIES[*]}"
-188:            log "INFO" "Installing all categories"
-Found the problematic log statement
-📝 Fixing determine_install_categories function...
-📝 Adding log messages at the calling site...
-📝 Fixing config.sh export statements...
-✅ Targeted fixes completed
-
-🔍 What was fixed:
-  ✅ Removed log statements from determine_install_categories function
-  ✅ Moved logging to the calling site
-  ✅ Fixed config.sh export statements
-  ✅ Cleaned up duplicate lines
-
-💡 Test with: ./scripts/install.sh -sed -v
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004hchmod +x ./scripts/targeted-fix.sh
-./scripts/targeted-fix.sh[K[A[35C[1B.[P[161C[K[A[102D[25D[10P[15C          [1B.[7P[16C       [A[26C[24D./scripts/debug-categories.sh[1B[K[A[55C[19Dinstall.sh -sed -v [?1l>[?2004l[1B]2;./scripts/install.sh -sed -v]1;./scripts/install.sh/home/fhcadmin/Projects/devarch/scripts/config.sh:64: parse error near `()'
-main:2: command not found: parse_common_args
-show_installation_summary:log:10: too many arguments
-
-📋 INSTALLATION SUMMARY
-======================
-
-Project Root: /home/fhcadmin/Projects/devarch
-Container Runtime: 
-Categories to Install: 
-
-
-Installation Options:
-- Skip Confirmation: false
-- Skip Database Setup: false
-- Skip SSL Setup: false
-- Skip Trust Setup: false
-- Parallel Install: false
-- Use Sudo: 
-- Show Errors: 
-- Dry Run: 
-
-Estimated Installation Time: 10-15 minutes
-
-Do you want to proceed with the installation? (y/N)
-y
-pre_installation_checks:log:1: too many arguments
-pre_installation_checks:log:4: too many arguments
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:log:36: too many arguments
-pre_installation_checks:log:39: too many arguments
-main:log:18: too many arguments
-install_services:log:10: too many arguments
-install_services:log:14: too many arguments
-install_services:17: command not found: ensure_network
-setup_databases:log:6: too many arguments
-setup_databases:log:9: too many arguments
-setup_databases:22: command not found: execute_command
-setup_ssl_certificates:log:6: too many arguments
-setup_ssl_certificates:log:9: too many arguments
-setup_ssl_certificates:21: command not found: execute_command
-trust_ssl_certificates:log:6: too many arguments
-trust_ssl_certificates:17: command not found: execute_command
-
-🎉 INSTALLATION COMPLETED SUCCESSFULLY!
-======================================
-
-Your microservices environment is now running!
-
-📊 Dashboard Access:
-- Nginx Proxy Manager: https://nginx.test (admin panel: http://localhost:81)
-- Grafana Monitoring: https://grafana.test (admin:123456)
-- Metabase Analytics: https://metabase.test
-
-🗄️ Database Management:
-- Adminer: https://adminer.test
-- phpMyAdmin: https://phpmyadmin.test  
-- Mongo Express: https://mongodb.test
-- pgAdmin: https://pgadmin.test
-
-🚀 Development Tools:
-- Mailpit: https://mailpit.test
-- Gitea: https://gitea.test
-
-💼 Business Applications:
-- Odoo ERP: https://odoo.test
-
-🤖 AI & Automation:
-- n8n Workflows: https://n8n.test
-- Langflow: https://langflow.test
-
-🔧 Useful Commands:
-- View services: /home/fhcadmin/Projects/devarch/scripts/show-services.sh
-- Stop all: /home/fhcadmin/Projects/devarch/scripts/stop-services.sh
-- Restart all: /home/fhcadmin/Projects/devarch/scripts/start-services.sh
-
-📝 Next Steps:
-1. Configure your proxy rules in Nginx Proxy Manager
-2. Set up your first database connections
-3. Deploy your applications to the apps/ directory
-4. Configure monitoring dashboards in Grafana
-
-main:log:31: too many arguments
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/install.sh -sed -v[28Dchmod +x ./scripts/targeted-fix.sh
-./scripts/targeted-fix.sh[K[A[35C[1B.[P[161C[K[A[102D[25D[10P[15C          [1B.[7P[16C       [A[26C[24D./scripts/debug-categories.sh[1B[K[A[55C[?1l>[?2004l[1B]2;./scripts/debug-categories.sh]1;./scripts/debug-categories.sh/home/fhcadmin/Projects/devarch/scripts/config.sh: line 64: syntax error near unexpected token `('
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 64: `log() {'
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 65: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 66: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 67: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 68: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 86: syntax error near unexpected token `}'
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 86: `}'
-🔍 Debugging category parsing...
-Script Dir: /home/fhcadmin/Projects/devarch/scripts
-Project Root: /home/fhcadmin/Projects/devarch
-Compose Dir: /home/fhcadmin/Projects/devarch/compose
-
-📋 SERVICE_CATEGORIES definition:
-Keys: project erp ai analytics database dbms proxy mail backend auth
-
-📋 SERVICE_STARTUP_ORDER:
-
-📋 Individual category contents:
-Category: project
-  - project/gitea.yml
-    ✅ File exists
-
-Category: erp
-  - erp/odoo.yml
-    ✅ File exists
-
-Category: ai
-  - ai/langflow.yml
-    ✅ File exists
-  - ai/n8n.yml
-    ✅ File exists
-
-Category: analytics
-  - analytics/elasticsearch.yml
-    ✅ File exists
-  - analytics/kibana.yml
-    ✅ File exists
-  - analytics/logstash.yml
-    ✅ File exists
-  - analytics/grafana.yml
-    ✅ File exists
-  - analytics/prometheus.yml
-    ✅ File exists
-  - analytics/matomo.yml
-    ✅ File exists
-
-Category: database
-  - database/postgres.yml
-    ✅ File exists
-  - database/mysql.yml
-    ✅ File exists
-  - database/mariadb.yml
-    ✅ File exists
-  - database/mongodb.yml
-    ✅ File exists
-  - database/redis.yml
-    ✅ File exists
-
-Category: dbms
-  - dbms/adminer.yml
-    ✅ File exists
-  - dbms/pgadmin.yml
-    ✅ File exists
-  - dbms/phpmyadmin.yml
-    ✅ File exists
-  - dbms/mongo-express.yml
-    ✅ File exists
-  - dbms/metabase.yml
-    ✅ File exists
-  - dbms/nocodb.yml
-    ✅ File exists
-
-Category: proxy
-  - proxy/nginx-proxy-manager.yml
-    ✅ File exists
-
-Category: mail
-  - mail/mailpit.yml
-    ✅ File exists
-
-Category: backend
-  - backend/php.yml
-    ✅ File exists
-  - backend/node.yml
-    ✅ File exists
-  - backend/python.yml
-    ✅ File exists
-  - backend/go.yml
-    ✅ File exists
-  - backend/dotnet.yml
-    ✅ File exists
-
-Category: auth
-  - auth/keycloak.yml
-    ✅ File exists
-
-📁 Actual compose directory structure:
-/home/fhcadmin/Projects/devarch/compose/ai/langflow.yml
-/home/fhcadmin/Projects/devarch/compose/ai/n8n.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml
-/home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml
-/home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml
-/home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml
-/home/fhcadmin/Projects/devarch/compose/backend/go.yml
-/home/fhcadmin/Projects/devarch/compose/backend/node.yml
-/home/fhcadmin/Projects/devarch/compose/backend/php.yml
-/home/fhcadmin/Projects/devarch/compose/backend/python.yml
-/home/fhcadmin/Projects/devarch/compose/database/mariadb.yml
-/home/fhcadmin/Projects/devarch/compose/database/mongodb.yml
-/home/fhcadmin/Projects/devarch/compose/database/mysql.yml
-/home/fhcadmin/Projects/devarch/compose/database/postgres.yml
-/home/fhcadmin/Projects/devarch/compose/database/redis.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml
-/home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml
-/home/fhcadmin/Projects/devarch/compose/erp/odoo.yml
-/home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml
-/home/fhcadmin/Projects/devarch/compose/project/gitea.yml
-/home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml
-
-🔍 Testing determine_install_categories function...
-Installing all categories: 
-
-🎯 Final categories to install:
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/debug-categories.sh[19Dinstall.sh -sed -v [28Dchmod +x ./scripts/targeted-fix.sh
-./scripts/targeted-fix.sh[K[A[35C[34D[9P[10Cinstall.sh -sed -v      [1B[K[A[54C[?1l>[?2004l[1B]2;./scripts/install.sh -sed -v]1;./scripts/install.sh/home/fhcadmin/Projects/devarch/scripts/config.sh:64: parse error near `()'
-main:2: command not found: parse_common_args
-determine_install_categories:log:18: too many arguments
-
-📋 INSTALLATION SUMMARY
-======================
-
-Project Root: /home/fhcadmin/Projects/devarch
-Container Runtime: 
-Categories to Install: 
-
-
-Installation Options:
-- Skip Confirmation: false
-- Skip Database Setup: false
-- Skip SSL Setup: false
-- Skip Trust Setup: false
-- Parallel Install: false
-- Use Sudo: 
-- Show Errors: 
-- Dry Run: 
-
-Estimated Installation Time: 10-15 minutes
-
-Do you want to proceed with the installation? (y/N)
-y
-pre_installation_checks:log:1: too many arguments
-pre_installation_checks:log:4: too many arguments
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:30: command not found: validate_compose_file
-pre_installation_checks:log:36: too many arguments
-pre_installation_checks:log:39: too many arguments
-main:log:18: too many arguments
-determine_install_categories:log:18: too many arguments
-install_services:log:3: too many arguments
-install_services:6: command not found: ensure_network
-setup_databases:log:6: too many arguments
-setup_databases:log:9: too many arguments
-^C
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[?2004l
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/install.sh -sed -v[?1l>[?2004l
-]2;./scripts/install.sh -sed -v]1;./scripts/install.sh/home/fhcadmin/Projects/devarch/scripts/config.sh: line 64: syntax error near unexpected token `('
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 64: `log() {'
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 65: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 66: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 67: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 68: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 86: syntax error near unexpected token `}'
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 86: `}'
-./scripts/install.sh: line 463: parse_common_args: command not found
-./scripts/install.sh: line 101: ${(k)SERVICE_CATEGORIES}: bad substitution
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/install.sh -sed -v[?1l>[?2004l
-]2;./scripts/install.sh -sed -v]1;./scripts/install.sh/home/fhcadmin/Projects/devarch/scripts/config.sh: line 64: syntax error near unexpected token `('
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 64: `log() {'
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 65: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 66: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 67: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 68: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 86: syntax error near unexpected token `}'
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 86: `}'
-./scripts/install.sh: line 463: parse_common_args: command not found
-./scripts/install.sh: line 101: ${(k)SERVICE_CATEGORIES}: bad substitution
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/install.sh -sed -v[?1l>[?2004l
-]2;./scripts/install.sh -sed -v]1;./scripts/install.sh/home/fhcadmin/Projects/devarch/scripts/config.sh: line 64: syntax error near unexpected token `('
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 64: `log() {'
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 65: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 66: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 67: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 68: local: can only be used in a function
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 86: syntax error near unexpected token `}'
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 86: `}'
-./scripts/install.sh: line 463: parse_common_args: command not found
-./scripts/install.sh: line 101: ${(k)SERVICE_CATEGORIES}: bad substitution
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/install.sh -sed -v[?1l>[?2004l
-]2;./scripts/install.sh -sed -v]1;./scripts/install.sh[0;36m[2025-06-13 10:31:26] [DEBUG] [install.sh] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true[0m
-./scripts/install.sh: line 101: ${(k)SERVICE_CATEGORIES}: bad substitution
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/install.sh -sed -v[?1l>[?2004l
-]2;./scripts/install.sh -sed -v]1;./scripts/install.sh[0;36m[2025-06-13 10:31:41] [DEBUG] [install.sh] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true[0m
-./scripts/install.sh: line 101: ${(k)SERVICE_CATEGORIES}: bad substitution
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/install.sh -sed -v[?1l>[?2004l
-]2;./scripts/install.sh -sed -v]1;./scripts/install.sh[0;36m[2025-06-13 10:31:51] [DEBUG] [install.sh] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true[0m
-./scripts/install.sh: line 101: ${(k)SERVICE_CATEGORIES}: bad substitution
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/install.sh -sed -v[?1l>[?2004l
-]2;./scripts/install.sh -sed -v]1;./scripts/install.sh/home/fhcadmin/Projects/devarch/scripts/config.sh:export:284: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:285: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:286: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:287: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:288: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:289: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:290: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:291: invalid option(s)
-[0;36m[2025-06-13 10:32:16] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true[0m
-
-📋 INSTALLATION SUMMARY
-======================
-
-Project Root: /home/fhcadmin/Projects/devarch
-Container Runtime: podman
-Categories to Install: [0;32m[2025-06-13 10:32:16] [INFO] [log] Installing all categories[0m database dbms backend analytics ai mail project erp auth proxy
-
-
-Installation Options:
-- Skip Confirmation: false
-- Skip Database Setup: false
-- Skip SSL Setup: false
-- Skip Trust Setup: false
-- Parallel Install: false
-- Use Sudo: true
-- Show Errors: true
-- Dry Run: true
-
-Estimated Installation Time: 10-15 minutes
-
-[0;32m[2025-06-13 10:32:16] [INFO] [log] Performing pre-installation checks...[0m
-[0;36m[2025-06-13 10:32:16] [DEBUG] [log] Container runtime: podman[0m
-[0;33m[2025-06-13 10:32:16] [WARN] [log] Sudo access required but not available. Some operations may fail.[0m
-[0;36m[2025-06-13 10:32:16] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml[0m
-[0;36m[2025-06-13 10:32:17] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml[0m
-[0;36m[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml[0m
-[0;36m[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml[0m
-[0;36m[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml[0m
-[0;36m[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml[0m
-[0;36m[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml[0m
-[0;36m[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml[0m
-[0;36m[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml[0m
-[0;36m[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml[0m
-[0;36m[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml[0m
-[0;36m[2025-06-13 10:32:18] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml[0m
-[0;32m[2025-06-13 10:32:18] [INFO] [log] Compose file validation: 29/29 files valid[0m
-[0;32m[2025-06-13 10:32:18] [INFO] [log] 🚀 Starting microservices installation...[0m
-[0;32m[2025-06-13 10:32:18] [INFO] [log] Starting installation of 17 categories...[0m
-[0;36m[2025-06-13 10:32:18] [DEBUG] [log] Checking if network 'microservices-net' exists[0m
-[0;36m[2025-06-13 10:32:18] [DEBUG] [log] Executing: Check network existence[0m
-[0;36m[2025-06-13 10:32:18] [DEBUG] [log] Command: sudo podman network exists microservices-net[0m
-[sudo] password for fhcadmin: 
-[0;32m[2025-06-13 10:32:26] [INFO] [log] ✅ Check network existence - Success[0m
-[0;32m[2025-06-13 10:32:26] [INFO] [log] Network 'microservices-net' already exists[0m
-[0;32m[2025-06-13 10:32:26] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13[0m
-[0;32m[2025-06-13 10:32:29] [INFO] [log] 📦 Installing category: 10:32:18][0m
-[0;32m[2025-06-13 10:32:32] [INFO] [log] 📦 Installing category: [INFO][0m
-[0;32m[2025-06-13 10:32:35] [INFO] [log] 📦 Installing category: [log][0m
-[0;32m[2025-06-13 10:32:38] [INFO] [log] 📦 Installing category: Installing[0m
-[0;32m[2025-06-13 10:32:41] [INFO] [log] 📦 Installing category: all[0m
-[0;32m[2025-06-13 10:32:44] [INFO] [log] 📦 Installing category: categories[0m[0m
-[0;32m[2025-06-13 10:32:47] [INFO] [log] 📦 Installing category: database[0m
-[0;32m[2025-06-13 10:32:47] [INFO] [log]   🚀 Starting service: postgres[0m
-[0;32m[2025-06-13 10:32:47] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/postgres.yml up -d[0m
-[0;32m[2025-06-13 10:32:47] [INFO] [log]   🚀 Starting service: mysql[0m
-[0;32m[2025-06-13 10:32:47] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mysql.yml up -d[0m
-[0;32m[2025-06-13 10:32:47] [INFO] [log]   🚀 Starting service: mariadb[0m
-[0;32m[2025-06-13 10:32:47] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml up -d[0m
-[0;32m[2025-06-13 10:32:47] [INFO] [log]   🚀 Starting service: mongodb[0m
-[0;32m[2025-06-13 10:32:47] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml up -d[0m
-[0;32m[2025-06-13 10:32:47] [INFO] [log]   🚀 Starting service: redis[0m
-[0;32m[2025-06-13 10:32:47] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/redis.yml up -d[0m
-[0;32m[2025-06-13 10:32:47] [INFO] [log]   🔍 Performing health checks for database services...[0m
-[0;32m[2025-06-13 10:32:52] [INFO] [log] Checking health of service: postgres[0m
-[0;36m[2025-06-13 10:32:52] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:32:52] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:32:52] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:32:52] [DEBUG] [log] Service postgres not ready, attempt 1/15[0m
-[0;36m[2025-06-13 10:32:55] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:32:55] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:32:55] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:32:55] [DEBUG] [log] Service postgres not ready, attempt 2/15[0m
-[0;36m[2025-06-13 10:32:58] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:32:58] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:32:58] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:32:58] [DEBUG] [log] Service postgres not ready, attempt 3/15[0m
-[0;36m[2025-06-13 10:33:01] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:33:01] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:33:02] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:33:02] [DEBUG] [log] Service postgres not ready, attempt 4/15[0m
-[0;36m[2025-06-13 10:33:05] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:33:05] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:33:05] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:33:05] [DEBUG] [log] Service postgres not ready, attempt 5/15[0m
-[0;36m[2025-06-13 10:33:08] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:33:08] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:33:08] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:33:08] [DEBUG] [log] Service postgres not ready, attempt 6/15[0m
-[0;36m[2025-06-13 10:33:11] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:33:11] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:33:11] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:33:11] [DEBUG] [log] Service postgres not ready, attempt 7/15[0m
-[0;36m[2025-06-13 10:33:14] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:33:14] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:33:14] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:33:14] [DEBUG] [log] Service postgres not ready, attempt 8/15[0m
-[0;36m[2025-06-13 10:33:17] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:33:17] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:33:17] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:33:17] [DEBUG] [log] Service postgres not ready, attempt 9/15[0m
-[0;36m[2025-06-13 10:33:20] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:33:20] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:33:20] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:33:20] [DEBUG] [log] Service postgres not ready, attempt 10/15[0m
-[0;36m[2025-06-13 10:33:23] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:33:23] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:33:23] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:33:23] [DEBUG] [log] Service postgres not ready, attempt 11/15[0m
-[0;36m[2025-06-13 10:33:26] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:33:26] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:33:26] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:33:26] [DEBUG] [log] Service postgres not ready, attempt 12/15[0m
-[0;36m[2025-06-13 10:33:29] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:33:29] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:33:29] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:33:29] [DEBUG] [log] Service postgres not ready, attempt 13/15[0m
-[0;36m[2025-06-13 10:33:32] [DEBUG] [log] Executing: Check postgres status[0m
-[0;36m[2025-06-13 10:33:32] [DEBUG] [log] Command: sudo podman container inspect postgres --format '{{.State.Status}}'[0m
-[0;33m[2025-06-13 10:33:33] [WARN] [log] ⚠️  Check postgres status - Failed (exit code: 125), continuing...[0m
-[0;36m[2025-06-13 10:33:33] [DEBUG] [log] Service postgres not ready, attempt 14/15[0m
-^C
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h../scripts[1m/[0m[0m/comprehensive-fix.sh[1m [0m[0m [?1l>[?2004l
-]2;./scripts/comprehensive-fix.sh]1;./scripts/comprehensive-fix.sh🔧 Applying comprehensive fixes...
-📝 Fixing config.sh export statements...
-✅ config.sh exports fixed
-📝 Fixing install.sh category determination...
-✅ install.sh category determination fixed
-📝 Fixing install.sh health checks in dry mode...
-✅ install.sh health checks fixed
-📝 Updating SERVICE_CATEGORIES in config.sh...
-✅ SERVICE_CATEGORIES updated
-📝 Cleaning up syntax issues...
-✅ Syntax cleanup completed
-🔍 Verifying fixes...
-📁 Category structure:
-  ✅ database: 5 files
-  ✅ dbms: 6 files
-  ✅ backend: 5 files
-  ✅ analytics: 6 files
-  ✅ ai: 2 files
-  ✅ mail: 1 files
-  ✅ project: 1 files
-  ✅ erp: 1 files
-  ✅ auth: 1 files
-  ✅ proxy: 1 files
-
-🎉 Comprehensive fixes completed!
-
-📋 Summary of fixes:
-  ✅ Fixed config.sh export statements
-  ✅ Fixed install.sh category determination
-  ✅ Fixed health checks in dry run mode
-  ✅ Updated SERVICE_CATEGORIES paths
-  ✅ Updated SERVICE_STARTUP_ORDER
-  ✅ Cleaned up syntax issues
-
-💡 Test with: ./scripts/install.sh -sed -v
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/comprehensive-fix.sh[20Dinstall.sh -sed -v  [?1l>[?2004l
-]2;./scripts/install.sh -sed -v]1;./scripts/install.sh/home/fhcadmin/Projects/devarch/scripts/config.sh:export:284: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:291: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:292: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:293: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:294: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:295: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:296: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:297: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:298: invalid option(s)
-./scripts/install.sh:242: parse error near `fi'
-[1m[7m%[27m[1m[0m                                                                                                                                                                   ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/install.sh -sed -v[?1l>[?2004l
-]2;./scripts/install.sh -sed -v]1;./scripts/install.sh/home/fhcadmin/Projects/devarch/scripts/config.sh:export:284: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:291: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:292: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:293: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:294: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:295: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:296: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:297: invalid option(s)
-/home/fhcadmin/Projects/devarch/scripts/config.sh:export:298: invalid option(s)
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true[0m
-
-📋 INSTALLATION SUMMARY
-======================
-
-Project Root: /home/fhcadmin/Projects/devarch
-Container Runtime: podman
-Categories to Install: [0;32m[2025-06-13 10:35:07] [INFO] [log] Installing all categories[0m database dbms backend analytics ai mail project erp auth proxy
-
-
-Installation Options:
-- Skip Confirmation: false
-- Skip Database Setup: false
-- Skip SSL Setup: false
-- Skip Trust Setup: false
-- Parallel Install: false
-- Use Sudo: true
-- Show Errors: true
-- Dry Run: true
-
-Estimated Installation Time: 10-15 minutes
-
-[0;32m[2025-06-13 10:35:07] [INFO] [log] Performing pre-installation checks...[0m
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Container runtime: podman[0m
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml[0m
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml[0m
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml[0m
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml[0m
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml[0m
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml[0m
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml[0m
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml[0m
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml[0m
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml[0m
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml[0m
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml[0m
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml[0m
-[0;36m[2025-06-13 10:35:07] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml[0m
-[0;32m[2025-06-13 10:35:08] [INFO] [log] Compose file validation: 29/29 files valid[0m
-[0;32m[2025-06-13 10:35:08] [INFO] [log] 🚀 Starting microservices installation...[0m
-[0;32m[2025-06-13 10:35:08] [INFO] [log] Starting installation of 17 categories...[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Checking if network 'microservices-net' exists[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Executing: Check network existence[0m
-[0;36m[2025-06-13 10:35:08] [DEBUG] [log] Command: sudo podman network exists microservices-net[0m
-[0;32m[2025-06-13 10:35:08] [INFO] [log] ✅ Check network existence - Success[0m
-[0;32m[2025-06-13 10:35:08] [INFO] [log] Network 'microservices-net' already exists[0m
-[0;32m[2025-06-13 10:35:08] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13[0m
-[0;32m[2025-06-13 10:35:11] [INFO] [log] 📦 Installing category: 10:35:08][0m
-[0;32m[2025-06-13 10:35:14] [INFO] [log] 📦 Installing category: [INFO][0m
-[0;32m[2025-06-13 10:35:17] [INFO] [log] 📦 Installing category: [log][0m
-[0;32m[2025-06-13 10:35:20] [INFO] [log] 📦 Installing category: Installing[0m
-[0;32m[2025-06-13 10:35:23] [INFO] [log] 📦 Installing category: all[0m
-[0;32m[2025-06-13 10:35:26] [INFO] [log] 📦 Installing category: categories[0m[0m
-[0;32m[2025-06-13 10:35:29] [INFO] [log] 📦 Installing category: database[0m
-[0;32m[2025-06-13 10:35:29] [INFO] [log]   🚀 Starting service: postgres[0m
-[0;32m[2025-06-13 10:35:29] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/postgres.yml up -d[0m
-[0;32m[2025-06-13 10:35:29] [INFO] [log]   🚀 Starting service: mysql[0m
-[0;32m[2025-06-13 10:35:29] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mysql.yml up -d[0m
-[0;32m[2025-06-13 10:35:29] [INFO] [log]   🚀 Starting service: mariadb[0m
-[0;32m[2025-06-13 10:35:29] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml up -d[0m
-[0;32m[2025-06-13 10:35:29] [INFO] [log]   🚀 Starting service: mongodb[0m
-[0;32m[2025-06-13 10:35:29] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml up -d[0m
-[0;32m[2025-06-13 10:35:29] [INFO] [log]   🚀 Starting service: redis[0m
-[0;32m[2025-06-13 10:35:29] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/database/redis.yml up -d[0m
-[0;32m[2025-06-13 10:35:29] [INFO] [log]   [DRY RUN] Would perform health checks for database services[0m
-[0;32m[2025-06-13 10:35:32] [INFO] [log] 📦 Installing category: dbms[0m
-[0;32m[2025-06-13 10:35:33] [INFO] [log]   🚀 Starting service: adminer[0m
-[0;32m[2025-06-13 10:35:33] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml up -d[0m
-[0;32m[2025-06-13 10:35:33] [INFO] [log]   🚀 Starting service: pgadmin[0m
-[0;32m[2025-06-13 10:35:33] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml up -d[0m
-[0;32m[2025-06-13 10:35:33] [INFO] [log]   🚀 Starting service: phpmyadmin[0m
-[0;32m[2025-06-13 10:35:33] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml up -d[0m
-[0;32m[2025-06-13 10:35:33] [INFO] [log]   🚀 Starting service: mongo-express[0m
-[0;32m[2025-06-13 10:35:33] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml up -d[0m
-[0;32m[2025-06-13 10:35:33] [INFO] [log]   🚀 Starting service: metabase[0m
-[0;32m[2025-06-13 10:35:33] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml up -d[0m
-[0;32m[2025-06-13 10:35:33] [INFO] [log]   🚀 Starting service: nocodb[0m
-[0;32m[2025-06-13 10:35:33] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml up -d[0m
-[0;32m[2025-06-13 10:35:36] [INFO] [log] 📦 Installing category: backend[0m
-[0;32m[2025-06-13 10:35:36] [INFO] [log]   🚀 Starting service: php[0m
-[0;32m[2025-06-13 10:35:36] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/backend/php.yml up -d[0m
-[0;32m[2025-06-13 10:35:36] [INFO] [log]   🚀 Starting service: node[0m
-[0;32m[2025-06-13 10:35:36] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/backend/node.yml up -d[0m
-[0;32m[2025-06-13 10:35:36] [INFO] [log]   🚀 Starting service: python[0m
-[0;32m[2025-06-13 10:35:36] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/backend/python.yml up -d[0m
-[0;32m[2025-06-13 10:35:36] [INFO] [log]   🚀 Starting service: go[0m
-[0;32m[2025-06-13 10:35:36] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/backend/go.yml up -d[0m
-[0;32m[2025-06-13 10:35:36] [INFO] [log]   🚀 Starting service: dotnet[0m
-[0;32m[2025-06-13 10:35:36] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml up -d[0m
-[0;32m[2025-06-13 10:35:39] [INFO] [log] 📦 Installing category: analytics[0m
-[0;32m[2025-06-13 10:35:39] [INFO] [log]   🚀 Starting service: elasticsearch[0m
-[0;32m[2025-06-13 10:35:39] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml up -d[0m
-[0;32m[2025-06-13 10:35:39] [INFO] [log]   🚀 Starting service: kibana[0m
-[0;32m[2025-06-13 10:35:39] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml up -d[0m
-[0;32m[2025-06-13 10:35:39] [INFO] [log]   🚀 Starting service: logstash[0m
-[0;32m[2025-06-13 10:35:39] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml up -d[0m
-[0;32m[2025-06-13 10:35:39] [INFO] [log]   🚀 Starting service: grafana[0m
-[0;32m[2025-06-13 10:35:39] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml up -d[0m
-[0;32m[2025-06-13 10:35:39] [INFO] [log]   🚀 Starting service: prometheus[0m
-[0;32m[2025-06-13 10:35:39] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml up -d[0m
-[0;32m[2025-06-13 10:35:39] [INFO] [log]   🚀 Starting service: matomo[0m
-[0;32m[2025-06-13 10:35:39] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml up -d[0m
-[0;32m[2025-06-13 10:35:42] [INFO] [log] 📦 Installing category: ai[0m
-[0;32m[2025-06-13 10:35:42] [INFO] [log]   🚀 Starting service: langflow[0m
-[0;32m[2025-06-13 10:35:42] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml up -d[0m
-[0;32m[2025-06-13 10:35:42] [INFO] [log]   🚀 Starting service: n8n[0m
-[0;32m[2025-06-13 10:35:42] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml up -d[0m
-[0;32m[2025-06-13 10:35:45] [INFO] [log] 📦 Installing category: mail[0m
-[0;32m[2025-06-13 10:35:45] [INFO] [log]   🚀 Starting service: mailpit[0m
-[0;32m[2025-06-13 10:35:45] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml up -d[0m
-[0;32m[2025-06-13 10:35:48] [INFO] [log] 📦 Installing category: project[0m
-[0;32m[2025-06-13 10:35:48] [INFO] [log]   🚀 Starting service: gitea[0m
-[0;32m[2025-06-13 10:35:48] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/project/gitea.yml up -d[0m
-[0;32m[2025-06-13 10:35:51] [INFO] [log] 📦 Installing category: erp[0m
-[0;32m[2025-06-13 10:35:51] [INFO] [log]   🚀 Starting service: odoo[0m
-[0;32m[2025-06-13 10:35:51] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml up -d[0m
-[0;32m[2025-06-13 10:35:54] [INFO] [log] 📦 Installing category: auth[0m
-[0;32m[2025-06-13 10:35:54] [INFO] [log]   🚀 Starting service: keycloak[0m
-[0;32m[2025-06-13 10:35:54] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml up -d[0m
-[0;32m[2025-06-13 10:35:57] [INFO] [log] 📦 Installing category: proxy[0m
-[0;32m[2025-06-13 10:35:57] [INFO] [log]   🚀 Starting service: nginx-proxy-manager[0m
-[0;32m[2025-06-13 10:35:57] [INFO] [log]   [DRY RUN] Would execute: sudo podman compose -f /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml up -d[0m
-[0;32m[2025-06-13 10:36:00] [INFO] [log] 🗄️ Setting up databases...[0m
-[0;32m[2025-06-13 10:36:00] [INFO] [log] Waiting for database services to initialize...[0m
-[0;32m[2025-06-13 10:36:15] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/setup-databases.sh -s -e[0m
-[0;32m[2025-06-13 10:36:15] [INFO] [log] 🔐 Setting up SSL certificates...[0m
-[0;32m[2025-06-13 10:36:15] [INFO] [log] Waiting for nginx-proxy-manager to start...[0m
-[0;32m[2025-06-13 10:36:25] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/setup-ssl.sh -s -e[0m
-[0;32m[2025-06-13 10:36:25] [INFO] [log] 🛡️ Installing SSL certificates in system trust store...[0m
-[0;32m[2025-06-13 10:36:25] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/trust-host.sh -s -e[0m
-[0;32m[2025-06-13 10:36:25] [INFO] [log] 🔍 Dry run completed successfully![0m
-[0;32m[2025-06-13 10:36:25] [INFO] [log] ✅ Installation process completed![0m
-[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/install.sh -sed -v   vd[?1l>[?2004l
-]2;./scripts/install.sh -sevd]1;./scripts/install.sh[0;36m[2025-06-13 10:42:50] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=true[0m
-
-📋 INSTALLATION SUMMARY
-======================
-
-Project Root: /home/fhcadmin/Projects/devarch
-Container Runtime: podman
-Categories to Install: [0;32m[2025-06-13 10:42:50] [INFO] [log] Installing all categories[0m database dbms backend analytics ai mail project erp auth proxy
-
-
-Installation Options:
-- Skip Confirmation: false
-- Skip Database Setup: false
-- Skip SSL Setup: false
-- Skip Trust Setup: false
-- Parallel Install: false
-- Use Sudo: true
-- Show Errors: true
-- Dry Run: true
-
-Estimated Installation Time: 10-15 minutes
-
-[0;32m[2025-06-13 10:42:50] [INFO] [log] Performing pre-installation checks...[0m
-[0;36m[2025-06-13 10:42:50] [DEBUG] [log] Container runtime: podman[0m
-[0;33m[2025-06-13 10:42:50] [WARN] [log] Sudo access required but not available. Some operations may fail.[0m
-[0;36m[2025-06-13 10:42:50] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml[0m
-[0;36m[2025-06-13 10:42:50] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml[0m
-[0;36m[2025-06-13 10:42:50] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml[0m
-[0;36m[2025-06-13 10:42:50] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml[0m
-[0;36m[2025-06-13 10:42:50] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml[0m
-[0;36m[2025-06-13 10:42:50] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml[0m
-[0;36m[2025-06-13 10:42:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml[0m
-[0;36m[2025-06-13 10:42:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml[0m
-[0;36m[2025-06-13 10:42:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml[0m
-[0;36m[2025-06-13 10:42:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml[0m
-[0;36m[2025-06-13 10:42:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml[0m
-[0;36m[2025-06-13 10:42:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml[0m
-[0;32m[2025-06-13 10:42:52] [INFO] [log] Compose file validation: 29/29 files valid[0m
-[0;32m[2025-06-13 10:42:52] [INFO] [log] 🚀 Starting microservices installation...[0m
-[0;32m[2025-06-13 10:42:52] [INFO] [log] Starting installation of 1 categories...[0m
-[0;32m[2025-06-13 10:42:52] [INFO] [log] Starting installation of 1 categories...[0m
-[0;36m[2025-06-13 10:42:52] [DEBUG] [log] Checking if network 'microservices-net' exists[0m
-[0;36m[2025-06-13 10:42:52] [DEBUG] [log] Executing: Check network existence[0m
-[0;36m[2025-06-13 10:42:52] [DEBUG] [log] Command: sudo podman network exists microservices-net[0m
-[sudo] password for fhcadmin: 
-[0;32m[2025-06-13 10:43:04] [INFO] [log] ✅ Check network existence - Success[0m
-[0;32m[2025-06-13 10:43:04] [INFO] [log] Network 'microservices-net' already exists[0m
-[0;32m[2025-06-13 10:43:04] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13 10:42:52] [INFO] [log] Installing all categories[0m
-database dbms backend analytics ai mail project erp auth proxy[0m
-[0;32m[2025-06-13 10:43:07] [INFO] [log] 🗄️ Setting up databases...[0m
-[0;32m[2025-06-13 10:43:07] [INFO] [log] Waiting for database services to initialize...[0m
-[0;32m[2025-06-13 10:43:22] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/setup-databases.sh -s -e[0m
-[0;32m[2025-06-13 10:43:22] [INFO] [log] 🔐 Setting up SSL certificates...[0m
-[0;32m[2025-06-13 10:43:22] [INFO] [log] Waiting for nginx-proxy-manager to start...[0m
-[0;32m[2025-06-13 10:43:32] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/setup-ssl.sh -s -e[0m
-[0;32m[2025-06-13 10:43:32] [INFO] [log] 🛡️ Installing SSL certificates in system trust store...[0m
-[0;32m[2025-06-13 10:43:32] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/trust-host.sh -s -e[0m
-[0;32m[2025-06-13 10:43:32] [INFO] [log] 🔍 Dry run completed successfully![0m
-[0;32m[2025-06-13 10:43:32] [INFO] [log] ✅ Installation process completed![0m
-[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004hggit add .[?1l>[?2004l
-]2;git add .]1;git[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004hggit commit -m 'more script updates'' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' s'c'r'i'p't's' 'c'l'e'a'n'e'd' 'u'p'[?1l>[?2004l
-]2;git commit -m 'scripts cleaned up']1;git[master 02291c1] scripts cleaned up
- 6 files changed, 2832 insertions(+), 17 deletions(-)
- create mode 100755 scripts/comprehensive-fix.sh
- mode change 100755 => 100644 scripts/config.sh
- create mode 100755 scripts/debug-categories.sh
- create mode 100644 typescript
-[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m)[00m [Kggit push[?1l>[?2004l
-]2;git push]1;gitEnumerating objects: 16, done.
-Counting objects:   6% (1/16)Counting objects:  12% (2/16)Counting objects:  18% (3/16)Counting objects:  25% (4/16)Counting objects:  31% (5/16)Counting objects:  37% (6/16)Counting objects:  43% (7/16)Counting objects:  50% (8/16)Counting objects:  56% (9/16)Counting objects:  62% (10/16)Counting objects:  68% (11/16)Counting objects:  75% (12/16)Counting objects:  81% (13/16)Counting objects:  87% (14/16)Counting objects:  93% (15/16)Counting objects: 100% (16/16)Counting objects: 100% (16/16), done.
-Delta compression using up to 4 threads
-Compressing objects:  10% (1/10)Compressing objects:  20% (2/10)Compressing objects:  30% (3/10)Compressing objects:  40% (4/10)Compressing objects:  50% (5/10)Compressing objects:  60% (6/10)Compressing objects:  70% (7/10)Compressing objects:  80% (8/10)Compressing objects:  90% (9/10)Compressing objects: 100% (10/10)Compressing objects: 100% (10/10), done.
-Writing objects:  10% (1/10)Writing objects:  20% (2/10)Writing objects:  30% (3/10)Writing objects:  50% (5/10)Writing objects:  60% (6/10)Writing objects:  70% (7/10)Writing objects:  80% (8/10)Writing objects:  90% (9/10)Writing objects: 100% (10/10)Writing objects: 100% (10/10), 19.99 KiB | 2.85 MiB/s, done.
-Total 10 (delta 6), reused 0 (delta 0), pack-reused 0 (from 0)
-remote: Resolving deltas:   0% (0/6)[Kremote: Resolving deltas:  16% (1/6)[Kremote: Resolving deltas:  33% (2/6)[Kremote: Resolving deltas:  50% (3/6)[Kremote: Resolving deltas:  66% (4/6)[Kremote: Resolving deltas:  83% (5/6)[Kremote: Resolving deltas: 100% (6/6)[Kremote: Resolving deltas: 100% (6/6), completed with 5 local objects.[K
-To https://github.com/prospect-ogujiuba/devarch.git
-   641d4d4..02291c1  master -> master
-[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m)[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [Kgit pushcommit -m 'scripts cleaned up'[30Dadd .                         [25D[9D./scripts/install.sh -sevd[1C [?1l>[?2004l
-]2;./scripts/install.sh -sev]1;./scripts/install.sh[0;36m[2025-06-13 10:44:09] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=false[0m
-
-📋 INSTALLATION SUMMARY
-======================
-
-Project Root: /home/fhcadmin/Projects/devarch
-Container Runtime: podman
-Categories to Install: [0;32m[2025-06-13 10:44:09] [INFO] [log] Installing all categories[0m database dbms backend analytics ai mail project erp auth proxy
-
-
-Installation Options:
-- Skip Confirmation: false
-- Skip Database Setup: false
-- Skip SSL Setup: false
-- Skip Trust Setup: false
-- Parallel Install: false
-- Use Sudo: true
-- Show Errors: true
-- Dry Run: false
-
-Estimated Installation Time: 10-15 minutes
-
-Do you want to proceed with the installation? (y/N)
-y
-[0;32m[2025-06-13 10:44:12] [INFO] [log] Performing pre-installation checks...[0m
-[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Container runtime: podman[0m
-[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml[0m
-[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml[0m
-[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml[0m
-[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml[0m
-[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml[0m
-[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml[0m
-[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml[0m
-[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml[0m
-[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml[0m
-[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml[0m
-[0;32m[2025-06-13 10:44:13] [INFO] [log] Compose file validation: 29/29 files valid[0m
-[0;32m[2025-06-13 10:44:13] [INFO] [log] 🚀 Starting microservices installation...[0m
-[0;32m[2025-06-13 10:44:13] [INFO] [log] Starting installation of 1 categories...[0m
-[0;32m[2025-06-13 10:44:13] [INFO] [log] Starting installation of 1 categories...[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Checking if network 'microservices-net' exists[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Executing: Check network existence[0m
-[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Command: sudo podman network exists microservices-net[0m
-[0;32m[2025-06-13 10:44:14] [INFO] [log] ✅ Check network existence - Success[0m
-[0;32m[2025-06-13 10:44:14] [INFO] [log] Network 'microservices-net' already exists[0m
-[0;32m[2025-06-13 10:44:14] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13 10:44:13] [INFO] [log] Installing all categories[0m
-database dbms backend analytics ai mail project erp auth proxy[0m
-[0;32m[2025-06-13 10:44:17] [INFO] [log] 🗄️ Setting up databases...[0m
-[0;32m[2025-06-13 10:44:17] [INFO] [log] Waiting for database services to initialize...[0m
-[0;36m[2025-06-13 10:44:32] [DEBUG] [log] Executing: Setup databases[0m
-[0;36m[2025-06-13 10:44:32] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-databases.sh -s -e[0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log] No specific database selected, setting up all databases[0m
-
-📋 DATABASE SETUP SUMMARY
-=========================
-
-Databases to setup: MariaDB MySQL PostgreSQL MongoDB Redis
-Create sample data: false
-Backup existing: false
-Restore from backup: false
-
-Container runtime: podman
-Wait time: 30 seconds
-
-[0;32m[2025-06-13 10:44:32] [INFO] [log] 🚀 Starting database setup...[0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log] 🔧 Setting up PostgreSQL databases...[0m
-[0;31m[2025-06-13 10:44:32] [ERROR] [log] PostgreSQL container not found. Please start it first.[0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log] 🔧 Setting up MariaDB databases...[0m
-[0;31m[2025-06-13 10:44:32] [ERROR] [log] MariaDB container not found. Please start it first.[0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log] 🔧 Setting up MySQL databases...[0m
-[0;33m[2025-06-13 10:44:32] [WARN] [log] MySQL container not found, skipping MySQL setup[0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log] 🔧 Setting up MongoDB databases...[0m
-[0;33m[2025-06-13 10:44:32] [WARN] [log] MongoDB container not found, skipping MongoDB setup[0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log] 🔧 Setting up Redis configuration...[0m
-[0;33m[2025-06-13 10:44:32] [WARN] [log] Redis container not found, skipping Redis setup[0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log] ✅ Database setup completed successfully![0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log] 🔍 Database connection details:[0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log]   PostgreSQL: localhost:8502 (user: postgres, password: 123456)[0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log]   MariaDB: localhost:8501 (user: root, password: 123456)[0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log]   MySQL: localhost:8505 (user: root, password: 123456)[0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log]   MongoDB: localhost:8503 (user: root, password: 123456)[0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log]   Redis: localhost:8504 (no authentication)[0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log] ✅ Setup databases - Success[0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log] 🔐 Setting up SSL certificates...[0m
-[0;32m[2025-06-13 10:44:32] [INFO] [log] Waiting for nginx-proxy-manager to start...[0m
-[0;36m[2025-06-13 10:44:42] [DEBUG] [log] Executing: Setup SSL certificates[0m
-[0;36m[2025-06-13 10:44:42] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-ssl.sh -s -e[0m
-
-📋 SSL CERTIFICATE SETUP SUMMARY
-================================
-
-Certificate Type: wildcard
-Domain: *.test
-Country: US
-State/Province: Development
-City: Local
-Organization: Microservices
-Organizational Unit: Development
-Validity Period: 3650 days
-RSA Key Size: 4096 bits
-
-Options:
-- Force Regenerate: false
-- Backup Existing: true
-- Setup Nginx Config: true
-- Validate Certificates: true
-
-Services Covered: 17 domains
-  nginx.test
-  adminer.test
-  phpmyadmin.test
-  mongodb.test
-  metabase.test
-  nocodb.test
-  grafana.test
-  prometheus.test
-  matomo.test
-  n8n.test
-  langflow.test
-  kibana.test
-  elasticsearch.test
-  keycloak.test
-  mailpit.test
-  gitea.test
-  odoo.test
-
-[0;32m[2025-06-13 10:44:42] [INFO] [log] 🚀 Starting SSL certificate setup...[0m
-[0;32m[2025-06-13 10:44:42] [INFO] [log] 🔍 Checking SSL setup prerequisites...[0m
-[0;31m[2025-06-13 10:44:43] [ERROR] [log] nginx-proxy-manager container not found. Please start it first.[0m
-[0;33m[2025-06-13 10:44:43] [WARN] [log] ⚠️  Setup SSL certificates - Failed (exit code: 1), continuing...[0m
-[0;32m[2025-06-13 10:44:43] [INFO] [log] 🛡️ Installing SSL certificates in system trust store...[0m
-[0;36m[2025-06-13 10:44:43] [DEBUG] [log] Executing: Trust SSL certificates[0m
-[0;36m[2025-06-13 10:44:43] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/trust-host.sh -s -e[0m
-
-📋 CERTIFICATE TRUST SETUP SUMMARY
-==================================
-
-Platform: [0;32m[2025-06-13 10:44:43] [INFO] [log] 🐧 Detected: Windows Subsystem for Linux (WSL)[0m
-wsl
-Certificate Source: container
-
-
-Trust Options:
-- Linux/WSL: true
-- Windows: false  
-- macOS: false
-- Firefox: false
-- Chrome: false
-- Update Hosts: false
-
-Operation: Install certificates
-
-[0;32m[2025-06-13 10:44:43] [INFO] [log] 🚀 Starting certificate trust setup...[0m
-[0;32m[2025-06-13 10:44:43] [INFO] [log] 📜 Acquiring certificate from source: container[0m
-[0;32m[2025-06-13 10:44:43] [INFO] [log] 📦 Extracting certificate from nginx-proxy-manager container...[0m
-[0;31m[2025-06-13 10:44:43] [ERROR] [log] nginx-proxy-manager container not found[0m
-[0;31m[2025-06-13 10:44:43] [ERROR] [log] Failed to acquire certificate[0m
-[0;33m[2025-06-13 10:44:43] [WARN] [log] ⚠️  Trust SSL certificates - Failed (exit code: 1), continuing...[0m
-
-🎉 INSTALLATION COMPLETED SUCCESSFULLY!
-======================================
-
-Your microservices environment is now running!
-
-📊 Dashboard Access:
-- Nginx Proxy Manager: https://nginx.test (admin panel: http://localhost:81)
-- Grafana Monitoring: https://grafana.test (admin:123456)
-- Metabase Analytics: https://metabase.test
-
-🗄️ Database Management:
-- Adminer: https://adminer.test
-- phpMyAdmin: https://phpmyadmin.test  
-- Mongo Express: https://mongodb.test
-- pgAdmin: https://pgadmin.test
-
-🚀 Development Tools:
-- Mailpit: https://mailpit.test
-- Gitea: https://gitea.test
-
-💼 Business Applications:
-- Odoo ERP: https://odoo.test
-
-🤖 AI & Automation:
-- n8n Workflows: https://n8n.test
-- Langflow: https://langflow.test
-
-🔧 Useful Commands:
-- View services: /home/fhcadmin/Projects/devarch/scripts/show-services.sh
-- Stop all: /home/fhcadmin/Projects/devarch/scripts/stop-services.sh
-- Restart all: /home/fhcadmin/Projects/devarch/scripts/start-services.sh
-
-📝 Next Steps:
-1. Configure your proxy rules in Nginx Proxy Manager
-2. Set up your first database connections
-3. Deploy your applications to the apps/ directory
-4. Configure monitoring dashboards in Grafana
-
-[0;32m[2025-06-13 10:44:43] [INFO] [log] ✅ Installation process completed![0m
-[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/install.sh -sev[1C               quick-start.sh[1m [0m[0m -se[?1l>[?2004l
-]2;./scripts/quick-start.sh -se]1;./scripts/quick-start.sh./scripts/quick-start.sh:12: bad option: -e
-🚀 Starting microservices manually...
-Using: podman with sudo
-📡 Creating network...
-Network already exists
-🗄️ Starting databases...
-./scripts/quick-start.sh:43: command not found: sudo podman
-./scripts/quick-start.sh:44: command not found: sudo podman
-./scripts/quick-start.sh:45: command not found: sudo podman
-⏳ Waiting for databases to initialize...
-🌐 Starting nginx proxy manager...
-./scripts/quick-start.sh:52: command not found: sudo podman
-⏳ Waiting for proxy manager...
-🛠️ Starting database management tools...
-./scripts/quick-start.sh:59: command not found: sudo podman
-./scripts/quick-start.sh:60: command not found: sudo podman
-💻 Starting backend services...
-./scripts/quick-start.sh:64: command not found: sudo podman
-📊 Starting monitoring...
-./scripts/quick-start.sh:68: command not found: sudo podman
-./scripts/quick-start.sh:69: command not found: sudo podman
-✅ Basic services started!
-
-🔗 Access points:
-  - Nginx Proxy Manager: http://localhost:81
-  - Adminer: http://localhost:8082
-  - pgAdmin: http://localhost:8087
-  - Grafana: http://localhost:9001
-  - PHP Development: http://localhost:8000
-
-🔍 Check status with: sudo podman ps
-[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/quick-start.sh -se[28Dsudo podman ps              [14D[14D./scripts/install.sh -sev[?1l>[?2004l
-]2;./scripts/install.sh -sev]1;./scripts/install.sh[0;36m[2025-06-13 10:49:46] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=false[0m
-
-📋 INSTALLATION SUMMARY
-======================
-
-Project Root: /home/fhcadmin/Projects/devarch
-Container Runtime: podman
-Categories to Install: [0;32m[2025-06-13 10:49:46] [INFO] [log] Installing all categories[0m database dbms backend analytics ai mail project erp auth proxy
-
-
-Installation Options:
-- Skip Confirmation: false
-- Skip Database Setup: false
-- Skip SSL Setup: false
-- Skip Trust Setup: false
-- Parallel Install: false
-- Use Sudo: true
-- Show Errors: true
-- Dry Run: false
-
-Estimated Installation Time: 10-15 minutes
-
-Do you want to proceed with the installation? (y/N)
-y
-[0;32m[2025-06-13 10:49:50] [INFO] [log] Performing pre-installation checks...[0m
-[0;36m[2025-06-13 10:49:50] [DEBUG] [log] Container runtime: podman[0m
-[0;33m[2025-06-13 10:49:50] [WARN] [log] Sudo access required but not available. Some operations may fail.[0m
-[0;36m[2025-06-13 10:49:50] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml[0m
-[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml[0m
-[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml[0m
-[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml[0m
-[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml[0m
-[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml[0m
-[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml[0m
-[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml[0m
-[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml[0m
-[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml[0m
-[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml[0m
-[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml[0m
-[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml[0m
-[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml[0m
-[0;32m[2025-06-13 10:49:52] [INFO] [log] Compose file validation: 29/29 files valid[0m
-[0;32m[2025-06-13 10:49:52] [INFO] [log] 🚀 Starting microservices installation...[0m
-[0;32m[2025-06-13 10:49:52] [INFO] [log] Starting installation of 1 categories...[0m
-[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Checking if network 'microservices-net' exists[0m
-[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Executing: Check network existence[0m
-[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Command: sudo podman network exists microservices-net[0m
-[sudo] password for fhcadmin: 
-[0;32m[2025-06-13 10:50:09] [INFO] [log] ✅ Check network existence - Success[0m
-[0;32m[2025-06-13 10:50:09] [INFO] [log] Network 'microservices-net' already exists[0m
-[0;32m[2025-06-13 10:50:09] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13 10:49:52] [INFO] [log] Installing all categories[0m
-database dbms backend analytics ai mail project erp auth proxy[0m
-[0;32m[2025-06-13 10:50:12] [INFO] [log] 🗄️ Setting up databases...[0m
-[0;32m[2025-06-13 10:50:12] [INFO] [log] Waiting for database services to initialize...[0m
-[0;36m[2025-06-13 10:50:27] [DEBUG] [log] Executing: Setup databases[0m
-[0;36m[2025-06-13 10:50:27] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-databases.sh -s -e[0m
-[0;32m[2025-06-13 10:50:27] [INFO] [log] No specific database selected, setting up all databases[0m
-
-📋 DATABASE SETUP SUMMARY
-=========================
-
-Databases to setup: MariaDB MySQL PostgreSQL MongoDB Redis
-Create sample data: false
-Backup existing: false
-Restore from backup: false
-
-Container runtime: podman
-Wait time: 30 seconds
-
-[0;32m[2025-06-13 10:50:27] [INFO] [log] 🚀 Starting database setup...[0m
-[0;32m[2025-06-13 10:50:27] [INFO] [log] 🔧 Setting up PostgreSQL databases...[0m
-[0;31m[2025-06-13 10:50:27] [ERROR] [log] PostgreSQL container not found. Please start it first.[0m
-[0;32m[2025-06-13 10:50:27] [INFO] [log] 🔧 Setting up MariaDB databases...[0m
-[0;31m[2025-06-13 10:50:27] [ERROR] [log] MariaDB container not found. Please start it first.[0m
-[0;32m[2025-06-13 10:50:27] [INFO] [log] 🔧 Setting up MySQL databases...[0m
-[0;33m[2025-06-13 10:50:28] [WARN] [log] MySQL container not found, skipping MySQL setup[0m
-[0;32m[2025-06-13 10:50:28] [INFO] [log] 🔧 Setting up MongoDB databases...[0m
-[0;33m[2025-06-13 10:50:28] [WARN] [log] MongoDB container not found, skipping MongoDB setup[0m
-[0;32m[2025-06-13 10:50:28] [INFO] [log] 🔧 Setting up Redis configuration...[0m
-[0;33m[2025-06-13 10:50:28] [WARN] [log] Redis container not found, skipping Redis setup[0m
-[0;32m[2025-06-13 10:50:28] [INFO] [log] ✅ Database setup completed successfully![0m
-[0;32m[2025-06-13 10:50:28] [INFO] [log] 🔍 Database connection details:[0m
-[0;32m[2025-06-13 10:50:28] [INFO] [log]   PostgreSQL: localhost:8502 (user: postgres, password: 123456)[0m
-[0;32m[2025-06-13 10:50:28] [INFO] [log]   MariaDB: localhost:8501 (user: root, password: 123456)[0m
-[0;32m[2025-06-13 10:50:28] [INFO] [log]   MySQL: localhost:8505 (user: root, password: 123456)[0m
-[0;32m[2025-06-13 10:50:28] [INFO] [log]   MongoDB: localhost:8503 (user: root, password: 123456)[0m
-[0;32m[2025-06-13 10:50:28] [INFO] [log]   Redis: localhost:8504 (no authentication)[0m
-[0;32m[2025-06-13 10:50:28] [INFO] [log] ✅ Setup databases - Success[0m
-[0;32m[2025-06-13 10:50:28] [INFO] [log] 🔐 Setting up SSL certificates...[0m
-[0;32m[2025-06-13 10:50:28] [INFO] [log] Waiting for nginx-proxy-manager to start...[0m
-[0;36m[2025-06-13 10:50:38] [DEBUG] [log] Executing: Setup SSL certificates[0m
-[0;36m[2025-06-13 10:50:38] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-ssl.sh -s -e[0m
-
-📋 SSL CERTIFICATE SETUP SUMMARY
-================================
-
-Certificate Type: wildcard
-Domain: *.test
-Country: US
-State/Province: Development
-City: Local
-Organization: Microservices
-Organizational Unit: Development
-Validity Period: 3650 days
-RSA Key Size: 4096 bits
-
-Options:
-- Force Regenerate: false
-- Backup Existing: true
-- Setup Nginx Config: true
-- Validate Certificates: true
-
-Services Covered: 17 domains
-  nginx.test
-  adminer.test
-  phpmyadmin.test
-  mongodb.test
-  metabase.test
-  nocodb.test
-  grafana.test
-  prometheus.test
-  matomo.test
-  n8n.test
-  langflow.test
-  kibana.test
-  elasticsearch.test
-  keycloak.test
-  mailpit.test
-  gitea.test
-  odoo.test
-
-[0;32m[2025-06-13 10:50:38] [INFO] [log] 🚀 Starting SSL certificate setup...[0m
-[0;32m[2025-06-13 10:50:38] [INFO] [log] 🔍 Checking SSL setup prerequisites...[0m
-[0;31m[2025-06-13 10:50:38] [ERROR] [log] nginx-proxy-manager container not found. Please start it first.[0m
-[0;33m[2025-06-13 10:50:38] [WARN] [log] ⚠️  Setup SSL certificates - Failed (exit code: 1), continuing...[0m
-[0;32m[2025-06-13 10:50:38] [INFO] [log] 🛡️ Installing SSL certificates in system trust store...[0m
-[0;36m[2025-06-13 10:50:38] [DEBUG] [log] Executing: Trust SSL certificates[0m
-[0;36m[2025-06-13 10:50:38] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/trust-host.sh -s -e[0m
-
-📋 CERTIFICATE TRUST SETUP SUMMARY
-==================================
-
-Platform: [0;32m[2025-06-13 10:50:38] [INFO] [log] 🐧 Detected: Windows Subsystem for Linux (WSL)[0m
-wsl
-Certificate Source: container
-
-
-Trust Options:
-- Linux/WSL: true
-- Windows: false  
-- macOS: false
-- Firefox: false
-- Chrome: false
-- Update Hosts: false
-
-Operation: Install certificates
-
-[0;32m[2025-06-13 10:50:38] [INFO] [log] 🚀 Starting certificate trust setup...[0m
-[0;32m[2025-06-13 10:50:38] [INFO] [log] 📜 Acquiring certificate from source: container[0m
-[0;32m[2025-06-13 10:50:38] [INFO] [log] 📦 Extracting certificate from nginx-proxy-manager container...[0m
-[0;31m[2025-06-13 10:50:38] [ERROR] [log] nginx-proxy-manager container not found[0m
-[0;31m[2025-06-13 10:50:38] [ERROR] [log] Failed to acquire certificate[0m
-[0;33m[2025-06-13 10:50:38] [WARN] [log] ⚠️  Trust SSL certificates - Failed (exit code: 1), continuing...[0m
-
-🎉 INSTALLATION COMPLETED SUCCESSFULLY!
-======================================
-
-Your microservices environment is now running!
-
-📊 Dashboard Access:
-- Nginx Proxy Manager: https://nginx.test (admin panel: http://localhost:81)
-- Grafana Monitoring: https://grafana.test (admin:123456)
-- Metabase Analytics: https://metabase.test
-
-🗄️ Database Management:
-- Adminer: https://adminer.test
-- phpMyAdmin: https://phpmyadmin.test  
-- Mongo Express: https://mongodb.test
-- pgAdmin: https://pgadmin.test
-
-🚀 Development Tools:
-- Mailpit: https://mailpit.test
-- Gitea: https://gitea.test
-
-💼 Business Applications:
-- Odoo ERP: https://odoo.test
-
-🤖 AI & Automation:
-- n8n Workflows: https://n8n.test
-- Langflow: https://langflow.test
-
-🔧 Useful Commands:
-- View services: /home/fhcadmin/Projects/devarch/scripts/show-services.sh
-- Stop all: /home/fhcadmin/Projects/devarch/scripts/stop-services.sh
-- Restart all: /home/fhcadmin/Projects/devarch/scripts/start-services.sh
-
-📝 Next Steps:
-1. Configure your proxy rules in Nginx Proxy Manager
-2. Set up your first database connections
-3. Deploy your applications to the apps/ directory
-4. Configure monitoring dashboards in Grafana
-
-[0;32m[2025-06-13 10:50:38] [INFO] [log] ✅ Installation process completed![0m
-[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ../scripts/install.sh -sev[1C.sh -sev       [15Ds.sh -sev[8Dt.sh -sev[8Da.sh -sev[8Dr.sh -sev[8Dt-services.sh[1m [0m -sev[0m -sev [1C -sev[?1l>[?2004l
-]2;./scripts/start-services.sh -sev]1;./scripts/start-services.sh[0;36m[2025-06-13 11:06:06] [DEBUG] [start-services.sh] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=false[0m
-[0;32m[2025-06-13 11:06:06] [INFO] [start-services.sh] 🚀 Starting microservices...[0m
-[0;36m[2025-06-13 11:06:06] [DEBUG] [start-services.sh] Checking if network 'microservices-net' exists[0m
-[0;36m[2025-06-13 11:06:06] [DEBUG] [start-services.sh] Executing: Check network existence[0m
-[0;36m[2025-06-13 11:06:06] [DEBUG] [start-services.sh] Command: sudo podman network exists microservices-net[0m
-[sudo] password for fhcadmin: 
-[0;32m[2025-06-13 11:06:17] [INFO] [start-services.sh] ✅ Check network existence - Success[0m
-[0;32m[2025-06-13 11:06:17] [INFO] [start-services.sh] Network 'microservices-net' already exists[0m
-./scripts/start-services.sh: line 90: ${=SERVICE_CATEGORIES[$category]}: bad substitution
-[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/start-services.sh  -sev[1C[1C[1C[1C[1C -c database[?1l>[?2004l
-]2;./scripts/start-services.sh -sev -c database]1;./scripts/start-services.sh./scripts/start-services.sh: illegal option -- c
-Common options:
-  -s    Use sudo for container commands
-  -e    Show error messages
-  -v    Verbose output (debug mode)
-  -d    Dry run (show commands without executing)
-  -r    Container runtime (docker/podman)
-[0;32m[2025-06-13 11:10:14] [INFO] [start-services.sh] 🚀 Starting microservices...[0m
-[0;36m[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Checking if network 'microservices-net' exists[0m
-[0;36m[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Executing: Check network existence[0m
-[0;36m[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Command:  network exists microservices-net[0m
-[0;33m[2025-06-13 11:10:14] [WARN] [start-services.sh] ⚠️  Check network existence - Failed (exit code: 127), continuing...[0m
-[0;36m[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Executing: Create network[0m
-[0;36m[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Command:  network create --driver bridge microservices-net[0m
-/home/fhcadmin/Projects/devarch/scripts/config.sh: line 122: network: command not found
-[0;31m[2025-06-13 11:10:14] [ERROR] [start-services.sh] ❌ Create network - Failed (exit code: 127)[0m
-[0;31m[2025-06-13 11:10:14] [ERROR] [start-services.sh] Command:  network create --driver bridge microservices-net[0m
-[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/start-services.sh  -sev -c database[11D           [12D[23Dinstall.sh -sev  [2C    [8D[?1l>[?2004l
-]2;./scripts/install.sh -sev]1;./scripts/install.sh[0;36m[2025-06-13 11:19:49] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=false[0m
-
-📋 INSTALLATION SUMMARY
-======================
-
-Project Root: /home/fhcadmin/Projects/devarch
-Container Runtime: podman
-Categories to Install: [0;32m[2025-06-13 11:19:49] [INFO] [log] Installing all categories[0m database dbms backend analytics ai mail project erp auth proxy
-
-
-Installation Options:
-- Skip Confirmation: false
-- Skip Database Setup: false
-- Skip SSL Setup: false
-- Skip Trust Setup: false
-- Parallel Install: false
-- Use Sudo: true
-- Show Errors: true
-- Dry Run: false
-
-Estimated Installation Time: 10-15 minutes
-
-Do you want to proceed with the installation? (y/N)
-y
-[0;32m[2025-06-13 11:19:51] [INFO] [log] Performing pre-installation checks...[0m
-[0;36m[2025-06-13 11:19:51] [DEBUG] [log] Container runtime: podman[0m
-[0;33m[2025-06-13 11:19:51] [WARN] [log] Sudo access required but not available. Some operations may fail.[0m
-[0;36m[2025-06-13 11:19:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml[0m
-[0;36m[2025-06-13 11:19:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml[0m
-[0;36m[2025-06-13 11:19:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml[0m
-[0;36m[2025-06-13 11:19:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml[0m
-[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml[0m
-[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml[0m
-[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml[0m
-[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml[0m
-[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml[0m
-[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml[0m
-[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml[0m
-[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml[0m
-[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml[0m
-[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml[0m
-[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml[0m
-[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml[0m
-[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml[0m
-[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml[0m
-[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml[0m
-[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml[0m
-[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml[0m
-[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml[0m
-[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml[0m
-[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml[0m
-[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml[0m
-[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml[0m
-[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml[0m
-[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml[0m
-[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml[0m
-[0;32m[2025-06-13 11:19:53] [INFO] [log] Compose file validation: 29/29 files valid[0m
-[0;32m[2025-06-13 11:19:53] [INFO] [log] 🚀 Starting microservices installation...[0m
-[0;32m[2025-06-13 11:19:53] [INFO] [log] Starting installation of 1 categories...[0m
-[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Checking if network 'microservices-net' exists[0m
-[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Executing: Check network existence[0m
-[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Command: sudo podman network exists microservices-net[0m
-[sudo] password for fhcadmin: 
-[0;33m[2025-06-13 11:20:03] [WARN] [log] ⚠️  Check network existence - Failed (exit code: 1), continuing...[0m
-[0;36m[2025-06-13 11:20:03] [DEBUG] [log] Executing: Create network[0m
-[0;36m[2025-06-13 11:20:03] [DEBUG] [log] Command: sudo podman network create --driver bridge microservices-net[0m
-microservices-net
-[0;32m[2025-06-13 11:20:03] [INFO] [log] ✅ Create network - Success[0m
-[0;32m[2025-06-13 11:20:03] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13 11:19:53] [INFO] [log] Installing all categories[0m
-database dbms backend analytics ai mail project erp auth proxy[0m
-[0;32m[2025-06-13 11:20:06] [INFO] [log] 🗄️ Setting up databases...[0m
-[0;32m[2025-06-13 11:20:06] [INFO] [log] Waiting for database services to initialize...[0m
-[0;36m[2025-06-13 11:20:21] [DEBUG] [log] Executing: Setup databases[0m
-[0;36m[2025-06-13 11:20:21] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-databases.sh -s -e[0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log] No specific database selected, setting up all databases[0m
-
-📋 DATABASE SETUP SUMMARY
-=========================
-
-Databases to setup: MariaDB MySQL PostgreSQL MongoDB Redis
-Create sample data: false
-Backup existing: false
-Restore from backup: false
-
-Container runtime: podman
-Wait time: 30 seconds
-
-[0;32m[2025-06-13 11:20:21] [INFO] [log] 🚀 Starting database setup...[0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log] 🔧 Setting up PostgreSQL databases...[0m
-[0;31m[2025-06-13 11:20:21] [ERROR] [log] PostgreSQL container not found. Please start it first.[0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log] 🔧 Setting up MariaDB databases...[0m
-[0;31m[2025-06-13 11:20:21] [ERROR] [log] MariaDB container not found. Please start it first.[0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log] 🔧 Setting up MySQL databases...[0m
-[0;33m[2025-06-13 11:20:21] [WARN] [log] MySQL container not found, skipping MySQL setup[0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log] 🔧 Setting up MongoDB databases...[0m
-[0;33m[2025-06-13 11:20:21] [WARN] [log] MongoDB container not found, skipping MongoDB setup[0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log] 🔧 Setting up Redis configuration...[0m
-[0;33m[2025-06-13 11:20:21] [WARN] [log] Redis container not found, skipping Redis setup[0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log] ✅ Database setup completed successfully![0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log] 🔍 Database connection details:[0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log]   PostgreSQL: localhost:8502 (user: postgres, password: 123456)[0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log]   MariaDB: localhost:8501 (user: root, password: 123456)[0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log]   MySQL: localhost:8505 (user: root, password: 123456)[0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log]   MongoDB: localhost:8503 (user: root, password: 123456)[0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log]   Redis: localhost:8504 (no authentication)[0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log] ✅ Setup databases - Success[0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log] 🔐 Setting up SSL certificates...[0m
-[0;32m[2025-06-13 11:20:21] [INFO] [log] Waiting for nginx-proxy-manager to start...[0m
-[0;36m[2025-06-13 11:20:31] [DEBUG] [log] Executing: Setup SSL certificates[0m
-[0;36m[2025-06-13 11:20:32] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-ssl.sh -s -e[0m
-
-📋 SSL CERTIFICATE SETUP SUMMARY
-================================
-
-Certificate Type: wildcard
-Domain: *.test
-Country: US
-State/Province: Development
-City: Local
-Organization: Microservices
-Organizational Unit: Development
-Validity Period: 3650 days
-RSA Key Size: 4096 bits
-
-Options:
-- Force Regenerate: false
-- Backup Existing: true
-- Setup Nginx Config: true
-- Validate Certificates: true
-
-Services Covered: 17 domains
-  nginx.test
-  adminer.test
-  phpmyadmin.test
-  mongodb.test
-  metabase.test
-  nocodb.test
-  grafana.test
-  prometheus.test
-  matomo.test
-  n8n.test
-  langflow.test
-  kibana.test
-  elasticsearch.test
-  keycloak.test
-  mailpit.test
-  gitea.test
-  odoo.test
-
-[0;32m[2025-06-13 11:20:32] [INFO] [log] 🚀 Starting SSL certificate setup...[0m
-[0;32m[2025-06-13 11:20:32] [INFO] [log] 🔍 Checking SSL setup prerequisites...[0m
-[0;31m[2025-06-13 11:20:32] [ERROR] [log] nginx-proxy-manager container not found. Please start it first.[0m
-[0;33m[2025-06-13 11:20:32] [WARN] [log] ⚠️  Setup SSL certificates - Failed (exit code: 1), continuing...[0m
-[0;32m[2025-06-13 11:20:32] [INFO] [log] 🛡️ Installing SSL certificates in system trust store...[0m
-[0;36m[2025-06-13 11:20:32] [DEBUG] [log] Executing: Trust SSL certificates[0m
-[0;36m[2025-06-13 11:20:32] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/trust-host.sh -s -e[0m
-
-📋 CERTIFICATE TRUST SETUP SUMMARY
-==================================
-
-Platform: [0;32m[2025-06-13 11:20:32] [INFO] [log] 🐧 Detected: Windows Subsystem for Linux (WSL)[0m
-wsl
-Certificate Source: container
-
-
-Trust Options:
-- Linux/WSL: true
-- Windows: false  
-- macOS: false
-- Firefox: false
-- Chrome: false
-- Update Hosts: false
-
-Operation: Install certificates
-
-[0;32m[2025-06-13 11:20:32] [INFO] [log] 🚀 Starting certificate trust setup...[0m
-[0;32m[2025-06-13 11:20:32] [INFO] [log] 📜 Acquiring certificate from source: container[0m
-[0;32m[2025-06-13 11:20:32] [INFO] [log] 📦 Extracting certificate from nginx-proxy-manager container...[0m
-[0;31m[2025-06-13 11:20:32] [ERROR] [log] nginx-proxy-manager container not found[0m
-[0;31m[2025-06-13 11:20:32] [ERROR] [log] Failed to acquire certificate[0m
-[0;33m[2025-06-13 11:20:32] [WARN] [log] ⚠️  Trust SSL certificates - Failed (exit code: 1), continuing...[0m
-
-🎉 INSTALLATION COMPLETED SUCCESSFULLY!
-======================================
-
-Your microservices environment is now running!
-
-📊 Dashboard Access:
-- Nginx Proxy Manager: https://nginx.test (admin panel: http://localhost:81)
-- Grafana Monitoring: https://grafana.test (admin:123456)
-- Metabase Analytics: https://metabase.test
-
-🗄️ Database Management:
-- Adminer: https://adminer.test
-- phpMyAdmin: https://phpmyadmin.test  
-- Mongo Express: https://mongodb.test
-- pgAdmin: https://pgadmin.test
-
-🚀 Development Tools:
-- Mailpit: https://mailpit.test
-- Gitea: https://gitea.test
-
-💼 Business Applications:
-- Odoo ERP: https://odoo.test
-
-🤖 AI & Automation:
-- n8n Workflows: https://n8n.test
-- Langflow: https://langflow.test
-
-🔧 Useful Commands:
-- View services: /home/fhcadmin/Projects/devarch/scripts/show-services.sh
-- Stop all: /home/fhcadmin/Projects/devarch/scripts/stop-services.sh
-- Restart all: /home/fhcadmin/Projects/devarch/scripts/start-services.sh
-
-📝 Next Steps:
-1. Configure your proxy rules in Nginx Proxy Manager
-2. Set up your first database connections
-3. Deploy your applications to the apps/ directory
-4. Configure monitoring dashboards in Grafana
-
-[0;32m[2025-06-13 11:20:32] [INFO] [log] ✅ Installation process completed![0m
-[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ../scripts[1m/[0m[0m/show-services.sh[1m [0m[0m -se[?1l>[?2004l
-]2;./scripts/show-services.sh -se]1;./scripts/show-services.sh╭─────────────────────┬──────────────┬─────────────────┬─────────────────────────────┬──────────────┬─────────────────────────────────────────────────────────╮
-│ Service             │ Status       │ Health          │ Ports                       │ Uptime       │ URL                                                     │
-├─────────────────────┼──────────────┼─────────────────┼─────────────────────────────┼──────────────┼─────────────────────────────────────────────────────────┤
-print_service_row:2: read-only variable: status
-[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/show-services.sh -se[1C[P[16C [17D[P[16C [17D[P[16C [17Dt-services.sh -se[16Do-services.sh -se[16Dp-services.sh -se[16D[?1l>[?2004l
-]2;./scripts/stop-services.sh -se]1;./scripts/stop-services.sh[0;32m[2025-06-13 11:23:36] [INFO] [stop-services.sh] 🛑 Stopping microservices...[0m
-./scripts/stop-services.sh: line 97: ${=SERVICE_CATEGORIES[$category]}: bad substitution
-[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/stop-services.sh -se[1C[1C[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se && ./scripts/start-services.sh -s[34De                                 [33D -c database[?1l>[?2004l
-]2;./scripts/stop-services.sh -se -c database]1;./scripts/stop-services.sh./scripts/stop-services.sh: illegal option -- c
-Common options:
-  -s    Use sudo for container commands
-  -e    Show error messages
-  -v    Verbose output (debug mode)
-  -d    Dry run (show commands without executing)
-  -r    Container runtime (docker/podman)
-[0;32m[2025-06-13 11:23:57] [INFO] [stop-services.sh] 🛑 Stopping microservices...[0m
-./scripts/stop-services.sh: line 97: ${=SERVICE_CATEGORIES[$category]}: bad substitution
-[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mm

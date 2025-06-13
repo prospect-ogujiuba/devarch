@@ -1,4 +1,5 @@
 # Microservices Architecture Management System
+
 ## Complete Documentation and User Guide
 
 ---
@@ -89,12 +90,14 @@ microservices/
 ### System Requirements
 
 #### Minimum Requirements
+
 - **OS**: Linux, macOS, or Windows 10/11 with WSL2
 - **RAM**: 8GB (16GB recommended for full stack)
 - **Storage**: 20GB free space (50GB recommended)
 - **CPU**: 2 cores (4+ cores recommended)
 
 #### Recommended Requirements
+
 - **OS**: Ubuntu 20.04+, CentOS 8+, macOS 12+, or Windows 11 with WSL2
 - **RAM**: 16GB or more
 - **Storage**: 50GB+ SSD storage
@@ -104,6 +107,7 @@ microservices/
 ### Required Software
 
 #### Container Runtime (Choose One)
+
 ```bash
 # Docker (Recommended for beginners)
 curl -fsSL https://get.docker.com -o get-docker.sh
@@ -120,6 +124,7 @@ brew install podman
 ```
 
 #### Additional Tools
+
 ```bash
 # Essential tools
 sudo apt install -y curl wget git zsh vim
@@ -134,6 +139,7 @@ sudo apt install -y libnss3-tools  # Firefox certificate support
 ### Network Configuration
 
 The system uses localhost-bound ports to avoid conflicts:
+
 - **Database Services**: 8501-8505
 - **Management Tools**: 8082-8087
 - **Analytics**: 9001, 9090, 9120-9131
@@ -176,11 +182,13 @@ chmod +x scripts/*.sh
 ### 3. Access Your Services
 
 **Management Dashboards:**
+
 - 🌐 **Nginx Proxy Manager**: http://localhost:81 (admin@example.com / changeme)
 - 📊 **Grafana**: http://localhost:9001 (admin / 123456)
 - 🗄️ **Adminer**: http://localhost:8082
 
 **Database Connections:**
+
 - 🐘 **PostgreSQL**: localhost:8502 (postgres / 123456)
 - 🐬 **MySQL**: localhost:8505 (root / 123456)
 - 🍃 **MongoDB**: localhost:8503 (root / 123456)
@@ -260,16 +268,19 @@ Install only specific service categories:
 ### Installation Process
 
 #### Phase 1: Prerequisites Check
+
 - Validates container runtime (Docker/Podman)
 - Checks available disk space (10GB minimum)
 - Verifies compose file syntax
 - Creates necessary directories
 
 #### Phase 2: Network Setup
+
 - Creates shared `microservices-net` network
 - Configures bridge networking for inter-service communication
 
 #### Phase 3: Service Deployment
+
 - Deploys services in dependency order:
   1. **Database** → PostgreSQL, MySQL, MongoDB, Redis
   2. **DBMS** → Adminer, pgAdmin, Metabase
@@ -278,6 +289,7 @@ Install only specific service categories:
   5. **Proxy** → Nginx Proxy Manager
 
 #### Phase 4: Post-Installation Setup
+
 - Database initialization and user creation
 - SSL certificate generation
 - Certificate trust store installation
@@ -288,6 +300,7 @@ Install only specific service categories:
 #### Common Issues
 
 **Port Conflicts:**
+
 ```bash
 # Check for port conflicts
 netstat -tlnp | grep -E ':(80|443|8501|8502|9001)'
@@ -297,6 +310,7 @@ sudo systemctl stop apache2 nginx mysql postgresql
 ```
 
 **Permission Issues:**
+
 ```bash
 # Fix Docker permissions
 sudo usermod -aG docker $USER
@@ -307,6 +321,7 @@ sudo chown -R $USER:$USER ./microservices
 ```
 
 **Container Runtime Issues:**
+
 ```bash
 # Test Docker
 docker run hello-world
@@ -321,6 +336,7 @@ docker system prune -a  # WARNING: Removes all containers/images
 #### Installation Logs
 
 Check installation logs for detailed error information:
+
 ```bash
 # View installation logs
 tail -f logs/scripts.log
@@ -341,6 +357,7 @@ grep -i error logs/scripts.log
 **Purpose**: Central configuration and utility functions for all scripts.
 
 **Key Functions**:
+
 - Environment setup and validation
 - Logging with multiple levels (DEBUG, INFO, WARN, ERROR)
 - Container runtime detection (Docker/Podman)
@@ -350,6 +367,7 @@ grep -i error logs/scripts.log
 **Usage**: Automatically sourced by other scripts.
 
 **Environment Variables**:
+
 ```bash
 # Set log level
 export MS_LOG_LEVEL=0  # DEBUG level
@@ -365,6 +383,7 @@ export CONTAINER_RUNTIME=podman
 **Purpose**: Complete system installation with intelligent service deployment.
 
 **Syntax**:
+
 ```bash
 ./scripts/install.sh [OPTIONS]
 ```
@@ -403,6 +422,7 @@ export CONTAINER_RUNTIME=podman
 ```
 
 **Categories Available**:
+
 - `database` - PostgreSQL, MySQL, MariaDB, MongoDB, Redis
 - `dbms` - Database management interfaces
 - `backend` - Development environments (PHP, Node.js, Python, Go, .NET)
@@ -420,6 +440,7 @@ export CONTAINER_RUNTIME=podman
 **Purpose**: Start microservices with dependency management and health checking.
 
 **Syntax**:
+
 ```bash
 ./scripts/start-services.sh [OPTIONS]
 ```
@@ -459,6 +480,7 @@ export CONTAINER_RUNTIME=podman
 **Purpose**: Gracefully stop services with cleanup options.
 
 **Syntax**:
+
 ```bash
 ./scripts/stop-services.sh [OPTIONS]
 ```
@@ -498,6 +520,7 @@ export CONTAINER_RUNTIME=podman
 **Purpose**: Display comprehensive service status, health, and connectivity information.
 
 **Syntax**:
+
 ```bash
 ./scripts/show-services.sh [OPTIONS]
 ```
@@ -541,6 +564,7 @@ export CONTAINER_RUNTIME=podman
 ```
 
 **Output Formats**:
+
 - **Table**: Human-readable formatted table (default)
 - **JSON**: Machine-readable for scripts and APIs
 - **CSV**: Spreadsheet-compatible format
@@ -553,6 +577,7 @@ export CONTAINER_RUNTIME=podman
 **Purpose**: Initialize databases, create users, and set up schemas for all services.
 
 **Syntax**:
+
 ```bash
 ./scripts/setup-databases.sh [OPTIONS]
 ```
@@ -592,19 +617,19 @@ export CONTAINER_RUNTIME=podman
 
 **Created Databases**:
 
-| Service | Database | User | Purpose |
-|---------|----------|------|---------|
-| **PostgreSQL** | metabase | metabase_user | Business Intelligence |
-| | nocodb | nocodb_user | No-code platform |
-| | keycloak | keycloak_user | Identity management |
-| | odoo | odoo_user | ERP system |
-| **MariaDB** | npm | npm_user | Nginx Proxy Manager |
-| | matomo | matomo_user | Web analytics |
-| **MySQL** | backup_db | backup_user | Backup storage |
-| | analytics | analytics_user | Analytics data |
-| **MongoDB** | logs | logs_user | Application logs |
-| | analytics | analytics_user | Analytics data |
-| | sessions | sessions_user | Session storage |
+| Service        | Database  | User           | Purpose               |
+| -------------- | --------- | -------------- | --------------------- |
+| **PostgreSQL** | metabase  | metabase_user  | Business Intelligence |
+|                | nocodb    | nocodb_user    | No-code platform      |
+|                | keycloak  | keycloak_user  | Identity management   |
+|                | odoo      | odoo_user      | ERP system            |
+| **MariaDB**    | npm       | npm_user       | Nginx Proxy Manager   |
+|                | matomo    | matomo_user    | Web analytics         |
+| **MySQL**      | backup_db | backup_user    | Backup storage        |
+|                | analytics | analytics_user | Analytics data        |
+| **MongoDB**    | logs      | logs_user      | Application logs      |
+|                | analytics | analytics_user | Analytics data        |
+|                | sessions  | sessions_user  | Session storage       |
 
 ---
 
@@ -613,6 +638,7 @@ export CONTAINER_RUNTIME=podman
 **Purpose**: Generate and manage SSL certificates for secure HTTPS access.
 
 **Syntax**:
+
 ```bash
 ./scripts/setup-ssl.sh [OPTIONS]
 ```
@@ -632,11 +658,13 @@ export CONTAINER_RUNTIME=podman
 **Certificate Types**:
 
 1. **Wildcard** (Recommended for development):
+
    ```bash
    ./scripts/setup-ssl.sh -t wildcard -D "*.test"
    ```
 
 2. **Individual** (Separate certificate per service):
+
    ```bash
    ./scripts/setup-ssl.sh -t individual
    ```
@@ -669,6 +697,7 @@ export CONTAINER_RUNTIME=podman
 **Purpose**: Install SSL certificates in system and browser trust stores for seamless HTTPS.
 
 **Syntax**:
+
 ```bash
 ./scripts/trust-host.sh [OPTIONS]
 ```
@@ -710,6 +739,7 @@ export CONTAINER_RUNTIME=podman
 ```
 
 **Platform Support**:
+
 - **Linux**: System CA certificates + browser profiles
 - **Windows**: Certificate store + browser configuration
 - **macOS**: System keychain + browser profiles
@@ -722,6 +752,7 @@ export CONTAINER_RUNTIME=podman
 ### Starting Services
 
 #### Complete System Startup
+
 ```bash
 # Start all services with health checks
 ./scripts/start-services.sh -w
@@ -734,6 +765,7 @@ export CONTAINER_RUNTIME=podman
 ```
 
 #### Category-Based Startup
+
 ```bash
 # Start only database services
 ./scripts/start-services.sh -c database
@@ -746,6 +778,7 @@ export CONTAINER_RUNTIME=podman
 ```
 
 #### Individual Service Management
+
 ```bash
 # Start specific service
 podman compose -f compose/postgres.yml up -d
@@ -760,6 +793,7 @@ podman compose -f compose/postgres.yml -f compose/pgadmin.yml up -d
 ### Stopping Services
 
 #### Graceful Shutdown
+
 ```bash
 # Stop all services gracefully
 ./scripts/stop-services.sh
@@ -772,6 +806,7 @@ podman compose -f compose/postgres.yml -f compose/pgadmin.yml up -d
 ```
 
 #### Force Shutdown and Cleanup
+
 ```bash
 # Force stop all services
 ./scripts/stop-services.sh -f
@@ -786,6 +821,7 @@ podman compose -f compose/postgres.yml -f compose/pgadmin.yml up -d
 ### Health Monitoring
 
 #### Service Status Overview
+
 ```bash
 # Basic status
 ./scripts/show-services.sh
@@ -798,6 +834,7 @@ podman compose -f compose/postgres.yml -f compose/pgadmin.yml up -d
 ```
 
 #### Continuous Monitoring
+
 ```bash
 # Live monitoring (refresh every 5 seconds)
 ./scripts/show-services.sh -i 5 -S
@@ -810,6 +847,7 @@ podman compose -f compose/postgres.yml -f compose/pgadmin.yml up -d
 ```
 
 #### Individual Service Health
+
 ```bash
 # Check specific service health
 podman healthcheck run postgres
@@ -827,6 +865,7 @@ podman stats postgres --no-stream
 ### Log Management
 
 #### Centralized Log Viewing
+
 ```bash
 # View logs for all services
 ./scripts/show-services.sh -L
@@ -839,6 +878,7 @@ podman stats postgres --no-stream
 ```
 
 #### Service-Specific Logs
+
 ```bash
 # Recent logs
 podman logs postgres --tail 50
@@ -854,6 +894,7 @@ podman logs postgres --since "2024-01-01T00:00:00"
 ```
 
 #### Log Analysis
+
 ```bash
 # Search for errors
 podman logs postgres 2>&1 | grep -i error
@@ -868,6 +909,7 @@ podman logs postgres > logs/postgres-$(date +%Y%m%d).log
 ### Resource Monitoring
 
 #### System Resource Usage
+
 ```bash
 # Resource dashboard
 ./scripts/show-services.sh -T
@@ -880,6 +922,7 @@ podman stats postgres grafana
 ```
 
 #### Network Monitoring
+
 ```bash
 # View network information
 ./scripts/show-services.sh -N
@@ -892,6 +935,7 @@ podman exec postgres ping adminer
 ```
 
 #### Volume Usage
+
 ```bash
 # View volume information
 ./scripts/show-services.sh -V
@@ -910,6 +954,7 @@ podman volume inspect postgres_data
 ### Database Setup and Configuration
 
 #### Initial Database Setup
+
 ```bash
 # Setup all databases with sample data
 ./scripts/setup-databases.sh -A -S
@@ -923,17 +968,18 @@ podman volume inspect postgres_data
 
 #### Database Connection Details
 
-| Database | Host | Port | Default Credentials | Management URL |
-|----------|------|------|-------------------|----------------|
-| **PostgreSQL** | localhost | 8502 | postgres / 123456 | https://pgadmin.test |
-| **MariaDB** | localhost | 8501 | root / 123456 | https://phpmyadmin.test |
-| **MySQL** | localhost | 8505 | root / 123456 | https://phpmyadmin.test |
-| **MongoDB** | localhost | 8503 | root / 123456 | https://mongodb.test |
-| **Redis** | localhost | 8504 | (no auth) | (command line only) |
+| Database       | Host      | Port | Default Credentials | Management URL          |
+| -------------- | --------- | ---- | ------------------- | ----------------------- |
+| **PostgreSQL** | localhost | 8502 | postgres / 123456   | https://pgadmin.test    |
+| **MariaDB**    | localhost | 8501 | root / 123456       | https://phpmyadmin.test |
+| **MySQL**      | localhost | 8505 | root / 123456       | https://phpmyadmin.test |
+| **MongoDB**    | localhost | 8503 | root / 123456       | https://mongodb.test    |
+| **Redis**      | localhost | 8504 | (no auth)           | (command line only)     |
 
 #### Service-Specific Databases
 
 **PostgreSQL Databases**:
+
 ```sql
 -- Connect: psql -h localhost -p 8502 -U postgres
 \l                          -- List databases
@@ -943,6 +989,7 @@ podman volume inspect postgres_data
 ```
 
 **MariaDB/MySQL Databases**:
+
 ```sql
 -- Connect: mysql -h localhost -P 8501 -u root -p
 SHOW DATABASES;             -- List databases
@@ -952,6 +999,7 @@ SELECT User FROM mysql.user; -- List users
 ```
 
 **MongoDB Databases**:
+
 ```javascript
 // Connect: mongosh mongodb://root:123456@localhost:8503
 show dbs                    // List databases
@@ -963,6 +1011,7 @@ db.stats()                 // Database statistics
 ### Backup and Restore Procedures
 
 #### Automated Backups
+
 ```bash
 # Backup before database setup
 ./scripts/setup-databases.sh -A -B
@@ -982,6 +1031,7 @@ podman exec mongodb mongodump --authenticationDatabase admin -u root -p 123456 -
 ```
 
 #### Individual Database Backups
+
 ```bash
 # PostgreSQL specific database
 podman exec postgres pg_dump -U postgres metabase > backups/metabase_$(date +%Y%m%d).sql
@@ -994,6 +1044,7 @@ podman exec mongodb mongodump --authenticationDatabase admin -u root -p 123456 -
 ```
 
 #### Restore Procedures
+
 ```bash
 # Restore PostgreSQL
 ./scripts/setup-databases.sh -P -F backups/postgres_backup.sql
@@ -1011,6 +1062,7 @@ podman exec mongodb mongorestore --authenticationDatabase admin -u root -p 12345
 ### Sample Data Management
 
 #### Creating Sample Data
+
 ```bash
 # Generate sample data during setup
 ./scripts/setup-databases.sh -A -S
@@ -1019,7 +1071,7 @@ podman exec mongodb mongorestore --authenticationDatabase admin -u root -p 12345
 cat << 'EOF' > sample_data.sql
 -- PostgreSQL sample data
 \c metabase;
-INSERT INTO sample_metrics (name, value, created_at) VALUES 
+INSERT INTO sample_metrics (name, value, created_at) VALUES
 ('Daily Users', 1500, NOW()),
 ('Revenue', 25000, NOW()),
 ('Conversion Rate', 3.5, NOW());
@@ -1031,20 +1083,24 @@ podman exec -i postgres psql -U postgres < sample_data.sql
 #### Sample Data Structure
 
 **PostgreSQL Sample Data**:
+
 - `metabase.sample_data` - Sample metrics and KPIs
 - `nocodb.projects` - Sample project data
 
 **MariaDB Sample Data**:
+
 - `npm.test_table` - Sample entries for testing
 - `matomo.sample_visits` - Web analytics sample data
 
 **MongoDB Sample Data**:
+
 - `logs.application_logs` - Sample application log entries
 - `analytics.events` - Sample event tracking data
 
 ### Database Administration
 
 #### PostgreSQL Administration
+
 ```bash
 # Connect to PostgreSQL
 podman exec -it postgres psql -U postgres
@@ -1056,7 +1112,7 @@ GRANT ALL PRIVILEGES ON DATABASE myapp TO myapp_user;
 
 # Performance monitoring
 SELECT * FROM pg_stat_activity WHERE state = 'active';
-SELECT schemaname, tablename, n_tup_ins, n_tup_upd, n_tup_del 
+SELECT schemaname, tablename, n_tup_ins, n_tup_upd, n_tup_del
 FROM pg_stat_user_tables;
 
 # Backup specific database
@@ -1064,6 +1120,7 @@ podman exec postgres pg_dump -U postgres -d myapp > backups/myapp.sql
 ```
 
 #### MySQL/MariaDB Administration
+
 ```bash
 # Connect to MariaDB
 podman exec -it mariadb mysql -u root -p
@@ -1084,6 +1141,7 @@ podman exec mariadb mysqldump -u root -p123456 myapp > backups/myapp.sql
 ```
 
 #### MongoDB Administration
+
 ```javascript
 // Connect to MongoDB
 // mongosh mongodb://root:123456@localhost:8503
@@ -1114,6 +1172,7 @@ db.serverStatus();
 ### SSL Certificate Generation
 
 #### Wildcard Certificate (Recommended for Development)
+
 ```bash
 # Generate wildcard certificate for *.test domains
 ./scripts/setup-ssl.sh -t wildcard
@@ -1126,6 +1185,7 @@ db.serverStatus();
 ```
 
 #### Individual Certificates
+
 ```bash
 # Generate separate certificate for each service
 ./scripts/setup-ssl.sh -t individual
@@ -1135,6 +1195,7 @@ db.serverStatus();
 ```
 
 #### Let's Encrypt Certificates (Production)
+
 ```bash
 # For production with valid domain
 ./scripts/setup-ssl.sh -t letsencrypt -D "api.mycompany.com"
@@ -1146,6 +1207,7 @@ db.serverStatus();
 ### Certificate Trust Installation
 
 #### Cross-Platform Trust Setup
+
 ```bash
 # Auto-detect platform and install
 ./scripts/trust-host.sh
@@ -1163,6 +1225,7 @@ db.serverStatus();
 #### Platform-Specific Instructions
 
 **Linux (Ubuntu/Debian)**:
+
 ```bash
 # Install certificate in system trust store
 ./scripts/trust-host.sh -L
@@ -1176,6 +1239,7 @@ openssl x509 -in /usr/local/share/ca-certificates/wildcard.test.crt -text -noout
 ```
 
 **Windows (WSL)**:
+
 ```bash
 # Install in both Linux and Windows trust stores
 ./scripts/trust-host.sh -W -L
@@ -1185,6 +1249,7 @@ Import-Certificate -FilePath "C:\path\to\wildcard.test.crt" -CertStoreLocation "
 ```
 
 **macOS**:
+
 ```bash
 # Install in system keychain
 ./scripts/trust-host.sh -M
@@ -1199,6 +1264,7 @@ security find-certificate -c "wildcard.test" /Library/Keychains/System.keychain
 #### Browser-Specific Configuration
 
 **Firefox**:
+
 ```bash
 # Install certificate in Firefox profiles
 ./scripts/trust-host.sh -F
@@ -1212,6 +1278,7 @@ certutil -L -d sql:$HOME/.mozilla/firefox/*.default*/
 ```
 
 **Chrome/Chromium**:
+
 ```bash
 # Setup Chrome certificate policy
 ./scripts/trust-host.sh -C
@@ -1223,6 +1290,7 @@ certutil -L -d sql:$HOME/.mozilla/firefox/*.default*/
 ### Hosts File Management
 
 #### Update System Hosts File
+
 ```bash
 # Add all microservice domains to /etc/hosts
 ./scripts/trust-host.sh -H
@@ -1239,27 +1307,29 @@ EOF
 ```
 
 #### Service Domains
-| Service | Domain | Purpose |
-|---------|--------|---------|
-| nginx.test | Nginx Proxy Manager | Reverse proxy management |
-| adminer.test | Adminer | Universal database tool |
-| pgadmin.test | pgAdmin | PostgreSQL administration |
-| phpmyadmin.test | phpMyAdmin | MySQL/MariaDB administration |
-| mongodb.test | Mongo Express | MongoDB administration |
-| metabase.test | Metabase | Business intelligence |
-| nocodb.test | NocoDB | No-code database platform |
-| grafana.test | Grafana | Monitoring dashboards |
-| prometheus.test | Prometheus | Metrics collection |
-| kibana.test | Kibana | Log analysis |
-| n8n.test | n8n | Workflow automation |
-| langflow.test | Langflow | AI workflow builder |
-| mailpit.test | Mailpit | Email testing |
-| gitea.test | Gitea | Git repository management |
-| odoo.test | Odoo | ERP system |
+
+| Service         | Domain              | Purpose                      |
+| --------------- | ------------------- | ---------------------------- |
+| nginx.test      | Nginx Proxy Manager | Reverse proxy management     |
+| adminer.test    | Adminer             | Universal database tool      |
+| pgadmin.test    | pgAdmin             | PostgreSQL administration    |
+| phpmyadmin.test | phpMyAdmin          | MySQL/MariaDB administration |
+| mongodb.test    | Mongo Express       | MongoDB administration       |
+| metabase.test   | Metabase            | Business intelligence        |
+| nocodb.test     | NocoDB              | No-code database platform    |
+| grafana.test    | Grafana             | Monitoring dashboards        |
+| prometheus.test | Prometheus          | Metrics collection           |
+| kibana.test     | Kibana              | Log analysis                 |
+| n8n.test        | n8n                 | Workflow automation          |
+| langflow.test   | Langflow            | AI workflow builder          |
+| mailpit.test    | Mailpit             | Email testing                |
+| gitea.test      | Gitea               | Git repository management    |
+| odoo.test       | Odoo                | ERP system                   |
 
 ### Security Best Practices
 
 #### Development Environment Security
+
 ```bash
 # Change default passwords
 sed -i 's/ADMIN_PASSWORD=123456/ADMIN_PASSWORD=your_secure_password/g' .env
@@ -1271,6 +1341,7 @@ openssl rand -base64 32  # For session secrets
 ```
 
 #### Production Security Hardening
+
 ```bash
 # 1. Update all default credentials in .env
 # 2. Use strong passwords (16+ characters)
@@ -1288,6 +1359,7 @@ podman run --security-opt label=enable --security-opt no-new-privileges
 ```
 
 #### Certificate Management
+
 ```bash
 # Check certificate expiration
 openssl x509 -in ssl/wildcard.test.crt -noout -dates
@@ -1316,6 +1388,7 @@ The system automatically detects and configures different project types without 
 #### PHP Projects
 
 **Supported Frameworks**:
+
 - Laravel (artisan commands)
 - WordPress (wp-config detection)
 - Symfony (bin/console commands)
@@ -1323,6 +1396,7 @@ The system automatically detects and configures different project types without 
 - Generic Composer projects
 
 **Auto-Detection Examples**:
+
 ```bash
 # Laravel Project
 mkdir apps/my-laravel-app
@@ -1338,6 +1412,7 @@ podman logs php
 ```
 
 **Manual PHP Deployment**:
+
 ```bash
 # Create PHP project structure
 mkdir -p apps/my-php-app
@@ -1356,6 +1431,7 @@ podman compose -f compose/php.yml up -d
 #### Node.js Projects
 
 **Supported Frameworks**:
+
 - Next.js (automatic build detection)
 - NestJS (TypeScript compilation)
 - React (build scripts)
@@ -1364,6 +1440,7 @@ podman compose -f compose/php.yml up -d
 - Generic npm projects
 
 **Auto-Detection Examples**:
+
 ```bash
 # Next.js Project
 mkdir apps/my-nextjs-app
@@ -1411,6 +1488,7 @@ podman compose -f compose/node.yml up -d
 #### Python Projects
 
 **Supported Frameworks**:
+
 - Django (manage.py detection)
 - FastAPI (automatic detection)
 - Flask (app.py detection)
@@ -1419,6 +1497,7 @@ podman compose -f compose/node.yml up -d
 - Pipenv projects
 
 **Auto-Detection Examples**:
+
 ```bash
 # Django Project
 mkdir apps/my-django-app
@@ -1454,6 +1533,7 @@ podman compose -f compose/python.yml up -d
 #### Go Projects
 
 **Supported Frameworks**:
+
 - Gin framework
 - Gorilla Mux
 - Echo framework
@@ -1462,6 +1542,7 @@ podman compose -f compose/python.yml up -d
 - Cobra CLI applications
 
 **Auto-Detection Examples**:
+
 ```bash
 # Gin Project
 mkdir apps/my-go-api
@@ -1496,12 +1577,14 @@ podman compose -f compose/go.yml up -d
 #### .NET Projects
 
 **Supported Project Types**:
+
 - ASP.NET Core (Web API, MVC, Blazor)
 - Worker Services
 - Console Applications
 - Class Libraries
 
 **Auto-Detection Examples**:
+
 ```bash
 # ASP.NET Core Web API
 mkdir apps/my-dotnet-api
@@ -1518,6 +1601,7 @@ podman compose -f compose/dotnet.yml up -d
 ### Application Deployment Patterns
 
 #### Multi-Application Structure
+
 ```bash
 # Organize multiple applications
 apps/
@@ -1532,6 +1616,7 @@ apps/
 ```
 
 #### Environment-Specific Deployment
+
 ```bash
 # Development environment
 ./scripts/start-services.sh -c backend -c database -c dbms
@@ -1546,6 +1631,7 @@ apps/
 ### Hot Reload and Development
 
 #### Enable Development Mode
+
 ```bash
 # Start services with development configurations
 export ASPNETCORE_ENVIRONMENT=Development
@@ -1556,15 +1642,18 @@ export FLASK_ENV=development
 ```
 
 #### Volume Mounting for Hot Reload
+
 All backend services automatically mount your application code:
+
 ```yaml
 # Automatic volume mounting pattern
 volumes:
-  - ../apps:/var/www/html          # PHP
-  - ../apps:/app                   # Node.js, Python, Go, .NET
+  - ../apps:/var/www/html # PHP
+  - ../apps:/app # Node.js, Python, Go, .NET
 ```
 
 #### Debugging Applications
+
 ```bash
 # View application logs
 podman logs -f node
@@ -1584,6 +1673,7 @@ podman exec python python -m pdb main.py
 ### IDE Integration
 
 #### VS Code Development
+
 ```bash
 # Install Docker extension
 # Create .vscode/launch.json for debugging
@@ -1608,6 +1698,7 @@ EOF
 ```
 
 #### Database Integration
+
 ```bash
 # VS Code database connections
 # Install SQLTools extension
@@ -1632,6 +1723,7 @@ EOF
 ### Security Hardening Checklist
 
 #### 1. Credential Management
+
 ```bash
 # Generate secure passwords
 openssl rand -base64 32 > .secrets/db_password
@@ -1644,6 +1736,7 @@ sed -i "s/MYSQL_ROOT_PASSWORD=123456/MYSQL_ROOT_PASSWORD=$(cat .secrets/db_passw
 ```
 
 #### 2. Network Security
+
 ```bash
 # Remove external database ports in production
 # Edit compose files to remove port mappings:
@@ -1666,6 +1759,7 @@ networks:
 ```
 
 #### 3. Container Security
+
 ```bash
 # Run containers as non-root users (already configured)
 # Enable security options
@@ -1680,6 +1774,7 @@ volumes:
 ```
 
 #### 4. SSL/TLS Configuration
+
 ```bash
 # Use Let's Encrypt for production
 ./scripts/setup-ssl.sh -t letsencrypt -D "yourdomain.com"
@@ -1693,6 +1788,7 @@ ssl_prefer_server_ciphers off;
 ### Performance Optimization
 
 #### 1. Container Resource Limits
+
 ```yaml
 # Add to compose files for production
 services:
@@ -1700,14 +1796,15 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'
+          cpus: "2"
           memory: 2G
         reservations:
-          cpus: '1'
+          cpus: "1"
           memory: 1G
 ```
 
 #### 2. Database Optimization
+
 ```bash
 # PostgreSQL optimization
 cat << 'EOF' > config/postgres/postgresql.conf
@@ -1733,6 +1830,7 @@ EOF
 ```
 
 #### 3. Application Performance
+
 ```bash
 # Enable production builds
 export NODE_ENV=production
@@ -1749,21 +1847,23 @@ opcache.validate_timestamps=0
 ### Monitoring and Alerting Setup
 
 #### 1. Configure Prometheus Monitoring
+
 ```yaml
 # config/prometheus/prometheus.yml
 global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'microservices'
+  - job_name: "microservices"
     static_configs:
-      - targets: 
-        - 'postgres-exporter:9187'
-        - 'nginx-exporter:9113'
-        - 'node-exporter:9100'
+      - targets:
+          - "postgres-exporter:9187"
+          - "nginx-exporter:9113"
+          - "node-exporter:9100"
 ```
 
 #### 2. Grafana Dashboard Setup
+
 ```bash
 # Import standard dashboards
 curl -X POST \
@@ -1779,6 +1879,7 @@ curl -X POST \
 ```
 
 #### 3. Log Aggregation
+
 ```bash
 # Configure centralized logging
 # Elasticsearch + Kibana + Logstash already included
@@ -1793,6 +1894,7 @@ curl -X POST \
 ### Backup Strategies
 
 #### 1. Automated Database Backups
+
 ```bash
 # Create backup script
 cat << 'EOF' > scripts/backup-production.sh
@@ -1816,6 +1918,7 @@ chmod +x scripts/backup-production.sh
 ```
 
 #### 2. Schedule Regular Backups
+
 ```bash
 # Add to crontab
 echo "0 2 * * * /path/to/scripts/backup-production.sh" | crontab -
@@ -1827,6 +1930,7 @@ echo "0 3 * * 0 /path/to/scripts/backup-production.sh && rsync -av /backups/ bac
 ### Disaster Recovery Planning
 
 #### 1. Recovery Procedures
+
 ```bash
 # Document recovery steps
 cat << 'EOF' > docs/disaster-recovery.md
@@ -1848,6 +1952,7 @@ EOF
 ```
 
 #### 2. Recovery Testing
+
 ```bash
 # Regular recovery testing
 # 1. Deploy to test environment
@@ -1871,11 +1976,13 @@ EOF
 #### 1. Port Conflicts
 
 **Symptoms**:
+
 - Services fail to start
 - "Port already in use" errors
 - Connection refused errors
 
 **Diagnosis**:
+
 ```bash
 # Check what's using specific ports
 netstat -tlnp | grep -E ':(80|443|8501|8502|9001)'
@@ -1886,6 +1993,7 @@ podman ps -a
 ```
 
 **Solutions**:
+
 ```bash
 # Stop conflicting services
 sudo systemctl stop apache2 nginx mysql postgresql
@@ -1901,11 +2009,13 @@ sed -i 's/8501:3306/8506:3306/' compose/mariadb.yml
 #### 2. Container Startup Failures
 
 **Symptoms**:
+
 - Containers exit immediately
 - "Container not found" errors
 - Services show as unhealthy
 
 **Diagnosis**:
+
 ```bash
 # Check container status
 podman ps -a
@@ -1922,6 +2032,7 @@ free -h  # Memory
 ```
 
 **Solutions**:
+
 ```bash
 # Remove and recreate containers
 podman stop container_name
@@ -1938,11 +2049,13 @@ sudo chown -R $USER:$USER ./microservices
 #### 3. Database Connection Issues
 
 **Symptoms**:
+
 - Applications can't connect to database
 - Authentication failures
 - Connection timeouts
 
 **Diagnosis**:
+
 ```bash
 # Test database connectivity
 podman exec postgres pg_isready -U postgres
@@ -1958,6 +2071,7 @@ podman exec php telnet mariadb 3306
 ```
 
 **Solutions**:
+
 ```bash
 # Reset database passwords
 ./scripts/setup-databases.sh -A
@@ -1974,11 +2088,13 @@ podman network inspect microservices-net
 #### 4. SSL Certificate Issues
 
 **Symptoms**:
+
 - "Certificate not trusted" warnings
 - HTTPS connections fail
 - Browser security errors
 
 **Diagnosis**:
+
 ```bash
 # Check certificate validity
 openssl x509 -in ssl/wildcard.test.crt -noout -dates -subject
@@ -1991,6 +2107,7 @@ openssl s_client -connect nginx.test:443
 ```
 
 **Solutions**:
+
 ```bash
 # Regenerate certificates
 ./scripts/setup-ssl.sh -f
@@ -2007,11 +2124,13 @@ openssl s_client -connect nginx.test:443
 #### 5. Network Connectivity Problems
 
 **Symptoms**:
+
 - Services can't communicate
 - DNS resolution failures
 - Proxy configuration issues
 
 **Diagnosis**:
+
 ```bash
 # Check network configuration
 podman network ls
@@ -2026,6 +2145,7 @@ podman logs nginx-proxy-manager
 ```
 
 **Solutions**:
+
 ```bash
 # Recreate network
 podman network rm microservices-net
@@ -2042,6 +2162,7 @@ podman network create --driver bridge microservices-net
 ### Log Analysis Techniques
 
 #### 1. Centralized Log Viewing
+
 ```bash
 # View all service logs
 ./scripts/show-services.sh -L
@@ -2054,6 +2175,7 @@ podman network create --driver bridge microservices-net
 ```
 
 #### 2. Error Pattern Analysis
+
 ```bash
 # Search for errors across all services
 podman ps --format "table {{.Names}}" | grep -v NAMES | while read container; do
@@ -2069,11 +2191,12 @@ grep -r "ERROR" logs/ | cut -d: -f3- | sort | uniq -c | sort -nr
 ```
 
 #### 3. Performance Log Analysis
+
 ```bash
 # Identify slow queries (PostgreSQL)
 podman exec postgres psql -U postgres -c "
-SELECT query, mean_time, calls, total_time 
-FROM pg_stat_statements 
+SELECT query, mean_time, calls, total_time
+FROM pg_stat_statements
 ORDER BY mean_time DESC LIMIT 10;"
 
 # Analyze web server logs
@@ -2089,6 +2212,7 @@ done > logs/resource-usage.log
 ### Recovery Procedures
 
 #### 1. Service Recovery
+
 ```bash
 # Individual service recovery
 ./scripts/stop-services.sh -c backend
@@ -2107,6 +2231,7 @@ podman system prune -f
 ```
 
 #### 2. Data Recovery
+
 ```bash
 # Database recovery from backup
 ./scripts/setup-databases.sh -F /backups/latest/postgres.sql
@@ -2122,6 +2247,7 @@ git stash pop  # Restore local changes
 ```
 
 #### 3. Network Recovery
+
 ```bash
 # Recreate network infrastructure
 podman network rm microservices-net
@@ -2139,6 +2265,7 @@ podman exec nginx-proxy-manager ping grafana
 ### Performance Troubleshooting
 
 #### 1. Identify Resource Bottlenecks
+
 ```bash
 # Monitor system resources
 htop  # CPU and memory usage
@@ -2151,11 +2278,12 @@ podman stats  # Live container statistics
 ```
 
 #### 2. Database Performance Issues
+
 ```bash
 # PostgreSQL performance analysis
 podman exec postgres psql -U postgres -c "
 SELECT schemaname, tablename, n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd
-FROM pg_stat_user_tables 
+FROM pg_stat_user_tables
 ORDER BY n_tup_ins + n_tup_upd + n_tup_del DESC;"
 
 # MySQL performance analysis
@@ -2172,6 +2300,7 @@ db.stats();"
 ```
 
 #### 3. Application Performance Optimization
+
 ```bash
 # Identify slow applications
 ./scripts/show-services.sh -T | grep -E "CPU|Memory" | sort -k2 -nr
@@ -2200,6 +2329,7 @@ services:
 #### 1. Adding New Services
 
 **Create a new service compose file**:
+
 ```yaml
 # compose/redis-commander.yml
 version: "3.8"
@@ -2223,6 +2353,7 @@ services:
 ```
 
 **Add to service categories**:
+
 ```bash
 # Edit scripts/config.sh
 SERVICE_CATEGORIES=(
@@ -2235,6 +2366,7 @@ SERVICE_CATEGORIES=(
 #### 2. Custom Backend Language Support
 
 **Create new backend service**:
+
 ```dockerfile
 # config/rust/Dockerfile
 FROM rust:1.70
@@ -2263,6 +2395,7 @@ CMD ["cargo", "run"]
 ```
 
 **Smart entrypoint for Rust**:
+
 ```bash
 #!/bin/bash
 # config/rust/smart-entrypoint.sh
@@ -2274,12 +2407,12 @@ detect_rust_projects() {
         if [ -d "$app_dir" ]; then
             app_name=$(basename "$app_dir")
             echo "📁 Found app: $app_name"
-            
+
             cd "$app_dir"
-            
+
             if [ -f "Cargo.toml" ]; then
                 echo "📦 Rust project detected in $app_name"
-                
+
                 # Check for web frameworks
                 if grep -q "actix-web" Cargo.toml; then
                     echo "🚀 Actix-web framework detected"
@@ -2288,7 +2421,7 @@ detect_rust_projects() {
                 elif grep -q "rocket" Cargo.toml; then
                     echo "🚀 Rocket framework detected"
                 fi
-                
+
                 # Build in release mode for production
                 if [ "$RUST_ENV" = "production" ]; then
                     cargo build --release
@@ -2296,7 +2429,7 @@ detect_rust_projects() {
                     cargo check
                 fi
             fi
-            
+
             chown -R app:app "$app_dir"
         fi
     done
@@ -2311,6 +2444,7 @@ exec "$@"
 #### 3. Environment-Specific Configurations
 
 **Create environment overlay files**:
+
 ```yaml
 # compose/overrides/development.yml
 version: "3.8"
@@ -2320,7 +2454,7 @@ services:
     environment:
       - POSTGRES_LOG_STATEMENT=all
     volumes:
-      - ../logs/postgres:/var/log/postgresql
+      - ../../logs/postgres:/var/log/postgresql
 
   node:
     environment:
@@ -2336,6 +2470,7 @@ services:
 ```
 
 **Use with docker compose**:
+
 ```bash
 # Deploy with development overrides
 podman compose -f compose/postgres.yml -f compose/overrides/development.yml up -d
@@ -2349,6 +2484,7 @@ podman compose -f compose/postgres.yml -f compose/overrides/production.yml up -d
 #### 1. Custom Deployment Scripts
 
 **Application-specific deployment**:
+
 ```bash
 #!/bin/bash
 # scripts/deploy-app.sh
@@ -2391,6 +2527,7 @@ echo "✅ $APP_NAME ($APP_TYPE) deployed successfully!"
 #### 2. Health Check Automation
 
 **Advanced health monitoring**:
+
 ```bash
 #!/bin/bash
 # scripts/health-monitor.sh
@@ -2401,29 +2538,29 @@ CHECK_INTERVAL=300  # 5 minutes
 monitor_services() {
     while true; do
         echo "$(date): Starting health check cycle..."
-        
+
         # Get service status
         services_json=$(./scripts/show-services.sh -f json)
-        
+
         # Check for unhealthy services
         unhealthy=$(echo "$services_json" | jq -r '.microservices.services[] | select(.health == "unhealthy") | .name')
-        
+
         if [ -n "$unhealthy" ]; then
             message="🚨 Unhealthy services detected: $unhealthy"
             echo "$message"
-            
+
             # Send alert (Slack, email, etc.)
             curl -X POST -H 'Content-type: application/json' \
                 --data "{\"text\":\"$message\"}" \
                 "$WEBHOOK_URL"
-            
+
             # Attempt automatic recovery
             for service in $unhealthy; do
                 echo "Attempting to restart $service..."
                 podman restart "$service"
             done
         fi
-        
+
         sleep $CHECK_INTERVAL
     done
 }
@@ -2441,6 +2578,7 @@ fi
 #### 3. Backup Automation
 
 **Intelligent backup script**:
+
 ```bash
 #!/bin/bash
 # scripts/smart-backup.sh
@@ -2453,67 +2591,67 @@ create_backup() {
     local backup_type="$1"  # full, incremental, databases-only
     local timestamp=$(date +%Y%m%d_%H%M%S)
     local backup_dir="$BACKUP_ROOT/$backup_type/$timestamp"
-    
+
     mkdir -p "$backup_dir"
-    
+
     case "$backup_type" in
         "full")
             echo "Creating full system backup..."
-            
+
             # Database backups
             backup_databases "$backup_dir"
-            
+
             # Volume backups
             backup_volumes "$backup_dir"
-            
+
             # Configuration backups
             tar -czf "$backup_dir/configs.tar.gz" compose/ config/ scripts/ .env
-            
+
             # Application code (if not in git)
             if [ -d "apps" ]; then
                 tar --exclude=node_modules --exclude=.git \
                     -czf "$backup_dir/apps.tar.gz" apps/
             fi
             ;;
-            
+
         "incremental")
             echo "Creating incremental backup..."
             # Compare with last backup and only backup changes
             ;;
-            
+
         "databases-only")
             echo "Creating database-only backup..."
             backup_databases "$backup_dir"
             ;;
     esac
-    
+
     # Compress and encrypt backup
     cd "$backup_dir/.."
     tar -czf "${timestamp}.tar.gz" "$timestamp"
     gpg --symmetric --cipher-algo AES256 "${timestamp}.tar.gz"
     rm -rf "$timestamp" "${timestamp}.tar.gz"
-    
+
     # Upload to cloud storage
     if command -v aws >/dev/null 2>&1; then
         aws s3 cp "${timestamp}.tar.gz.gpg" "s3://$S3_BUCKET/$backup_type/"
     fi
-    
+
     echo "✅ Backup completed: $backup_dir"
 }
 
 backup_databases() {
     local backup_dir="$1"
-    
+
     # PostgreSQL
     if podman container exists postgres; then
         podman exec postgres pg_dumpall -U postgres | gzip > "$backup_dir/postgres.sql.gz"
     fi
-    
+
     # MariaDB
     if podman container exists mariadb; then
         podman exec mariadb mysqldump --all-databases -u root -p$MYSQL_ROOT_PASSWORD | gzip > "$backup_dir/mariadb.sql.gz"
     fi
-    
+
     # MongoDB
     if podman container exists mongodb; then
         podman exec mongodb mongodump --authenticationDatabase admin -u root -p $MONGO_ROOT_PASSWORD --gzip --archive="$backup_dir/mongodb.archive.gz"
@@ -2522,10 +2660,10 @@ backup_databases() {
 
 backup_volumes() {
     local backup_dir="$1"
-    
+
     # Get list of volumes
     volumes=$(podman volume ls --format "{{.Name}}" | grep -E "(postgres|mariadb|mongodb|grafana|prometheus)_data")
-    
+
     for volume in $volumes; do
         echo "Backing up volume: $volume"
         podman run --rm -v "$volume:/source:ro" -v "$backup_dir:/backup" \
@@ -2581,7 +2719,7 @@ test:
   script:
     - ./scripts/install.sh -c database -c backend -y
     - ./scripts/show-services.sh -H
-    - # Run application tests
+    -  # Run application tests
   only:
     - merge_requests
     - main
@@ -2589,7 +2727,7 @@ test:
 build:
   stage: build
   script:
-    - # Build application containers
+    -  # Build application containers
     - podman build -t $CONTAINER_REGISTRY/$CI_PROJECT_PATH/app:$CI_COMMIT_SHA apps/
     - podman push $CONTAINER_REGISTRY/$CI_PROJECT_PATH/app:$CI_COMMIT_SHA
   only:
@@ -2598,7 +2736,7 @@ build:
 deploy_staging:
   stage: deploy
   script:
-    - ./scripts/stop-services.sh -x database  # Keep databases running
+    - ./scripts/stop-services.sh -x database # Keep databases running
     - ./scripts/start-services.sh -c backend
     - ./scripts/show-services.sh -H
   environment:
@@ -2629,30 +2767,30 @@ name: Microservices CI/CD
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Setup environment
         run: |
           sudo apt-get update
           sudo apt-get install -y podman
-          
+
       - name: Install microservices
         run: |
           ./scripts/install.sh -c database -c backend -y
-          
+
       - name: Run health checks
         run: |
           sleep 30  # Wait for services to start
           ./scripts/show-services.sh -H
-          
+
       - name: Run application tests
         run: |
           # Add your test commands here
@@ -2664,7 +2802,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Deploy to production
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -2672,7 +2810,7 @@ jobs:
         run: |
           echo "$SSH_PRIVATE_KEY" > /tmp/ssh_key
           chmod 600 /tmp/ssh_key
-          
+
           ssh -i /tmp/ssh_key -o StrictHostKeyChecking=no user@$PRODUCTION_HOST '
             cd /opt/microservices
             git pull origin main
@@ -2688,19 +2826,19 @@ jobs:
 // Jenkinsfile
 pipeline {
     agent any
-    
+
     environment {
         MICROSERVICES_PATH = '/opt/microservices'
         BACKUP_PATH = '/backups'
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/your-org/microservices.git'
             }
         }
-        
+
         stage('Test') {
             steps {
                 sh '''
@@ -2711,7 +2849,7 @@ pipeline {
                 '''
             }
         }
-        
+
         stage('Backup') {
             when {
                 branch 'main'
@@ -2723,7 +2861,7 @@ pipeline {
                 '''
             }
         }
-        
+
         stage('Deploy') {
             when {
                 branch 'main'
@@ -2751,7 +2889,7 @@ pipeline {
             }
         }
     }
-    
+
     post {
         always {
             sh '''
@@ -2769,6 +2907,7 @@ pipeline {
 #### 1. Environment Separation
 
 **Directory structure for multiple environments**:
+
 ```
 microservices/
 ├── environments/
@@ -2787,6 +2926,7 @@ microservices/
 ```
 
 **Environment deployment script**:
+
 ```bash
 #!/bin/bash
 # scripts/deploy-env.sh
@@ -2814,28 +2954,28 @@ export COMPOSE_PROJECT_NAME="microservices_$ENVIRONMENT"
 case "$ACTION" in
     "start")
         echo "🚀 Starting $ENVIRONMENT environment..."
-        
+
         # Copy environment configuration
         cp "$ENV_FILE" .env
-        
+
         # Start services with environment-specific overrides
         if [ -f "$ENV_DIR/docker-compose.override.yml" ]; then
             export COMPOSE_FILE="compose/postgres.yml:compose/mariadb.yml:$ENV_DIR/docker-compose.override.yml"
         fi
-        
+
         ./scripts/start-services.sh
         ;;
-        
+
     "stop")
         echo "🛑 Stopping $ENVIRONMENT environment..."
         ./scripts/stop-services.sh
         ;;
-        
+
     "status")
         echo "📊 Status of $ENVIRONMENT environment..."
         ./scripts/show-services.sh
         ;;
-        
+
     *)
         echo "Unknown action: $ACTION"
         exit 1
@@ -2846,6 +2986,7 @@ esac
 #### 2. Environment-Specific Configurations
 
 **Development environment**:
+
 ```bash
 # environments/development/.env
 ADMIN_PASSWORD=dev123
@@ -2859,6 +3000,7 @@ ENABLE_DEBUG_PORTS=true
 ```
 
 **Production environment**:
+
 ```bash
 # environments/production/.env
 ADMIN_PASSWORD=complex_secure_password_here
@@ -2879,69 +3021,78 @@ BACKUP_ENABLED=true
 ### Complete Service Listing
 
 #### Database Services
-| Service | Container | Internal Port | External Port | URL | Default Credentials |
-|---------|-----------|---------------|---------------|-----|-------------------|
-| PostgreSQL | postgres | 5432 | 8502 | N/A | postgres / 123456 |
-| MariaDB | mariadb | 3306 | 8501 | N/A | root / 123456 |
-| MySQL | mysql | 3306 | 8505 | N/A | root / 123456 |
-| MongoDB | mongodb | 27017 | 8503 | N/A | root / 123456 |
-| Redis | redis | 6379 | 8504 | N/A | No authentication |
+
+| Service    | Container | Internal Port | External Port | URL | Default Credentials |
+| ---------- | --------- | ------------- | ------------- | --- | ------------------- |
+| PostgreSQL | postgres  | 5432          | 8502          | N/A | postgres / 123456   |
+| MariaDB    | mariadb   | 3306          | 8501          | N/A | root / 123456       |
+| MySQL      | mysql     | 3306          | 8505          | N/A | root / 123456       |
+| MongoDB    | mongodb   | 27017         | 8503          | N/A | root / 123456       |
+| Redis      | redis     | 6379          | 8504          | N/A | No authentication   |
 
 #### Database Management Tools
-| Service | Container | Internal Port | External Port | URL | Default Credentials |
-|---------|-----------|---------------|---------------|-----|-------------------|
-| Adminer | adminer | 8080 | 8082 | https://adminer.test | N/A |
-| pgAdmin | pgadmin | 80 | 8087 | https://pgadmin.test | admin@site.test / 123456 |
-| phpMyAdmin | phpmyadmin | 80 | 8083 | https://phpmyadmin.test | N/A |
-| Mongo Express | mongo-express | 8081 | 8084 | https://mongodb.test | admin / 123456 |
-| Metabase | metabase | 3000 | 8085 | https://metabase.test | Setup required |
-| NocoDB | nocodb | 8080 | 8086 | https://nocodb.test | Setup required |
+
+| Service       | Container     | Internal Port | External Port | URL                     | Default Credentials      |
+| ------------- | ------------- | ------------- | ------------- | ----------------------- | ------------------------ |
+| Adminer       | adminer       | 8080          | 8082          | https://adminer.test    | N/A                      |
+| pgAdmin       | pgadmin       | 80            | 8087          | https://pgadmin.test    | admin@site.test / 123456 |
+| phpMyAdmin    | phpmyadmin    | 80            | 8083          | https://phpmyadmin.test | N/A                      |
+| Mongo Express | mongo-express | 8081          | 8084          | https://mongodb.test    | admin / 123456           |
+| Metabase      | metabase      | 3000          | 8085          | https://metabase.test   | Setup required           |
+| NocoDB        | nocodb        | 8080          | 8086          | https://nocodb.test     | Setup required           |
 
 #### Backend Development Environments
-| Service | Container | Internal Port | External Port | URL | Features |
-|---------|-----------|---------------|---------------|-----|----------|
-| PHP | php | 8000 | 8000 | http://localhost:8000 | Laravel, WordPress, Symfony auto-detection |
-| Node.js | node | 3000 | 8030 | http://localhost:8030 | Next.js, React, Express auto-detection |
-| Python | python | 8000 | 8040 | http://localhost:8040 | Django, FastAPI, Flask auto-detection |
-| Go | go | 8080 | 8020 | http://localhost:8020 | Gin, Echo, Fiber auto-detection |
-| .NET | dotnet | 80/443 | 8010/8011 | http://localhost:8010 | ASP.NET Core auto-detection |
+
+| Service | Container | Internal Port | External Port | URL                   | Features                                   |
+| ------- | --------- | ------------- | ------------- | --------------------- | ------------------------------------------ |
+| PHP     | php       | 8000          | 8000          | http://localhost:8000 | Laravel, WordPress, Symfony auto-detection |
+| Node.js | node      | 3000          | 8030          | http://localhost:8030 | Next.js, React, Express auto-detection     |
+| Python  | python    | 8000          | 8040          | http://localhost:8040 | Django, FastAPI, Flask auto-detection      |
+| Go      | go        | 8080          | 8020          | http://localhost:8020 | Gin, Echo, Fiber auto-detection            |
+| .NET    | dotnet    | 80/443        | 8010/8011     | http://localhost:8010 | ASP.NET Core auto-detection                |
 
 #### Analytics & Monitoring
-| Service | Container | Internal Port | External Port | URL | Default Credentials |
-|---------|-----------|---------------|---------------|-----|-------------------|
-| Grafana | grafana | 3000 | 9001 | https://grafana.test | admin / 123456 |
-| Prometheus | prometheus | 9090 | 9090 | https://prometheus.test | N/A |
-| Elasticsearch | elasticsearch | 9200/9300 | 9130/9131 | https://elasticsearch.test | N/A |
-| Kibana | kibana | 5601 | 9120 | https://kibana.test | N/A |
-| Logstash | logstash | 5000/5044/9600 | 5000/5044/9600 | N/A | N/A |
-| Matomo | matomo | 80 | 9010 | https://matomo.test | Setup required |
+
+| Service       | Container     | Internal Port  | External Port  | URL                        | Default Credentials |
+| ------------- | ------------- | -------------- | -------------- | -------------------------- | ------------------- |
+| Grafana       | grafana       | 3000           | 9001           | https://grafana.test       | admin / 123456      |
+| Prometheus    | prometheus    | 9090           | 9090           | https://prometheus.test    | N/A                 |
+| Elasticsearch | elasticsearch | 9200/9300      | 9130/9131      | https://elasticsearch.test | N/A                 |
+| Kibana        | kibana        | 5601           | 9120           | https://kibana.test        | N/A                 |
+| Logstash      | logstash      | 5000/5044/9600 | 5000/5044/9600 | N/A                        | N/A                 |
+| Matomo        | matomo        | 80             | 9010           | https://matomo.test        | Setup required      |
 
 #### AI & Automation
-| Service | Container | Internal Port | External Port | URL | Default Credentials |
-|---------|-----------|---------------|---------------|-----|-------------------|
-| n8n | n8n | 5678 | 9100 | https://n8n.test | Setup required |
-| Langflow | langflow | 7860 | 9110 | https://langflow.test | N/A |
+
+| Service  | Container | Internal Port | External Port | URL                   | Default Credentials |
+| -------- | --------- | ------------- | ------------- | --------------------- | ------------------- |
+| n8n      | n8n       | 5678          | 9100          | https://n8n.test      | Setup required      |
+| Langflow | langflow  | 7860          | 9110          | https://langflow.test | N/A                 |
 
 #### Communication & Project Management
-| Service | Container | Internal Port | External Port | URL | Default Credentials |
-|---------|-----------|---------------|---------------|-----|-------------------|
-| Mailpit | mailpit | 8025/1025 | 9200/9201 | https://mailpit.test | N/A |
-| Gitea | gitea | 3000/22 | 9210/2222 | https://gitea.test | Setup required |
+
+| Service | Container | Internal Port | External Port | URL                  | Default Credentials |
+| ------- | --------- | ------------- | ------------- | -------------------- | ------------------- |
+| Mailpit | mailpit   | 8025/1025     | 9200/9201     | https://mailpit.test | N/A                 |
+| Gitea   | gitea     | 3000/22       | 9210/2222     | https://gitea.test   | Setup required      |
 
 #### Business Applications
-| Service | Container | Internal Port | External Port | URL | Default Credentials |
-|---------|-----------|---------------|---------------|-----|-------------------|
-| Odoo | odoo | 8069/8072 | 9300/9301 | https://odoo.test | Setup required |
+
+| Service | Container | Internal Port | External Port | URL               | Default Credentials |
+| ------- | --------- | ------------- | ------------- | ----------------- | ------------------- |
+| Odoo    | odoo      | 8069/8072     | 9300/9301     | https://odoo.test | Setup required      |
 
 #### Proxy & Security
-| Service | Container | Internal Port | External Port | URL | Default Credentials |
-|---------|-----------|---------------|---------------|-----|-------------------|
-| Nginx Proxy Manager | nginx-proxy-manager | 80/443/81 | 80/443/81 | https://nginx.test | admin@example.com / changeme |
-| Keycloak | keycloak | 8443/9000 | 9400/9401 | https://keycloak.test | Setup required |
+
+| Service             | Container           | Internal Port | External Port | URL                   | Default Credentials          |
+| ------------------- | ------------------- | ------------- | ------------- | --------------------- | ---------------------------- |
+| Nginx Proxy Manager | nginx-proxy-manager | 80/443/81     | 80/443/81     | https://nginx.test    | admin@example.com / changeme |
+| Keycloak            | keycloak            | 8443/9000     | 9400/9401     | https://keycloak.test | Setup required               |
 
 ### Environment Variable Reference
 
 #### Global Settings
+
 ```bash
 # Admin Credentials
 ADMIN_USER=admin
@@ -2957,6 +3108,7 @@ COMPOSE_PROJECT_NAME=microservices
 ```
 
 #### Database Configuration
+
 ```bash
 # PostgreSQL
 POSTGRES_HOST=postgres
@@ -2982,6 +3134,7 @@ MONGO_INITDB_DATABASE=admin
 ```
 
 #### Service-Specific Variables
+
 ```bash
 # Grafana
 GF_SECURITY_ADMIN_USER=admin
@@ -3009,21 +3162,24 @@ FLASK_ENV=development
 ### Default Credentials and Security Notes
 
 #### ⚠️ Security Warning
+
 **All default passwords must be changed for production use!**
 
 #### Default Credentials Table
-| Service | Username | Password | Notes |
-|---------|----------|----------|--------|
-| **System Admin** | admin | 123456 | Used for multiple services |
-| **PostgreSQL** | postgres | 123456 | Database superuser |
-| **MariaDB/MySQL** | root | 123456 | Database root user |
-| **MongoDB** | root | 123456 | Database admin user |
-| **Grafana** | admin | 123456 | Dashboard admin |
-| **Nginx Proxy Manager** | admin@example.com | changeme | Proxy management |
-| **pgAdmin** | admin@site.test | 123456 | PostgreSQL web admin |
-| **Mongo Express** | admin | 123456 | MongoDB web admin |
+
+| Service                 | Username          | Password | Notes                      |
+| ----------------------- | ----------------- | -------- | -------------------------- |
+| **System Admin**        | admin             | 123456   | Used for multiple services |
+| **PostgreSQL**          | postgres          | 123456   | Database superuser         |
+| **MariaDB/MySQL**       | root              | 123456   | Database root user         |
+| **MongoDB**             | root              | 123456   | Database admin user        |
+| **Grafana**             | admin             | 123456   | Dashboard admin            |
+| **Nginx Proxy Manager** | admin@example.com | changeme | Proxy management           |
+| **pgAdmin**             | admin@site.test   | 123456   | PostgreSQL web admin       |
+| **Mongo Express**       | admin             | 123456   | MongoDB web admin          |
 
 #### Production Security Checklist
+
 - [ ] Change all default passwords
 - [ ] Generate secure JWT secrets
 - [ ] Update GitHub tokens
@@ -3077,7 +3233,8 @@ FLASK_ENV=development
 ### File and Directory Reference
 
 #### Project Structure
-```
+
+````
 microservices/
 ├── compose/                    # Docker Compose files
 │   ├── analytics/             # Monitoring & analytics services
@@ -3236,9 +3393,10 @@ microservices/
 
 # SSL setup
 ./scripts/setup-ssl.sh && ./scripts/trust-host.sh
-```
+````
 
 #### Troubleshooting Commands
+
 ```bash
 # Check service status
 podman ps -a
@@ -3267,6 +3425,7 @@ podman system prune -a
 ```
 
 #### Database Commands
+
 ```bash
 # PostgreSQL
 podman exec -it postgres psql -U postgres
@@ -3286,6 +3445,7 @@ podman exec -it redis redis-cli
 #### Getting Help
 
 **Script Help**:
+
 ```bash
 # General help for any script
 ./scripts/{script_name}.sh -h
@@ -3299,51 +3459,55 @@ podman exec -it redis redis-cli
 **Common Support Scenarios**:
 
 1. **Service Won't Start**:
+
    ```bash
    # Check logs
    podman logs {service_name}
-   
+
    # Check port conflicts
    netstat -tlnp | grep {port}
-   
+
    # Recreate service
    podman compose -f compose/{service}.yml down
    podman compose -f compose/{service}.yml up -d
    ```
 
 2. **Database Connection Issues**:
+
    ```bash
    # Test connectivity
    podman exec {app_container} ping {db_container}
-   
+
    # Check database status
    ./scripts/show-services.sh -c database -H
-   
+
    # Reset database
    ./scripts/setup-databases.sh -A
    ```
 
 3. **SSL Certificate Problems**:
+
    ```bash
    # Regenerate certificates
    ./scripts/setup-ssl.sh -f
-   
+
    # Reinstall trust
    ./scripts/trust-host.sh -R && ./scripts/trust-host.sh
-   
+
    # Check certificate validity
    openssl x509 -in ssl/wildcard.test.crt -noout -dates
    ```
 
 4. **Performance Issues**:
+
    ```bash
    # Monitor resources
    ./scripts/show-services.sh -T
-   
+
    # Check system resources
    htop
    df -h
-   
+
    # Optimize containers
    podman system prune
    ```
@@ -3351,12 +3515,14 @@ podman exec -it redis redis-cli
 #### Best Practices Summary
 
 **Development**:
+
 - Use category-specific deployments for development
 - Enable debug logging with `-v` flags
 - Regularly backup development databases
 - Keep applications in separate directories under `apps/`
 
 **Production**:
+
 - Change all default passwords before deployment
 - Use Let's Encrypt certificates for valid domains
 - Enable monitoring and alerting
@@ -3365,6 +3531,7 @@ podman exec -it redis redis-cli
 - Test disaster recovery procedures
 
 **Maintenance**:
+
 - Regularly update container images
 - Monitor disk space and clean up old logs
 - Review and rotate certificates
@@ -3374,24 +3541,28 @@ podman exec -it redis redis-cli
 #### Performance Tips
 
 **Container Optimization**:
+
 - Set appropriate resource limits
 - Use multi-stage builds for smaller images
 - Enable build caching
 - Regularly prune unused resources
 
 **Database Performance**:
+
 - Configure appropriate buffer sizes
 - Enable query caching
 - Set up proper indexes
 - Monitor slow queries
 
 **Network Performance**:
+
 - Use internal container networking
 - Optimize proxy configurations
 - Enable compression
 - Configure appropriate timeouts
 
 **Security Best Practices**:
+
 - Regular security updates
 - Network segmentation
 - Access control policies
@@ -3439,5 +3610,5 @@ This documentation serves as your complete reference for managing and extending 
 
 ---
 
-*Last updated: $(date)*
-*Version: 1.0*
+_Last updated: $(date)_
+_Version: 1.0_

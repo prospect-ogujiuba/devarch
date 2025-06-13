@@ -12,7 +12,7 @@ services:
   npm:
     container_name: nginx-proxy-manager
     build:
-      context: ../config/nginx
+      context: ../../config/nginx
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: ../../.env
@@ -21,8 +21,8 @@ services:
       - "443:443"
       - "81:81"
     volumes:
-      - ../apps:/var/www/html
-      - ../config/nginx/custom:/data/nginx/custom
+      - ../../apps:/var/www/html
+      - ../../config/nginx/custom:/data/nginx/custom
       - /etc/localtime:/etc/localtime:ro
       - npm_data:/data
       - npm_letsencrypt:/etc/letsencrypt

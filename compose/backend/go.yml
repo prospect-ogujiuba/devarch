@@ -8,15 +8,15 @@ services:
   go:
     container_name: go
     build:
-      context: ../config/go
+      context: ../../config/go
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: ../../.env
     ports:
       - "127.0.0.1:8020:8080" # Go application port
     volumes:
-      - ../apps/go:/app
-      - ../logs/go:/var/log/go
+      - ../../apps/go:/app
+      - ../../logs/go:/var/log/go
     working_dir: /app
     command: ["go", "run", "main.go"]
     networks:

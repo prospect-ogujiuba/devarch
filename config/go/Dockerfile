@@ -13,12 +13,11 @@ RUN apk add --no-cache \
 # Install Oh My Zsh
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" || true
 
-# Install Go development tools
-RUN go install github.com/cosmtrek/air@latest && \
-    go install github.com/go-delve/delve/cmd/dlv@latest && \
-    go install golang.org/x/tools/cmd/goimports@latest && \
-    go install golang.org/x/lint/golint@latest && \
-    go install github.com/goreleaser/goreleaser@latest
+# Install Go development tools (compatible versions for Go 1.21)
+RUN go install github.com/cosmtrek/air@v1.49.0 && \
+    go install github.com/go-delve/delve/cmd/dlv@v1.21.2 && \
+    go install golang.org/x/tools/cmd/goimports@v0.13.0 && \
+    go install honnef.co/go/tools/cmd/staticcheck@2023.1.6
 
 # Create app directory
 WORKDIR /app

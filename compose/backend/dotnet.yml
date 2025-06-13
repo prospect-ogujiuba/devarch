@@ -8,7 +8,7 @@ services:
   dotnet:
     container_name: dotnet
     build:
-      context: ../config/dotnet
+      context: ../../config/dotnet
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: ../../.env
@@ -16,8 +16,8 @@ services:
       - "127.0.0.1:8010:80" # HTTP
       - "127.0.0.1:8011:443" # HTTPS
     volumes:
-      - ../apps/dotnet:/app
-      - ../logs/dotnet:/var/log/dotnet
+      - ../../apps/dotnet:/app
+      - ../../logs/dotnet:/var/log/dotnet
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80;https://+:443
