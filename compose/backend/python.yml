@@ -11,9 +11,9 @@ services:
       context: ../config/python
       dockerfile: Dockerfile
     restart: unless-stopped
-    env_file: ../.env
+    env_file: ../../.env
     ports:
-      - "127.0.0.1:8040:8000"   # Python application port (FastAPI/Django)
+      - "127.0.0.1:8040:8000" # Python application port (FastAPI/Django)
     volumes:
       - ../apps/python:/app
       - ../logs/python:/var/log/python

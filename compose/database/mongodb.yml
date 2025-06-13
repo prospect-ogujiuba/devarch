@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 networks:
   microservices-net:
@@ -13,7 +13,7 @@ services:
     container_name: mongodb
     image: mongo:latest
     restart: unless-stopped
-    env_file: ../.env
+    env_file: ../../.env
     ports:
       - "127.0.0.1:8503:27017"
     volumes:

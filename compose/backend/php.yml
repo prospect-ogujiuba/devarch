@@ -16,7 +16,7 @@ services:
     volumes:
       - ../apps:/var/www/html
       - ../scripts:/var/www/scripts
-      - ../.env:/var/www/.env
+      - ../../.env:/var/www/.env
       - ../config/php/php.ini:/usr/local/etc/php/php.ini:ro
     networks:
       - microservices-net

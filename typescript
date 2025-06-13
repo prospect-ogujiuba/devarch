@@ -1325,4 +1325,772 @@ Estimated Installation Time: 10-15 minutes
 [0;36m[2025-06-13 10:42:52] [DEBUG] [log] Command: sudo podman network exists microservices-net[0m
 [sudo] password for fhcadmin: 
 [0;32m[2025-06-13 10:43:04] [INFO] [log] ✅ Check network existence - Success[0m
-[0;32m[
+[0;32m[2025-06-13 10:43:04] [INFO] [log] Network 'microservices-net' already exists[0m
+[0;32m[2025-06-13 10:43:04] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13 10:42:52] [INFO] [log] Installing all categories[0m
+database dbms backend analytics ai mail project erp auth proxy[0m
+[0;32m[2025-06-13 10:43:07] [INFO] [log] 🗄️ Setting up databases...[0m
+[0;32m[2025-06-13 10:43:07] [INFO] [log] Waiting for database services to initialize...[0m
+[0;32m[2025-06-13 10:43:22] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/setup-databases.sh -s -e[0m
+[0;32m[2025-06-13 10:43:22] [INFO] [log] 🔐 Setting up SSL certificates...[0m
+[0;32m[2025-06-13 10:43:22] [INFO] [log] Waiting for nginx-proxy-manager to start...[0m
+[0;32m[2025-06-13 10:43:32] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/setup-ssl.sh -s -e[0m
+[0;32m[2025-06-13 10:43:32] [INFO] [log] 🛡️ Installing SSL certificates in system trust store...[0m
+[0;32m[2025-06-13 10:43:32] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/trust-host.sh -s -e[0m
+[0;32m[2025-06-13 10:43:32] [INFO] [log] 🔍 Dry run completed successfully![0m
+[0;32m[2025-06-13 10:43:32] [INFO] [log] ✅ Installation process completed![0m
+[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004hggit add .[?1l>[?2004l
+]2;git add .]1;git[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004hggit commit -m 'more script updates'' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' s'c'r'i'p't's' 'c'l'e'a'n'e'd' 'u'p'[?1l>[?2004l
+]2;git commit -m 'scripts cleaned up']1;git[master 02291c1] scripts cleaned up
+ 6 files changed, 2832 insertions(+), 17 deletions(-)
+ create mode 100755 scripts/comprehensive-fix.sh
+ mode change 100755 => 100644 scripts/config.sh
+ create mode 100755 scripts/debug-categories.sh
+ create mode 100644 typescript
+[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m)[00m [Kggit push[?1l>[?2004l
+]2;git push]1;gitEnumerating objects: 16, done.
+Counting objects:   6% (1/16)Counting objects:  12% (2/16)Counting objects:  18% (3/16)Counting objects:  25% (4/16)Counting objects:  31% (5/16)Counting objects:  37% (6/16)Counting objects:  43% (7/16)Counting objects:  50% (8/16)Counting objects:  56% (9/16)Counting objects:  62% (10/16)Counting objects:  68% (11/16)Counting objects:  75% (12/16)Counting objects:  81% (13/16)Counting objects:  87% (14/16)Counting objects:  93% (15/16)Counting objects: 100% (16/16)Counting objects: 100% (16/16), done.
+Delta compression using up to 4 threads
+Compressing objects:  10% (1/10)Compressing objects:  20% (2/10)Compressing objects:  30% (3/10)Compressing objects:  40% (4/10)Compressing objects:  50% (5/10)Compressing objects:  60% (6/10)Compressing objects:  70% (7/10)Compressing objects:  80% (8/10)Compressing objects:  90% (9/10)Compressing objects: 100% (10/10)Compressing objects: 100% (10/10), done.
+Writing objects:  10% (1/10)Writing objects:  20% (2/10)Writing objects:  30% (3/10)Writing objects:  50% (5/10)Writing objects:  60% (6/10)Writing objects:  70% (7/10)Writing objects:  80% (8/10)Writing objects:  90% (9/10)Writing objects: 100% (10/10)Writing objects: 100% (10/10), 19.99 KiB | 2.85 MiB/s, done.
+Total 10 (delta 6), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas:   0% (0/6)[Kremote: Resolving deltas:  16% (1/6)[Kremote: Resolving deltas:  33% (2/6)[Kremote: Resolving deltas:  50% (3/6)[Kremote: Resolving deltas:  66% (4/6)[Kremote: Resolving deltas:  83% (5/6)[Kremote: Resolving deltas: 100% (6/6)[Kremote: Resolving deltas: 100% (6/6), completed with 5 local objects.[K
+To https://github.com/prospect-ogujiuba/devarch.git
+   641d4d4..02291c1  master -> master
+[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m)[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [Kgit pushcommit -m 'scripts cleaned up'[30Dadd .                         [25D[9D./scripts/install.sh -sevd[1C [?1l>[?2004l
+]2;./scripts/install.sh -sev]1;./scripts/install.sh[0;36m[2025-06-13 10:44:09] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=false[0m
+
+📋 INSTALLATION SUMMARY
+======================
+
+Project Root: /home/fhcadmin/Projects/devarch
+Container Runtime: podman
+Categories to Install: [0;32m[2025-06-13 10:44:09] [INFO] [log] Installing all categories[0m database dbms backend analytics ai mail project erp auth proxy
+
+
+Installation Options:
+- Skip Confirmation: false
+- Skip Database Setup: false
+- Skip SSL Setup: false
+- Skip Trust Setup: false
+- Parallel Install: false
+- Use Sudo: true
+- Show Errors: true
+- Dry Run: false
+
+Estimated Installation Time: 10-15 minutes
+
+Do you want to proceed with the installation? (y/N)
+y
+[0;32m[2025-06-13 10:44:12] [INFO] [log] Performing pre-installation checks...[0m
+[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Container runtime: podman[0m
+[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml[0m
+[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml[0m
+[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml[0m
+[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml[0m
+[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml[0m
+[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml[0m
+[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml[0m
+[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml[0m
+[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml[0m
+[0;36m[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml[0m
+[0;32m[2025-06-13 10:44:13] [INFO] [log] Compose file validation: 29/29 files valid[0m
+[0;32m[2025-06-13 10:44:13] [INFO] [log] 🚀 Starting microservices installation...[0m
+[0;32m[2025-06-13 10:44:13] [INFO] [log] Starting installation of 1 categories...[0m
+[0;32m[2025-06-13 10:44:13] [INFO] [log] Starting installation of 1 categories...[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Checking if network 'microservices-net' exists[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Executing: Check network existence[0m
+[0;36m[2025-06-13 10:44:13] [DEBUG] [log] Command: sudo podman network exists microservices-net[0m
+[0;32m[2025-06-13 10:44:14] [INFO] [log] ✅ Check network existence - Success[0m
+[0;32m[2025-06-13 10:44:14] [INFO] [log] Network 'microservices-net' already exists[0m
+[0;32m[2025-06-13 10:44:14] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13 10:44:13] [INFO] [log] Installing all categories[0m
+database dbms backend analytics ai mail project erp auth proxy[0m
+[0;32m[2025-06-13 10:44:17] [INFO] [log] 🗄️ Setting up databases...[0m
+[0;32m[2025-06-13 10:44:17] [INFO] [log] Waiting for database services to initialize...[0m
+[0;36m[2025-06-13 10:44:32] [DEBUG] [log] Executing: Setup databases[0m
+[0;36m[2025-06-13 10:44:32] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-databases.sh -s -e[0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log] No specific database selected, setting up all databases[0m
+
+📋 DATABASE SETUP SUMMARY
+=========================
+
+Databases to setup: MariaDB MySQL PostgreSQL MongoDB Redis
+Create sample data: false
+Backup existing: false
+Restore from backup: false
+
+Container runtime: podman
+Wait time: 30 seconds
+
+[0;32m[2025-06-13 10:44:32] [INFO] [log] 🚀 Starting database setup...[0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log] 🔧 Setting up PostgreSQL databases...[0m
+[0;31m[2025-06-13 10:44:32] [ERROR] [log] PostgreSQL container not found. Please start it first.[0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log] 🔧 Setting up MariaDB databases...[0m
+[0;31m[2025-06-13 10:44:32] [ERROR] [log] MariaDB container not found. Please start it first.[0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log] 🔧 Setting up MySQL databases...[0m
+[0;33m[2025-06-13 10:44:32] [WARN] [log] MySQL container not found, skipping MySQL setup[0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log] 🔧 Setting up MongoDB databases...[0m
+[0;33m[2025-06-13 10:44:32] [WARN] [log] MongoDB container not found, skipping MongoDB setup[0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log] 🔧 Setting up Redis configuration...[0m
+[0;33m[2025-06-13 10:44:32] [WARN] [log] Redis container not found, skipping Redis setup[0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log] ✅ Database setup completed successfully![0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log] 🔍 Database connection details:[0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log]   PostgreSQL: localhost:8502 (user: postgres, password: 123456)[0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log]   MariaDB: localhost:8501 (user: root, password: 123456)[0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log]   MySQL: localhost:8505 (user: root, password: 123456)[0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log]   MongoDB: localhost:8503 (user: root, password: 123456)[0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log]   Redis: localhost:8504 (no authentication)[0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log] ✅ Setup databases - Success[0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log] 🔐 Setting up SSL certificates...[0m
+[0;32m[2025-06-13 10:44:32] [INFO] [log] Waiting for nginx-proxy-manager to start...[0m
+[0;36m[2025-06-13 10:44:42] [DEBUG] [log] Executing: Setup SSL certificates[0m
+[0;36m[2025-06-13 10:44:42] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-ssl.sh -s -e[0m
+
+📋 SSL CERTIFICATE SETUP SUMMARY
+================================
+
+Certificate Type: wildcard
+Domain: *.test
+Country: US
+State/Province: Development
+City: Local
+Organization: Microservices
+Organizational Unit: Development
+Validity Period: 3650 days
+RSA Key Size: 4096 bits
+
+Options:
+- Force Regenerate: false
+- Backup Existing: true
+- Setup Nginx Config: true
+- Validate Certificates: true
+
+Services Covered: 17 domains
+  nginx.test
+  adminer.test
+  phpmyadmin.test
+  mongodb.test
+  metabase.test
+  nocodb.test
+  grafana.test
+  prometheus.test
+  matomo.test
+  n8n.test
+  langflow.test
+  kibana.test
+  elasticsearch.test
+  keycloak.test
+  mailpit.test
+  gitea.test
+  odoo.test
+
+[0;32m[2025-06-13 10:44:42] [INFO] [log] 🚀 Starting SSL certificate setup...[0m
+[0;32m[2025-06-13 10:44:42] [INFO] [log] 🔍 Checking SSL setup prerequisites...[0m
+[0;31m[2025-06-13 10:44:43] [ERROR] [log] nginx-proxy-manager container not found. Please start it first.[0m
+[0;33m[2025-06-13 10:44:43] [WARN] [log] ⚠️  Setup SSL certificates - Failed (exit code: 1), continuing...[0m
+[0;32m[2025-06-13 10:44:43] [INFO] [log] 🛡️ Installing SSL certificates in system trust store...[0m
+[0;36m[2025-06-13 10:44:43] [DEBUG] [log] Executing: Trust SSL certificates[0m
+[0;36m[2025-06-13 10:44:43] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/trust-host.sh -s -e[0m
+
+📋 CERTIFICATE TRUST SETUP SUMMARY
+==================================
+
+Platform: [0;32m[2025-06-13 10:44:43] [INFO] [log] 🐧 Detected: Windows Subsystem for Linux (WSL)[0m
+wsl
+Certificate Source: container
+
+
+Trust Options:
+- Linux/WSL: true
+- Windows: false  
+- macOS: false
+- Firefox: false
+- Chrome: false
+- Update Hosts: false
+
+Operation: Install certificates
+
+[0;32m[2025-06-13 10:44:43] [INFO] [log] 🚀 Starting certificate trust setup...[0m
+[0;32m[2025-06-13 10:44:43] [INFO] [log] 📜 Acquiring certificate from source: container[0m
+[0;32m[2025-06-13 10:44:43] [INFO] [log] 📦 Extracting certificate from nginx-proxy-manager container...[0m
+[0;31m[2025-06-13 10:44:43] [ERROR] [log] nginx-proxy-manager container not found[0m
+[0;31m[2025-06-13 10:44:43] [ERROR] [log] Failed to acquire certificate[0m
+[0;33m[2025-06-13 10:44:43] [WARN] [log] ⚠️  Trust SSL certificates - Failed (exit code: 1), continuing...[0m
+
+🎉 INSTALLATION COMPLETED SUCCESSFULLY!
+======================================
+
+Your microservices environment is now running!
+
+📊 Dashboard Access:
+- Nginx Proxy Manager: https://nginx.test (admin panel: http://localhost:81)
+- Grafana Monitoring: https://grafana.test (admin:123456)
+- Metabase Analytics: https://metabase.test
+
+🗄️ Database Management:
+- Adminer: https://adminer.test
+- phpMyAdmin: https://phpmyadmin.test  
+- Mongo Express: https://mongodb.test
+- pgAdmin: https://pgadmin.test
+
+🚀 Development Tools:
+- Mailpit: https://mailpit.test
+- Gitea: https://gitea.test
+
+💼 Business Applications:
+- Odoo ERP: https://odoo.test
+
+🤖 AI & Automation:
+- n8n Workflows: https://n8n.test
+- Langflow: https://langflow.test
+
+🔧 Useful Commands:
+- View services: /home/fhcadmin/Projects/devarch/scripts/show-services.sh
+- Stop all: /home/fhcadmin/Projects/devarch/scripts/stop-services.sh
+- Restart all: /home/fhcadmin/Projects/devarch/scripts/start-services.sh
+
+📝 Next Steps:
+1. Configure your proxy rules in Nginx Proxy Manager
+2. Set up your first database connections
+3. Deploy your applications to the apps/ directory
+4. Configure monitoring dashboards in Grafana
+
+[0;32m[2025-06-13 10:44:43] [INFO] [log] ✅ Installation process completed![0m
+[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/install.sh -sev[1C               quick-start.sh[1m [0m[0m -se[?1l>[?2004l
+]2;./scripts/quick-start.sh -se]1;./scripts/quick-start.sh./scripts/quick-start.sh:12: bad option: -e
+🚀 Starting microservices manually...
+Using: podman with sudo
+📡 Creating network...
+Network already exists
+🗄️ Starting databases...
+./scripts/quick-start.sh:43: command not found: sudo podman
+./scripts/quick-start.sh:44: command not found: sudo podman
+./scripts/quick-start.sh:45: command not found: sudo podman
+⏳ Waiting for databases to initialize...
+🌐 Starting nginx proxy manager...
+./scripts/quick-start.sh:52: command not found: sudo podman
+⏳ Waiting for proxy manager...
+🛠️ Starting database management tools...
+./scripts/quick-start.sh:59: command not found: sudo podman
+./scripts/quick-start.sh:60: command not found: sudo podman
+💻 Starting backend services...
+./scripts/quick-start.sh:64: command not found: sudo podman
+📊 Starting monitoring...
+./scripts/quick-start.sh:68: command not found: sudo podman
+./scripts/quick-start.sh:69: command not found: sudo podman
+✅ Basic services started!
+
+🔗 Access points:
+  - Nginx Proxy Manager: http://localhost:81
+  - Adminer: http://localhost:8082
+  - pgAdmin: http://localhost:8087
+  - Grafana: http://localhost:9001
+  - PHP Development: http://localhost:8000
+
+🔍 Check status with: sudo podman ps
+[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/quick-start.sh -se[28Dsudo podman ps              [14D[14D./scripts/install.sh -sev[?1l>[?2004l
+]2;./scripts/install.sh -sev]1;./scripts/install.sh[0;36m[2025-06-13 10:49:46] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=false[0m
+
+📋 INSTALLATION SUMMARY
+======================
+
+Project Root: /home/fhcadmin/Projects/devarch
+Container Runtime: podman
+Categories to Install: [0;32m[2025-06-13 10:49:46] [INFO] [log] Installing all categories[0m database dbms backend analytics ai mail project erp auth proxy
+
+
+Installation Options:
+- Skip Confirmation: false
+- Skip Database Setup: false
+- Skip SSL Setup: false
+- Skip Trust Setup: false
+- Parallel Install: false
+- Use Sudo: true
+- Show Errors: true
+- Dry Run: false
+
+Estimated Installation Time: 10-15 minutes
+
+Do you want to proceed with the installation? (y/N)
+y
+[0;32m[2025-06-13 10:49:50] [INFO] [log] Performing pre-installation checks...[0m
+[0;36m[2025-06-13 10:49:50] [DEBUG] [log] Container runtime: podman[0m
+[0;33m[2025-06-13 10:49:50] [WARN] [log] Sudo access required but not available. Some operations may fail.[0m
+[0;36m[2025-06-13 10:49:50] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml[0m
+[0;36m[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml[0m
+[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml[0m
+[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml[0m
+[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml[0m
+[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml[0m
+[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml[0m
+[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml[0m
+[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml[0m
+[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml[0m
+[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml[0m
+[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml[0m
+[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml[0m
+[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml[0m
+[0;32m[2025-06-13 10:49:52] [INFO] [log] Compose file validation: 29/29 files valid[0m
+[0;32m[2025-06-13 10:49:52] [INFO] [log] 🚀 Starting microservices installation...[0m
+[0;32m[2025-06-13 10:49:52] [INFO] [log] Starting installation of 1 categories...[0m
+[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Checking if network 'microservices-net' exists[0m
+[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Executing: Check network existence[0m
+[0;36m[2025-06-13 10:49:52] [DEBUG] [log] Command: sudo podman network exists microservices-net[0m
+[sudo] password for fhcadmin: 
+[0;32m[2025-06-13 10:50:09] [INFO] [log] ✅ Check network existence - Success[0m
+[0;32m[2025-06-13 10:50:09] [INFO] [log] Network 'microservices-net' already exists[0m
+[0;32m[2025-06-13 10:50:09] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13 10:49:52] [INFO] [log] Installing all categories[0m
+database dbms backend analytics ai mail project erp auth proxy[0m
+[0;32m[2025-06-13 10:50:12] [INFO] [log] 🗄️ Setting up databases...[0m
+[0;32m[2025-06-13 10:50:12] [INFO] [log] Waiting for database services to initialize...[0m
+[0;36m[2025-06-13 10:50:27] [DEBUG] [log] Executing: Setup databases[0m
+[0;36m[2025-06-13 10:50:27] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-databases.sh -s -e[0m
+[0;32m[2025-06-13 10:50:27] [INFO] [log] No specific database selected, setting up all databases[0m
+
+📋 DATABASE SETUP SUMMARY
+=========================
+
+Databases to setup: MariaDB MySQL PostgreSQL MongoDB Redis
+Create sample data: false
+Backup existing: false
+Restore from backup: false
+
+Container runtime: podman
+Wait time: 30 seconds
+
+[0;32m[2025-06-13 10:50:27] [INFO] [log] 🚀 Starting database setup...[0m
+[0;32m[2025-06-13 10:50:27] [INFO] [log] 🔧 Setting up PostgreSQL databases...[0m
+[0;31m[2025-06-13 10:50:27] [ERROR] [log] PostgreSQL container not found. Please start it first.[0m
+[0;32m[2025-06-13 10:50:27] [INFO] [log] 🔧 Setting up MariaDB databases...[0m
+[0;31m[2025-06-13 10:50:27] [ERROR] [log] MariaDB container not found. Please start it first.[0m
+[0;32m[2025-06-13 10:50:27] [INFO] [log] 🔧 Setting up MySQL databases...[0m
+[0;33m[2025-06-13 10:50:28] [WARN] [log] MySQL container not found, skipping MySQL setup[0m
+[0;32m[2025-06-13 10:50:28] [INFO] [log] 🔧 Setting up MongoDB databases...[0m
+[0;33m[2025-06-13 10:50:28] [WARN] [log] MongoDB container not found, skipping MongoDB setup[0m
+[0;32m[2025-06-13 10:50:28] [INFO] [log] 🔧 Setting up Redis configuration...[0m
+[0;33m[2025-06-13 10:50:28] [WARN] [log] Redis container not found, skipping Redis setup[0m
+[0;32m[2025-06-13 10:50:28] [INFO] [log] ✅ Database setup completed successfully![0m
+[0;32m[2025-06-13 10:50:28] [INFO] [log] 🔍 Database connection details:[0m
+[0;32m[2025-06-13 10:50:28] [INFO] [log]   PostgreSQL: localhost:8502 (user: postgres, password: 123456)[0m
+[0;32m[2025-06-13 10:50:28] [INFO] [log]   MariaDB: localhost:8501 (user: root, password: 123456)[0m
+[0;32m[2025-06-13 10:50:28] [INFO] [log]   MySQL: localhost:8505 (user: root, password: 123456)[0m
+[0;32m[2025-06-13 10:50:28] [INFO] [log]   MongoDB: localhost:8503 (user: root, password: 123456)[0m
+[0;32m[2025-06-13 10:50:28] [INFO] [log]   Redis: localhost:8504 (no authentication)[0m
+[0;32m[2025-06-13 10:50:28] [INFO] [log] ✅ Setup databases - Success[0m
+[0;32m[2025-06-13 10:50:28] [INFO] [log] 🔐 Setting up SSL certificates...[0m
+[0;32m[2025-06-13 10:50:28] [INFO] [log] Waiting for nginx-proxy-manager to start...[0m
+[0;36m[2025-06-13 10:50:38] [DEBUG] [log] Executing: Setup SSL certificates[0m
+[0;36m[2025-06-13 10:50:38] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-ssl.sh -s -e[0m
+
+📋 SSL CERTIFICATE SETUP SUMMARY
+================================
+
+Certificate Type: wildcard
+Domain: *.test
+Country: US
+State/Province: Development
+City: Local
+Organization: Microservices
+Organizational Unit: Development
+Validity Period: 3650 days
+RSA Key Size: 4096 bits
+
+Options:
+- Force Regenerate: false
+- Backup Existing: true
+- Setup Nginx Config: true
+- Validate Certificates: true
+
+Services Covered: 17 domains
+  nginx.test
+  adminer.test
+  phpmyadmin.test
+  mongodb.test
+  metabase.test
+  nocodb.test
+  grafana.test
+  prometheus.test
+  matomo.test
+  n8n.test
+  langflow.test
+  kibana.test
+  elasticsearch.test
+  keycloak.test
+  mailpit.test
+  gitea.test
+  odoo.test
+
+[0;32m[2025-06-13 10:50:38] [INFO] [log] 🚀 Starting SSL certificate setup...[0m
+[0;32m[2025-06-13 10:50:38] [INFO] [log] 🔍 Checking SSL setup prerequisites...[0m
+[0;31m[2025-06-13 10:50:38] [ERROR] [log] nginx-proxy-manager container not found. Please start it first.[0m
+[0;33m[2025-06-13 10:50:38] [WARN] [log] ⚠️  Setup SSL certificates - Failed (exit code: 1), continuing...[0m
+[0;32m[2025-06-13 10:50:38] [INFO] [log] 🛡️ Installing SSL certificates in system trust store...[0m
+[0;36m[2025-06-13 10:50:38] [DEBUG] [log] Executing: Trust SSL certificates[0m
+[0;36m[2025-06-13 10:50:38] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/trust-host.sh -s -e[0m
+
+📋 CERTIFICATE TRUST SETUP SUMMARY
+==================================
+
+Platform: [0;32m[2025-06-13 10:50:38] [INFO] [log] 🐧 Detected: Windows Subsystem for Linux (WSL)[0m
+wsl
+Certificate Source: container
+
+
+Trust Options:
+- Linux/WSL: true
+- Windows: false  
+- macOS: false
+- Firefox: false
+- Chrome: false
+- Update Hosts: false
+
+Operation: Install certificates
+
+[0;32m[2025-06-13 10:50:38] [INFO] [log] 🚀 Starting certificate trust setup...[0m
+[0;32m[2025-06-13 10:50:38] [INFO] [log] 📜 Acquiring certificate from source: container[0m
+[0;32m[2025-06-13 10:50:38] [INFO] [log] 📦 Extracting certificate from nginx-proxy-manager container...[0m
+[0;31m[2025-06-13 10:50:38] [ERROR] [log] nginx-proxy-manager container not found[0m
+[0;31m[2025-06-13 10:50:38] [ERROR] [log] Failed to acquire certificate[0m
+[0;33m[2025-06-13 10:50:38] [WARN] [log] ⚠️  Trust SSL certificates - Failed (exit code: 1), continuing...[0m
+
+🎉 INSTALLATION COMPLETED SUCCESSFULLY!
+======================================
+
+Your microservices environment is now running!
+
+📊 Dashboard Access:
+- Nginx Proxy Manager: https://nginx.test (admin panel: http://localhost:81)
+- Grafana Monitoring: https://grafana.test (admin:123456)
+- Metabase Analytics: https://metabase.test
+
+🗄️ Database Management:
+- Adminer: https://adminer.test
+- phpMyAdmin: https://phpmyadmin.test  
+- Mongo Express: https://mongodb.test
+- pgAdmin: https://pgadmin.test
+
+🚀 Development Tools:
+- Mailpit: https://mailpit.test
+- Gitea: https://gitea.test
+
+💼 Business Applications:
+- Odoo ERP: https://odoo.test
+
+🤖 AI & Automation:
+- n8n Workflows: https://n8n.test
+- Langflow: https://langflow.test
+
+🔧 Useful Commands:
+- View services: /home/fhcadmin/Projects/devarch/scripts/show-services.sh
+- Stop all: /home/fhcadmin/Projects/devarch/scripts/stop-services.sh
+- Restart all: /home/fhcadmin/Projects/devarch/scripts/start-services.sh
+
+📝 Next Steps:
+1. Configure your proxy rules in Nginx Proxy Manager
+2. Set up your first database connections
+3. Deploy your applications to the apps/ directory
+4. Configure monitoring dashboards in Grafana
+
+[0;32m[2025-06-13 10:50:38] [INFO] [log] ✅ Installation process completed![0m
+[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ../scripts/install.sh -sev[1C.sh -sev       [15Ds.sh -sev[8Dt.sh -sev[8Da.sh -sev[8Dr.sh -sev[8Dt-services.sh[1m [0m -sev[0m -sev [1C -sev[?1l>[?2004l
+]2;./scripts/start-services.sh -sev]1;./scripts/start-services.sh[0;36m[2025-06-13 11:06:06] [DEBUG] [start-services.sh] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=false[0m
+[0;32m[2025-06-13 11:06:06] [INFO] [start-services.sh] 🚀 Starting microservices...[0m
+[0;36m[2025-06-13 11:06:06] [DEBUG] [start-services.sh] Checking if network 'microservices-net' exists[0m
+[0;36m[2025-06-13 11:06:06] [DEBUG] [start-services.sh] Executing: Check network existence[0m
+[0;36m[2025-06-13 11:06:06] [DEBUG] [start-services.sh] Command: sudo podman network exists microservices-net[0m
+[sudo] password for fhcadmin: 
+[0;32m[2025-06-13 11:06:17] [INFO] [start-services.sh] ✅ Check network existence - Success[0m
+[0;32m[2025-06-13 11:06:17] [INFO] [start-services.sh] Network 'microservices-net' already exists[0m
+./scripts/start-services.sh: line 90: ${=SERVICE_CATEGORIES[$category]}: bad substitution
+[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/start-services.sh  -sev[1C[1C[1C[1C[1C -c database[?1l>[?2004l
+]2;./scripts/start-services.sh -sev -c database]1;./scripts/start-services.sh./scripts/start-services.sh: illegal option -- c
+Common options:
+  -s    Use sudo for container commands
+  -e    Show error messages
+  -v    Verbose output (debug mode)
+  -d    Dry run (show commands without executing)
+  -r    Container runtime (docker/podman)
+[0;32m[2025-06-13 11:10:14] [INFO] [start-services.sh] 🚀 Starting microservices...[0m
+[0;36m[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Checking if network 'microservices-net' exists[0m
+[0;36m[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Executing: Check network existence[0m
+[0;36m[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Command:  network exists microservices-net[0m
+[0;33m[2025-06-13 11:10:14] [WARN] [start-services.sh] ⚠️  Check network existence - Failed (exit code: 127), continuing...[0m
+[0;36m[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Executing: Create network[0m
+[0;36m[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Command:  network create --driver bridge microservices-net[0m
+/home/fhcadmin/Projects/devarch/scripts/config.sh: line 122: network: command not found
+[0;31m[2025-06-13 11:10:14] [ERROR] [start-services.sh] ❌ Create network - Failed (exit code: 127)[0m
+[0;31m[2025-06-13 11:10:14] [ERROR] [start-services.sh] Command:  network create --driver bridge microservices-net[0m
+[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/start-services.sh  -sev -c database[11D           [12D[23Dinstall.sh -sev  [2C    [8D[?1l>[?2004l
+]2;./scripts/install.sh -sev]1;./scripts/install.sh[0;36m[2025-06-13 11:19:49] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=false[0m
+
+📋 INSTALLATION SUMMARY
+======================
+
+Project Root: /home/fhcadmin/Projects/devarch
+Container Runtime: podman
+Categories to Install: [0;32m[2025-06-13 11:19:49] [INFO] [log] Installing all categories[0m database dbms backend analytics ai mail project erp auth proxy
+
+
+Installation Options:
+- Skip Confirmation: false
+- Skip Database Setup: false
+- Skip SSL Setup: false
+- Skip Trust Setup: false
+- Parallel Install: false
+- Use Sudo: true
+- Show Errors: true
+- Dry Run: false
+
+Estimated Installation Time: 10-15 minutes
+
+Do you want to proceed with the installation? (y/N)
+y
+[0;32m[2025-06-13 11:19:51] [INFO] [log] Performing pre-installation checks...[0m
+[0;36m[2025-06-13 11:19:51] [DEBUG] [log] Container runtime: podman[0m
+[0;33m[2025-06-13 11:19:51] [WARN] [log] Sudo access required but not available. Some operations may fail.[0m
+[0;36m[2025-06-13 11:19:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml[0m
+[0;36m[2025-06-13 11:19:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml[0m
+[0;36m[2025-06-13 11:19:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml[0m
+[0;36m[2025-06-13 11:19:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml[0m
+[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml[0m
+[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml[0m
+[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml[0m
+[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml[0m
+[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml[0m
+[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml[0m
+[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml[0m
+[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml[0m
+[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml[0m
+[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml[0m
+[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml[0m
+[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml[0m
+[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml[0m
+[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml[0m
+[0;36m[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml[0m
+[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml[0m
+[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml[0m
+[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml[0m
+[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml[0m
+[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml[0m
+[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml[0m
+[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml[0m
+[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml[0m
+[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml[0m
+[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml[0m
+[0;32m[2025-06-13 11:19:53] [INFO] [log] Compose file validation: 29/29 files valid[0m
+[0;32m[2025-06-13 11:19:53] [INFO] [log] 🚀 Starting microservices installation...[0m
+[0;32m[2025-06-13 11:19:53] [INFO] [log] Starting installation of 1 categories...[0m
+[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Checking if network 'microservices-net' exists[0m
+[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Executing: Check network existence[0m
+[0;36m[2025-06-13 11:19:53] [DEBUG] [log] Command: sudo podman network exists microservices-net[0m
+[sudo] password for fhcadmin: 
+[0;33m[2025-06-13 11:20:03] [WARN] [log] ⚠️  Check network existence - Failed (exit code: 1), continuing...[0m
+[0;36m[2025-06-13 11:20:03] [DEBUG] [log] Executing: Create network[0m
+[0;36m[2025-06-13 11:20:03] [DEBUG] [log] Command: sudo podman network create --driver bridge microservices-net[0m
+microservices-net
+[0;32m[2025-06-13 11:20:03] [INFO] [log] ✅ Create network - Success[0m
+[0;32m[2025-06-13 11:20:03] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13 11:19:53] [INFO] [log] Installing all categories[0m
+database dbms backend analytics ai mail project erp auth proxy[0m
+[0;32m[2025-06-13 11:20:06] [INFO] [log] 🗄️ Setting up databases...[0m
+[0;32m[2025-06-13 11:20:06] [INFO] [log] Waiting for database services to initialize...[0m
+[0;36m[2025-06-13 11:20:21] [DEBUG] [log] Executing: Setup databases[0m
+[0;36m[2025-06-13 11:20:21] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-databases.sh -s -e[0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log] No specific database selected, setting up all databases[0m
+
+📋 DATABASE SETUP SUMMARY
+=========================
+
+Databases to setup: MariaDB MySQL PostgreSQL MongoDB Redis
+Create sample data: false
+Backup existing: false
+Restore from backup: false
+
+Container runtime: podman
+Wait time: 30 seconds
+
+[0;32m[2025-06-13 11:20:21] [INFO] [log] 🚀 Starting database setup...[0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log] 🔧 Setting up PostgreSQL databases...[0m
+[0;31m[2025-06-13 11:20:21] [ERROR] [log] PostgreSQL container not found. Please start it first.[0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log] 🔧 Setting up MariaDB databases...[0m
+[0;31m[2025-06-13 11:20:21] [ERROR] [log] MariaDB container not found. Please start it first.[0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log] 🔧 Setting up MySQL databases...[0m
+[0;33m[2025-06-13 11:20:21] [WARN] [log] MySQL container not found, skipping MySQL setup[0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log] 🔧 Setting up MongoDB databases...[0m
+[0;33m[2025-06-13 11:20:21] [WARN] [log] MongoDB container not found, skipping MongoDB setup[0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log] 🔧 Setting up Redis configuration...[0m
+[0;33m[2025-06-13 11:20:21] [WARN] [log] Redis container not found, skipping Redis setup[0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log] ✅ Database setup completed successfully![0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log] 🔍 Database connection details:[0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log]   PostgreSQL: localhost:8502 (user: postgres, password: 123456)[0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log]   MariaDB: localhost:8501 (user: root, password: 123456)[0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log]   MySQL: localhost:8505 (user: root, password: 123456)[0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log]   MongoDB: localhost:8503 (user: root, password: 123456)[0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log]   Redis: localhost:8504 (no authentication)[0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log] ✅ Setup databases - Success[0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log] 🔐 Setting up SSL certificates...[0m
+[0;32m[2025-06-13 11:20:21] [INFO] [log] Waiting for nginx-proxy-manager to start...[0m
+[0;36m[2025-06-13 11:20:31] [DEBUG] [log] Executing: Setup SSL certificates[0m
+[0;36m[2025-06-13 11:20:32] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-ssl.sh -s -e[0m
+
+📋 SSL CERTIFICATE SETUP SUMMARY
+================================
+
+Certificate Type: wildcard
+Domain: *.test
+Country: US
+State/Province: Development
+City: Local
+Organization: Microservices
+Organizational Unit: Development
+Validity Period: 3650 days
+RSA Key Size: 4096 bits
+
+Options:
+- Force Regenerate: false
+- Backup Existing: true
+- Setup Nginx Config: true
+- Validate Certificates: true
+
+Services Covered: 17 domains
+  nginx.test
+  adminer.test
+  phpmyadmin.test
+  mongodb.test
+  metabase.test
+  nocodb.test
+  grafana.test
+  prometheus.test
+  matomo.test
+  n8n.test
+  langflow.test
+  kibana.test
+  elasticsearch.test
+  keycloak.test
+  mailpit.test
+  gitea.test
+  odoo.test
+
+[0;32m[2025-06-13 11:20:32] [INFO] [log] 🚀 Starting SSL certificate setup...[0m
+[0;32m[2025-06-13 11:20:32] [INFO] [log] 🔍 Checking SSL setup prerequisites...[0m
+[0;31m[2025-06-13 11:20:32] [ERROR] [log] nginx-proxy-manager container not found. Please start it first.[0m
+[0;33m[2025-06-13 11:20:32] [WARN] [log] ⚠️  Setup SSL certificates - Failed (exit code: 1), continuing...[0m
+[0;32m[2025-06-13 11:20:32] [INFO] [log] 🛡️ Installing SSL certificates in system trust store...[0m
+[0;36m[2025-06-13 11:20:32] [DEBUG] [log] Executing: Trust SSL certificates[0m
+[0;36m[2025-06-13 11:20:32] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/trust-host.sh -s -e[0m
+
+📋 CERTIFICATE TRUST SETUP SUMMARY
+==================================
+
+Platform: [0;32m[2025-06-13 11:20:32] [INFO] [log] 🐧 Detected: Windows Subsystem for Linux (WSL)[0m
+wsl
+Certificate Source: container
+
+
+Trust Options:
+- Linux/WSL: true
+- Windows: false  
+- macOS: false
+- Firefox: false
+- Chrome: false
+- Update Hosts: false
+
+Operation: Install certificates
+
+[0;32m[2025-06-13 11:20:32] [INFO] [log] 🚀 Starting certificate trust setup...[0m
+[0;32m[2025-06-13 11:20:32] [INFO] [log] 📜 Acquiring certificate from source: container[0m
+[0;32m[2025-06-13 11:20:32] [INFO] [log] 📦 Extracting certificate from nginx-proxy-manager container...[0m
+[0;31m[2025-06-13 11:20:32] [ERROR] [log] nginx-proxy-manager container not found[0m
+[0;31m[2025-06-13 11:20:32] [ERROR] [log] Failed to acquire certificate[0m
+[0;33m[2025-06-13 11:20:32] [WARN] [log] ⚠️  Trust SSL certificates - Failed (exit code: 1), continuing...[0m
+
+🎉 INSTALLATION COMPLETED SUCCESSFULLY!
+======================================
+
+Your microservices environment is now running!
+
+📊 Dashboard Access:
+- Nginx Proxy Manager: https://nginx.test (admin panel: http://localhost:81)
+- Grafana Monitoring: https://grafana.test (admin:123456)
+- Metabase Analytics: https://metabase.test
+
+🗄️ Database Management:
+- Adminer: https://adminer.test
+- phpMyAdmin: https://phpmyadmin.test  
+- Mongo Express: https://mongodb.test
+- pgAdmin: https://pgadmin.test
+
+🚀 Development Tools:
+- Mailpit: https://mailpit.test
+- Gitea: https://gitea.test
+
+💼 Business Applications:
+- Odoo ERP: https://odoo.test
+
+🤖 AI & Automation:
+- n8n Workflows: https://n8n.test
+- Langflow: https://langflow.test
+
+🔧 Useful Commands:
+- View services: /home/fhcadmin/Projects/devarch/scripts/show-services.sh
+- Stop all: /home/fhcadmin/Projects/devarch/scripts/stop-services.sh
+- Restart all: /home/fhcadmin/Projects/devarch/scripts/start-services.sh
+
+📝 Next Steps:
+1. Configure your proxy rules in Nginx Proxy Manager
+2. Set up your first database connections
+3. Deploy your applications to the apps/ directory
+4. Configure monitoring dashboards in Grafana
+
+[0;32m[2025-06-13 11:20:32] [INFO] [log] ✅ Installation process completed![0m
+[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;32m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ../scripts[1m/[0m[0m/show-services.sh[1m [0m[0m -se[?1l>[?2004l
+]2;./scripts/show-services.sh -se]1;./scripts/show-services.sh╭─────────────────────┬──────────────┬─────────────────┬─────────────────────────────┬──────────────┬─────────────────────────────────────────────────────────╮
+│ Service             │ Status       │ Health          │ Ports                       │ Uptime       │ URL                                                     │
+├─────────────────────┼──────────────┼─────────────────┼─────────────────────────────┼──────────────┼─────────────────────────────────────────────────────────┤
+print_service_row:2: read-only variable: status
+[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/show-services.sh -se[1C[P[16C [17D[P[16C [17D[P[16C [17Dt-services.sh -se[16Do-services.sh -se[16Dp-services.sh -se[16D[?1l>[?2004l
+]2;./scripts/stop-services.sh -se]1;./scripts/stop-services.sh[0;32m[2025-06-13 11:23:36] [INFO] [stop-services.sh] 🛑 Stopping microservices...[0m
+./scripts/stop-services.sh: line 97: ${=SERVICE_CATEGORIES[$category]}: bad substitution
+[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004h./scripts/stop-services.sh -se[1C[1C[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mmaster[34m) [33m✗[00m ./scripts/stop-services.sh -se && ./scripts/start-services.sh -s[34De                                 [33D -c database[?1l>[?2004l
+]2;./scripts/stop-services.sh -se -c database]1;./scripts/stop-services.sh./scripts/stop-services.sh: illegal option -- c
+Common options:
+  -s    Use sudo for container commands
+  -e    Show error messages
+  -v    Verbose output (debug mode)
+  -d    Dry run (show commands without executing)
+  -r    Container runtime (docker/podman)
+[0;32m[2025-06-13 11:23:57] [INFO] [stop-services.sh] 🛑 Stopping microservices...[0m
+./scripts/stop-services.sh: line 97: ${=SERVICE_CATEGORIES[$category]}: bad substitution
+[1m[7m%[27m[1m[0m                                                                                                                                                  ]2;fhcadmin@FHCDT32:~/Projects/devarch]1;..jects/devarch]7;file://FHCDT32/home/fhcadmin/Projects/devarch\[0m[27m[24m[J[01;31m➜  [36mdevarch[00m [01;34mgit:([31mm

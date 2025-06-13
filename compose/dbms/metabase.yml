@@ -11,9 +11,9 @@ services:
   metabase:
     container_name: metabase
     image: metabase/metabase:latest
-    env_file: ../.env
+    env_file: ../../.env
     ports:
-      - "127.0.0.1:8085:3000"  # Local access to Metabase
+      - "127.0.0.1:8085:3000" # Local access to Metabase
     volumes:
       - metabase_data:/metabase-data
     networks:

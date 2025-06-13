@@ -1259,3 +1259,329 @@ database dbms backend analytics ai mail project erp auth proxy
 [2025-06-13 10:43:32] [INFO] [log] [DRY RUN] Would execute: /home/fhcadmin/Projects/devarch/scripts/trust-host.sh -s -e
 [2025-06-13 10:43:32] [INFO] [log] 🔍 Dry run completed successfully!
 [2025-06-13 10:43:32] [INFO] [log] ✅ Installation process completed!
+[2025-06-13 10:44:09] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:44:09] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=false
+[2025-06-13 10:44:09] [INFO] [log] Installing all categories
+[2025-06-13 10:44:12] [INFO] [log] Performing pre-installation checks...
+[2025-06-13 10:44:12] [DEBUG] [log] Container runtime: podman
+[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml
+[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml
+[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml
+[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml
+[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml
+[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml
+[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml
+[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml
+[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml
+[2025-06-13 10:44:12] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml
+[2025-06-13 10:44:13] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml
+[2025-06-13 10:44:13] [INFO] [log] Compose file validation: 29/29 files valid
+[2025-06-13 10:44:13] [INFO] [log] 🚀 Starting microservices installation...
+[2025-06-13 10:44:13] [INFO] [log] Installing all categories
+[2025-06-13 10:44:13] [INFO] [log] Starting installation of 1 categories...
+[2025-06-13 10:44:13] [INFO] [log] Starting installation of 1 categories...
+[2025-06-13 10:44:13] [DEBUG] [log] Checking if network 'microservices-net' exists
+[2025-06-13 10:44:13] [DEBUG] [log] Executing: Check network existence
+[2025-06-13 10:44:13] [DEBUG] [log] Command: sudo podman network exists microservices-net
+[2025-06-13 10:44:14] [INFO] [log] ✅ Check network existence - Success
+[2025-06-13 10:44:14] [INFO] [log] Network 'microservices-net' already exists
+[2025-06-13 10:44:14] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13 10:44:13] [INFO] [log] Installing all categories[0m
+database dbms backend analytics ai mail project erp auth proxy
+[2025-06-13 10:44:17] [INFO] [log] 🗄️ Setting up databases...
+[2025-06-13 10:44:17] [INFO] [log] Waiting for database services to initialize...
+[2025-06-13 10:44:32] [DEBUG] [log] Executing: Setup databases
+[2025-06-13 10:44:32] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-databases.sh -s -e
+[2025-06-13 10:44:32] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:44:32] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=false, dry_run=false
+[2025-06-13 10:44:32] [INFO] [log] No specific database selected, setting up all databases
+[2025-06-13 10:44:32] [INFO] [log] 🚀 Starting database setup...
+[2025-06-13 10:44:32] [INFO] [log] 🔧 Setting up PostgreSQL databases...
+[2025-06-13 10:44:32] [ERROR] [log] PostgreSQL container not found. Please start it first.
+[2025-06-13 10:44:32] [INFO] [log] 🔧 Setting up MariaDB databases...
+[2025-06-13 10:44:32] [ERROR] [log] MariaDB container not found. Please start it first.
+[2025-06-13 10:44:32] [INFO] [log] 🔧 Setting up MySQL databases...
+[2025-06-13 10:44:32] [WARN] [log] MySQL container not found, skipping MySQL setup
+[2025-06-13 10:44:32] [INFO] [log] 🔧 Setting up MongoDB databases...
+[2025-06-13 10:44:32] [WARN] [log] MongoDB container not found, skipping MongoDB setup
+[2025-06-13 10:44:32] [INFO] [log] 🔧 Setting up Redis configuration...
+[2025-06-13 10:44:32] [WARN] [log] Redis container not found, skipping Redis setup
+[2025-06-13 10:44:32] [INFO] [log] ✅ Database setup completed successfully!
+[2025-06-13 10:44:32] [INFO] [log] 🔍 Database connection details:
+[2025-06-13 10:44:32] [INFO] [log]   PostgreSQL: localhost:8502 (user: postgres, password: 123456)
+[2025-06-13 10:44:32] [INFO] [log]   MariaDB: localhost:8501 (user: root, password: 123456)
+[2025-06-13 10:44:32] [INFO] [log]   MySQL: localhost:8505 (user: root, password: 123456)
+[2025-06-13 10:44:32] [INFO] [log]   MongoDB: localhost:8503 (user: root, password: 123456)
+[2025-06-13 10:44:32] [INFO] [log]   Redis: localhost:8504 (no authentication)
+[2025-06-13 10:44:32] [INFO] [log] ✅ Setup databases - Success
+[2025-06-13 10:44:32] [INFO] [log] 🔐 Setting up SSL certificates...
+[2025-06-13 10:44:32] [INFO] [log] Waiting for nginx-proxy-manager to start...
+[2025-06-13 10:44:42] [DEBUG] [log] Executing: Setup SSL certificates
+[2025-06-13 10:44:42] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-ssl.sh -s -e
+[2025-06-13 10:44:42] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:44:42] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=false, dry_run=false
+[2025-06-13 10:44:42] [INFO] [log] 🚀 Starting SSL certificate setup...
+[2025-06-13 10:44:42] [INFO] [log] 🔍 Checking SSL setup prerequisites...
+[2025-06-13 10:44:43] [ERROR] [log] nginx-proxy-manager container not found. Please start it first.
+[2025-06-13 10:44:43] [WARN] [log] ⚠️  Setup SSL certificates - Failed (exit code: 1), continuing...
+[2025-06-13 10:44:43] [INFO] [log] 🛡️ Installing SSL certificates in system trust store...
+[2025-06-13 10:44:43] [DEBUG] [log] Executing: Trust SSL certificates
+[2025-06-13 10:44:43] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/trust-host.sh -s -e
+[2025-06-13 10:44:43] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:44:43] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=false, dry_run=false
+[2025-06-13 10:44:43] [INFO] [log] 🐧 Detected: Windows Subsystem for Linux (WSL)
+[2025-06-13 10:44:43] [DEBUG] [log] Windows user detected: prospect
+[2025-06-13 10:44:43] [DEBUG] [log] Linux distribution: Arch Linux
+[2025-06-13 10:44:43] [INFO] [log] 🚀 Starting certificate trust setup...
+[2025-06-13 10:44:43] [INFO] [log] 📜 Acquiring certificate from source: container
+[2025-06-13 10:44:43] [INFO] [log] 📦 Extracting certificate from nginx-proxy-manager container...
+[2025-06-13 10:44:43] [ERROR] [log] nginx-proxy-manager container not found
+[2025-06-13 10:44:43] [ERROR] [log] Failed to acquire certificate
+[2025-06-13 10:44:43] [DEBUG] [log] Cleaned up temporary directory: /tmp/ssl-cert-81005
+[2025-06-13 10:44:43] [WARN] [log] ⚠️  Trust SSL certificates - Failed (exit code: 1), continuing...
+[2025-06-13 10:44:43] [INFO] [log] ✅ Installation process completed!
+[2025-06-13 10:49:04] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:49:46] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:49:46] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=false
+[2025-06-13 10:49:46] [INFO] [log] Installing all categories
+[2025-06-13 10:49:50] [INFO] [log] Performing pre-installation checks...
+[2025-06-13 10:49:50] [DEBUG] [log] Container runtime: podman
+[2025-06-13 10:49:50] [WARN] [log] Sudo access required but not available. Some operations may fail.
+[2025-06-13 10:49:50] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml
+[2025-06-13 10:49:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml
+[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml
+[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml
+[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml
+[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml
+[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml
+[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml
+[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml
+[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml
+[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml
+[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml
+[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml
+[2025-06-13 10:49:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml
+[2025-06-13 10:49:52] [INFO] [log] Compose file validation: 29/29 files valid
+[2025-06-13 10:49:52] [INFO] [log] 🚀 Starting microservices installation...
+[2025-06-13 10:49:52] [INFO] [log] Installing all categories
+[2025-06-13 10:49:52] [INFO] [log] Starting installation of 1 categories...
+[2025-06-13 10:49:52] [DEBUG] [log] Checking if network 'microservices-net' exists
+[2025-06-13 10:49:52] [DEBUG] [log] Executing: Check network existence
+[2025-06-13 10:49:52] [DEBUG] [log] Command: sudo podman network exists microservices-net
+[2025-06-13 10:50:09] [INFO] [log] ✅ Check network existence - Success
+[2025-06-13 10:50:09] [INFO] [log] Network 'microservices-net' already exists
+[2025-06-13 10:50:09] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13 10:49:52] [INFO] [log] Installing all categories[0m
+database dbms backend analytics ai mail project erp auth proxy
+[2025-06-13 10:50:12] [INFO] [log] 🗄️ Setting up databases...
+[2025-06-13 10:50:12] [INFO] [log] Waiting for database services to initialize...
+[2025-06-13 10:50:27] [DEBUG] [log] Executing: Setup databases
+[2025-06-13 10:50:27] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-databases.sh -s -e
+[2025-06-13 10:50:27] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:50:27] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=false, dry_run=false
+[2025-06-13 10:50:27] [INFO] [log] No specific database selected, setting up all databases
+[2025-06-13 10:50:27] [INFO] [log] 🚀 Starting database setup...
+[2025-06-13 10:50:27] [INFO] [log] 🔧 Setting up PostgreSQL databases...
+[2025-06-13 10:50:27] [ERROR] [log] PostgreSQL container not found. Please start it first.
+[2025-06-13 10:50:27] [INFO] [log] 🔧 Setting up MariaDB databases...
+[2025-06-13 10:50:27] [ERROR] [log] MariaDB container not found. Please start it first.
+[2025-06-13 10:50:27] [INFO] [log] 🔧 Setting up MySQL databases...
+[2025-06-13 10:50:28] [WARN] [log] MySQL container not found, skipping MySQL setup
+[2025-06-13 10:50:28] [INFO] [log] 🔧 Setting up MongoDB databases...
+[2025-06-13 10:50:28] [WARN] [log] MongoDB container not found, skipping MongoDB setup
+[2025-06-13 10:50:28] [INFO] [log] 🔧 Setting up Redis configuration...
+[2025-06-13 10:50:28] [WARN] [log] Redis container not found, skipping Redis setup
+[2025-06-13 10:50:28] [INFO] [log] ✅ Database setup completed successfully!
+[2025-06-13 10:50:28] [INFO] [log] 🔍 Database connection details:
+[2025-06-13 10:50:28] [INFO] [log]   PostgreSQL: localhost:8502 (user: postgres, password: 123456)
+[2025-06-13 10:50:28] [INFO] [log]   MariaDB: localhost:8501 (user: root, password: 123456)
+[2025-06-13 10:50:28] [INFO] [log]   MySQL: localhost:8505 (user: root, password: 123456)
+[2025-06-13 10:50:28] [INFO] [log]   MongoDB: localhost:8503 (user: root, password: 123456)
+[2025-06-13 10:50:28] [INFO] [log]   Redis: localhost:8504 (no authentication)
+[2025-06-13 10:50:28] [INFO] [log] ✅ Setup databases - Success
+[2025-06-13 10:50:28] [INFO] [log] 🔐 Setting up SSL certificates...
+[2025-06-13 10:50:28] [INFO] [log] Waiting for nginx-proxy-manager to start...
+[2025-06-13 10:50:38] [DEBUG] [log] Executing: Setup SSL certificates
+[2025-06-13 10:50:38] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-ssl.sh -s -e
+[2025-06-13 10:50:38] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:50:38] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=false, dry_run=false
+[2025-06-13 10:50:38] [INFO] [log] 🚀 Starting SSL certificate setup...
+[2025-06-13 10:50:38] [INFO] [log] 🔍 Checking SSL setup prerequisites...
+[2025-06-13 10:50:38] [ERROR] [log] nginx-proxy-manager container not found. Please start it first.
+[2025-06-13 10:50:38] [WARN] [log] ⚠️  Setup SSL certificates - Failed (exit code: 1), continuing...
+[2025-06-13 10:50:38] [INFO] [log] 🛡️ Installing SSL certificates in system trust store...
+[2025-06-13 10:50:38] [DEBUG] [log] Executing: Trust SSL certificates
+[2025-06-13 10:50:38] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/trust-host.sh -s -e
+[2025-06-13 10:50:38] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 10:50:38] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=false, dry_run=false
+[2025-06-13 10:50:38] [INFO] [log] 🐧 Detected: Windows Subsystem for Linux (WSL)
+[2025-06-13 10:50:38] [DEBUG] [log] Windows user detected: prospect
+[2025-06-13 10:50:38] [DEBUG] [log] Linux distribution: Arch Linux
+[2025-06-13 10:50:38] [INFO] [log] 🚀 Starting certificate trust setup...
+[2025-06-13 10:50:38] [INFO] [log] 📜 Acquiring certificate from source: container
+[2025-06-13 10:50:38] [INFO] [log] 📦 Extracting certificate from nginx-proxy-manager container...
+[2025-06-13 10:50:38] [ERROR] [log] nginx-proxy-manager container not found
+[2025-06-13 10:50:38] [ERROR] [log] Failed to acquire certificate
+[2025-06-13 10:50:38] [DEBUG] [log] Cleaned up temporary directory: /tmp/ssl-cert-84217
+[2025-06-13 10:50:38] [WARN] [log] ⚠️  Trust SSL certificates - Failed (exit code: 1), continuing...
+[2025-06-13 10:50:38] [INFO] [log] ✅ Installation process completed!
+[2025-06-13 11:06:06] [DEBUG] [start-services.sh] Configuration loaded successfully
+[2025-06-13 11:06:06] [DEBUG] [start-services.sh] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=false
+[2025-06-13 11:06:06] [INFO] [start-services.sh] Starting all categories
+[2025-06-13 11:06:06] [INFO] [start-services.sh] 🚀 Starting microservices...
+[2025-06-13 11:06:06] [DEBUG] [start-services.sh] Checking if network 'microservices-net' exists
+[2025-06-13 11:06:06] [DEBUG] [start-services.sh] Executing: Check network existence
+[2025-06-13 11:06:06] [DEBUG] [start-services.sh] Command: sudo podman network exists microservices-net
+[2025-06-13 11:06:17] [INFO] [start-services.sh] ✅ Check network existence - Success
+[2025-06-13 11:06:17] [INFO] [start-services.sh] Network 'microservices-net' already exists
+[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Configuration loaded successfully
+[2025-06-13 11:10:14] [INFO] [start-services.sh] Starting only specified categories: database
+[2025-06-13 11:10:14] [INFO] [start-services.sh] 🚀 Starting microservices...
+[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Checking if network 'microservices-net' exists
+[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Executing: Check network existence
+[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Command:  network exists microservices-net
+[2025-06-13 11:10:14] [WARN] [start-services.sh] ⚠️  Check network existence - Failed (exit code: 127), continuing...
+[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Executing: Create network
+[2025-06-13 11:10:14] [DEBUG] [start-services.sh] Command:  network create --driver bridge microservices-net
+[2025-06-13 11:10:14] [ERROR] [start-services.sh] ❌ Create network - Failed (exit code: 127)
+[2025-06-13 11:10:14] [ERROR] [start-services.sh] Command:  network create --driver bridge microservices-net
+[2025-06-13 11:19:49] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 11:19:49] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=true, dry_run=false
+[2025-06-13 11:19:49] [INFO] [log] Installing all categories
+[2025-06-13 11:19:51] [INFO] [log] Performing pre-installation checks...
+[2025-06-13 11:19:51] [DEBUG] [log] Container runtime: podman
+[2025-06-13 11:19:51] [WARN] [log] Sudo access required but not available. Some operations may fail.
+[2025-06-13 11:19:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/project/gitea.yml
+[2025-06-13 11:19:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/php.yml
+[2025-06-13 11:19:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/node.yml
+[2025-06-13 11:19:51] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/python.yml
+[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/go.yml
+[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/backend/dotnet.yml
+[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/adminer.yml
+[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/pgadmin.yml
+[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/phpmyadmin.yml
+[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/mongo-express.yml
+[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/metabase.yml
+[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/dbms/nocodb.yml
+[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/proxy/nginx-proxy-manager.yml
+[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/auth/keycloak.yml
+[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/mail/mailpit.yml
+[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/langflow.yml
+[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/ai/n8n.yml
+[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/elasticsearch.yml
+[2025-06-13 11:19:52] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/kibana.yml
+[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/logstash.yml
+[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/grafana.yml
+[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/prometheus.yml
+[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/analytics/matomo.yml
+[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/postgres.yml
+[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mysql.yml
+[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mariadb.yml
+[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/mongodb.yml
+[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/database/redis.yml
+[2025-06-13 11:19:53] [DEBUG] [log] Compose file validated: /home/fhcadmin/Projects/devarch/compose/erp/odoo.yml
+[2025-06-13 11:19:53] [INFO] [log] Compose file validation: 29/29 files valid
+[2025-06-13 11:19:53] [INFO] [log] 🚀 Starting microservices installation...
+[2025-06-13 11:19:53] [INFO] [log] Installing all categories
+[2025-06-13 11:19:53] [INFO] [log] Starting installation of 1 categories...
+[2025-06-13 11:19:53] [DEBUG] [log] Checking if network 'microservices-net' exists
+[2025-06-13 11:19:53] [DEBUG] [log] Executing: Check network existence
+[2025-06-13 11:19:53] [DEBUG] [log] Command: sudo podman network exists microservices-net
+[2025-06-13 11:20:03] [WARN] [log] ⚠️  Check network existence - Failed (exit code: 1), continuing...
+[2025-06-13 11:20:03] [DEBUG] [log] Executing: Create network
+[2025-06-13 11:20:03] [DEBUG] [log] Command: sudo podman network create --driver bridge microservices-net
+[2025-06-13 11:20:03] [INFO] [log] ✅ Create network - Success
+[2025-06-13 11:20:03] [INFO] [log] 📦 Installing category: [0;32m[2025-06-13 11:19:53] [INFO] [log] Installing all categories[0m
+database dbms backend analytics ai mail project erp auth proxy
+[2025-06-13 11:20:06] [INFO] [log] 🗄️ Setting up databases...
+[2025-06-13 11:20:06] [INFO] [log] Waiting for database services to initialize...
+[2025-06-13 11:20:21] [DEBUG] [log] Executing: Setup databases
+[2025-06-13 11:20:21] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-databases.sh -s -e
+[2025-06-13 11:20:21] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 11:20:21] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=false, dry_run=false
+[2025-06-13 11:20:21] [INFO] [log] No specific database selected, setting up all databases
+[2025-06-13 11:20:21] [INFO] [log] 🚀 Starting database setup...
+[2025-06-13 11:20:21] [INFO] [log] 🔧 Setting up PostgreSQL databases...
+[2025-06-13 11:20:21] [ERROR] [log] PostgreSQL container not found. Please start it first.
+[2025-06-13 11:20:21] [INFO] [log] 🔧 Setting up MariaDB databases...
+[2025-06-13 11:20:21] [ERROR] [log] MariaDB container not found. Please start it first.
+[2025-06-13 11:20:21] [INFO] [log] 🔧 Setting up MySQL databases...
+[2025-06-13 11:20:21] [WARN] [log] MySQL container not found, skipping MySQL setup
+[2025-06-13 11:20:21] [INFO] [log] 🔧 Setting up MongoDB databases...
+[2025-06-13 11:20:21] [WARN] [log] MongoDB container not found, skipping MongoDB setup
+[2025-06-13 11:20:21] [INFO] [log] 🔧 Setting up Redis configuration...
+[2025-06-13 11:20:21] [WARN] [log] Redis container not found, skipping Redis setup
+[2025-06-13 11:20:21] [INFO] [log] ✅ Database setup completed successfully!
+[2025-06-13 11:20:21] [INFO] [log] 🔍 Database connection details:
+[2025-06-13 11:20:21] [INFO] [log]   PostgreSQL: localhost:8502 (user: postgres, password: 123456)
+[2025-06-13 11:20:21] [INFO] [log]   MariaDB: localhost:8501 (user: root, password: 123456)
+[2025-06-13 11:20:21] [INFO] [log]   MySQL: localhost:8505 (user: root, password: 123456)
+[2025-06-13 11:20:21] [INFO] [log]   MongoDB: localhost:8503 (user: root, password: 123456)
+[2025-06-13 11:20:21] [INFO] [log]   Redis: localhost:8504 (no authentication)
+[2025-06-13 11:20:21] [INFO] [log] ✅ Setup databases - Success
+[2025-06-13 11:20:21] [INFO] [log] 🔐 Setting up SSL certificates...
+[2025-06-13 11:20:21] [INFO] [log] Waiting for nginx-proxy-manager to start...
+[2025-06-13 11:20:31] [DEBUG] [log] Executing: Setup SSL certificates
+[2025-06-13 11:20:32] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/setup-ssl.sh -s -e
+[2025-06-13 11:20:32] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 11:20:32] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=false, dry_run=false
+[2025-06-13 11:20:32] [INFO] [log] 🚀 Starting SSL certificate setup...
+[2025-06-13 11:20:32] [INFO] [log] 🔍 Checking SSL setup prerequisites...
+[2025-06-13 11:20:32] [ERROR] [log] nginx-proxy-manager container not found. Please start it first.
+[2025-06-13 11:20:32] [WARN] [log] ⚠️  Setup SSL certificates - Failed (exit code: 1), continuing...
+[2025-06-13 11:20:32] [INFO] [log] 🛡️ Installing SSL certificates in system trust store...
+[2025-06-13 11:20:32] [DEBUG] [log] Executing: Trust SSL certificates
+[2025-06-13 11:20:32] [DEBUG] [log] Command: /home/fhcadmin/Projects/devarch/scripts/trust-host.sh -s -e
+[2025-06-13 11:20:32] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 11:20:32] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=false, dry_run=false
+[2025-06-13 11:20:32] [INFO] [log] 🐧 Detected: Windows Subsystem for Linux (WSL)
+[2025-06-13 11:20:32] [DEBUG] [log] Windows user detected: prospect
+[2025-06-13 11:20:32] [DEBUG] [log] Linux distribution: Arch Linux
+[2025-06-13 11:20:32] [INFO] [log] 🚀 Starting certificate trust setup...
+[2025-06-13 11:20:32] [INFO] [log] 📜 Acquiring certificate from source: container
+[2025-06-13 11:20:32] [INFO] [log] 📦 Extracting certificate from nginx-proxy-manager container...
+[2025-06-13 11:20:32] [ERROR] [log] nginx-proxy-manager container not found
+[2025-06-13 11:20:32] [ERROR] [log] Failed to acquire certificate
+[2025-06-13 11:20:32] [DEBUG] [log] Cleaned up temporary directory: /tmp/ssl-cert-98249
+[2025-06-13 11:20:32] [WARN] [log] ⚠️  Trust SSL certificates - Failed (exit code: 1), continuing...
+[2025-06-13 11:20:32] [INFO] [log] ✅ Installation process completed!
+[2025-06-13 11:23:17] [DEBUG] [log] Configuration loaded successfully
+[2025-06-13 11:23:17] [DEBUG] [log] Configuration: runtime=podman, sudo=true, errors=true, verbose=false, dry_run=false
+[2025-06-13 11:23:36] [DEBUG] [stop-services.sh] Configuration loaded successfully
+[2025-06-13 11:23:36] [DEBUG] [stop-services.sh] Configuration: runtime=podman, sudo=true, errors=true, verbose=false, dry_run=false
+[2025-06-13 11:23:36] [INFO] [stop-services.sh] Stopping all categories
+[2025-06-13 11:23:36] [INFO] [stop-services.sh] 🛑 Stopping microservices...
+[2025-06-13 11:23:57] [DEBUG] [stop-services.sh] Configuration loaded successfully
+[2025-06-13 11:23:57] [INFO] [stop-services.sh] Stopping only specified categories: database
+[2025-06-13 11:23:57] [INFO] [stop-services.sh] 🛑 Stopping microservices...

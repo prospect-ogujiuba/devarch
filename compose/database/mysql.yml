@@ -12,9 +12,9 @@ services:
     container_name: mysql
     image: mysql:latest
     restart: unless-stopped
-    env_file: ../.env
+    env_file: ../../.env
     ports:
-      - "127.0.0.1:8505:3306"  # Local access to MySQL
+      - "127.0.0.1:8505:3306" # Local access to MySQL
     volumes:
       - mysql_data:/var/lib/mysql
     environment:

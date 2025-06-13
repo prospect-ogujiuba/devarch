@@ -14,10 +14,10 @@ services:
       context: ../config/keycloak
       dockerfile: Dockerfile
     restart: unless-stopped
-    env_file: ../.env
+    env_file: ../../.env
     ports:
-      - "127.0.0.1:9400:8443"  # Local access to Keycloak HTTPS
-      - "127.0.0.1:9401:9000"  # Local access to Keycloak health/metrics
+      - "127.0.0.1:9400:8443" # Local access to Keycloak HTTPS
+      - "127.0.0.1:9401:9000" # Local access to Keycloak health/metrics
     volumes:
       - keycloak_data:/opt/keycloak/data
     networks:

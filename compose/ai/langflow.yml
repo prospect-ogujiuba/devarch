@@ -12,9 +12,9 @@ services:
     container_name: langflow
     image: langflowai/langflow:latest
     restart: unless-stopped
-    env_file: ../.env
+    env_file: ../../.env
     ports:
-      - "127.0.0.1:9110:7860"  # Local access to Langflow
+      - "127.0.0.1:9110:7860" # Local access to Langflow
     volumes:
       - langflow_data:/app/data
     networks:

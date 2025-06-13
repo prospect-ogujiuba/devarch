@@ -12,10 +12,10 @@ services:
     container_name: gitea
     image: gitea/gitea:latest
     restart: unless-stopped
-    env_file: ../.env
+    env_file: ../../.env
     ports:
-      - "127.0.0.1:9210:3000"  # Local access to Gitea web
-      - "2222:22"  # SSH access for Git
+      - "127.0.0.1:9210:3000" # Local access to Gitea web
+      - "2222:22" # SSH access for Git
     volumes:
       - gitea_data:/data
       - /etc/timezone:/etc/timezone:ro

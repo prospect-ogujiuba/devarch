@@ -11,9 +11,9 @@ services:
       context: ../config/go
       dockerfile: Dockerfile
     restart: unless-stopped
-    env_file: ../.env
+    env_file: ../../.env
     ports:
-      - "127.0.0.1:8020:8080"   # Go application port
+      - "127.0.0.1:8020:8080" # Go application port
     volumes:
       - ../apps/go:/app
       - ../logs/go:/var/log/go

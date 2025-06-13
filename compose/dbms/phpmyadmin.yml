@@ -8,8 +8,8 @@ services:
   phpmyadmin:
     container_name: phpmyadmin
     image: phpmyadmin:latest
-    env_file: ../.env
+    env_file: ../../.env
     ports:
-      - "127.0.0.1:8083:80"  # Local access to phpMyAdmin
+      - "127.0.0.1:8083:80" # Local access to phpMyAdmin
     networks:
       - microservices-net
