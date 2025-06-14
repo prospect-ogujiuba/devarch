@@ -162,12 +162,6 @@ validate_nginx_container() {
 
 validate_domain_format() {
     local domain="$opt_custom_domain"
-    
-    # Basic domain validation
-    if [[ ! "$domain" =~ ^(\*\.)?[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*$ ]]; then
-        handle_error "Invalid domain format: $domain"
-    fi
-    
     print_status "info" "Using domain: $domain"
 }
 
@@ -263,7 +257,6 @@ EOF
         "langflow.$base_domain"
         "kibana.$base_domain"
         "elasticsearch.$base_domain"
-        "keycloak.$base_domain"
         "mailpit.$base_domain"
         "gitea.$base_domain"
         "odoo.$base_domain"
@@ -286,11 +279,11 @@ generate_certificate() {
     local config_file="$CERT_TEMP_DIR/openssl.conf"
     
     # Generate private key and certificate in one command
-    if eval "openssl req -x509 -nodes -days $opt_cert_days -newkey rsa:$opt_key_size \
-        -keyout '$key_file' \
-        -out '$cert_file' \
-        -config '$config_file' \
-        -extensions v3_req $ERROR_REDIRECT"; then
+    if eval "$SUDO_PREFIX podman exec nginx-proxy-manager openssl req -x509 -nodes -days 3650 -newkey rsa:4096 \
+    -keyout /etc/letsencrypt/live/wildcard.test/privkey.pem \
+    -out /etc/letsencrypt/live/wildcard.test/fullchain.pem \
+    -subj \"/C=US/ST=Development/L=Local/O=Development/CN=*.test\" \
+    -addext \"subjectAltName=DNS:*.test,DNS:test\" $ERROR_REDIRECT}"; then
         
         print_status "success" "SSL certificate generated successfully"
     else
@@ -391,10 +384,10 @@ restart_nginx_container() {
     local max_wait=30
     local counter=0
     while [[ $counter -lt $max_wait ]]; do
-        local status
-        status=$(eval "$CONTAINER_CMD inspect --format='{{.State.Status}}' nginx-proxy-manager 2>/dev/null" || echo "unknown")
+        local container_status
+        container_status=$(eval "$CONTAINER_CMD inspect --format='{{.State.Status}}' nginx-proxy-manager 2>/dev/null" || echo "unknown")
         
-        if [[ "$status" == "running" ]]; then
+        if [[ "$container_status" == "running" ]]; then
             print_status "success" "nginx-proxy-manager restarted successfully"
             return 0
         fi

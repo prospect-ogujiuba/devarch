@@ -52,12 +52,10 @@ DATABASES CREATED:
     MariaDB/MySQL:
         - npm (Nginx Proxy Manager)
         - matomo (Analytics)
-        - keycloak (Authentication)
         
     PostgreSQL:
         - metabase (Analytics)
         - nocodb (No-code database)
-        - keycloak (Authentication alternative)
         - odoo (ERP system)
         
     MongoDB:
@@ -244,25 +242,21 @@ setup_mariadb() {
 -- Create databases with IF NOT EXISTS to avoid conflicts
 CREATE DATABASE IF NOT EXISTS npm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS matomo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS keycloak CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS microservices CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Drop and recreate users to ensure clean state
 DROP USER IF EXISTS 'npm_user'@'%';
 DROP USER IF EXISTS 'matomo_user'@'%';
-DROP USER IF EXISTS 'keycloak_user'@'%';
 DROP USER IF EXISTS 'app_user'@'%';
 
 -- Create users
 CREATE USER 'npm_user'@'%' IDENTIFIED BY '${ADMIN_PASSWORD}';
 CREATE USER 'matomo_user'@'%' IDENTIFIED BY '${ADMIN_PASSWORD}';
-CREATE USER 'keycloak_user'@'%' IDENTIFIED BY '${ADMIN_PASSWORD}';
 CREATE USER 'app_user'@'%' IDENTIFIED BY '${ADMIN_PASSWORD}';
 
 -- Grant privileges
 GRANT ALL PRIVILEGES ON npm.* TO 'npm_user'@'%';
 GRANT ALL PRIVILEGES ON matomo.* TO 'matomo_user'@'%';
-GRANT ALL PRIVILEGES ON keycloak.* TO 'keycloak_user'@'%';
 GRANT ALL PRIVILEGES ON microservices.* TO 'app_user'@'%';
 
 FLUSH PRIVILEGES;
@@ -335,7 +329,7 @@ setup_postgres() {
     local postgres_setup_sql="
 -- Terminate existing connections to databases we might need to recreate
 SELECT pg_terminate_backend(pid) FROM pg_stat_activity 
-WHERE datname IN ('metabase', 'nocodb', 'keycloak', 'odoo') AND pid <> pg_backend_pid();
+WHERE datname IN ('metabase', 'nocodb', 'odoo') AND pid <> pg_backend_pid();
 
 -- Wait a moment for connections to close
 SELECT pg_sleep(2);
@@ -343,32 +337,27 @@ SELECT pg_sleep(2);
 -- Drop existing databases if they exist (CASCADE to handle dependencies)
 DROP DATABASE IF EXISTS metabase;
 DROP DATABASE IF EXISTS nocodb; 
-DROP DATABASE IF EXISTS keycloak;
 DROP DATABASE IF EXISTS odoo;
 
 -- Drop existing users if they exist
 DROP USER IF EXISTS metabase_user;
 DROP USER IF EXISTS nocodb_user;
-DROP USER IF EXISTS keycloak_user;
 DROP USER IF EXISTS odoo_user;
 
 -- Create users first
 CREATE USER metabase_user WITH PASSWORD '${ADMIN_PASSWORD}';
 CREATE USER nocodb_user WITH PASSWORD '${ADMIN_PASSWORD}';
-CREATE USER keycloak_user WITH PASSWORD '${ADMIN_PASSWORD}';
 CREATE USER odoo_user WITH PASSWORD '${ADMIN_PASSWORD}';
 
 -- Create databases
 CREATE DATABASE metabase OWNER metabase_user;
 CREATE DATABASE nocodb OWNER nocodb_user;
-CREATE DATABASE keycloak OWNER keycloak_user;
 CREATE DATABASE odoo OWNER odoo_user;
 
 -- Grant additional privileges
 ALTER USER odoo_user CREATEDB;
 GRANT ALL PRIVILEGES ON DATABASE metabase TO metabase_user;
 GRANT ALL PRIVILEGES ON DATABASE nocodb TO nocodb_user;
-GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak_user;
 GRANT ALL PRIVILEGES ON DATABASE odoo TO odoo_user;
 "
     

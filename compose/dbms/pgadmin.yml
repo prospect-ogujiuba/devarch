@@ -17,8 +17,5 @@ services:
       - "127.0.0.1:8087:80" # Local access to pgAdmin
     volumes:
       - pgadmin_data:/var/lib/pgadmin
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
-      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
     networks:
       - microservices-net

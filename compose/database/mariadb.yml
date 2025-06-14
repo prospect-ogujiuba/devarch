@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 
 networks:
   microservices-net:
@@ -14,7 +14,12 @@ services:
     restart: unless-stopped
     env_file: ../../.env
     ports:
-      - "127.0.0.1:8501:3306" # Local access to MariaDB
+      - "127.0.0.1:8501:3306"  # Local access to MariaDB
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MARIADB_DATABASE}
+      - MYSQL_USER=${MARIADB_USER}
+      - MYSQL_PASSWORD=${MARIADB_PASSWORD}
     volumes:
       - mariadb_data:/var/lib/mysql
     networks:

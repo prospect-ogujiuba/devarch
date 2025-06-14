@@ -61,7 +61,6 @@ CATEGORIES (in dependency order):
     mail          - Mailpit email testing
     project       - Gitea repository management
     erp           - Odoo business applications
-    auth          - Keycloak identity provider
     proxy         - Nginx Proxy Manager
 
 RESTART POLICIES:
@@ -71,9 +70,9 @@ RESTART POLICIES:
     on-failure      - Restart only on failure
 
 EXAMPLES:
-    $0                                  # Start all services in dependency order
+    $0                                 # Start all services in dependency order
     $0 -c database,backend             # Start only database and backend services
-    $0 -x auth,erp                     # Start all except auth and ERP services
+    $0 -x dbms,erp                     # Start all except dbms and ERP services
     $0 -f -p                           # Force recreate and parallel start
     $0 -d -v                           # Dry run with verbose output
     $0 -w -t 60                        # Skip health checks, 60s timeout
@@ -555,7 +554,7 @@ show_completion_info() {
     echo ""
     echo "⚙️  Manage services:"
     echo "  - Stop all: $SCRIPT_DIR/stop-services.sh"
-    echo "  - Restart specific: $COMPOSE_CMD -f $COMPOSE_DIR/[service].yml restart"
+    echo "  - Restart specific: $COMPOSE_CMD -f $COMPOSE_DIR/[category]/[service].yml restart"
     echo ""
     echo "🔐 Default credentials:"
     echo "  - Username: admin"

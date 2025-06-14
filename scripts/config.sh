@@ -44,7 +44,6 @@ SERVICE_CATEGORIES=(
     [mail]="mail/mailpit.yml"
     [project]="project/gitea.yml"
     [erp]="erp/odoo.yml"
-    [auth]="auth/keycloak.yml"
     [proxy]="proxy/nginx-proxy-manager.yml"
 )
 
@@ -58,7 +57,6 @@ SERVICE_STARTUP_ORDER=(
     "mail"
     "project"
     "erp"
-    "auth"
     "proxy"
 )
 
@@ -88,7 +86,7 @@ export SSL_DAYS_VALID="3650"  # 10 years for development
 detect_sudo_requirement() {
     if command -v podman >/dev/null 2>&1; then
         export USE_PODMAN=true
-        export DEFAULT_SUDO=false
+        export DEFAULT_SUDO=true
     elif command -v docker >/dev/null 2>&1; then
         export USE_PODMAN=false
         # Check if user is in docker group

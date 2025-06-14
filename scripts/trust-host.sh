@@ -16,7 +16,7 @@
 # Default values
 opt_use_sudo="$DEFAULT_SUDO"
 opt_show_errors=false
-opt_copy_to_windows=false
+opt_copy_to_windows=true
 opt_install_firefox=false
 opt_install_chrome=false
 opt_install_system=true
@@ -287,6 +287,11 @@ backup_existing_certificates() {
                         cp "/etc/pki/ca-trust/source/anchors/$opt_cert_name.crt" "$backup_dir/"
                     fi
                     ;;
+                "arch")
+                    if [[ -f "/etc/ca-certificates/trust-source/anchors/$opt_cert_name.crt" ]]; then
+                        cp "/etc/ca-certificates/trust-source/anchors/$opt_cert_name.crt" "$backup_dir/"
+                    fi
+                    ;;
             esac
             ;;
     esac
@@ -341,7 +346,7 @@ install_linux_system_trust() {
             ;;
             
         "arch")
-            # Copy certificate and update trust
+            # Copy certificate and update trust for Arch Linux
             local cert_path="/etc/ca-certificates/trust-source/anchors/$opt_cert_name.crt"
             
             if [[ "$opt_use_sudo" == "true" ]]; then
@@ -392,42 +397,68 @@ install_macos_system_trust() {
     fi
 }
 
-install_windows_system_trust() {
+install_wsl2_windows_trust() {
     if [[ "$opt_copy_to_windows" == "false" ]]; then
         return 0
     fi
     
-    print_status "step" "Installing certificate to Windows system trust store..."
+    print_status "step" "Preparing certificate for Windows installation (WSL2)..."
     
     # Copy certificate to Windows accessible location
     local windows_cert_path="/mnt/c/temp/$opt_cert_name.crt"
     mkdir -p "/mnt/c/temp"
     cp "$TEMP_CERT_DIR/cert.pem" "$windows_cert_path"
     
-    # Generate PowerShell script for certificate installation
-    cat > "/mnt/c/temp/install-cert.ps1" << 'EOF'
+    # Generate PowerShell script for certificate installation with dynamic cert path
+    cat > "/mnt/c/temp/install-cert.ps1" << EOF
 param(
-    [string]$CertPath = "C:\temp\wildcard.test.crt"
+    [string]\$CertPath = "C:\\temp\\$opt_cert_name.crt"
 )
 
+Write-Host "Installing SSL certificate: \$CertPath"
+
 try {
-    $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($CertPath)
-    $store = New-Object System.Security.Cryptography.X509Certificates.X509Store([System.Security.Cryptography.X509Certificates.StoreName]::Root, [System.Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine)
-    $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-    $store.Add($cert)
-    $store.Close()
-    Write-Host "Certificate installed successfully"
+    # Check if certificate file exists
+    if (-not (Test-Path \$CertPath)) {
+        throw "Certificate file not found: \$CertPath"
+    }
+
+    # Load the certificate
+    \$cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2(\$CertPath)
+    Write-Host "Certificate loaded: \$(\$cert.Subject)"
+    
+    # Open the LocalMachine Root store
+    \$store = New-Object System.Security.Cryptography.X509Certificates.X509Store([System.Security.Cryptography.X509Certificates.StoreName]::Root, [System.Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine)
+    \$store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+    
+    # Add the certificate
+    \$store.Add(\$cert)
+    \$store.Close()
+    
+    Write-Host "Certificate installed successfully to Windows trust store!" -ForegroundColor Green
+    Write-Host "You can now access https://nginx.test and other services without SSL warnings."
     exit 0
 } catch {
-    Write-Error "Failed to install certificate: $_"
+    Write-Error "Failed to install certificate: \$_"
+    Write-Host "Try running PowerShell as Administrator" -ForegroundColor Yellow
     exit 1
 }
 EOF
     
-    print_status "success" "Certificate copied to Windows. Run as Administrator in PowerShell:"
-    echo "  PowerShell -ExecutionPolicy Bypass -File C:\\temp\\install-cert.ps1"
+    print_status "success" "Certificate prepared for Windows installation"
     echo ""
-    print_status "info" "Alternative: Double-click C:\\temp\\$opt_cert_name.crt and install to 'Trusted Root Certification Authorities'"
+    print_status "info" "Windows Installation Instructions:"
+    echo "  1. Open PowerShell as Administrator in Windows"
+    echo "  2. Run: PowerShell -ExecutionPolicy Bypass -File C:\\temp\\install-cert.ps1"
+    echo ""
+    print_status "info" "Alternative Manual Installation:"
+    echo "  1. Navigate to C:\\temp\\$opt_cert_name.crt in Windows Explorer"
+    echo "  2. Double-click the certificate file"
+    echo "  3. Click 'Install Certificate'"
+    echo "  4. Select 'Local Machine' and click 'Next'"
+    echo "  5. Select 'Place all certificates in the following store'"
+    echo "  6. Click 'Browse' and select 'Trusted Root Certification Authorities'"
+    echo "  7. Click 'Next' and 'Finish'"
 }
 
 install_firefox_trust() {
@@ -536,13 +567,9 @@ verify_installation() {
     for url in "${test_urls[@]}"; do
         if curl -s --max-time 5 --connect-timeout 3 "$url" >/dev/null 2>&1; then
             ((successful_tests++))
-            if [[ "$opt_verbose" == "true" ]]; then
-                print_status "success" "✓ $url"
-            fi
+            print_status "success" "✓ $url"
         else
-            if [[ "$opt_verbose" == "true" ]]; then
-                print_status "warning" "✗ $url (service may not be running)"
-            fi
+            print_status "warning" "✗ $url (service may not be running)"
         fi
     done
     
@@ -586,11 +613,15 @@ Generated: $(date)
 
 Manual Installation:
 
-LINUX (Ubuntu/Debian):
+ARCH LINUX:
+sudo cp $opt_cert_name.crt /etc/ca-certificates/trust-source/anchors/
+sudo trust extract-compat
+
+UBUNTU/DEBIAN:
 sudo cp $opt_cert_name.crt /usr/local/share/ca-certificates/
 sudo update-ca-certificates
 
-LINUX (RHEL/CentOS):
+RHEL/CENTOS:
 sudo cp $opt_cert_name.crt /etc/pki/ca-trust/source/anchors/
 sudo update-ca-trust
 
@@ -666,13 +697,13 @@ main() {
             ;;
         "wsl")
             install_linux_system_trust
-            install_windows_system_trust
+            install_wsl2_windows_trust
             ;;
         "macos")
             install_macos_system_trust
             ;;
         "windows")
-            install_windows_system_trust
+            install_wsl2_windows_trust
             ;;
         *)
             print_status "error" "Unsupported operating system: $OS_TYPE"

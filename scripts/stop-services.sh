@@ -56,7 +56,6 @@ OPTIONS:
 
 CATEGORIES (stopped in reverse dependency order):
     proxy         - Nginx Proxy Manager
-    auth          - Keycloak identity provider
     erp           - Odoo business applications
     project       - Gitea repository management
     mail          - Mailpit email testing
@@ -72,7 +71,7 @@ CLEANUP OPTIONS:
     --remove-networks  Remove created Docker networks
 
 EXAMPLES:
-    $0                                  # Stop all services gracefully
+    $0                                 # Stop all services gracefully
     $0 -c backend,analytics            # Stop only backend and analytics
     $0 -x database                     # Stop all except database services
     $0 -f -t 10                        # Force stop with 10s timeout

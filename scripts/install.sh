@@ -47,7 +47,7 @@ OPTIONS:
     -h, --help              Show this help message
 
 CATEGORIES:
-    database, db-tools, backend, analytics, ai-services, mail, project, erp, auth, proxy
+    database, db-tools, backend, analytics, ai-services, mail, project, erp, proxy
 
 EXAMPLES:
     $0                                    # Full installation with prompts
