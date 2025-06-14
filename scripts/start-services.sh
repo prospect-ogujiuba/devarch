@@ -60,7 +60,6 @@ CATEGORIES (in dependency order):
     ai-services   - Langflow, n8n automation platforms
     mail          - Mailpit email testing
     project       - Gitea repository management
-    erp           - Odoo business applications
     proxy         - Nginx Proxy Manager
 
 RESTART POLICIES:
@@ -72,7 +71,7 @@ RESTART POLICIES:
 EXAMPLES:
     $0                                 # Start all services in dependency order
     $0 -c database,backend             # Start only database and backend services
-    $0 -x dbms,erp                     # Start all except dbms and ERP services
+    $0 -x dbms,backend                     # Start all except dbms and backend services
     $0 -f -p                           # Force recreate and parallel start
     $0 -d -v                           # Dry run with verbose output
     $0 -w -t 60                        # Skip health checks, 60s timeout

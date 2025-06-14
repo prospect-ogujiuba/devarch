@@ -259,7 +259,6 @@ EOF
         "elasticsearch.$base_domain"
         "mailpit.$base_domain"
         "gitea.$base_domain"
-        "odoo.$base_domain"
     )
     
     local dns_counter=5

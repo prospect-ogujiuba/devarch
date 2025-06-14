@@ -43,7 +43,6 @@ SERVICE_CATEGORIES=(
     [ai-services]="ai/langflow.yml ai/n8n.yml"
     [mail]="mail/mailpit.yml"
     [project]="project/gitea.yml"
-    [erp]="erp/odoo.yml"
     [proxy]="proxy/nginx-proxy-manager.yml"
 )
 
@@ -56,7 +55,6 @@ SERVICE_STARTUP_ORDER=(
     "ai-services"
     "mail"
     "project"
-    "erp"
     "proxy"
 )
 

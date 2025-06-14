@@ -13,3 +13,5 @@ services:
       - "127.0.0.1:8083:80" # Local access to phpMyAdmin
     networks:
       - microservices-net
+    volumes:
+      - ../../config/phpmyadmin/config.inc.php:/etc/phpmyadmin/config.user.inc.php:ro

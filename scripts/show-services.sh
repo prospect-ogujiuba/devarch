@@ -85,10 +85,6 @@ print_service "Mailpit" "http://localhost:9200" "https://mailpit.test"
 print_header "📋 PROJECT MANAGEMENT"
 print_service "Gitea" "http://localhost:9210" "https://gitea.test"
 
-# Business Applications
-print_header "🏢 BUSINESS APPLICATIONS"
-print_service "Odoo ERP" "http://localhost:9300" "https://odoo.test"
-
 # Print footer with credentials and tips
 print_header "🔐 DEFAULT CREDENTIALS"
 echo -e "${YELLOW}Username:${NC} admin"

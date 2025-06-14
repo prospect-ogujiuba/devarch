@@ -1,27 +1,5 @@
 # Microservices Architecture Management System
 
-## Complete Documentation and User Guide
-
----
-
-## Table of Contents
-
-1. [Overview](#overview)
-2. [Prerequisites & System Requirements](#prerequisites--system-requirements)
-3. [Quick Start Guide](#quick-start-guide)
-4. [Installation Guide](#installation-guide)
-5. [Script Reference](#script-reference)
-6. [Service Management](#service-management)
-7. [Database Management](#database-management)
-8. [SSL and Security](#ssl-and-security)
-9. [Development Workflows](#development-workflows)
-10. [Production Considerations](#production-considerations)
-11. [Troubleshooting Guide](#troubleshooting-guide)
-12. [Advanced Usage](#advanced-usage)
-13. [Reference Materials](#reference-materials)
-
----
-
 ## Overview
 
 ### System Architecture
@@ -30,25 +8,14 @@ This microservices architecture provides a comprehensive development and product
 
 #### Service Categories
 
-```
-📊 Analytics & Monitoring    🗄️ Database Services        🛠️ Database Management
-├── Elasticsearch            ├── PostgreSQL               ├── Adminer
-├── Kibana                   ├── MariaDB                  ├── pgAdmin
-├── Logstash                 ├── MySQL                    ├── phpMyAdmin
-├── Grafana                  ├── MongoDB                  ├── Mongo Express
-├── Prometheus               └── Redis                    ├── Metabase
-└── Matomo                                                └── NocoDB
-
-🚀 Backend Development      🤖 AI & Automation          📧 Communication
-├── PHP (Laravel/WordPress)  ├── Langflow                 └── Mailpit
-├── Node.js (Next/React)     └── n8n Workflows
-├── Python (Django/FastAPI)
-├── Go (Gin/Echo)           📂 Project Management        🔐 Security & Proxy
-└── .NET (ASP.NET Core)     └── Gitea                    ├── Nginx Proxy Manager
-                                                         └── Keycloak
-💼 Business Applications
-└── Odoo ERP
-```
+🗄️ Database Services
+🛠️ Database Management
+🚀 Backend Development
+📧 Communication
+📊 Analytics & Monitoring
+📂 Project Management
+🤖 AI & Automation
+🔐 Security & Proxy
 
 #### Key Features
 
@@ -60,8 +27,6 @@ This microservices architecture provides a comprehensive development and product
 - **Flexible Deployment**: Deploy all services or specific categories
 
 ### Directory Structure
-
-```
 microservices/
 ├── compose/                 # Docker Compose files organized by category
 │   ├── analytics/          # Elasticsearch, Kibana, Grafana, etc.
@@ -81,60 +46,6 @@ microservices/
 ├── logs/                  # Service logs and debugging
 ├── ssl/                   # SSL certificates and keys
 └── .env                   # Environment configuration
-```
-
----
-
-## Prerequisites & System Requirements
-
-### System Requirements
-
-#### Minimum Requirements
-
-- **OS**: Linux, macOS, or Windows 10/11 with WSL2
-- **RAM**: 8GB (16GB recommended for full stack)
-- **Storage**: 20GB free space (50GB recommended)
-- **CPU**: 2 cores (4+ cores recommended)
-
-#### Recommended Requirements
-
-- **OS**: Ubuntu 20.04+, CentOS 8+, macOS 12+, or Windows 11 with WSL2
-- **RAM**: 16GB or more
-- **Storage**: 50GB+ SSD storage
-- **CPU**: 4+ cores
-- **Network**: Stable internet connection for container downloads
-
-### Required Software
-
-#### Container Runtime (Choose One)
-
-```bash
-# Docker (Recommended for beginners)
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
-
-# Podman (Recommended for production)
-# Ubuntu/Debian
-sudo apt update && sudo apt install -y podman
-# CentOS/RHEL
-sudo dnf install -y podman
-# macOS
-brew install podman
-```
-
-#### Additional Tools
-
-```bash
-# Essential tools
-sudo apt install -y curl wget git zsh vim
-
-# Optional but recommended
-sudo apt install -y htop netcat-openbsd openssl
-
-# For SSL certificate management
-sudo apt install -y libnss3-tools  # Firefox certificate support
-```
 
 ### Network Configuration
 
@@ -145,70 +56,6 @@ The system uses localhost-bound ports to avoid conflicts:
 - **Analytics**: 9001, 9090, 9120-9131
 - **Proxy & Security**: 80, 81, 443, 9400-9401
 - **Other Services**: 9100-9300
-
----
-
-## Quick Start Guide
-
-### 1. Initial Setup (5 minutes)
-
-```bash
-# Clone or extract the project
-cd microservices
-
-# Copy environment template
-cp .env-sample .env
-
-# Make scripts executable
-chmod +x scripts/*.sh
-
-# Quick installation (all services)
-./scripts/install.sh -y
-```
-
-### 2. Verify Installation (2 minutes)
-
-```bash
-# Check service status
-./scripts/show-services.sh
-
-# View running services
-./scripts/show-services.sh -R
-
-# Quick URL reference
-./scripts/show-services.sh -u
-```
-
-### 3. Access Your Services
-
-**Management Dashboards:**
-
-- 🌐 **Nginx Proxy Manager**: http://localhost:81 (admin@example.com / changeme)
-- 📊 **Grafana**: http://localhost:9001 (admin / 123456)
-- 🗄️ **Adminer**: http://localhost:8082
-
-**Database Connections:**
-
-- 🐘 **PostgreSQL**: localhost:8502 (postgres / 123456)
-- 🐬 **MySQL**: localhost:8505 (root / 123456)
-- 🍃 **MongoDB**: localhost:8503 (root / 123456)
-
-### 4. Deploy Your First App
-
-```bash
-# Create app directory
-mkdir apps/my-api
-
-# For Node.js
-echo '{"name":"my-api","main":"server.js"}' > apps/my-api/package.json
-echo 'console.log("Hello World!")' > apps/my-api/server.js
-
-# Start Node.js service (auto-detects and configures)
-podman compose -f compose/node.yml up -d
-
-# Check logs
-podman logs node
-```
 
 ---
 
@@ -621,8 +468,6 @@ export CONTAINER_RUNTIME=podman
 | -------------- | --------- | -------------- | --------------------- |
 | **PostgreSQL** | metabase  | metabase_user  | Business Intelligence |
 |                | nocodb    | nocodb_user    | No-code platform      |
-|                | keycloak  | keycloak_user  | Identity management   |
-|                | odoo      | odoo_user      | ERP system            |
 | **MariaDB**    | npm       | npm_user       | Nginx Proxy Manager   |
 |                | matomo    | matomo_user    | Web analytics         |
 | **MySQL**      | backup_db | backup_user    | Backup storage        |
@@ -1324,7 +1169,6 @@ EOF
 | langflow.test   | Langflow            | AI workflow builder          |
 | mailpit.test    | Mailpit             | Email testing                |
 | gitea.test      | Gitea               | Git repository management    |
-| odoo.test       | Odoo                | ERP system                   |
 
 ### Security Best Practices
 
@@ -3076,12 +2920,6 @@ BACKUP_ENABLED=true
 | Mailpit | mailpit   | 8025/1025     | 9200/9201     | https://mailpit.test | N/A                 |
 | Gitea   | gitea     | 3000/22       | 9210/2222     | https://gitea.test   | Setup required      |
 
-#### Business Applications
-
-| Service | Container | Internal Port | External Port | URL               | Default Credentials |
-| ------- | --------- | ------------- | ------------- | ----------------- | ------------------- |
-| Odoo    | odoo      | 8069/8072     | 9300/9301     | https://odoo.test | Setup required      |
-
 #### Proxy & Security
 
 | Service             | Container           | Internal Port | External Port | URL                   | Default Credentials          |
@@ -3221,12 +3059,6 @@ FLASK_ENV=development
 │  └─────────────┘    │             │    │             │        │
 │                     │ mailpit     │    │ gitea       │        │
 │                     └─────────────┘    └─────────────┘        │
-│                                                                │
-│                     ┌─────────────┐                           │
-│                     │     ERP     │                           │
-│                     │             │                           │
-│                     │ odoo        │                           │
-│                     └─────────────┘                           │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -3273,8 +3105,8 @@ microservices/
 │   ├── ai/                    # AI & automation
 │   │   ├── langflow.yml
 │   │   └── n8n.yml
-│   └── erp/                   # Business applications
-│       └── odoo.yml
+│    
+│
 ├── config/                    # Service configurations
 │   ├── dotnet/
 │   │   ├── Dockerfile

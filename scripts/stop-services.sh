@@ -56,7 +56,6 @@ OPTIONS:
 
 CATEGORIES (stopped in reverse dependency order):
     proxy         - Nginx Proxy Manager
-    erp           - Odoo business applications
     project       - Gitea repository management
     mail          - Mailpit email testing
     ai-services   - Langflow, n8n automation platforms

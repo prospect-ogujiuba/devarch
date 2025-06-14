@@ -341,7 +341,6 @@ show_completion_message() {
     echo "  - Kibana: https://kibana.test (or http://localhost:9120)"
     echo ""
     echo "📊 Business Applications:"
-    echo "  - Odoo ERP: https://odoo.test (or http://localhost:9300)"
     echo "  - Matomo Analytics: https://matomo.test (or http://localhost:9010)"
     echo ""
     echo "💻 Development Tools:"

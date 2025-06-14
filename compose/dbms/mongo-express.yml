@@ -10,6 +10,6 @@ services:
     image: mongo-express:latest
     env_file: ../../.env
     ports:
-      - "127.0.0.1:8084:8081" # Local access to Mongo Express
+      - "127.0.0.1:8084:5432" # Local access to Mongo Express
     networks:
       - microservices-net

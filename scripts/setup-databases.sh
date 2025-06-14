@@ -56,7 +56,6 @@ DATABASES CREATED:
     PostgreSQL:
         - metabase (Analytics)
         - nocodb (No-code database)
-        - odoo (ERP system)
         
     MongoDB:
         - admin (Administrative)
@@ -329,7 +328,7 @@ setup_postgres() {
     local postgres_setup_sql="
 -- Terminate existing connections to databases we might need to recreate
 SELECT pg_terminate_backend(pid) FROM pg_stat_activity 
-WHERE datname IN ('metabase', 'nocodb', 'odoo') AND pid <> pg_backend_pid();
+WHERE datname IN ('metabase', 'nocodb') AND pid <> pg_backend_pid();
 
 -- Wait a moment for connections to close
 SELECT pg_sleep(2);
@@ -337,28 +336,22 @@ SELECT pg_sleep(2);
 -- Drop existing databases if they exist (CASCADE to handle dependencies)
 DROP DATABASE IF EXISTS metabase;
 DROP DATABASE IF EXISTS nocodb; 
-DROP DATABASE IF EXISTS odoo;
 
 -- Drop existing users if they exist
 DROP USER IF EXISTS metabase_user;
 DROP USER IF EXISTS nocodb_user;
-DROP USER IF EXISTS odoo_user;
 
 -- Create users first
 CREATE USER metabase_user WITH PASSWORD '${ADMIN_PASSWORD}';
 CREATE USER nocodb_user WITH PASSWORD '${ADMIN_PASSWORD}';
-CREATE USER odoo_user WITH PASSWORD '${ADMIN_PASSWORD}';
 
 -- Create databases
 CREATE DATABASE metabase OWNER metabase_user;
 CREATE DATABASE nocodb OWNER nocodb_user;
-CREATE DATABASE odoo OWNER odoo_user;
 
 -- Grant additional privileges
-ALTER USER odoo_user CREATEDB;
 GRANT ALL PRIVILEGES ON DATABASE metabase TO metabase_user;
 GRANT ALL PRIVILEGES ON DATABASE nocodb TO nocodb_user;
-GRANT ALL PRIVILEGES ON DATABASE odoo TO odoo_user;
 "
     
     if eval "$CONTAINER_CMD exec -i postgres psql -U postgres 2>/dev/null << 'EOF'
