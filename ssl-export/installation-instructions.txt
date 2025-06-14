@@ -1,0 +1,31 @@
+SSL Certificate Installation Instructions
+========================================
+
+Certificate: wildcard.test
+Generated: Sat Jun 14 11:53:35 EDT 2025
+
+Manual Installation:
+
+ARCH LINUX:
+sudo cp wildcard.test.crt /etc/ca-certificates/trust-source/anchors/
+sudo trust extract-compat
+
+UBUNTU/DEBIAN:
+sudo cp wildcard.test.crt /usr/local/share/ca-certificates/
+sudo update-ca-certificates
+
+RHEL/CENTOS:
+sudo cp wildcard.test.crt /etc/pki/ca-trust/source/anchors/
+sudo update-ca-trust
+
+macOS:
+sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain wildcard.test.crt
+
+Windows (PowerShell as Admin):
+Import-Certificate -FilePath "wildcard.test.crt" -CertStoreLocation Cert:\LocalMachine\Root
+
+Firefox:
+1. Settings → Privacy & Security → View Certificates
+2. Authorities tab → Import
+3. Select wildcard.test.crt
+4. Check "Trust this CA to identify websites"

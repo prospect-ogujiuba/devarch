@@ -29,10 +29,14 @@ opt_verify_installation=true
 CERT_CONTAINER_PATH="$SSL_CERT_DIR/fullchain.pem"
 TEMP_CERT_DIR="/tmp/ssl-trust-$$"
 
-# OS-specific paths
+# OS-specific paths - PROPERLY USED IN FUNCTIONS
 declare -A TRUST_PATHS=(
-    [linux_system]="/usr/local/share/ca-certificates"
-    [linux_update]="update-ca-certificates"
+    [arch_system]="/etc/ca-certificates/trust-source/anchors"
+    [arch_update]="trust extract-compat"
+    [ubuntu_system]="/usr/local/share/ca-certificates"
+    [ubuntu_update]="update-ca-certificates"
+    [rhel_system]="/etc/pki/ca-trust/source/anchors"
+    [rhel_update]="update-ca-trust"
     [macos_system]="/System/Library/Keychains/SystemRootCertificates.keychain"
     [macos_login]="/Library/Keychains/System.keychain"
     [windows_user]="Cert:\\CurrentUser\\Root"
@@ -87,10 +91,11 @@ EXAMPLES:
     $0 --name custom.local         # Custom certificate name
 
 INSTALLATION LOCATIONS:
-    Linux:    /usr/local/share/ca-certificates/
-    macOS:    System Keychain
-    Windows:  LocalMachine\\Root (requires admin)
-    Firefox:  Browser-specific certificate store
+    Arch Linux: /etc/ca-certificates/trust-source/anchors/
+    Ubuntu:     /usr/local/share/ca-certificates/
+    macOS:      System Keychain
+    Windows:    LocalMachine\\Root (requires admin)
+    Firefox:    Browser-specific certificate store
 
 NOTES:
     - System installation usually requires administrator privileges
@@ -199,6 +204,8 @@ detect_linux_distribution() {
         LINUX_DISTRO=$(lsb_release -si 2>/dev/null | tr '[:upper:]' '[:lower:]')
     elif [[ -f /etc/os-release ]]; then
         LINUX_DISTRO=$(grep '^ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"' | tr '[:upper:]' '[:lower:]')
+    elif [[ -f /etc/arch-release ]]; then
+        LINUX_DISTRO="arch"
     elif [[ -f /etc/redhat-release ]]; then
         LINUX_DISTRO="rhel"
     else
@@ -214,6 +221,16 @@ check_prerequisites() {
             detect_linux_distribution
             
             case "$LINUX_DISTRO" in
+                "arch"|"manjaro")
+                    if ! command -v trust >/dev/null 2>&1; then
+                        print_status "warning" "ca-certificates-utils not found. Installing..."
+                        if [[ "$opt_use_sudo" == "true" ]]; then
+                            sudo pacman -S --noconfirm ca-certificates-utils || handle_error "Failed to install ca-certificates-utils"
+                        else
+                            handle_error "ca-certificates-utils package not installed. Run: sudo pacman -S ca-certificates-utils"
+                        fi
+                    fi
+                    ;;
                 "ubuntu"|"debian")
                     if ! command -v update-ca-certificates >/dev/null 2>&1; then
                         handle_error "ca-certificates package not installed. Run: apt install ca-certificates"
@@ -224,20 +241,12 @@ check_prerequisites() {
                         handle_error "ca-certificates package not installed. Run: yum install ca-certificates"
                     fi
                     ;;
-                "arch")
-                    if ! command -v trust >/dev/null 2>&1; then
-                        handle_error "ca-certificates-utils package not installed. Run: pacman -S ca-certificates-utils"
-                    fi
-                    ;;
             esac
             ;;
         "macos")
             if ! command -v security >/dev/null 2>&1; then
                 handle_error "macOS security command not available"
             fi
-            ;;
-        "windows")
-            # Windows-specific checks would go here
             ;;
     esac
 }
@@ -274,25 +283,18 @@ backup_existing_certificates() {
     local backup_dir="$PROJECT_ROOT/ssl-backup-$(date +%Y%m%d-%H%M%S)"
     mkdir -p "$backup_dir"
     
-    case "$OS_TYPE" in
-        "linux"|"wsl")
-            case "$LINUX_DISTRO" in
-                "ubuntu"|"debian")
-                    if [[ -f "/usr/local/share/ca-certificates/$opt_cert_name.crt" ]]; then
-                        cp "/usr/local/share/ca-certificates/$opt_cert_name.crt" "$backup_dir/"
-                    fi
-                    ;;
-                "rhel"|"centos"|"fedora")
-                    if [[ -f "/etc/pki/ca-trust/source/anchors/$opt_cert_name.crt" ]]; then
-                        cp "/etc/pki/ca-trust/source/anchors/$opt_cert_name.crt" "$backup_dir/"
-                    fi
-                    ;;
-                "arch")
-                    if [[ -f "/etc/ca-certificates/trust-source/anchors/$opt_cert_name.crt" ]]; then
-                        cp "/etc/ca-certificates/trust-source/anchors/$opt_cert_name.crt" "$backup_dir/"
-                    fi
-                    ;;
-            esac
+    case "$LINUX_DISTRO" in
+        "arch"|"manjaro")
+            local cert_path="${TRUST_PATHS[arch_system]}/$opt_cert_name.crt"
+            [[ -f "$cert_path" ]] && cp "$cert_path" "$backup_dir/"
+            ;;
+        "ubuntu"|"debian")
+            local cert_path="${TRUST_PATHS[ubuntu_system]}/$opt_cert_name.crt"
+            [[ -f "$cert_path" ]] && cp "$cert_path" "$backup_dir/"
+            ;;
+        "rhel"|"centos"|"fedora")
+            local cert_path="${TRUST_PATHS[rhel_system]}/$opt_cert_name.crt"
+            [[ -f "$cert_path" ]] && cp "$cert_path" "$backup_dir/"
             ;;
     esac
     
@@ -311,54 +313,60 @@ install_linux_system_trust() {
     print_status "step" "Installing certificate to Linux system trust store..."
     
     case "$LINUX_DISTRO" in
-        "ubuntu"|"debian")
-            # Copy certificate to ca-certificates directory
-            local cert_path="/usr/local/share/ca-certificates/$opt_cert_name.crt"
+        "arch"|"manjaro")
+            local cert_path="${TRUST_PATHS[arch_system]}/$opt_cert_name.crt"
+            local update_cmd="${TRUST_PATHS[arch_update]}"
+            
+            print_status "info" "Installing to Arch Linux trust store: $cert_path"
             
             if [[ "$opt_use_sudo" == "true" ]]; then
                 sudo cp "$TEMP_CERT_DIR/cert.pem" "$cert_path"
                 sudo chmod 644 "$cert_path"
-                sudo update-ca-certificates
+                sudo $update_cmd
             else
                 cp "$TEMP_CERT_DIR/cert.pem" "$cert_path" 2>/dev/null || {
                     print_status "error" "Permission denied. Try with --sudo option"
                     return 1
                 }
-                update-ca-certificates
+                $update_cmd
+            fi
+            ;;
+            
+        "ubuntu"|"debian")
+            local cert_path="${TRUST_PATHS[ubuntu_system]}/$opt_cert_name.crt"
+            local update_cmd="${TRUST_PATHS[ubuntu_update]}"
+            
+            print_status "info" "Installing to Ubuntu/Debian trust store: $cert_path"
+            
+            if [[ "$opt_use_sudo" == "true" ]]; then
+                sudo cp "$TEMP_CERT_DIR/cert.pem" "$cert_path"
+                sudo chmod 644 "$cert_path"
+                sudo $update_cmd
+            else
+                cp "$TEMP_CERT_DIR/cert.pem" "$cert_path" 2>/dev/null || {
+                    print_status "error" "Permission denied. Try with --sudo option"
+                    return 1
+                }
+                $update_cmd
             fi
             ;;
             
         "rhel"|"centos"|"fedora")
-            # Copy certificate to ca-trust anchors
-            local cert_path="/etc/pki/ca-trust/source/anchors/$opt_cert_name.crt"
+            local cert_path="${TRUST_PATHS[rhel_system]}/$opt_cert_name.crt"
+            local update_cmd="${TRUST_PATHS[rhel_update]}"
+            
+            print_status "info" "Installing to RHEL/CentOS trust store: $cert_path"
             
             if [[ "$opt_use_sudo" == "true" ]]; then
                 sudo cp "$TEMP_CERT_DIR/cert.pem" "$cert_path"
                 sudo chmod 644 "$cert_path"
-                sudo update-ca-trust
+                sudo $update_cmd
             else
                 cp "$TEMP_CERT_DIR/cert.pem" "$cert_path" 2>/dev/null || {
                     print_status "error" "Permission denied. Try with --sudo option"
                     return 1
                 }
-                update-ca-trust
-            fi
-            ;;
-            
-        "arch")
-            # Copy certificate and update trust for Arch Linux
-            local cert_path="/etc/ca-certificates/trust-source/anchors/$opt_cert_name.crt"
-            
-            if [[ "$opt_use_sudo" == "true" ]]; then
-                sudo cp "$TEMP_CERT_DIR/cert.pem" "$cert_path"
-                sudo chmod 644 "$cert_path"
-                sudo trust extract-compat
-            else
-                cp "$TEMP_CERT_DIR/cert.pem" "$cert_path" 2>/dev/null || {
-                    print_status "error" "Permission denied. Try with --sudo option"
-                    return 1
-                }
-                trust extract-compat
+                $update_cmd
             fi
             ;;
             
@@ -409,13 +417,13 @@ install_wsl2_windows_trust() {
     mkdir -p "/mnt/c/temp"
     cp "$TEMP_CERT_DIR/cert.pem" "$windows_cert_path"
     
-    # Generate PowerShell script for certificate installation with dynamic cert path
+    # Generate PowerShell script for certificate installation
     cat > "/mnt/c/temp/install-cert.ps1" << EOF
 param(
     [string]\$CertPath = "C:\\temp\\$opt_cert_name.crt"
 )
 
-Write-Host "Installing SSL certificate: \$CertPath"
+Write-Host "Installing SSL certificate: \$CertPath" -ForegroundColor Yellow
 
 try {
     # Check if certificate file exists
@@ -425,7 +433,7 @@ try {
 
     # Load the certificate
     \$cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2(\$CertPath)
-    Write-Host "Certificate loaded: \$(\$cert.Subject)"
+    Write-Host "Certificate loaded: \$(\$cert.Subject)" -ForegroundColor Green
     
     # Open the LocalMachine Root store
     \$store = New-Object System.Security.Cryptography.X509Certificates.X509Store([System.Security.Cryptography.X509Certificates.StoreName]::Root, [System.Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine)
@@ -436,7 +444,18 @@ try {
     \$store.Close()
     
     Write-Host "Certificate installed successfully to Windows trust store!" -ForegroundColor Green
-    Write-Host "You can now access https://nginx.test and other services without SSL warnings."
+    Write-Host "You can now access https://nginx.test and other services without SSL warnings." -ForegroundColor Cyan
+    
+    # Test the installation
+    Write-Host "Testing certificate installation..." -ForegroundColor Yellow
+    \$installedCerts = Get-ChildItem -Path Cert:\\LocalMachine\\Root | Where-Object { \$_.Subject -like "*wildcard.test*" -or \$_.Subject -like "*\*.test*" }
+    if (\$installedCerts) {
+        Write-Host "Certificate verification: PASSED" -ForegroundColor Green
+        \$installedCerts | ForEach-Object { Write-Host "Found: \$(\$_.Subject)" -ForegroundColor Cyan }
+    } else {
+        Write-Host "Certificate verification: FAILED" -ForegroundColor Red
+    }
+    
     exit 0
 } catch {
     Write-Error "Failed to install certificate: \$_"
@@ -507,7 +526,7 @@ install_firefox_trust() {
             fi
         done
     else
-        print_status "warning" "certutil not found. Install nss-tools package for automatic Firefox installation"
+        print_status "warning" "certutil not found. Install nss package for automatic Firefox installation"
         print_status "info" "Manual Firefox installation:"
         echo "  1. Open Firefox"
         echo "  2. Go to Settings → Privacy & Security → View Certificates"
@@ -526,17 +545,14 @@ install_chrome_trust() {
     
     case "$OS_TYPE" in
         "linux"|"wsl")
-            # Chrome on Linux uses system certificate store
             print_status "info" "Chrome on Linux uses system certificate store"
             print_status "info" "Certificate should work automatically after system installation"
             ;;
         "macos")
-            # Chrome on macOS uses system keychain
             print_status "info" "Chrome on macOS uses system keychain"
             print_status "info" "Certificate should work automatically after system installation"
             ;;
         "windows")
-            # Chrome on Windows uses system certificate store
             print_status "info" "Chrome on Windows uses system certificate store"
             print_status "info" "Certificate should work automatically after Windows installation"
             ;;
@@ -556,28 +572,25 @@ verify_installation() {
     
     print_status "step" "Verifying certificate installation..."
     
-    # Test if certificate is trusted by checking common services
-    local -a test_urls=(
-        "https://nginx.test"
-        "https://metabase.test"
-        "https://grafana.test"
-    )
-    
-    local successful_tests=0
-    for url in "${test_urls[@]}"; do
-        if curl -s --max-time 5 --connect-timeout 3 "$url" >/dev/null 2>&1; then
-            ((successful_tests++))
-            print_status "success" "✓ $url"
-        else
-            print_status "warning" "✗ $url (service may not be running)"
-        fi
-    done
-    
-    if [[ $successful_tests -gt 0 ]]; then
-        print_status "success" "Certificate verification passed ($successful_tests/$((${#test_urls[@]})) services accessible)"
-    else
-        print_status "warning" "Certificate verification inconclusive (services may not be running)"
-    fi
+    # Check if certificate is in the system trust store
+    case "$LINUX_DISTRO" in
+        "arch"|"manjaro")
+            local cert_path="${TRUST_PATHS[arch_system]}/$opt_cert_name.crt"
+            if [[ -f "$cert_path" ]]; then
+                print_status "success" "✓ Certificate found in Arch trust store"
+            else
+                print_status "warning" "✗ Certificate not found in Arch trust store"
+            fi
+            ;;
+        "ubuntu"|"debian")
+            local cert_path="${TRUST_PATHS[ubuntu_system]}/$opt_cert_name.crt"
+            if [[ -f "$cert_path" ]]; then
+                print_status "success" "✓ Certificate found in Ubuntu trust store"
+            else
+                print_status "warning" "✗ Certificate not found in Ubuntu trust store"
+            fi
+            ;;
+    esac
     
     # Test with openssl
     if echo | openssl s_client -connect localhost:443 -servername nginx.test 2>/dev/null | grep -q "Verify return code: 0"; then
@@ -658,6 +671,7 @@ cleanup_temp_files() {
 show_trust_summary() {
     print_status "info" "SSL Certificate Trust Installation Summary:"
     echo "  Operating System: $OS_TYPE"
+    echo "  Linux Distribution: ${LINUX_DISTRO:-N/A}"
     echo "  Certificate Name: $opt_cert_name"
     echo "  Use Sudo: $opt_use_sudo"
     echo "  Install System Trust: $opt_install_system"
@@ -731,7 +745,8 @@ main() {
     echo "  3. Access services via HTTPS URLs"
     
     if [[ "$OS_TYPE" == "wsl" && "$opt_copy_to_windows" == "true" ]]; then
-        echo "  4. Run the PowerShell script in Windows as Administrator"
+        echo "  4. Run the PowerShell script in Windows as Administrator:"
+        echo "     PowerShell -ExecutionPolicy Bypass -File C:\\temp\\install-cert.ps1"
     fi
 }
 

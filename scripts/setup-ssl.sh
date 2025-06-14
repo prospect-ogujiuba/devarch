@@ -273,49 +273,60 @@ EOF
 generate_certificate() {
     print_status "step" "Generating SSL certificate..."
     
+    # First generate the config inside the container
+    local container_config="/tmp/openssl.conf"
+    local container_cert="$CERT_CONTAINER_DIR/fullchain.pem"
+    local container_key="$CERT_CONTAINER_DIR/privkey.pem"
+    
+    # Copy our config to the container
+    eval "$CONTAINER_CMD cp '$CERT_TEMP_DIR/openssl.conf' nginx-proxy-manager:/tmp/openssl.conf $ERROR_REDIRECT"
+    check_status "Failed to copy OpenSSL config to container"
+    
+    # Generate certificate directly in the container
+    local openssl_cmd="openssl req -x509 -nodes -days $opt_cert_days -newkey rsa:$opt_key_size"
+    openssl_cmd="$openssl_cmd -keyout '$container_key' -out '$container_cert'"
+    openssl_cmd="$openssl_cmd -config '$container_config' -extensions v3_req"
+    
+    if eval "$CONTAINER_CMD exec nginx-proxy-manager $openssl_cmd $ERROR_REDIRECT"; then
+        print_status "success" "SSL certificate generated successfully"
+    else
+        print_status "error" "Failed to generate SSL certificate. Trying alternative method..."
+        
+        # Alternative: Generate on host and copy to container
+        generate_certificate_on_host
+    fi
+    
+    # Set proper permissions
+    eval "$CONTAINER_CMD exec nginx-proxy-manager chmod 644 $container_cert $ERROR_REDIRECT"
+    eval "$CONTAINER_CMD exec nginx-proxy-manager chmod 600 $container_key $ERROR_REDIRECT"
+}
+
+generate_certificate_on_host() {
+    print_status "step" "Generating certificate on host as fallback..."
+    
     local key_file="$CERT_TEMP_DIR/privkey.pem"
     local cert_file="$CERT_TEMP_DIR/fullchain.pem"
     local config_file="$CERT_TEMP_DIR/openssl.conf"
     
-    # Generate private key and certificate in one command
-    if eval "$SUDO_PREFIX podman exec nginx-proxy-manager openssl req -x509 -nodes -days 3650 -newkey rsa:4096 \
-    -keyout /etc/letsencrypt/live/wildcard.test/privkey.pem \
-    -out /etc/letsencrypt/live/wildcard.test/fullchain.pem \
-    -subj \"/C=US/ST=Development/L=Local/O=Development/CN=*.test\" \
-    -addext \"subjectAltName=DNS:*.test,DNS:test\" $ERROR_REDIRECT}"; then
+    # Generate certificate on host
+    local openssl_cmd="openssl req -x509 -nodes -days $opt_cert_days -newkey rsa:$opt_key_size"
+    openssl_cmd="$openssl_cmd -keyout '$key_file' -out '$cert_file'"
+    openssl_cmd="$openssl_cmd -config '$config_file' -extensions v3_req"
+    
+    if eval "$openssl_cmd $ERROR_REDIRECT"; then
+        print_status "success" "Certificate generated on host"
         
-        print_status "success" "SSL certificate generated successfully"
+        # Copy to container
+        eval "$CONTAINER_CMD cp '$cert_file' nginx-proxy-manager:$CERT_CONTAINER_DIR/fullchain.pem $ERROR_REDIRECT"
+        check_status "Failed to copy certificate to container"
+        
+        eval "$CONTAINER_CMD cp '$key_file' nginx-proxy-manager:$CERT_CONTAINER_DIR/privkey.pem $ERROR_REDIRECT"
+        check_status "Failed to copy private key to container"
+        
+        print_status "success" "Certificate copied to container"
     else
         handle_error "Failed to generate SSL certificate"
     fi
-    
-    # Verify the generated certificate
-    print_status "step" "Verifying generated certificate..."
-    if openssl x509 -in "$cert_file" -noout -text | grep -q "Subject Alternative Name" $ERROR_REDIRECT; then
-        print_status "success" "Certificate contains Subject Alternative Names"
-    else
-        print_status "warning" "Certificate may not contain all expected SANs"
-    fi
-}
-
-install_certificate_to_container() {
-    print_status "step" "Installing certificate to nginx-proxy-manager..."
-    
-    local key_file="$CERT_TEMP_DIR/privkey.pem"
-    local cert_file="$CERT_TEMP_DIR/fullchain.pem"
-    
-    # Copy certificates to container
-    eval "$CONTAINER_CMD cp '$cert_file' nginx-proxy-manager:$CERT_CONTAINER_DIR/fullchain.pem $ERROR_REDIRECT"
-    check_status "Failed to copy certificate to container"
-    
-    eval "$CONTAINER_CMD cp '$key_file' nginx-proxy-manager:$CERT_CONTAINER_DIR/privkey.pem $ERROR_REDIRECT"
-    check_status "Failed to copy private key to container"
-    
-    # Set proper permissions
-    eval "$CONTAINER_CMD exec nginx-proxy-manager chmod 644 $CERT_CONTAINER_DIR/fullchain.pem $ERROR_REDIRECT"
-    eval "$CONTAINER_CMD exec nginx-proxy-manager chmod 600 $CERT_CONTAINER_DIR/privkey.pem $ERROR_REDIRECT"
-    
-    print_status "success" "Certificate installed to container"
 }
 
 export_certificate_formats() {
@@ -325,14 +336,16 @@ export_certificate_formats() {
     
     print_status "step" "Exporting certificate in multiple formats..."
     
-    local key_file="$CERT_TEMP_DIR/privkey.pem"
-    local cert_file="$CERT_TEMP_DIR/fullchain.pem"
     local export_dir="$PROJECT_ROOT/ssl"
     local domain_safe="${opt_custom_domain//\*/wildcard}"
     
-    # Export PEM format (already have these)
-    cp "$cert_file" "$export_dir/${domain_safe}.crt"
-    cp "$key_file" "$export_dir/${domain_safe}.key"
+    # Copy certificates from container to export directory
+    eval "$CONTAINER_CMD cp nginx-proxy-manager:$CERT_CONTAINER_DIR/fullchain.pem '$export_dir/${domain_safe}.crt' $ERROR_REDIRECT"
+    eval "$CONTAINER_CMD cp nginx-proxy-manager:$CERT_CONTAINER_DIR/privkey.pem '$export_dir/${domain_safe}.key' $ERROR_REDIRECT"
+    
+    # Generate additional formats
+    local cert_file="$export_dir/${domain_safe}.crt"
+    local key_file="$export_dir/${domain_safe}.key"
     
     # Export PFX format (for Windows)
     openssl pkcs12 -export -out "$export_dir/${domain_safe}.pfx" \
@@ -540,7 +553,6 @@ main() {
     prepare_certificate_environment
     generate_openssl_config
     generate_certificate
-    install_certificate_to_container
     
     # Export in multiple formats if requested
     export_certificate_formats
