@@ -1,0 +1,59 @@
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  traefik_data:
+  traefik_logs:
+
+services:
+  traefik:
+    container_name: traefik
+    build:
+      context: ../../config/traefik
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Dashboard - accessible via localhost:8080
+    volumes:
+      - ../../config/traefik/traefik-entrypoint.sh:/usr/local/bin/traefik-entrypoint.sh
+      - ../../config/traefik/static:/etc/traefik/static:ro
+      - ../../config/traefik/dynamic:/etc/traefik/dynamic:ro
+      - ../../config/traefik/ssl:/ssl:ro
+      - traefik_data:/data
+      - traefik_logs:/var/log/traefik
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      # Clean environment variables
+      - TRAEFIK_API_DASHBOARD=true
+      - TRAEFIK_API_DEBUG=true
+      - TRAEFIK_API_INSECURE=true
+      - TRAEFIK_ENTRYPOINTS_WEB_ADDRESS=:80
+      - TRAEFIK_ENTRYPOINTS_WEBSECURE_ADDRESS=:443
+      - TRAEFIK_PROVIDERS_FILE_DIRECTORY=/etc/traefik/dynamic
+      - TRAEFIK_PROVIDERS_FILE_WATCH=true
+      - TRAEFIK_LOG_LEVEL=INFO
+      - TRAEFIK_ACCESSLOG=true
+      - TRAEFIK_PING=true
+    networks:
+      - microservices-net
+    labels:
+      # Enable Traefik for this service
+      - "traefik.enable=true"
+      
+      # Dashboard route via traefik.test domain
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.test`)"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      - "traefik.http.routers.traefik-dashboard.tls=true"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      
+      # HTTP to HTTPS redirect for dashboard
+      - "traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.test`)"
+      - "traefik.http.routers.traefik-dashboard-http.entrypoints=web"
+      - "traefik.http.routers.traefik-dashboard-http.middlewares=traefik-dashboard-redirect"
+      - "traefik.http.middlewares.traefik-dashboard-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.traefik-dashboard-redirect.redirectscheme.permanent=true"

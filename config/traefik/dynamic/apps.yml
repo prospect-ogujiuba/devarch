@@ -1,0 +1,20 @@
+# config/traefik/dynamic/apps.yml
+http:
+  routers:
+    serverinfo:
+      rule: "Host(`serverinfo.test`)"
+      service: "php"
+      tls: {}
+      middlewares:
+        - "serverinfo-path"
+
+  middlewares:
+    serverinfo-path:
+      addPrefix:
+        prefix: "/serverinfo/public"
+
+# TLS Configuration
+tls:
+  certificates:
+    - certFile: "/ssl/cert.pem"
+      keyFile: "/ssl/key.pem"

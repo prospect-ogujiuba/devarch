@@ -43,7 +43,8 @@ SERVICE_CATEGORIES=(
     [ai-services]="ai/langflow.yml ai/n8n.yml"
     [mail]="mail/mailpit.yml"
     [project]="project/gitea.yml"
-    [proxy]="proxy/nginx-proxy-manager.yml"
+    [proxy]="proxy/traefik.yml"
+    [proxy-nginx]="proxy/nginx-proxy-manager.yml"
 )
 
 # Service startup order (critical for dependencies) - zsh array
@@ -332,6 +333,155 @@ stop_service_category() {
     
     print_status "success" "$category services stopped"
 }
+
+# =============================================================================
+# TRAEFIK SPECIFIC FUNCTIONS (Add these new functions)
+# =============================================================================
+
+# Function to add Traefik labels to a service
+add_traefik_labels() {
+    local service_name="$1"
+    local domain="$2"
+    local port="${3:-80}"
+    local compose_file="$4"
+    
+    if [[ -z "$service_name" || -z "$domain" || -z "$compose_file" ]]; then
+        print_status "error" "Missing required parameters for Traefik labels"
+        return 1
+    fi
+    
+    print_status "info" "Adding Traefik labels to $service_name"
+    
+    # Create labels section if it doesn't exist
+    if ! grep -q "labels:" "$compose_file"; then
+        cat >> "$compose_file" << EOF
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${service_name}.rule=Host(\`${domain}\`)"
+      - "traefik.http.routers.${service_name}.tls=true"
+      - "traefik.http.services.${service_name}.loadbalancer.server.port=${port}"
+      - "traefik.docker.network=${NETWORK_NAME}"
+EOF
+    fi
+}
+
+# Function to switch between Traefik and Nginx Proxy Manager
+switch_proxy_provider() {
+    local provider="${1:-traefik}"  # Default to traefik
+    
+    case "$provider" in
+        "traefik")
+            SERVICE_CATEGORIES[proxy]="proxy/traefik.yml"
+            print_status "success" "Switched to Traefik as proxy provider"
+            ;;
+        "nginx"|"nginx-proxy-manager")
+            SERVICE_CATEGORIES[proxy]="proxy/nginx-proxy-manager.yml"
+            print_status "success" "Switched to Nginx Proxy Manager as proxy provider"
+            ;;
+        *)
+            print_status "error" "Unknown proxy provider: $provider"
+            print_status "info" "Available providers: traefik, nginx, nginx-proxy-manager"
+            return 1
+            ;;
+    esac
+}
+
+# Function to validate Traefik setup
+validate_traefik_setup() {
+    print_status "step" "Validating Traefik setup..."
+    
+    # Check if Traefik container exists
+    if ! eval "$CONTAINER_CMD container exists traefik $ERROR_REDIRECT"; then
+        print_status "error" "Traefik container not found"
+        return 1
+    fi
+    
+    # Check if container is running
+    local container_status
+    container_status=$(eval "$CONTAINER_CMD inspect --format='{{.State.Status}}' traefik 2>/dev/null" || echo "unknown")
+    
+    if [[ "$container_status" != "running" ]]; then
+        print_status "error" "Traefik container is not running. Status: $container_status"
+        return 1
+    fi
+    
+    print_status "success" "Traefik container is running"
+    return 0
+}
+
+# Function to get Traefik dashboard URL
+get_traefik_dashboard() {
+    echo "https://traefik.test"
+}
+
+# Function to get Traefik API info
+get_traefik_api() {
+    local api_endpoint="http://localhost:8080/api/rawdata"
+    if command -v curl >/dev/null 2>&1; then
+        curl -s "$api_endpoint" 2>/dev/null || echo "Traefik API not accessible"
+    else
+        echo "curl not available - cannot access Traefik API"
+    fi
+}
+
+# Function to show Traefik routes
+show_traefik_routes() {
+    print_status "info" "Traefik Routes:"
+    
+    if validate_traefik_setup; then
+        # Try to get routes from API
+        local routes_json
+        routes_json=$(curl -s "http://localhost:8080/api/http/routers" 2>/dev/null)
+        
+        if [[ $? -eq 0 && -n "$routes_json" ]]; then
+            echo "$routes_json" | grep -o '"name":"[^"]*"' | sed 's/"name":"//g' | sed 's/"//g' | sort
+        else
+            print_status "warning" "Could not fetch routes from Traefik API"
+            echo "Access the dashboard at: $(get_traefik_dashboard)"
+        fi
+    fi
+}
+
+# Function to reload Traefik configuration
+reload_traefik_config() {
+    print_status "step" "Reloading Traefik configuration..."
+    
+    if validate_traefik_setup; then
+        # Traefik automatically reloads file provider configurations
+        # But we can restart the container to ensure everything is fresh
+        eval "$CONTAINER_CMD restart traefik $ERROR_REDIRECT"
+        check_status "Failed to restart Traefik"
+        
+        print_status "success" "Traefik configuration reloaded"
+        
+        # Wait a moment for startup
+        sleep 3
+        
+        # Show routes after reload
+        show_traefik_routes
+    else
+        print_status "error" "Cannot reload - Traefik is not running"
+        return 1
+    fi
+}
+
+# Export new functions for use in other scripts
+if [[ -n "$ZSH_VERSION" ]]; then
+    # ZSH: Functions are automatically available
+    :
+else
+    # Bash: Export functions explicitly
+    export -f add_traefik_labels 2>/dev/null || true
+    export -f switch_proxy_provider 2>/dev/null || true
+    export -f validate_traefik_setup 2>/dev/null || true
+    export -f get_traefik_dashboard 2>/dev/null || true
+    export -f get_traefik_api 2>/dev/null || true
+    export -f show_traefik_routes 2>/dev/null || true
+    export -f reload_traefik_config 2>/dev/null || true
+fi
+
+print_status "info" "Traefik configuration functions loaded"
 
 # =============================================================================
 # OS DETECTION
