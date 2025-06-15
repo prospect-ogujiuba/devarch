@@ -1,0 +1,235 @@
+http:
+  routers:
+    # Traefik Dashboard
+    traefik-dashboard:
+      rule: "Host(`traefik.test`)"
+      tls: {}
+      service: api@internal
+
+    # Nginx Proxy Manager
+    nginx-proxy-manager:
+      rule: "Host(`nginx.test`)"
+      tls: {}
+      service: nginx-proxy-manager
+
+    # Analytics & Monitoring Services
+    grafana:
+      rule: "Host(`grafana.test`)"
+      tls: {}
+      service: grafana
+
+    prometheus:
+      rule: "Host(`prometheus.test`)"
+      tls: {}
+      service: prometheus
+
+    matomo:
+      rule: "Host(`matomo.test`)"
+      tls: {}
+      service: matomo
+
+    elasticsearch:
+      rule: "Host(`elasticsearch.test`)"
+      tls: {}
+      service: elasticsearch
+
+    kibana:
+      rule: "Host(`kibana.test`)"
+      tls: {}
+      service: kibana
+
+    # Database Management Tools
+    adminer:
+      rule: "Host(`adminer.test`)"
+      tls: {}
+      service: adminer
+
+    phpmyadmin:
+      rule: "Host(`phpmyadmin.test`)"
+      tls: {}
+      service: phpmyadmin
+
+    mongo-express:
+      rule: "Host(`mongodb.test`)"
+      tls: {}
+      service: mongo-express
+
+    metabase:
+      rule: "Host(`metabase.test`)"
+      tls: {}
+      service: metabase
+
+    nocodb:
+      rule: "Host(`nocodb.test`)"
+      tls: {}
+      service: nocodb
+
+    pgadmin:
+      rule: "Host(`pgadmin.test`)"
+      tls: {}
+      service: pgadmin
+
+    # AI & Workflow Services
+    langflow:
+      rule: "Host(`langflow.test`)"
+      tls: {}
+      service: langflow
+
+    n8n:
+      rule: "Host(`n8n.test`)"
+      tls: {}
+      service: n8n
+
+    # Mail Services
+    mailpit:
+      rule: "Host(`mailpit.test`)"
+      tls: {}
+      service: mailpit
+
+    # Project Management
+    gitea:
+      rule: "Host(`gitea.test`)"
+      tls: {}
+      service: gitea
+
+    # Backend Services
+    dotnet:
+      rule: "Host(`dotnet.test`)"
+      tls: {}
+      service: dotnet
+
+    go:
+      rule: "Host(`go.test`)"
+      tls: {}
+      service: go
+
+    node:
+      rule: "Host(`node.test`)"
+      tls: {}
+      service: node
+
+    python:
+      rule: "Host(`python.test`)"
+      tls: {}
+      service: python
+
+    # PHP Projects Dynamic Router (for apps/[projectName]/public)
+    php-projects:
+      rule: "HostRegexp(`{subdomain:[a-zA-Z0-9-]+}.test`) && !Host(`traefik.test`) && !Host(`nginx.test`) && !Host(`grafana.test`) && !Host(`prometheus.test`) && !Host(`matomo.test`) && !Host(`elasticsearch.test`) && !Host(`kibana.test`) && !Host(`adminer.test`) && !Host(`phpmyadmin.test`) && !Host(`mongodb.test`) && !Host(`metabase.test`) && !Host(`nocodb.test`) && !Host(`pgadmin.test`) && !Host(`langflow.test`) && !Host(`n8n.test`) && !Host(`mailpit.test`) && !Host(`gitea.test`) && !Host(`dotnet.test`) && !Host(`go.test`) && !Host(`node.test`) && !Host(`python.test`)"
+      tls: {}
+      service: php-projects
+      priority: 1
+
+  services:
+    # Nginx Proxy Manager
+    nginx-proxy-manager:
+      loadBalancer:
+        servers:
+          - url: "http://nginx-proxy-manager:81"
+
+    # Analytics & Monitoring Services
+    grafana:
+      loadBalancer:
+        servers:
+          - url: "http://grafana:3000"
+
+    prometheus:
+      loadBalancer:
+        servers:
+          - url: "http://prometheus:9090"
+
+    matomo:
+      loadBalancer:
+        servers:
+          - url: "http://matomo:80"
+
+    elasticsearch:
+      loadBalancer:
+        servers:
+          - url: "http://elasticsearch:9200"
+
+    kibana:
+      loadBalancer:
+        servers:
+          - url: "http://kibana:5601"
+
+    # Database Management Tools
+    adminer:
+      loadBalancer:
+        servers:
+          - url: "http://adminer:8080"
+
+    phpmyadmin:
+      loadBalancer:
+        servers:
+          - url: "http://phpmyadmin:80"
+
+    mongo-express:
+      loadBalancer:
+        servers:
+          - url: "http://mongo-express:8081"
+
+    metabase:
+      loadBalancer:
+        servers:
+          - url: "http://metabase:3000"
+
+    nocodb:
+      loadBalancer:
+        servers:
+          - url: "http://nocodb:8080"
+
+    pgadmin:
+      loadBalancer:
+        servers:
+          - url: "http://pgadmin:80"
+
+    # AI & Workflow Services
+    langflow:
+      loadBalancer:
+        servers:
+          - url: "http://langflow:7860"
+
+    n8n:
+      loadBalancer:
+        servers:
+          - url: "http://n8n:5678"
+
+    # Mail Services
+    mailpit:
+      loadBalancer:
+        servers:
+          - url: "http://mailpit:8025"
+
+    # Project Management
+    gitea:
+      loadBalancer:
+        servers:
+          - url: "http://gitea:3000"
+
+    # Backend Services
+    dotnet:
+      loadBalancer:
+        servers:
+          - url: "http://dotnet:80"
+
+    go:
+      loadBalancer:
+        servers:
+          - url: "http://go:8080"
+
+    node:
+      loadBalancer:
+        servers:
+          - url: "http://node:3000"
+
+    python:
+      loadBalancer:
+        servers:
+          - url: "http://python:8000"
+
+    # PHP Projects Service
+    php-projects:
+      loadBalancer:
+        servers:
+          - url: "http://php:8000"

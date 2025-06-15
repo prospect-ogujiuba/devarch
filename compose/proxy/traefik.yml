@@ -1,0 +1,22 @@
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+services:
+  traefik:
+    image: docker.io/library/traefik:v3.4.1
+    container_name: traefik
+    env_file: ../../.env
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+    volumes:
+      - /run/docker.sock:/run/docker.sock:ro
+      - ../../config/traefik:/etc/traefik/:ro
+      - ../../config/traefik/certs/:/var/traefik/certs/:rw
+    networks:
+      - microservices-net
+    restart: unless-stopped
