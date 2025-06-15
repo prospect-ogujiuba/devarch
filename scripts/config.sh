@@ -43,8 +43,7 @@ SERVICE_CATEGORIES=(
     [ai-services]="ai/langflow.yml ai/n8n.yml"
     [mail]="mail/mailpit.yml"
     [project]="project/gitea.yml"
-    [proxy]="proxy/traefik.yml"
-    [proxy-nginx]="proxy/nginx-proxy-manager.yml"
+    [proxy]="proxy/nginx-proxy-manager.yml"
 )
 
 # Service startup order (critical for dependencies) - zsh array
