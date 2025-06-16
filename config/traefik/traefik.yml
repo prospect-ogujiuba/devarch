@@ -9,7 +9,7 @@ accesslog: {}
 
 api:
   dashboard: true
-  insecure: false
+  insecure: true
 
 entryPoints:
   web:
@@ -38,9 +38,6 @@ serversTransport:
   insecureSkipVerify: true
 
 providers:
-  docker:
-    exposedByDefault: false
-    network: microservices-net
   file:
     directory: /etc/traefik
     watch: true
