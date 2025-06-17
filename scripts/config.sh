@@ -27,7 +27,7 @@ export LOGS_DIR="${PROJECT_ROOT}/logs"
 # =============================================================================
 
 export NETWORK_NAME="microservices-net"
-export CONTAINER_RUNTIME="podman"  # Change to "docker" if using Docker instead
+export CONTAINER_RUNTIME="docker"  # Change to "docker" if using Docker instead
 
 # =============================================================================
 # SERVICE CATEGORIES & COMPOSE FILES
@@ -43,7 +43,7 @@ SERVICE_CATEGORIES=(
     [ai-services]="ai/langflow.yml ai/n8n.yml"
     [mail]="mail/mailpit.yml"
     [project]="project/gitea.yml"
-    [proxy]="proxy/nginx-proxy-manager.yml"
+    [proxy]="proxy/traefik.yml"
 )
 
 # Service startup order (critical for dependencies) - zsh array
@@ -83,7 +83,7 @@ export SSL_DAYS_VALID="3650"  # 10 years for development
 # Detect if we should use sudo (for Docker on Linux)
 detect_sudo_requirement() {
     if command -v podman >/dev/null 2>&1; then
-        export USE_PODMAN=true
+        export USE_PODMAN=false
         export DEFAULT_SUDO=true
     elif command -v docker >/dev/null 2>&1; then
         export USE_PODMAN=false
@@ -255,13 +255,26 @@ wait_for_mongodb() {
 
 # Function to create network if it doesn't exist
 ensure_network_exists() {
-    if ! eval "$CONTAINER_CMD network exists \"$NETWORK_NAME\" $ERROR_REDIRECT"; then
-        print_status "step" "Creating network: $NETWORK_NAME"
-        eval "$CONTAINER_CMD network create --driver bridge \"$NETWORK_NAME\" $ERROR_REDIRECT"
-        check_status "Failed to create network: $NETWORK_NAME"
-        print_status "success" "Network created: $NETWORK_NAME"
+    if [[ "$USE_PODMAN" == "true" ]]; then
+        # Podman has 'network exists' command
+        if ! eval "$CONTAINER_CMD network exists \"$NETWORK_NAME\" $ERROR_REDIRECT"; then
+            print_status "step" "Creating network: $NETWORK_NAME"
+            eval "$CONTAINER_CMD network create --driver bridge \"$NETWORK_NAME\" $ERROR_REDIRECT"
+            check_status "Failed to create network: $NETWORK_NAME"
+            print_status "success" "Network created: $NETWORK_NAME"
+        else
+            print_status "info" "Network already exists: $NETWORK_NAME"
+        fi
     else
-        print_status "info" "Network already exists: $NETWORK_NAME"
+        # Docker doesn't have 'network exists' - use 'network ls' instead
+        if ! eval "$CONTAINER_CMD network ls --format '{{.Name}}' | grep -q '^$NETWORK_NAME$' $ERROR_REDIRECT"; then
+            print_status "step" "Creating network: $NETWORK_NAME"
+            eval "$CONTAINER_CMD network create --driver bridge \"$NETWORK_NAME\" $ERROR_REDIRECT"
+            check_status "Failed to create network: $NETWORK_NAME"
+            print_status "success" "Network created: $NETWORK_NAME"
+        else
+            print_status "info" "Network already exists: $NETWORK_NAME"
+        fi
     fi
 }
 
@@ -334,57 +347,8 @@ stop_service_category() {
 }
 
 # =============================================================================
-# TRAEFIK SPECIFIC FUNCTIONS (Add these new functions)
+# TRAEFIK SPECIFIC FUNCTIONS
 # =============================================================================
-
-# Function to add Traefik labels to a service
-add_traefik_labels() {
-    local service_name="$1"
-    local domain="$2"
-    local port="${3:-80}"
-    local compose_file="$4"
-    
-    if [[ -z "$service_name" || -z "$domain" || -z "$compose_file" ]]; then
-        print_status "error" "Missing required parameters for Traefik labels"
-        return 1
-    fi
-    
-    print_status "info" "Adding Traefik labels to $service_name"
-    
-    # Create labels section if it doesn't exist
-    if ! grep -q "labels:" "$compose_file"; then
-        cat >> "$compose_file" << EOF
-
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.${service_name}.rule=Host(\`${domain}\`)"
-      - "traefik.http.routers.${service_name}.tls=true"
-      - "traefik.http.services.${service_name}.loadbalancer.server.port=${port}"
-      - "traefik.docker.network=${NETWORK_NAME}"
-EOF
-    fi
-}
-
-# Function to switch between Traefik and Nginx Proxy Manager
-switch_proxy_provider() {
-    local provider="${1:-traefik}"  # Default to traefik
-    
-    case "$provider" in
-        "traefik")
-            SERVICE_CATEGORIES[proxy]="proxy/traefik.yml"
-            print_status "success" "Switched to Traefik as proxy provider"
-            ;;
-        "nginx"|"nginx-proxy-manager")
-            SERVICE_CATEGORIES[proxy]="proxy/nginx-proxy-manager.yml"
-            print_status "success" "Switched to Nginx Proxy Manager as proxy provider"
-            ;;
-        *)
-            print_status "error" "Unknown proxy provider: $provider"
-            print_status "info" "Available providers: traefik, nginx, nginx-proxy-manager"
-            return 1
-            ;;
-    esac
-}
 
 # Function to validate Traefik setup
 validate_traefik_setup() {
@@ -447,7 +411,7 @@ reload_traefik_config() {
     print_status "step" "Reloading Traefik configuration..."
     
     if validate_traefik_setup; then
-        # Traefik automatically reloads file provider configurations
+        # Traefik automatically reloads Docker provider configurations
         # But we can restart the container to ensure everything is fresh
         eval "$CONTAINER_CMD restart traefik $ERROR_REDIRECT"
         check_status "Failed to restart Traefik"
@@ -464,21 +428,6 @@ reload_traefik_config() {
         return 1
     fi
 }
-
-# Export new functions for use in other scripts
-if [[ -n "$ZSH_VERSION" ]]; then
-    # ZSH: Functions are automatically available
-    :
-else
-    # Bash: Export functions explicitly
-    export -f add_traefik_labels 2>/dev/null || true
-    export -f switch_proxy_provider 2>/dev/null || true
-    export -f validate_traefik_setup 2>/dev/null || true
-    export -f get_traefik_dashboard 2>/dev/null || true
-    export -f get_traefik_api 2>/dev/null || true
-    export -f show_traefik_routes 2>/dev/null || true
-    export -f reload_traefik_config 2>/dev/null || true
-fi
 
 # =============================================================================
 # OS DETECTION
@@ -542,6 +491,11 @@ else
     export -f start_service_category 2>/dev/null || true
     export -f stop_service_category 2>/dev/null || true
     export -f setup_command_context 2>/dev/null || true
+    export -f validate_traefik_setup 2>/dev/null || true
+    export -f get_traefik_dashboard 2>/dev/null || true
+    export -f get_traefik_api 2>/dev/null || true
+    export -f show_traefik_routes 2>/dev/null || true
+    export -f reload_traefik_config 2>/dev/null || true
 fi
 
 print_status "info" "Configuration loaded successfully"

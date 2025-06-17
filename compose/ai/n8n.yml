@@ -1,5 +1,3 @@
-version: "3.8"
-
 networks:
   microservices-net:
     external: true
@@ -13,9 +11,12 @@ services:
     image: n8nio/n8n:latest
     restart: unless-stopped
     env_file: ../../.env
-    ports:
-      - "127.0.0.1:9100:5678" # Local access to n8n
     volumes:
       - n8n_data:/home/node/.n8n
     networks:
       - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`${N8N_DOMAIN}`)"
+      - "traefik.http.routers.n8n.tls=true"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"

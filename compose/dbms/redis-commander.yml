@@ -1,5 +1,3 @@
-version: "3.8"
-
 networks:
   microservices-net:
     external: true
@@ -19,7 +17,10 @@ services:
       - HTTP_PASSWORD=${REDIS_COMMANDER_PASSWORD:-123456}
       - ADDRESS=0.0.0.0
       - PORT=8081
-    ports:
-      - "127.0.0.1:8088:8081" # Local access to Redis Commander
     networks:
       - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redis-commander.rule=Host(`${REDIS_DOMAIN}`)"
+      - "traefik.http.routers.redis-commander.tls=true"
+      - "traefik.http.services.redis-commander.loadbalancer.server.port=8081"

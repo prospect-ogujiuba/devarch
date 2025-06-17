@@ -1,5 +1,3 @@
-version: "3.8"
-
 networks:
   microservices-net:
     external: true
@@ -9,7 +7,10 @@ services:
     container_name: mongo-express
     image: mongo-express:latest
     env_file: ../../.env
-    ports:
-      - "127.0.0.1:8084:8081" # Local access to Mongo Express
     networks:
       - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mongo-express.rule=Host(`${MONGODB_DOMAIN}`)"
+      - "traefik.http.routers.mongo-express.tls=true"
+      - "traefik.http.services.mongo-express.loadbalancer.server.port=8081"

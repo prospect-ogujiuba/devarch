@@ -1,5 +1,3 @@
-version: "3.8"
-
 networks:
   microservices-net:
     external: true
@@ -9,17 +7,13 @@ volumes:
   npm_letsencrypt:
 
 services:
-  npm:
+  nginx-proxy-manager:
     container_name: nginx-proxy-manager
     build:
       context: ../../config/nginx
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: ../../.env
-    ports:
-      - "80:80"
-      - "443:443"
-      - "81:81"
     volumes:
       - ../../apps:/var/www/html
       - ../../config/nginx/custom:/data/nginx/custom
@@ -28,3 +22,8 @@ services:
       - npm_letsencrypt:/etc/letsencrypt
     networks:
       - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nginx-proxy-manager.rule=Host(`${NGINX_DOMAIN}`)"
+      - "traefik.http.routers.nginx-proxy-manager.tls=true"
+      - "traefik.http.services.nginx-proxy-manager.loadbalancer.server.port=81"

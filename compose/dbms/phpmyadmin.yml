@@ -1,5 +1,3 @@
-version: "3.8"
-
 networks:
   microservices-net:
     external: true
@@ -9,9 +7,12 @@ services:
     container_name: phpmyadmin
     image: phpmyadmin:latest
     env_file: ../../.env
-    ports:
-      - "127.0.0.1:8083:80" # Local access to phpMyAdmin
     networks:
       - microservices-net
     volumes:
       - ../../config/phpmyadmin/config.inc.php:/etc/phpmyadmin/config.user.inc.php:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.phpmyadmin.rule=Host(`${PHPMYADMIN_DOMAIN}`)"
+      - "traefik.http.routers.phpmyadmin.tls=true"
+      - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"

@@ -1,5 +1,3 @@
-version: "3.8"
-
 networks:
   microservices-net:
     external: true
@@ -13,9 +11,12 @@ services:
     image: grafana/grafana:latest
     user: "0"
     env_file: ../../.env
-    ports:
-      - "127.0.0.1:9001:3000" # Local access to Grafana
     volumes:
       - grafana_data:/var/lib/grafana
     networks:
       - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`${GRAFANA_DOMAIN}`)"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"

@@ -1,5 +1,3 @@
-version: "3.8"
-
 networks:
   microservices-net:
     external: true
@@ -16,10 +14,12 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-    ports:
-      - "127.0.0.1:9130:9200" # Local access to Elasticsearch HTTP
-      - "127.0.0.1:9131:9300" # Local access to Elasticsearch transport
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     networks:
       - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.elasticsearch.rule=Host(`${ELASTICSEARCH_DOMAIN}`)"
+      - "traefik.http.routers.elasticsearch.tls=true"
+      - "traefik.http.services.elasticsearch.loadbalancer.server.port=9200"

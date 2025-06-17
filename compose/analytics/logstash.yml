@@ -1,5 +1,3 @@
-version: "3.8"
-
 networks:
   microservices-net:
     external: true
@@ -13,12 +11,13 @@ services:
     image: docker.elastic.co/logstash/logstash:8.12.2
     restart: unless-stopped
     env_file: ../../.env
-    ports:
-      - "127.0.0.1:5000:5000" # TCP input
-      - "127.0.0.1:5044:5044" # Beats input
-      - "127.0.0.1:9600:9600" # API endpoint
     volumes:
       - ../../config/logstash:/usr/share/logstash/config:ro
       - logstash_data:/usr/share/logstash/data
     networks:
       - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.logstash.rule=Host(`${LOGSTASH_DOMAIN}`)"
+      - "traefik.http.routers.logstash.tls=true"
+      - "traefik.http.services.logstash.loadbalancer.server.port=9600"
