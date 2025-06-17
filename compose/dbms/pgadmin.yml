@@ -11,12 +11,15 @@ services:
     image: dpage/pgadmin4:latest
     restart: unless-stopped
     env_file: ../../.env
+    ports:
+      - "127.0.0.1:8087:80" # Local access to pgAdmin
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     networks:
       - microservices-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.pgadmin.rule=Host(`${PGADMIN_DOMAIN}`)"
+      - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.test`)"
+      - "traefik.http.routers.pgadmin.entrypoints=websecure"
       - "traefik.http.routers.pgadmin.tls=true"
       - "traefik.http.services.pgadmin.loadbalancer.server.port=80"

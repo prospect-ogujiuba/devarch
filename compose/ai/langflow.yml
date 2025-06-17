@@ -11,12 +11,17 @@ services:
     image: langflowai/langflow:latest
     restart: unless-stopped
     env_file: ../../.env
+    ports:
+      - "127.0.0.1:9110:7860" # Local access to Langflow
     volumes:
       - langflow_data:/app/data
     networks:
       - microservices-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.langflow.rule=Host(`${LANGFLOW_DOMAIN}`)"
+      - "traefik.http.routers.langflow.rule=Host(`langflow.test`)"
+      - "traefik.http.routers.langflow.entrypoints=websecure"
       - "traefik.http.routers.langflow.tls=true"
       - "traefik.http.services.langflow.loadbalancer.server.port=7860"
+      - "traefik.http.routers.langflow.middlewares=langflow-timeout"
+      - "traefik.http.middlewares.langflow-timeout.buffering.maxrequestbodybytes=104857600"

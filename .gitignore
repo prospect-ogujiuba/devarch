@@ -1,5 +1,8 @@
 apps/*
 !apps/
-!apps/serverinfo
+!apps/dotnet
+!apps/go
+!apps/node
+!apps/python
 .env
 .DS_Store

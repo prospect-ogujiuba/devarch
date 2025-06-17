@@ -10,6 +10,8 @@ services:
     container_name: prometheus
     image: prom/prometheus:latest
     user: "0"
+    ports:
+      - "127.0.0.1:9090:9090"  # Local access to Prometheus
     volumes:
       - ../../config/prometheus:/etc/prometheus:ro
       - prometheus_data:/prometheus
@@ -22,6 +24,7 @@ services:
       - microservices-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.prometheus.rule=Host(`${PROMETHEUS_DOMAIN}`)"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.test`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
       - "traefik.http.routers.prometheus.tls=true"
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"

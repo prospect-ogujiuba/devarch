@@ -10,15 +10,17 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: ../../.env
+    ports:
+      - "127.0.0.1:8040:8000" # Python application port (FastAPI/Django)
     volumes:
       - ../../apps:/app
       - ../../logs/python:/var/log/python
     working_dir: /app
-    command: ["python", "main.py"]
     networks:
       - microservices-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.python.rule=Host(`${PYTHON_DOMAIN}`)"
+      - "traefik.http.routers.python.rule=Host(`python.test`)"
+      - "traefik.http.routers.python.entrypoints=websecure"
       - "traefik.http.routers.python.tls=true"
       - "traefik.http.services.python.loadbalancer.server.port=8000"

@@ -14,6 +14,10 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: ../../.env
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"
     volumes:
       - ../../apps:/var/www/html
       - ../../config/nginx/custom:/data/nginx/custom
@@ -24,6 +28,7 @@ services:
       - microservices-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.nginx-proxy-manager.rule=Host(`${NGINX_DOMAIN}`)"
+      - "traefik.http.routers.nginx-proxy-manager.rule=Host(`nginx.test`)"
+      - "traefik.http.routers.nginx-proxy-manager.entrypoints=websecure"
       - "traefik.http.routers.nginx-proxy-manager.tls=true"
       - "traefik.http.services.nginx-proxy-manager.loadbalancer.server.port=81"

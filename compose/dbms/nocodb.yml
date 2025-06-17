@@ -27,12 +27,17 @@ services:
       - NC_SMTP_USERNAME=
       - NC_SMTP_PASSWORD=
       - NC_SMTP_SECURE=false
+    ports:
+      - "127.0.0.1:8086:8080"
     volumes:
       - nocodb_data:/usr/app/data
     networks:
       - microservices-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.nocodb.rule=Host(`${NOCODB_DOMAIN}`)"
+      - "traefik.http.routers.nocodb.rule=Host(`nocodb.test`)"
+      - "traefik.http.routers.nocodb.entrypoints=websecure"
       - "traefik.http.routers.nocodb.tls=true"
       - "traefik.http.services.nocodb.loadbalancer.server.port=8080"
+      - "traefik.http.routers.nocodb.middlewares=nocodb-timeout"
+      - "traefik.http.middlewares.nocodb-timeout.buffering.maxrequestbodybytes=104857600"

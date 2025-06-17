@@ -10,15 +10,17 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: ../../.env
+    ports:
+      - "127.0.0.1:8020:8080" # Go application port
     volumes:
       - ../../apps:/app
       - ../../logs/go:/var/log/go
     working_dir: /app
-    command: ["go", "run", "main.go"]
     networks:
       - microservices-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.go.rule=Host(`${GO_DOMAIN}`)"
+      - "traefik.http.routers.go.rule=Host(`go.test`)"
+      - "traefik.http.routers.go.entrypoints=websecure"
       - "traefik.http.routers.go.tls=true"
       - "traefik.http.services.go.loadbalancer.server.port=8080"

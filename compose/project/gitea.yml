@@ -12,6 +12,7 @@ services:
     restart: unless-stopped
     env_file: ../../.env
     ports:
+      - "127.0.0.1:9210:3000" # Local access to Gitea web
       - "2222:22" # SSH access for Git
     volumes:
       - gitea_data:/data
@@ -21,6 +22,7 @@ services:
       - microservices-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.gitea.rule=Host(`${GITEA_DOMAIN}`)"
+      - "traefik.http.routers.gitea.rule=Host(`gitea.test`)"
+      - "traefik.http.routers.gitea.entrypoints=websecure"
       - "traefik.http.routers.gitea.tls=true"
       - "traefik.http.services.gitea.loadbalancer.server.port=3000"

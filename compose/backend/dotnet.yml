@@ -10,6 +10,9 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: ../../.env
+    ports:
+      - "127.0.0.1:8010:80" # HTTP
+      - "127.0.0.1:8011:443" # HTTPS
     volumes:
       - ../../apps:/app
       - ../../logs/dotnet:/var/log/dotnet
@@ -20,6 +23,7 @@ services:
       - microservices-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.dotnet.rule=Host(`${DOTNET_DOMAIN}`)"
+      - "traefik.http.routers.dotnet.rule=Host(`dotnet.test`)"
+      - "traefik.http.routers.dotnet.entrypoints=websecure"
       - "traefik.http.routers.dotnet.tls=true"
       - "traefik.http.services.dotnet.loadbalancer.server.port=80"

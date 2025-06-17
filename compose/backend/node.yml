@@ -10,15 +10,17 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: ../../.env
+    ports:
+      - "127.0.0.1:8030:3000" # Node.js application port
     volumes:
       - ../../apps:/app
       - ../../logs/node:/var/log/node
     working_dir: /app
-    command: ["npm", "start"]
     networks:
       - microservices-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.node.rule=Host(`${NODE_DOMAIN}`)"
+      - "traefik.http.routers.node.rule=Host(`node.test`)"
+      - "traefik.http.routers.node.entrypoints=websecure"
       - "traefik.http.routers.node.tls=true"
       - "traefik.http.services.node.loadbalancer.server.port=3000"

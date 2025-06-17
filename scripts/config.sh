@@ -27,7 +27,7 @@ export LOGS_DIR="${PROJECT_ROOT}/logs"
 # =============================================================================
 
 export NETWORK_NAME="microservices-net"
-export CONTAINER_RUNTIME="docker"  # Change to "docker" if using Docker instead
+export CONTAINER_RUNTIME="podman"  # Change to "docker" if using Docker instead
 
 # =============================================================================
 # SERVICE CATEGORIES & COMPOSE FILES
@@ -83,10 +83,10 @@ export SSL_DAYS_VALID="3650"  # 10 years for development
 # Detect if we should use sudo (for Docker on Linux)
 detect_sudo_requirement() {
     if command -v podman >/dev/null 2>&1; then
-        export USE_PODMAN=false
+        export USE_PODMAN=true
         export DEFAULT_SUDO=true
     elif command -v docker >/dev/null 2>&1; then
-        export USE_PODMAN=false
+        export USE_PODMAN=true
         # Check if user is in docker group
         if groups | grep -q docker 2>/dev/null; then
             export DEFAULT_SUDO=false

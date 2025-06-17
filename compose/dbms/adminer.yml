@@ -7,10 +7,13 @@ services:
     container_name: adminer
     image: adminer:latest
     env_file: ../../.env
+    ports:
+      - "127.0.0.1:8082:8080" # Keep for direct access during testing
     networks:
       - microservices-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.adminer.rule=Host(`${ADMINER_DOMAIN}`)"
+      - "traefik.http.routers.adminer.rule=Host(`adminer.test`)"
+      - "traefik.http.routers.adminer.entrypoints=websecure"
       - "traefik.http.routers.adminer.tls=true"
       - "traefik.http.services.adminer.loadbalancer.server.port=8080"

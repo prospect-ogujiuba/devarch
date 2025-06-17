@@ -11,12 +11,17 @@ services:
     image: n8nio/n8n:latest
     restart: unless-stopped
     env_file: ../../.env
+    ports:
+      - "127.0.0.1:9100:5678" # Local access to n8n
     volumes:
       - n8n_data:/home/node/.n8n
     networks:
       - microservices-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.n8n.rule=Host(`${N8N_DOMAIN}`)"
+      - "traefik.http.routers.n8n.rule=Host(`n8n.test`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
       - "traefik.http.routers.n8n.tls=true"
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+      - "traefik.http.routers.n8n.middlewares=n8n-timeout"
+      - "traefik.http.middlewares.n8n-timeout.buffering.maxrequestbodybytes=104857600"

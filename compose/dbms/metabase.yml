@@ -10,12 +10,17 @@ services:
     container_name: metabase
     image: metabase/metabase:latest
     env_file: ../../.env
+    ports:
+      - "127.0.0.1:8085:3000" # Local access to Metabase
     volumes:
       - metabase_data:/metabase-data
     networks:
       - microservices-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.metabase.rule=Host(`${METABASE_DOMAIN}`)"
+      - "traefik.http.routers.metabase.rule=Host(`metabase.test`)"
+      - "traefik.http.routers.metabase.entrypoints=websecure"
       - "traefik.http.routers.metabase.tls=true"
       - "traefik.http.services.metabase.loadbalancer.server.port=3000"
+      - "traefik.http.routers.metabase.middlewares=metabase-timeout"
+      - "traefik.http.middlewares.metabase-timeout.buffering.maxrequestbodybytes=104857600"

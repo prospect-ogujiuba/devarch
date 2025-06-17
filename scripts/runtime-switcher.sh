@@ -60,6 +60,24 @@ get_current_runtime() {
     echo "none"
 }
 
+stop_all_services() {
+    print_status "info" "Stopping all microservices before runtime switch..."
+    
+    # Use the existing stop-services.sh script if available
+    if [[ -f "$SCRIPT_DIR/stop-services.sh" ]]; then
+        "$SCRIPT_DIR/stop-services.sh" --force --timeout 10 2>/dev/null || true
+    else
+        print_status "warning" "stop-services.sh not found, attempting manual cleanup..."
+        cleanup_runtime_containers
+    fi
+}
+
+cleanup_runtime_containers() {
+    # Clean up both runtimes to ensure clean state
+    cleanup_runtime "podman"
+    cleanup_runtime "docker"
+}
+
 cleanup_runtime() {
     local runtime="$1"
     print_status "info" "Cleaning up $runtime resources..."
@@ -90,9 +108,6 @@ cleanup_runtime() {
 
 switch_to_docker() {
     print_status "info" "Switching to Docker..."
-    
-    # Clean up Podman completely
-    cleanup_runtime "podman"
     
     # Stop podman services
     if command -v podman >/dev/null 2>&1; then
@@ -128,9 +143,6 @@ switch_to_docker() {
 
 switch_to_podman() {
     print_status "info" "Switching to Podman..."
-    
-    # Clean up Docker completely
-    cleanup_runtime "docker"
     
     # Stop Docker
     if command -v docker >/dev/null 2>&1; then
@@ -235,17 +247,26 @@ usage() {
     echo "  $0 docker     # Switch to Docker"
     echo "  $0 podman     # Switch to Podman"
     echo "  $0 status     # Show current status"
+    echo ""
+    echo "Notes:"
+    echo "  - All running containers will be stopped during the switch"
+    echo "  - The config.sh file will be updated automatically"
+    echo "  - Restart your services after switching runtimes"
 }
 
 # Main execution
 case "${1:-status}" in
     "docker")
-        stop_services
+        stop_all_services
         switch_to_docker
+        echo ""
+        print_status "info" "To start services with Docker, run: ./scripts/start-services.sh"
         ;;
     "podman")
-        stop_services
+        stop_all_services
         switch_to_podman
+        echo ""
+        print_status "info" "To start services with Podman, run: ./scripts/start-services.sh"
         ;;
     "status")
         show_status
