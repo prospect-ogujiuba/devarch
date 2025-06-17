@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
 # Install Oh My Zsh
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" || true
 
-# Install global Python tools
+# Install global Python tools and a simple HTTP server
 RUN pip install --no-cache-dir \
     pipenv \
     poetry \
@@ -27,24 +27,22 @@ RUN pip install --no-cache-dir \
     pytest \
     black \
     flake8 \
-    mypy
+    mypy \
+    fastapi \
+    flask \
+    django \
+    streamlit
 
 # Create app directory
-WORKDIR /app
-
-# Copy smart entrypoint script
-COPY smart-entrypoint.sh /usr/local/bin/smart-entrypoint.sh
-RUN chmod +x /usr/local/bin/smart-entrypoint.sh
+WORKDIR /var/www/html
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app
-RUN chown -R app:app /app
+RUN chown -R app:app /var/www/html
 
 # Expose common Python ports
 EXPOSE 8000 8080 5000 3000
 
-# Use smart entrypoint
-ENTRYPOINT ["/usr/local/bin/smart-entrypoint.sh"]
-
-# Default command
-CMD ["python", "main.py"]
+# Run a simple HTTP server that serves the current directory
+# This keeps the container running and ready to serve files
+CMD ["python", "-m", "http.server", "8000"]

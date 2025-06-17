@@ -83,8 +83,5 @@ WORKDIR /var/www/html
 # Expose ports for PHP-FPM and Mailpit
 EXPOSE 9000 8025 1025
 
-# Use smart entrypoint
-ENTRYPOINT ["/usr/local/bin/smart-entrypoint.sh"]
-
 # Default command
 CMD ["php-fpm"]

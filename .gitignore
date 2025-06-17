@@ -1,8 +1,10 @@
-apps/*
+# Ignore everything inside apps/
+apps/**
+
+# But NOT the apps folder itself
 !apps/
-!apps/dotnet
-!apps/go
-!apps/node
-!apps/python
+!apps/serverinfo/
+
+# Other ignores
 .env
 .DS_Store

@@ -21,24 +21,22 @@ RUN npm install -g \
     create-next-app \
     express-generator \
     typescript \
-    ts-node
+    ts-node \
+    serve
 
 # Create app directory
-WORKDIR /app
-
-# Copy smart entrypoint script
-COPY smart-entrypoint.sh /usr/local/bin/smart-entrypoint.sh
-RUN chmod +x /usr/local/bin/smart-entrypoint.sh
+WORKDIR /var/www/html
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001
 
+# Set up directory permissions
+RUN chown -R nextjs:nodejs /var/www/html
+
 # Expose common Node.js ports
 EXPOSE 3000 3001 8080 8000
 
-# Use smart entrypoint
-ENTRYPOINT ["/usr/local/bin/smart-entrypoint.sh"]
-
-# Default command
-CMD ["npm", "start"]
+# Start a simple HTTP server that can serve any directory
+# This keeps the container running and ready to serve files
+CMD ["serve", "-s", ".", "-p", "3000", "--cors"]

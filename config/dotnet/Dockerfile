@@ -22,22 +22,51 @@ RUN dotnet tool install --global dotnet-ef && \
 # Add tools to PATH
 ENV PATH="$PATH:/root/.dotnet/tools"
 
-# Create app directory
+# Create a simple ASP.NET Core file server
+RUN mkdir -p /app
 WORKDIR /app
 
-# Copy smart entrypoint script
-COPY smart-entrypoint.sh /usr/local/bin/smart-entrypoint.sh
-RUN chmod +x /usr/local/bin/smart-entrypoint.sh
+# Create a simple web server project
+RUN dotnet new web -n FileServer
+WORKDIR /app/FileServer
+
+# Modify Program.cs to serve static files from /var/www/html
+RUN cat > Program.cs << 'EOF'
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+// Configure static file serving from /var/www/html
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider("/var/www/html"),
+    RequestPath = ""
+});
+
+// Fallback for SPA applications
+app.MapFallbackToFile("/var/www/html/index.html");
+
+// Basic API endpoint
+app.MapGet("/api/status", () => new { 
+    Status = "Running", 
+    Server = ".NET File Server",
+    Time = DateTime.Now 
+});
+
+app.Run("http://0.0.0.0:80");
+EOF
+
+# Build the application
+RUN dotnet build
+
+# Create app directory
+WORKDIR /var/www/html
 
 # Create non-root user (with proper error handling)
 RUN useradd --create-home --shell /bin/bash app || echo "User app already exists"
-RUN chown -R app:app /app
+RUN chown -R app:app /var/www/html
 
 # Expose common .NET ports
 EXPOSE 80 443 5000 5001 8080
 
-# Use smart entrypoint
-ENTRYPOINT ["/usr/local/bin/smart-entrypoint.sh"]
-
-# Default command
-CMD ["dotnet", "run"]
+# Run the .NET file server
+CMD ["dotnet", "run", "--project", "/app/FileServer", "--urls", "http://0.0.0.0:80"]
