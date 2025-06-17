@@ -70,10 +70,6 @@ RUN wget https://github.com/axllent/mailpit/releases/download/${MAILPIT_VERSION}
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" \
     && chsh -s $(which zsh)
 
-# Copy smart entrypoint script
-COPY smart-entrypoint.sh /usr/local/bin/smart-entrypoint.sh
-RUN chmod +x /usr/local/bin/smart-entrypoint.sh
-
 # Set permissions for the container user
 RUN chown -R www-data:www-data /var/www/html
 
