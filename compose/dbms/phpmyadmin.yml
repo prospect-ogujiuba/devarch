@@ -16,6 +16,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.test`)"
-      - "traefik.http.routers.phpmyadmin.entrypoints=websecure"
-      - "traefik.http.routers.phpmyadmin.tls=true"
+      - "traefik.http.routers.phpmyadmin.entrypoints=web"
+      # - "traefik.http.routers.phpmyadmin.tls=false"
       - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"

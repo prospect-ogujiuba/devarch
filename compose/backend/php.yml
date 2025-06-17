@@ -21,10 +21,10 @@ services:
     labels:
       # Enable Traefik for PHP container
       - "traefik.enable=true"
-      
-      # Main PHP router for dynamic subdomain routing
-      - "traefik.http.routers.php-projects.rule=HostRegexp(`{subdomain:[a-zA-Z0-9-]+}.test`) && !Host(`traefik.test`) && !Host(`nginx.test`) && !Host(`grafana.test`) && !Host(`prometheus.test`) && !Host(`matomo.test`) && !Host(`elasticsearch.test`) && !Host(`kibana.test`) && !Host(`adminer.test`) && !Host(`phpmyadmin.test`) && !Host(`mongodb.test`) && !Host(`metabase.test`) && !Host(`nocodb.test`) && !Host(`pgadmin.test`) && !Host(`redis.test`) && !Host(`langflow.test`) && !Host(`n8n.test`) && !Host(`mailpit.test`) && !Host(`gitea.test`) && !Host(`dotnet.test`) && !Host(`go.test`) && !Host(`node.test`) && !Host(`python.test`) && !Host(`logstash.test`)"
-      - "traefik.http.routers.php-projects.entrypoints=websecure"
-      - "traefik.http.routers.php-projects.tls=true"
-      - "traefik.http.routers.php-projects.priority=1"
-      - "traefik.http.services.php-projects.loadbalancer.server.port=8000"
+
+      # Simplified PHP router for catch-all domains
+      - "traefik.http.routers.php.rule=HostRegexp(`^[a-zA-Z0-9-]+\\.test$$`)"
+      - "traefik.http.routers.php.entrypoints=web"
+      # - "traefik.http.routers.php.tls=false"
+      - "traefik.http.routers.php.priority=1"
+      - "traefik.http.services.php.loadbalancer.server.port=8000"

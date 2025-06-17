@@ -148,8 +148,8 @@ services:
       
       # HTTPS Router
       - "traefik.http.routers.your-service-secure.rule=Host(`your-service.test`)"
-      - "traefik.http.routers.your-service-secure.entrypoints=websecure"
-      - "traefik.http.routers.your-service-secure.tls=true"
+      - "traefik.http.routers.your-service-secure.entrypoints=web"
+      - "traefik.http.routers.your-service-secure.tls=false"
       
       # Service definition
       - "traefik.http.services.your-service.loadbalancer.server.port=80"

@@ -14,6 +14,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.mongo-express.rule=Host(`mongodb.test`)"
-      - "traefik.http.routers.mongo-express.entrypoints=websecure"
-      - "traefik.http.routers.mongo-express.tls=true"
+      - "traefik.http.routers.mongo-express.entrypoints=web"
+      # - "traefik.http.routers.mongo-express.tls=false"
       - "traefik.http.services.mongo-express.loadbalancer.server.port=8081"

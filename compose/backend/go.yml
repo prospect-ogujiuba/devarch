@@ -21,6 +21,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.go.rule=Host(`go.test`)"
-      - "traefik.http.routers.go.entrypoints=websecure"
-      - "traefik.http.routers.go.tls=true"
+      - "traefik.http.routers.go.entrypoints=web"
+      # - "traefik.http.routers.go.tls=false"
       - "traefik.http.services.go.loadbalancer.server.port=8080"

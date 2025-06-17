@@ -15,6 +15,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.kibana.rule=Host(`kibana.test`)"
-      - "traefik.http.routers.kibana.entrypoints=websecure"
-      - "traefik.http.routers.kibana.tls=true"
+      - "traefik.http.routers.kibana.entrypoints=web"
+      # - "traefik.http.routers.kibana.tls=false"
       - "traefik.http.services.kibana.loadbalancer.server.port=5601"

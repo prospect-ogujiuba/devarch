@@ -24,6 +24,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.elasticsearch.rule=Host(`elasticsearch.test`)"
-      - "traefik.http.routers.elasticsearch.entrypoints=websecure"
-      - "traefik.http.routers.elasticsearch.tls=true"
+      - "traefik.http.routers.elasticsearch.entrypoints=web"
+      # - "traefik.http.routers.elasticsearch.tls=false"
       - "traefik.http.services.elasticsearch.loadbalancer.server.port=9200"
