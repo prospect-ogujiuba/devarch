@@ -1,0 +1,74 @@
+# Copyright (c) 1993-2009 Microsoft Corp.
+#
+# This is a sample HOSTS file used by Microsoft TCP/IP for Windows.
+#
+# This file contains the mappings of IP addresses to host names. Each
+# entry should be kept on an individual line. The IP address should
+# be placed in the first column followed by the corresponding host name.
+# The IP address and the host name should be separated by at least one
+# space.
+#
+# Additionally, comments (such as these) may be inserted on individual
+# lines or following the machine name denoted by a '#' symbol.
+#
+# For example:
+#
+#      102.54.94.97     rhino.acme.com          # source server
+#       38.25.63.10     x.acme.com              # x client host
+
+# localhost name resolution is handled within DNS itself.
+#	127.0.0.1       localhost
+#	::1             localhost
+
+# Backend Infrastructure
+127.0.0.1 traefik.test
+127.0.0.1 nginx.test
+127.0.0.1 serverinfo.test
+
+# Backend Stacks
+127.0.0.1 go.test
+127.0.0.1 python.test
+127.0.0.1 node.test
+127.0.0.1 go.test
+127.0.0.1php.test
+
+# AI & Backend Services
+127.0.0.1 n8n.test
+127.0.0.1 langflow.test
+127.0.0.1 kibana.test
+
+# Project Management Stack
+127.0.0.1 gitea.test
+
+# Analytics & Monitoring Stack
+127.0.0.1 matomo.test
+127.0.0.1 metabase.test
+127.0.0.1 grafana.test
+127.0.0.1 prometheus.test
+
+# Database Management Tools
+127.0.0.1 adminer.test
+127.0.0.1 phpmyadmin.test
+127.0.0.1 pgadmin.test
+127.0.0.1 mongodb.test
+127.0.0.1 redis.test
+127.0.0.1 nocodb.test
+
+# Mail Testing Stack
+127.0.0.1 mailpit.test
+
+# WordPress Development Stack
+127.0.0.1 wploaded.test
+127.0.0.1 wpclean.test
+127.0.0.1 wpcustom.test
+127.0.0.1 wpbare.test
+
+# Client & Personal Projects Stack
+127.0.0.1 mediagrowthpartner.test
+127.0.0.1 prospectogujiuba.test
+127.0.0.1 straightlinesites.test
+127.0.0.1 prizthecreator.test
+127.0.0.1 playground.test
+
+# External Services
+144.217.129.53 ftp.compasscareerscanada.ca
