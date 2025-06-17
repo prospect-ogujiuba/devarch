@@ -55,6 +55,7 @@ print_service "Mongo Express" "http://localhost:8084" "https://mongodb.test"
 print_service "Metabase" "http://localhost:8085" "https://metabase.test"
 print_service "NocoDB" "http://localhost:8086" "https://nocodb.test"
 print_service "pgAdmin" "http://localhost:8087" "https://pgadmin.test"
+print_service "Redis Commander" "http://localhost:8088" "https://redis.test"
 
 # Backend Services
 print_header "⚙️ BACKEND SERVICES"

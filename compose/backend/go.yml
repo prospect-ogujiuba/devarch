@@ -15,7 +15,7 @@ services:
     ports:
       - "127.0.0.1:8020:8080" # Go application port
     volumes:
-      - ../../apps/go:/app
+      - ../../apps:/app
       - ../../logs/go:/var/log/go
     working_dir: /app
     command: ["go", "run", "main.go"]

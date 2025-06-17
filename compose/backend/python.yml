@@ -15,7 +15,7 @@ services:
     ports:
       - "127.0.0.1:8040:8000" # Python application port (FastAPI/Django)
     volumes:
-      - ../../apps/python:/app
+      - ../../apps:/app
       - ../../logs/python:/var/log/python
     working_dir: /app
     command: ["python", "main.py"]

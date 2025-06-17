@@ -250,6 +250,7 @@ EOF
         "metabase.$base_domain"
         "nocodb.$base_domain"
         "pgadmin.$base_domain"
+        "redis.$base_domain"
         "grafana.$base_domain"
         "prometheus.$base_domain"
         "matomo.$base_domain"

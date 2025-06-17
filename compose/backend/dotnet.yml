@@ -16,7 +16,7 @@ services:
       - "127.0.0.1:8010:80" # HTTP
       - "127.0.0.1:8011:443" # HTTPS
     volumes:
-      - ../../apps/dotnet:/app
+      - ../../apps:/app
       - ../../logs/dotnet:/var/log/dotnet
     environment:
       - ASPNETCORE_ENVIRONMENT=Development

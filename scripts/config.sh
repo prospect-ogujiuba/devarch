@@ -37,7 +37,7 @@ export CONTAINER_RUNTIME="podman"  # Change to "docker" if using Docker instead
 typeset -A SERVICE_CATEGORIES
 SERVICE_CATEGORIES=(
     [database]="database/mariadb.yml database/mysql.yml database/postgres.yml database/mongodb.yml database/redis.yml"
-    [dbms]="dbms/adminer.yml dbms/phpmyadmin.yml dbms/mongo-express.yml dbms/metabase.yml dbms/nocodb.yml dbms/pgadmin.yml"
+    [dbms]="dbms/adminer.yml dbms/phpmyadmin.yml dbms/mongo-express.yml dbms/metabase.yml dbms/nocodb.yml dbms/pgadmin.yml dbms/redis-commander.yml"
     [backend]="backend/dotnet.yml backend/go.yml backend/node.yml backend/php.yml backend/python.yml"
     [analytics]="analytics/elasticsearch.yml analytics/kibana.yml analytics/logstash.yml analytics/grafana.yml analytics/prometheus.yml analytics/matomo.yml"
     [ai-services]="ai/langflow.yml ai/n8n.yml"
@@ -479,8 +479,6 @@ else
     export -f show_traefik_routes 2>/dev/null || true
     export -f reload_traefik_config 2>/dev/null || true
 fi
-
-print_status "info" "Traefik configuration functions loaded"
 
 # =============================================================================
 # OS DETECTION

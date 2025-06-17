@@ -18,8 +18,7 @@ services:
       - "127.0.0.1:5044:5044" # Beats input
       - "127.0.0.1:9600:9600" # API endpoint
     volumes:
-      - ../../config/logstash/pipeline:/usr/share/logstash/pipeline:ro
-      - ../../config/logstash/config:/usr/share/logstash/config:ro
+      - ../../config/logstash:/usr/share/logstash/config:ro
       - logstash_data:/usr/share/logstash/data
     networks:
       - microservices-net

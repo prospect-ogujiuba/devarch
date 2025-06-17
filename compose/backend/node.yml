@@ -15,9 +15,8 @@ services:
     ports:
       - "127.0.0.1:8030:3000" # Node.js application port
     volumes:
-      - ../../apps/node:/app
+      - ../../apps:/app
       - ../../logs/node:/var/log/node
-      - /app/node_modules # Anonymous volume for node_modules
     working_dir: /app
     command: ["npm", "start"]
     networks:

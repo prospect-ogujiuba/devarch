@@ -91,29 +91,36 @@ detect_dotnet_projects() {
             fi
             
             # Set proper permissions
-            chown -R app:app "$app_dir"
+            chown -R app:app "$app_dir" 2>/dev/null || true
         fi
     done
 }
 
-# Run detection
-detect_dotnet_projects
-
-echo "✅ .NET Smart Entrypoint: Setup complete!"
-
-# If we're in a specific app directory, use it
-if ls /app/*.sln >/dev/null 2>&1 || ls /app/*.csproj >/dev/null 2>&1; then
-    cd /app
-elif [ -d "/app" ]; then
-    # Find the first app with .NET files and cd into it
-    for app_dir in /app/*/; do
-        if ls "$app_dir"*.sln >/dev/null 2>&1 || ls "$app_dir"*.csproj >/dev/null 2>&1; then
-            cd "$app_dir"
-            echo "🎯 Switching to $app_dir for execution"
-            break
-        fi
-    done
+# Only run detection once by checking if we've already detected
+if [ ! -f "/tmp/dotnet_detected" ]; then
+    # Run detection
+    detect_dotnet_projects
+    
+    echo "✅ .NET Smart Entrypoint: Setup complete!"
+    
+    # Mark that we've run detection
+    touch /tmp/dotnet_detected
+    
+    # If we're in a specific app directory, use it
+    if ls /app/*.sln >/dev/null 2>&1 || ls /app/*.csproj >/dev/null 2>&1; then
+        cd /app
+    elif [ -d "/app" ]; then
+        # Find the first app with .NET files and cd into it
+        for app_dir in /app/*/; do
+            if ls "$app_dir"*.sln >/dev/null 2>&1 || ls "$app_dir"*.csproj >/dev/null 2>&1; then
+                cd "$app_dir"
+                echo "🎯 Switching to $app_dir for execution"
+                break
+            fi
+        done
+    fi
 fi
 
-# Switch to app user for security
-exec su-exec app "$@" 2>/dev/null || exec "$@"
+# Execute the command directly without user switching for now
+echo "🚀 Starting application with command: $@"
+exec "$@"
