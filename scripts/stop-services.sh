@@ -26,6 +26,12 @@ opt_graceful_timeout=30
 opt_dry_run=false
 opt_verbose=false
 opt_cleanup_orphans=true
+opt_services_only=""              # Comma-separated list of specific services
+opt_except_services=""            # Comma-separated list of services to exclude
+opt_preserve_volumes=false        # Preserve volumes (opposite of remove_volumes)
+opt_cleanup_service_images=false  # Only remove images for stopped services
+opt_cleanup_service_volumes=false # Only remove volumes for stopped services
+opt_preserve_data=false           # Never touch named volumes with data
 
 # =============================================================================
 # USAGE & HELP
@@ -40,19 +46,26 @@ DESCRIPTION:
     and graceful dependency handling. Stops services in reverse dependency order.
 
 OPTIONS:
-    -s, --sudo              Use sudo for container commands
-    -e, --errors            Show detailed error messages
-    -c, --categories LIST   Stop only specific categories (comma-separated)
-    -x, --exclude LIST      Exclude specific categories (comma-separated)
-    -i, --remove-images     Remove all container images after stopping
-    -v, --remove-volumes    Remove all volumes (WARNING: destroys data)
-    -n, --remove-networks   Remove created networks
-    -f, --force             Force stop containers (SIGKILL)
-    -t, --timeout SECONDS   Graceful shutdown timeout (default: 30)
-    -d, --dry-run           Show what would be stopped without execution
-    --verbose               Show detailed progress information
-    --no-orphans           Skip cleanup of orphaned containers
-    -h, --help              Show this help message
+    -s, --sudo                  Use sudo for container commands
+    -e, --errors                Show detailed error messages
+    -c, --categories LIST       Stop only specific categories (comma-separated)
+    -x, --exclude LIST          Exclude specific categories (comma-separated)
+    -i, --remove-images         Remove all container images after stopping
+    -v, --remove-volumes        Remove all volumes (WARNING: destroys data)
+    -n, --remove-networks       Remove created networks
+    --services LIST             Stop only specific services (comma-separated)
+    --except-services LIST      Exclude specific services from shutdown
+    --preserve-volumes          Preserve all volumes (safe default)
+    --preserve-data             Never touch any data volumes (safest option)
+    --cleanup-service-images    Remove images only for stopped services
+    --cleanup-service-volumes   Remove volumes only for stopped services
+    --cleanup-orphans          Remove containers not managed by compose files
+    -f, --force                Force stop containers (SIGKILL)
+    -t, --timeout SECONDS      Graceful shutdown timeout (default: 30)
+    -d, --dry-run              Show what would be stopped without execution
+    --verbose                  Show detailed progress information
+    --no-orphans               Skip cleanup of orphaned containers
+    -h, --help                 Show this help message
 
 CATEGORIES (stopped in reverse dependency order):
     proxy         - Nginx Proxy Manager
@@ -77,6 +90,10 @@ EXAMPLES:
     $0 -i -v                           # Stop and cleanup images/volumes
     $0 -d --verbose                    # Dry run with detailed output
     $0 --remove-volumes                # Stop all and remove data volumes
+    $0 --services postgres,redis           # Stop only postgres and redis
+    $0 --categories database --preserve-volumes  # Stop database but keep data
+    $0 --services nginx --cleanup-service-images # Stop nginx and clean its images
+    $0 --except-services postgres --preserve-data # Stop all except postgres, preserve data
 
 SHUTDOWN ORDER:
     Services are stopped in reverse dependency order to prevent
@@ -112,6 +129,41 @@ parse_arguments() {
                 else
                     handle_error "Option $1 requires a comma-separated list of categories"
                 fi
+                ;;
+            --services)
+                if [[ -n "$2" && "$2" != -* ]]; then
+                    opt_services_only="$2"
+                    shift 2
+                else
+                    handle_error "Option $1 requires a comma-separated list of services"
+                fi
+                ;;
+            --except-services)
+                if [[ -n "$2" && "$2" != -* ]]; then
+                    opt_except_services="$2"
+                    shift 2
+                else
+                    handle_error "Option $1 requires a comma-separated list of services"
+                fi
+                ;;
+            --preserve-volumes)
+                opt_preserve_volumes=true
+                opt_remove_volumes=false  # Override any previous --remove-volumes
+                shift
+                ;;
+            --cleanup-service-images)
+                opt_cleanup_service_images=true
+                shift
+                ;;
+            --cleanup-service-volumes)
+                opt_cleanup_service_volumes=true
+                shift
+                ;;
+            --preserve-data)
+                opt_preserve_data=true
+                opt_remove_volumes=false
+                opt_cleanup_service_volumes=false
+                shift
                 ;;
             -x|--exclude)
                 if [[ -n "$2" && "$2" != -* ]]; then
@@ -198,6 +250,204 @@ validate_categories() {
         done
         
         print_status "info" "Will exclude categories: ${excluded_categories[*]}"
+    fi
+}
+
+# Function to validate individual services (similar to start-services.sh)
+validate_individual_services() {
+    # Validate --services option
+    if [[ -n "$opt_services_only" ]]; then
+        local -a requested_services
+        requested_services=(${(s:,:)opt_services_only})
+        
+        for service in "${requested_services[@]}"; do
+            if ! validate_service_exists "$service"; then
+                print_status "error" "Service '$service' not found"
+                print_status "info" "Available services: $(list_all_service_names | tr '\n' ' ')"
+                exit 1
+            fi
+        done
+        
+        print_status "info" "Will stop services: ${requested_services[*]}"
+    fi
+    
+    # Validate --except-services option
+    if [[ -n "$opt_except_services" ]]; then
+        local -a excluded_services
+        excluded_services=(${(s:,:)opt_except_services})
+        
+        for service in "${excluded_services[@]}"; do
+            if ! validate_service_exists "$service"; then
+                print_status "warning" "Excluded service '$service' not found (ignoring)"
+            fi
+        done
+        
+        print_status "info" "Will exclude services: ${excluded_services[*]}"
+    fi
+    
+    # Validate conflicting options
+    if [[ -n "$opt_services_only" && -n "$opt_categories_only" ]]; then
+        handle_error "Cannot use both --services and --categories options together"
+    fi
+}
+
+# Function to filter services for shutdown (similar to start-services.sh)
+filter_services_for_shutdown() {
+    local category="$1"
+    local service_files
+    service_files=$(get_service_files "$category")
+    
+    local -a all_files filtered_files
+    all_files=(${=service_files})
+    
+    # If --services specified, only include those services that belong to this category
+    if [[ -n "$opt_services_only" ]]; then
+        local -a requested_services
+        requested_services=(${(s:,:)opt_services_only})
+        
+        for service_file in "${all_files[@]}"; do
+            local service_name="${service_file%.yml}"
+            if [[ " ${requested_services[*]} " =~ " $service_name " ]]; then
+                filtered_files+=("$service_file")
+            fi
+        done
+    else
+        # Start with all files in category
+        filtered_files=("${all_files[@]}")
+    fi
+    
+    # Remove excluded services
+    if [[ -n "$opt_except_services" ]]; then
+        local -a excluded_services final_files
+        excluded_services=(${(s:,:)opt_except_services})
+        
+        for service_file in "${filtered_files[@]}"; do
+            local service_name="${service_file%.yml}"
+            if [[ ! " ${excluded_services[*]} " =~ " $service_name " ]]; then
+                final_files+=("$service_file")
+            fi
+        done
+        filtered_files=("${final_files[@]}")
+    fi
+    
+    # Return filtered list
+    echo "${filtered_files[*]}"
+}
+
+# Enhanced service stopping function
+stop_individual_service() {
+    local service_file="$1"
+    local category="$2"
+    
+    local service_name="${service_file%.yml}"
+    local service_path
+    service_path=$(resolve_service_path "$service_file" "$category")
+    
+    if [[ ! -f "$service_path" ]]; then
+        print_status "warning" "Service file not found: $service_file"
+        return 1
+    fi
+    
+    # Determine volume removal strategy
+    local remove_volumes="false"
+    if [[ "$opt_preserve_data" == "true" || "$opt_preserve_volumes" == "true" ]]; then
+        remove_volumes="false"
+    elif [[ "$opt_remove_volumes" == "true" ]]; then
+        remove_volumes="true"
+    fi
+    
+    # Stop the service
+    stop_single_service "$service_name" "$remove_volumes" "$opt_graceful_timeout"
+    local stop_result=$?
+    
+    # Smart cleanup for this specific service
+    if [[ $stop_result -eq 0 ]]; then
+        cleanup_service_resources "$service_name"
+    fi
+    
+    return $stop_result
+}
+
+# Function to cleanup resources for a specific service
+cleanup_service_resources() {
+    local service_name="$1"
+    
+    if [[ "$opt_dry_run" == "true" ]]; then
+        if [[ "$opt_cleanup_service_images" == "true" ]]; then
+            echo "DRY RUN: Remove images for service: $service_name"
+        fi
+        if [[ "$opt_cleanup_service_volumes" == "true" ]]; then
+            echo "DRY RUN: Remove volumes for service: $service_name"
+        fi
+        return 0
+    fi
+    
+    # Cleanup service-specific images
+    if [[ "$opt_cleanup_service_images" == "true" ]]; then
+        cleanup_service_images "$service_name"
+    fi
+    
+    # Cleanup service-specific volumes
+    if [[ "$opt_cleanup_service_volumes" == "true" && "$opt_preserve_data" == "false" ]]; then
+        cleanup_service_volumes "$service_name"
+    fi
+}
+
+# Function to cleanup images for a specific service
+cleanup_service_images() {
+    local service_name="$1"
+    
+    if [[ "$opt_verbose" == "true" ]]; then
+        print_status "step" "Cleaning up images for service: $service_name"
+    fi
+    
+    # Get images related to this service
+    local images
+    images=$(eval "$CONTAINER_CMD images --filter 'label=com.docker.compose.service=$service_name' -q" 2>/dev/null || echo "")
+    
+    if [[ -n "$images" ]]; then
+        local image_list
+        image_list=(${(f)images})
+        
+        local removed=0
+        for image in "${image_list[@]}"; do
+            if eval "$CONTAINER_CMD rmi -f $image $ERROR_REDIRECT"; then
+                ((removed++))
+            fi
+        done
+        
+        if [[ "$opt_verbose" == "true" && $removed -gt 0 ]]; then
+            print_status "success" "Removed $removed image(s) for $service_name"
+        fi
+    fi
+}
+
+# Function to cleanup volumes for a specific service
+cleanup_service_volumes() {
+    local service_name="$1"
+    
+    if [[ "$opt_verbose" == "true" ]]; then
+        print_status "step" "Cleaning up volumes for service: $service_name"
+    fi
+    
+    # Get volumes related to this service
+    local volumes
+    volumes=$(eval "$CONTAINER_CMD volume ls --filter 'label=com.docker.compose.service=$service_name' -q" 2>/dev/null || echo "")
+    
+    if [[ -n "$volumes" ]]; then
+        local volume_list
+        volume_list=(${(f)volumes})
+        
+        local removed=0
+        for volume in "${volume_list[@]}"; do
+            if eval "$CONTAINER_CMD volume rm -f $volume $ERROR_REDIRECT"; then
+                ((removed++))
+            fi
+        done
+        
+        if [[ "$opt_verbose" == "true" && $removed -gt 0 ]]; then
+            print_status "success" "Removed $removed volume(s) for $service_name"
+        fi
     fi
 }
 
@@ -321,10 +571,14 @@ stop_service_file() {
 stop_category() {
     local category="$1"
     local service_files
-    service_files=$(get_service_files "$category")
+    
+    # Use filtered services instead of all services
+    service_files=$(filter_services_for_shutdown "$category")
     
     if [[ -z "$service_files" ]]; then
-        print_status "warning" "No services found for category: $category"
+        if [[ "$opt_verbose" == "true" ]]; then
+            print_status "info" "No services to stop in $category (filtered out)"
+        fi
         return 0
     fi
     
@@ -335,7 +589,7 @@ stop_category() {
     
     local failed=0
     for service_file in "${files[@]}"; do
-        if ! stop_service_file "$service_file" "$category"; then
+        if ! stop_individual_service "$service_file" "$category"; then
             ((failed++))
         fi
     done
@@ -501,13 +755,55 @@ show_shutdown_summary() {
     echo "  Show Errors: $opt_show_errors"
     echo "  Force Stop: $opt_force_stop"
     echo "  Graceful Timeout: ${opt_graceful_timeout}s"
-    echo "  Remove Images: $opt_remove_images"
-    echo "  Remove Volumes: $opt_remove_volumes"
-    echo "  Remove Networks: $opt_remove_networks"
-    echo "  Cleanup Orphans: $opt_cleanup_orphans"
     echo "  Dry Run: $opt_dry_run"
     echo ""
-    echo "  Categories to stop: ${categories_to_stop[*]}"
+    
+    # Show what will be affected
+    if [[ -n "$opt_services_only" ]]; then
+        echo "  Target: Specific services only"
+        echo "  Services: $opt_services_only"
+    elif [[ -n "$opt_categories_only" ]]; then
+        echo "  Target: Specific categories only"
+        echo "  Categories: $opt_categories_only"
+    else
+        echo "  Target: All services"
+        echo "  Categories: ${categories_to_stop[*]}"
+    fi
+    
+    if [[ -n "$opt_except_services" ]]; then
+        echo "  Excluding services: $opt_except_services"
+    fi
+    
+    if [[ -n "$opt_exclude_categories" ]]; then
+        echo "  Excluding categories: $opt_exclude_categories"
+    fi
+    
+    echo ""
+    echo "  Data Safety:"
+    if [[ "$opt_preserve_data" == "true" ]]; then
+        echo "    🛡️  PRESERVE DATA: All data volumes will be preserved"
+    elif [[ "$opt_preserve_volumes" == "true" ]]; then
+        echo "    🛡️  PRESERVE VOLUMES: All volumes will be preserved"
+    elif [[ "$opt_remove_volumes" == "true" ]]; then
+        echo "    ⚠️  REMOVE VOLUMES: Data volumes will be destroyed"
+    else
+        echo "    ✅ SAFE DEFAULT: Volumes will be preserved"
+    fi
+    
+    echo ""
+    echo "  Cleanup Operations:"
+    [[ "$opt_remove_images" == "true" ]] && echo "    🗑️  Remove all container images"
+    [[ "$opt_cleanup_service_images" == "true" ]] && echo "    🗑️  Remove images for stopped services only"
+    [[ "$opt_cleanup_service_volumes" == "true" ]] && echo "    🗑️  Remove volumes for stopped services only"
+    [[ "$opt_remove_networks" == "true" ]] && echo "    🗑️  Remove networks"
+    [[ "$opt_cleanup_orphans" == "true" ]] && echo "    🧹 Clean up orphaned containers"
+    
+    if [[ "$opt_remove_images" == "false" && "$opt_cleanup_service_images" == "false" && 
+          "$opt_remove_volumes" == "false" && "$opt_cleanup_service_volumes" == "false" && 
+          "$opt_remove_networks" == "false" ]]; then
+        echo "    ✅ No cleanup operations (containers only)"
+    fi
+    
     echo ""
 }
 
@@ -524,6 +820,18 @@ run_shutdown_process() {
     
     # Stop each category
     for category in "${categories_to_stop[@]}"; do
+        local service_files
+        service_files=$(filter_services_for_shutdown "$category")
+        
+        # Skip categories with no services (after filtering)
+        if [[ -z "$service_files" ]]; then
+            if [[ "$opt_verbose" == "true" ]]; then
+                print_status "info" "Skipping $category (no services to stop after filtering)"
+            fi
+            continue
+        fi
+        
+        # Stop services in category
         stop_category "$category"
         
         # Brief pause between categories
@@ -532,16 +840,25 @@ run_shutdown_process() {
         fi
     done
     
-    # Force stop any remaining containers
+    # Force stop any remaining containers if requested
     force_stop_containers
     
-    # Cleanup operations
+    # Run cleanup operations
+    run_cleanup_operations
+    
+    print_status "success" "Service shutdown process completed!"
+}
+
+run_cleanup_operations() {
+    print_status "step" "Running cleanup operations..."
+    
+    # Global cleanup (existing functionality)
     cleanup_images
-    cleanup_volumes
+    cleanup_volumes  
     cleanup_networks
     cleanup_system
     
-    print_status "success" "Service shutdown process completed!"
+    print_status "success" "Cleanup operations completed"
 }
 
 show_completion_info() {
@@ -555,19 +872,29 @@ show_completion_info() {
     echo ""
     print_status "info" "Shutdown completed!"
     echo ""
-    echo "🔍 Check remaining services:"
-    echo "  $SCRIPT_DIR/show-services.sh"
-    echo ""
-    echo "🚀 Restart services:"
-    echo "  $SCRIPT_DIR/start-services.sh"
-    echo ""
     
-    if [[ "$opt_remove_volumes" == "true" ]]; then
-        echo "⚠️  Data volumes were removed - all data has been deleted!"
-        echo "   Run setup scripts to reinitialize:"
-        echo "   $SCRIPT_DIR/setup-databases.sh -a"
-        echo ""
+    # Show what was actually done
+    if [[ -n "$opt_services_only" ]]; then
+        echo "🛑 Stopped specific services: $opt_services_only"
+    elif [[ -n "$opt_categories_only" ]]; then
+        echo "🛑 Stopped categories: $opt_categories_only"
+    else
+        echo "🛑 Stopped all services"
     fi
+    
+    if [[ "$opt_preserve_data" == "true" || "$opt_preserve_volumes" == "true" ]]; then
+        echo "🛡️  Data preserved: All volumes kept safe"
+    elif [[ "$opt_remove_volumes" == "true" ]]; then
+        echo "⚠️  Data removed: Volumes were destroyed"
+    fi
+    
+    echo ""
+    echo "🔄 Management commands:"
+    echo "  - Start services: $SCRIPT_DIR/start-services.sh"
+    echo "  - Start specific: $SCRIPT_DIR/start-services.sh --services [service,...]"
+    echo "  - Check status: $SCRIPT_DIR/service-manager.sh status"
+    echo "  - View services: $SCRIPT_DIR/show-services.sh"
+    echo ""
 }
 
 main() {
@@ -577,8 +904,9 @@ main() {
     # Set up command context based on options
     setup_command_context "$opt_use_sudo" "$opt_show_errors"
     
-    # Validate arguments and warn about destructive operations
+    # Validate environment and arguments
     validate_categories
+    validate_individual_services
     validate_destructive_operations
     
     # Show shutdown summary
