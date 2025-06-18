@@ -97,7 +97,6 @@ echo "Start all services:    $SCRIPT_DIR/start-services.sh"
 echo "Stop all services:     $SCRIPT_DIR/stop-services.sh"
 echo "Setup databases:       $SCRIPT_DIR/setup-databases.sh -a"
 echo "Setup SSL:            $SCRIPT_DIR/setup-ssl.sh"
-echo "Install SSL trust:     $SCRIPT_DIR/trust-host.sh"
 
 print_header "💡 QUICK TIPS"
 echo "1. Use local ports for development and direct database access"

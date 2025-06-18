@@ -42,7 +42,6 @@ OPTIONS:
     -q, --quick             Quick mode: skip SSL and trust setup
     -d, --skip-db           Skip database initialization
     --skip-ssl              Skip SSL certificate generation
-    --skip-trust            Skip SSL certificate trust installation
     -c, --categories LIST   Install only specific categories (comma-separated)
     -h, --help              Show this help message
 
@@ -50,7 +49,7 @@ CATEGORIES:
     database, db-tools, backend, analytics, ai-services, mail, project, erp, proxy
 
 EXAMPLES:
-    $0                                    # Full installation with prompts
+    $0                                   # Full installation with prompts
     $0 -y                                # Full installation, no prompts
     $0 -q                                # Quick installation (no SSL setup)
     $0 -c database,backend               # Install only database and backend services
@@ -96,10 +95,6 @@ parse_arguments() {
                 ;;
             --skip-ssl)
                 opt_skip_ssl=true
-                shift
-                ;;
-            --skip-trust)
-                opt_skip_trust=true
                 shift
                 ;;
             -c|--categories)
@@ -274,38 +269,19 @@ setup_ssl_certificates() {
         return 0
     fi
     
-    print_status "step" "Setting up SSL certificates..."
+    print_status "step" "Setting up SSL certificates with mkcert..."
     
     local ssl_args=()
     [[ "$opt_use_sudo" == "true" ]] && ssl_args+=("-s")
     [[ "$opt_show_errors" == "true" ]] && ssl_args+=("-e")
+    [[ "$opt_force_regenerate" == "true" ]] && ssl_args+=("-f")
     
     if "$SCRIPT_DIR/setup-ssl.sh" "${ssl_args[@]}"; then
-        print_status "success" "SSL certificates generated successfully"
+        print_status "success" "SSL certificates generated and automatically trusted"
+        return 0
     else
         print_status "warning" "SSL setup encountered issues but continuing..."
-    fi
-}
-
-install_ssl_trust() {
-    if [[ "$opt_skip_trust" == "true" ]]; then
-        print_status "info" "Skipping SSL certificate trust installation"
-        return 0
-    fi
-    
-    print_status "step" "Installing SSL certificates for host system..."
-    
-    local trust_args=()
-    [[ "$opt_use_sudo" == "true" ]] && trust_args+=("-s")
-    [[ "$opt_show_errors" == "true" ]] && trust_args+=("-e")
-    
-    # Add Windows certificate copying if on WSL
-    [[ "$OS_TYPE" == "wsl" ]] && trust_args+=("-w")
-    
-    if "$SCRIPT_DIR/trust-host.sh" "${trust_args[@]}"; then
-        print_status "success" "SSL certificates trusted by host system"
-    else
-        print_status "warning" "SSL trust setup encountered issues but continuing..."
+        return 1
     fi
 }
 
@@ -319,7 +295,7 @@ show_completion_message() {
     if [[ "$opt_quick_mode" == "true" ]]; then
         echo "Quick mode installation completed. Services are accessible via localhost ports."
         echo "Run the following for SSL setup later:"
-        echo "  $SCRIPT_DIR/setup-ssl.sh && $SCRIPT_DIR/trust-host.sh"
+        echo "  $SCRIPT_DIR/setup-ssl.sh"
         echo ""
     fi
     
@@ -351,12 +327,20 @@ show_completion_message() {
     echo "  - View all services: $SCRIPT_DIR/show-services.sh"
     echo "  - Stop all services: $SCRIPT_DIR/stop-services.sh"
     echo "  - Start services: $SCRIPT_DIR/start-services.sh"
+    echo "  - Individual service: $SCRIPT_DIR/service-manager.sh [command] [service]"
     echo ""
     echo "🔧 Default Credentials:"
     echo "  - Username: admin"
     echo "  - Password: 123456"
     echo "  - Email: admin@site.test"
     echo ""
+    if [[ "$opt_skip_ssl" == "false" ]]; then
+        echo "🔒 SSL Certificates:"
+        echo "  - Automatically generated and trusted with mkcert"
+        echo "  - All https:// URLs should work without browser warnings"
+        echo "  - Certificates located: ./config/traefik/certs/"
+        echo ""
+    fi
     echo "========================================================"
 }
 
@@ -387,9 +371,6 @@ main() {
     
     # Setup SSL if not skipped
     setup_ssl_certificates
-    
-    # Trust SSL certificates if not skipped
-    install_ssl_trust
     
     # Show completion message
     show_completion_message
