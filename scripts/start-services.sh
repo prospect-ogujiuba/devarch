@@ -25,6 +25,10 @@ opt_health_timeout=120
 opt_restart_policy="unless-stopped"
 opt_dry_run=false
 opt_verbose=false
+opt_services_only=""          # Comma-separated list of specific services
+opt_except_services=""        # Comma-separated list of services to exclude
+opt_rebuild_services=false    # Rebuild specific services before starting
+opt_force_services=false      # Force recreate specific services
 
 # =============================================================================
 # USAGE & HELP
@@ -44,6 +48,10 @@ OPTIONS:
     -f, --force             Force recreate containers (docker compose up --force-recreate)
     -c, --categories LIST   Start only specific categories (comma-separated)
     -x, --exclude LIST      Exclude specific categories (comma-separated)
+    --services LIST         Start only specific services (comma-separated)
+    --except-services LIST  Exclude specific services from startup
+    --rebuild-services      Rebuild services before starting them
+    --force-services        Force recreate service containers
     -p, --parallel          Start services in parallel within categories
     -w, --no-wait           Don't wait for health checks
     -t, --timeout SECONDS   Health check timeout (default: 120)
@@ -76,6 +84,9 @@ EXAMPLES:
     $0 -d -v                           # Dry run with verbose output
     $0 -w -t 60                        # Skip health checks, 60s timeout
     $0 --restart always --force        # Force recreate with always restart
+    $0 --services postgres,adminer         # Start only postgres and adminer
+    $0 --categories database --except-services redis  # Start database category except redis
+    $0 --services nginx --rebuild-services --force    # Rebuild and force recreate nginx
 
 DEPENDENCY HANDLING:
     - Database services start first and wait for readiness
@@ -117,6 +128,30 @@ parse_arguments() {
                 else
                     handle_error "Option $1 requires a comma-separated list of categories"
                 fi
+                ;;
+            --services)
+                if [[ -n "$2" && "$2" != -* ]]; then
+                    opt_services_only="$2"
+                    shift 2
+                else
+                    handle_error "Option $1 requires a comma-separated list of services"
+                fi
+                ;;
+            --except-services)
+                if [[ -n "$2" && "$2" != -* ]]; then
+                    opt_except_services="$2"
+                    shift 2
+                else
+                    handle_error "Option $1 requires a comma-separated list of services"
+                fi
+                ;;
+            --rebuild-services)
+                opt_rebuild_services=true
+                shift
+                ;;
+            --force-services)
+                opt_force_services=true
+                shift
                 ;;
             -x|--exclude)
                 if [[ -n "$2" && "$2" != -* ]]; then
@@ -208,6 +243,115 @@ validate_categories() {
         done
         
         print_status "info" "Will exclude categories: ${excluded_categories[*]}"
+    fi
+}
+
+validate_individual_services() {
+    # Validate --services option
+    if [[ -n "$opt_services_only" ]]; then
+        local -a requested_services
+        requested_services=(${(s:,:)opt_services_only})
+        
+        for service in "${requested_services[@]}"; do
+            if ! validate_service_exists "$service"; then
+                print_status "error" "Service '$service' not found"
+                print_status "info" "Available services: $(list_all_service_names | tr '\n' ' ')"
+                exit 1
+            fi
+        done
+        
+        print_status "info" "Will start services: ${requested_services[*]}"
+    fi
+    
+    # Validate --except-services option
+    if [[ -n "$opt_except_services" ]]; then
+        local -a excluded_services
+        excluded_services=(${(s:,:)opt_except_services})
+        
+        for service in "${excluded_services[@]}"; do
+            if ! validate_service_exists "$service"; then
+                print_status "warning" "Excluded service '$service' not found (ignoring)"
+            fi
+        done
+        
+        print_status "info" "Will exclude services: ${excluded_services[*]}"
+    fi
+    
+    # Validate conflicting options
+    if [[ -n "$opt_services_only" && -n "$opt_categories_only" ]]; then
+        handle_error "Cannot use both --services and --categories options together"
+    fi
+}
+
+# Function to filter services based on individual service options
+filter_services_for_category() {
+    local category="$1"
+    local service_files
+    service_files=$(get_service_files "$category")
+    
+    local -a all_files filtered_files
+    all_files=(${=service_files})
+    
+    # If --services specified, only include those services that belong to this category
+    if [[ -n "$opt_services_only" ]]; then
+        local -a requested_services
+        requested_services=(${(s:,:)opt_services_only})
+        
+        for service_file in "${all_files[@]}"; do
+            local service_name="${service_file%.yml}"
+            if [[ " ${requested_services[*]} " =~ " $service_name " ]]; then
+                filtered_files+=("$service_file")
+            fi
+        done
+    else
+        # Start with all files in category
+        filtered_files=("${all_files[@]}")
+    fi
+    
+    # Remove excluded services
+    if [[ -n "$opt_except_services" ]]; then
+        local -a excluded_services final_files
+        excluded_services=(${(s:,:)opt_except_services})
+        
+        for service_file in "${filtered_files[@]}"; do
+            local service_name="${service_file%.yml}"
+            if [[ ! " ${excluded_services[*]} " =~ " $service_name " ]]; then
+                final_files+=("$service_file")
+            fi
+        done
+        filtered_files=("${final_files[@]}")
+    fi
+    
+    # Return filtered list
+    echo "${filtered_files[*]}"
+}
+
+# Enhanced service startup function that handles individual service options
+start_individual_service() {
+    local service_file="$1"
+    local category="$2"
+    
+    local service_name="${service_file%.yml}"
+    local service_path
+    service_path=$(resolve_service_path "$service_file" "$category")
+    
+    if [[ ! -f "$service_path" ]]; then
+        print_status "warning" "Service file not found: $service_file"
+        return 1
+    fi
+    
+    # Check if this service should be rebuilt
+    if [[ "$opt_rebuild_services" == "true" ]]; then
+        print_status "step" "Rebuilding $service_name..."
+        rebuild_single_service "$service_name" "false"
+        return $?
+    else
+        # Use enhanced startup with force option if specified
+        local force_recreate="$opt_force_recreate"
+        [[ "$opt_force_services" == "true" ]] && force_recreate="true"
+        
+        start_single_service "$service_name" "$force_recreate"
+        return $?
     fi
 }
 
@@ -329,7 +473,17 @@ start_service_file() {
 
 start_category_parallel() {
     local category="$1"
-    local service_files="$2"
+    local service_files
+    
+    # Use filtered services instead of all services
+    service_files=$(filter_services_for_category "$category")
+    
+    if [[ -z "$service_files" ]]; then
+        if [[ "$opt_verbose" == "true" ]]; then
+            print_status "info" "No services to start in $category (filtered out)"
+        fi
+        return 0
+    fi
     
     local -a files pids
     files=(${=service_files})
@@ -339,9 +493,9 @@ start_category_parallel() {
     # Start all services in background
     for service_file in "${files[@]}"; do
         if [[ "$opt_dry_run" == "true" ]]; then
-            start_service_file "$service_file" "$category"
+            start_individual_service "$service_file" "$category"
         else
-            start_service_file "$service_file" "$category" &
+            start_individual_service "$service_file" "$category" &
             pids+=($!)
         fi
     done
@@ -365,7 +519,17 @@ start_category_parallel() {
 
 start_category_sequential() {
     local category="$1"
-    local service_files="$2"
+    local service_files
+    
+    # Use filtered services instead of all services
+    service_files=$(filter_services_for_category "$category")
+    
+    if [[ -z "$service_files" ]]; then
+        if [[ "$opt_verbose" == "true" ]]; then
+            print_status "info" "No services to start in $category (filtered out)"
+        fi
+        return 0
+    fi
     
     local -a files
     files=(${=service_files})
@@ -374,7 +538,8 @@ start_category_sequential() {
     
     local failed=0
     for service_file in "${files[@]}"; do
-        if ! start_service_file "$service_file" "$category"; then
+        # Use the enhanced individual service function
+        if ! start_individual_service "$service_file" "$category"; then
             ((failed++))
         fi
         
@@ -436,35 +601,7 @@ setup_environment() {
     # Create network if it doesn't exist
     ensure_network_exists
     
-    # Create necessary directories
-    create_required_directories
-    
     print_status "success" "Environment setup completed"
-}
-
-create_required_directories() {
-    local -a required_dirs=(
-        "$APPS_DIR"
-        "$LOGS_DIR"
-        "$LOGS_DIR/nginx"
-        "$LOGS_DIR/dotnet"
-        "$LOGS_DIR/go"
-        "$LOGS_DIR/node"
-        "$LOGS_DIR/python"
-    )
-    
-    for dir in "${required_dirs[@]}"; do
-        if [[ ! -d "$dir" ]]; then
-            if [[ "$opt_dry_run" == "true" ]]; then
-                echo "DRY RUN: mkdir -p $dir"
-            else
-                mkdir -p "$dir"
-                if [[ "$opt_verbose" == "true" ]]; then
-                    print_status "info" "Created directory: $dir"
-                fi
-            fi
-        fi
-    done
 }
 
 # =============================================================================
@@ -507,18 +644,21 @@ run_startup_process() {
     # Start each category
     for category in "${categories_to_start[@]}"; do
         local service_files
-        service_files=$(get_service_files "$category")
+        service_files=$(filter_services_for_category "$category")
         
+        # Skip categories with no services (after filtering)
         if [[ -z "$service_files" ]]; then
-            print_status "warning" "No services found for category: $category"
+            if [[ "$opt_verbose" == "true" ]]; then
+                print_status "info" "Skipping $category (no services to start after filtering)"
+            fi
             continue
         fi
         
         # Start services in category
         if [[ "$opt_parallel_start" == "true" ]]; then
-            start_category_parallel "$category" "$service_files"
+            start_category_parallel "$category"
         else
-            start_category_sequential "$category" "$service_files"
+            start_category_sequential "$category"
         fi
         
         # Wait for health if enabled
