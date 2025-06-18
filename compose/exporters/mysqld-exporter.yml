@@ -10,9 +10,9 @@ services:
     environment:
       - MYSQLD_EXPORTER_PASSWORD=123456
     command:
-      - '--mysqld.address=mariadb:3306'
-      - '--mysqld.username=root'
-      - '--web.listen-address=:9104'
+      - "--mysqld.address=mariadb:3306"
+      - "--mysqld.username=root"
+      - "--web.listen-address=:9104"
     ports:
       - "127.0.0.1:9104:9104"
     networks:
@@ -20,6 +20,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.mysqld-exporter.rule=Host(`mysql-exporter.test`)"
-      - "traefik.http.routers.mysqld-exporter.entrypoints=web"
-      # - "traefik.http.routers.mysqld-exporter.tls=false"
+      - "traefik.http.routers.mysqld-exporter.entrypoints=websecure"
+      - "traefik.http.routers.mysqld-exporter.tls=true"
       - "traefik.http.services.mysqld-exporter.loadbalancer.server.port=9104"

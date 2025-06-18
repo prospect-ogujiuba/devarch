@@ -144,12 +144,12 @@ services:
       
       # HTTP Router
       - "traefik.http.routers.your-service.rule=Host(`your-service.test`)"
-      - "traefik.http.routers.your-service.entrypoints=web"
+      - "traefik.http.routers.your-service.entrypoints=websecure"
       
       # HTTPS Router
       - "traefik.http.routers.your-service-secure.rule=Host(`your-service.test`)"
-      - "traefik.http.routers.your-service-secure.entrypoints=web"
-      - "traefik.http.routers.your-service-secure.tls=false"
+      - "traefik.http.routers.your-service-secure.entrypoints=websecure"
+      - "traefik.http.routers.your-service-secure.tls=true"
       
       # Service definition
       - "traefik.http.services.your-service.loadbalancer.server.port=80"

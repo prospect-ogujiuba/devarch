@@ -16,6 +16,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.mongodb-exporter.rule=Host(`mongodb-exporter.test`)"
-      - "traefik.http.routers.mongodb-exporter.entrypoints=web"
-      # - "traefik.http.routers.mongodb-exporter.tls=false"
+      - "traefik.http.routers.mongodb-exporter.entrypoints=websecure"
+      - "traefik.http.routers.mongodb-exporter.tls=true"
       - "traefik.http.services.mongodb-exporter.loadbalancer.server.port=9216"

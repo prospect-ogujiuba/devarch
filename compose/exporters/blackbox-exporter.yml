@@ -16,8 +16,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.blackbox-exporter.rule=Host(`blackbox.test`)"
-      - "traefik.http.routers.blackbox-exporter.entrypoints=web"
-      # - "traefik.http.routers.blackbox-exporter.tls=false"
+      - "traefik.http.routers.blackbox-exporter.entrypoints=websecure"
+      - "traefik.http.routers.blackbox-exporter.tls=true"
       - "traefik.http.services.blackbox-exporter.loadbalancer.server.port=9115"
     command:
-      - '--config.file=/etc/blackbox_exporter/config.yml'
+      - "--config.file=/etc/blackbox_exporter/config.yml"

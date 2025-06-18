@@ -21,6 +21,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.node.rule=Host(`node.test`)"
-      - "traefik.http.routers.node.entrypoints=web"
-      # - "traefik.http.routers.node.tls=false"
+      - "traefik.http.routers.node.entrypoints=websecure"
+      - "traefik.http.routers.node.tls=true"
       - "traefik.http.services.node.loadbalancer.server.port=3000"

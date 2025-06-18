@@ -17,6 +17,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.redis-exporter.rule=Host(`redis-exporter.test`)"
-      - "traefik.http.routers.redis-exporter.entrypoints=web"
-      # - "traefik.http.routers.redis-exporter.tls=false"
+      - "traefik.http.routers.redis-exporter.entrypoints=websecure"
+      - "traefik.http.routers.redis-exporter.tls=true"
       - "traefik.http.services.redis-exporter.loadbalancer.server.port=9121"

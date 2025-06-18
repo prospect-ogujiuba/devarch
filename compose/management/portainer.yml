@@ -1,0 +1,30 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  portainer_data:
+
+services:
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:lts
+    privileged: true
+    ports:
+      - "127.0.0.1:9443:9443" # Local HTTPS access to Portainer
+      - "127.0.0.1:8001:8000" # Local access to TCP tunnel for Edge agents
+      - "127.0.0.1:9000:9000" # Uncomment for HTTP access (legacy)
+    volumes:
+      - /run/podman/podman.sock:/var/run/docker.sock
+      - portainer_data:/data
+      - ../../config/portainer/password:/run/secrets/portainer_password:ro
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.test`)"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls=true"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+    command:
+      - --admin-password-file=/run/secrets/portainer_password

@@ -36,6 +36,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.nocodb.rule=Host(`nocodb.test`)"
-      - "traefik.http.routers.nocodb.entrypoints=web"
-      # - "traefik.http.routers.nocodb.tls=false"
+      - "traefik.http.routers.nocodb.entrypoints=websecure"
+      - "traefik.http.routers.nocodb.tls=true"
       - "traefik.http.services.nocodb.loadbalancer.server.port=8080"

@@ -25,6 +25,7 @@ services:
       # Enable Traefik for the dashboard
       - "traefik.enable=true"
       - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.test`)"
-      - "traefik.http.routers.traefik-dashboard.entrypoints=web"
-      # - "traefik.http.routers.traefik-dashboard.tls=false"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.tls=true"
+      - "traefik.http.services.traefik-dashboard.loadbalancer.server.port=8080"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"

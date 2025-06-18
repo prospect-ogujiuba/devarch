@@ -24,7 +24,7 @@ services:
 
       # Simplified PHP router for catch-all domains
       - "traefik.http.routers.php.rule=HostRegexp(`^[a-zA-Z0-9-]+\\.test$$`)"
-      - "traefik.http.routers.php.entrypoints=web"
-      # - "traefik.http.routers.php.tls=false"
+      - "traefik.http.routers.php.entrypoints=websecure"
+      - "traefik.http.routers.php.tls=true"
       - "traefik.http.routers.php.priority=1"
       - "traefik.http.services.php.loadbalancer.server.port=8000"

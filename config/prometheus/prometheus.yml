@@ -17,9 +17,10 @@ scrape_configs:
     static_configs:
       - targets: ["grafana:3000"]
 
+  # Traefik reverse proxy
   - job_name: 'traefik'
     static_configs:
-      - targets: ['traefik:8080']  # Replace with your Traefik host IP
+      - targets: ['traefik:8080']
     scrape_interval: 15s
     metrics_path: '/metrics'
     scrape_timeout: 10s
@@ -40,7 +41,7 @@ scrape_configs:
       - targets: ['cadvisor:8080']
 
   # Database Exporters
-  - job_name: 'mysql-exporter'
+  - job_name: 'mysqld-exporter'
     static_configs:
       - targets: ['mysqld-exporter:9104']
 
@@ -61,28 +62,54 @@ scrape_configs:
     static_configs:
       - targets: ['blackbox-exporter:9115']
 
-# HTTP probes for web services
+  # HTTP probes for web services - Complete list of all sites
   - job_name: 'blackbox-http'
     metrics_path: /probe
     params:
       module: [http_2xx]
     static_configs:
       - targets:
+        # Reverse Proxy & Management
         - https://nginx.test
-        - https://grafana.test
-        - https://metabase.test
+        - https://traefik.test
+        
+        # Database Management Tools
         - https://adminer.test
         - https://phpmyadmin.test
         - https://mongodb.test
+        - https://metabase.test
         - https://nocodb.test
         - https://pgadmin.test
         - https://redis.test
-        - https://n8n.test
-        - https://langflow.test
+        
+        # Backend Application Services
+        - https://dotnet.test
+        - https://go.test
+        - https://node.test
+        - https://python.test
+        
+        # Analytics & Monitoring Stack
+        - https://elasticsearch.test
         - https://kibana.test
+        - https://logstash.test
+        - https://grafana.test
+        - https://prometheus.test
+        - https://matomo.test
+        
+        # AI & Workflow Services, Mail & Project Management
+        - https://langflow.test
+        - https://n8n.test
         - https://mailpit.test
         - https://gitea.test
-        - https://matomo.test
+        
+        # Monitoring Exporters & Tools
+        - https://blackbox.test
+        - https://mongodb-exporter.test
+        - https://mysql-exporter.test
+        - https://node-exporter.test
+        - https://postgres-exporter.test
+        - https://redis-exporter.test
+        - https://cadvisor.test
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -90,3 +117,203 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: blackbox-exporter:9115
+
+  # Backend application services (using container names and internal ports)
+  - job_name: 'microservices-backend'
+    static_configs:
+      - targets:
+          - 'dotnet:80'      # .NET Core service
+          - 'go:8080'        # Go service
+          - 'node:3000'      # Node.js service
+          - 'python:8000'    # Python service
+          - 'php:8000'       # PHP service
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: 'dotnet:.*'
+        target_label: service
+        replacement: 'dotnet-backend'
+      - source_labels: [__address__]
+        regex: 'go:.*'
+        target_label: service
+        replacement: 'go-backend'
+      - source_labels: [__address__]
+        regex: 'node:.*'
+        target_label: service
+        replacement: 'nodejs-backend'
+      - source_labels: [__address__]
+        regex: 'python:.*'
+        target_label: service
+        replacement: 'python-backend'
+      - source_labels: [__address__]
+        regex: 'php:.*'
+        target_label: service
+        replacement: 'php-backend'
+
+  # Database services (internal container access)
+  - job_name: 'database-services'
+    static_configs:
+      - targets:
+          - 'mariadb:3306'
+          - 'mysql:3306'
+          - 'postgres:5432'
+          - 'mongodb:27017'
+          - 'redis:6379'
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+    scrape_timeout: 15s
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: 'mariadb:.*'
+        target_label: service
+        replacement: 'mariadb'
+      - source_labels: [__address__]
+        regex: 'mysql:.*'
+        target_label: service
+        replacement: 'mysql'
+      - source_labels: [__address__]
+        regex: 'postgres:.*'
+        target_label: service
+        replacement: 'postgres'
+      - source_labels: [__address__]
+        regex: 'mongodb:.*'
+        target_label: service
+        replacement: 'mongodb'
+      - source_labels: [__address__]
+        regex: 'redis:.*'
+        target_label: service
+        replacement: 'redis'
+      - target_label: service_type
+        replacement: 'database'
+
+  # Analytics and observability stack (using container names)
+  - job_name: 'analytics-stack'
+    static_configs:
+      - targets:
+          - 'grafana:3000'
+          - 'elasticsearch:9200'
+          - 'kibana:5601'
+          - 'logstash:9600'
+          - 'matomo:80'
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: 'grafana:.*'
+        target_label: service
+        replacement: 'grafana'
+      - source_labels: [__address__]
+        regex: 'elasticsearch:.*'
+        target_label: service
+        replacement: 'elasticsearch'
+      - source_labels: [__address__]
+        regex: 'kibana:.*'
+        target_label: service
+        replacement: 'kibana'
+      - source_labels: [__address__]
+        regex: 'logstash:.*'
+        target_label: service
+        replacement: 'logstash'
+      - source_labels: [__address__]
+        regex: 'matomo:.*'
+        target_label: service
+        replacement: 'matomo'
+      - target_label: service_type
+        replacement: 'analytics'
+
+  # AI and automation services (using container names)
+  - job_name: 'ai-automation'
+    static_configs:
+      - targets:
+          - 'langflow:7860'
+          - 'n8n:5678'
+    scrape_interval: 20s
+    metrics_path: '/metrics'
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: 'langflow:.*'
+        target_label: service
+        replacement: 'langflow'
+      - source_labels: [__address__]
+        regex: 'n8n:.*'
+        target_label: service
+        replacement: 'n8n'
+      - target_label: service_type
+        replacement: 'ai-automation'
+
+  # Database management tools (using container names and internal ports)
+  - job_name: 'db-management-tools'
+    static_configs:
+      - targets:
+          - 'adminer:8080'
+          - 'phpmyadmin:80'
+          - 'mongo-express:8081'
+          - 'metabase:3000'
+          - 'nocodb:8080'
+          - 'pgadmin:80'
+          - 'redis-commander:8081'
+    scrape_interval: 60s
+    metrics_path: '/metrics'
+    scrape_timeout: 10s
+    honor_labels: false
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: 'adminer:.*'
+        target_label: service
+        replacement: 'adminer'
+      - source_labels: [__address__]
+        regex: 'phpmyadmin:.*'
+        target_label: service
+        replacement: 'phpmyadmin'
+      - source_labels: [__address__]
+        regex: 'mongo-express:.*'
+        target_label: service
+        replacement: 'mongo-express'
+      - source_labels: [__address__]
+        regex: 'metabase:.*'
+        target_label: service
+        replacement: 'metabase'
+      - source_labels: [__address__]
+        regex: 'nocodb:.*'
+        target_label: service
+        replacement: 'nocodb'
+      - source_labels: [__address__]
+        regex: 'pgadmin:.*'
+        target_label: service
+        replacement: 'pgadmin'
+      - source_labels: [__address__]
+        regex: 'redis-commander:.*'
+        target_label: service
+        replacement: 'redis-commander'
+      - target_label: service_type
+        replacement: 'db-tools'
+
+  # Supporting services (using container names)
+  - job_name: 'supporting-services'
+    static_configs:
+      - targets:
+          - 'mailpit:8025'
+          - 'gitea:3000'
+          - 'nginx-proxy-manager:81'
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: 'mailpit:.*'
+        target_label: service
+        replacement: 'mailpit'
+      - source_labels: [__address__]
+        regex: 'gitea:.*'
+        target_label: service
+        replacement: 'gitea'
+      - source_labels: [__address__]
+        regex: 'nginx-proxy-manager:.*'
+        target_label: service
+        replacement: 'nginx-proxy-manager'
+      - target_label: service_type
+        replacement: 'supporting'

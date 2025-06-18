@@ -25,6 +25,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.prometheus.rule=Host(`prometheus.test`)"
-      - "traefik.http.routers.prometheus.entrypoints=web"
-      # - "traefik.http.routers.prometheus.tls=false"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls=true"
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"

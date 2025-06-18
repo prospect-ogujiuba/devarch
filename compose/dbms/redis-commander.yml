@@ -24,6 +24,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.redis-commander.rule=Host(`redis.test`)"
-      - "traefik.http.routers.redis-commander.entrypoints=web"
-      # - "traefik.http.routers.redis-commander.tls=false"
+      - "traefik.http.routers.redis-commander.entrypoints=websecure"
+      - "traefik.http.routers.redis-commander.tls=true"
       - "traefik.http.services.redis-commander.loadbalancer.server.port=8081"

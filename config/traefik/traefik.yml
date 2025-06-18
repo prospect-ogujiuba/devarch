@@ -1,3 +1,4 @@
+# Traefik Configuration
 global:
   checkNewVersion: false
   sendAnonymousUsage: false
@@ -7,29 +8,61 @@ log:
 
 accesslog: {}
 
+# OpenTelemetry tracing configuration pointing to collector
+tracing:
+  serviceName: traefik
+  sampleRate: 1.0
+  otlp:
+    http:
+      endpoint: http://otel-collector:4318/v1/traces
+      headers:
+        content-type: application/json
+    # Alternative gRPC configuration (comment out HTTP above to use this)
+    # grpc:
+    #   endpoint: otel-collector:4317
+    #   insecure: true
+
 api:
   dashboard: true
-  insecure: true
+  insecure: true  # Set to true for development, false for production
 
 entryPoints:
   web:
     address: :80
+    # Uncomment for automatic HTTPS redirect
+    # http:
+    #   redirections:
+    #     entrypoint:
+    #       to: websecure
+    #       scheme: https
   websecure:
     address: :443
 
 serversTransport:
   insecureSkipVerify: true
 
-# Add global TLS configuration for development
+# TLS Configuration with local certificates
 tls:
+  certificates:
+    - certFile: /var/traefik/certs/local.crt
+      keyFile: /var/traefik/certs/local.key
+      stores:
+        - default
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /var/traefik/certs/local.crt
+        keyFile: /var/traefik/certs/local.key
   options:
     default:
-      sslProtocols:
-        - "TLSv1.2"
-        - "TLSv1.3"
       minVersion: "VersionTLS12"
+      maxVersion: "VersionTLS13"
+      cipherSuites:
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
 
-# Add Prometheus metrics configuration - uses existing dashboard port 8080
+# Prometheus metrics configuration
 metrics:
   prometheus:
     addEntryPointsLabels: true
@@ -54,7 +87,7 @@ providers:
     directory: /etc/traefik
     watch: true
   
-  # Docker provider configured for ROOT Podman
+  # Docker provider configured for Podman
   docker:
     endpoint: "unix:///var/run/podman/podman.sock"
     network: microservices-net

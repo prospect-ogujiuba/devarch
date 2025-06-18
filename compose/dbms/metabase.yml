@@ -19,6 +19,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.metabase.rule=Host(`metabase.test`)"
-      - "traefik.http.routers.metabase.entrypoints=web"
-      # - "traefik.http.routers.metabase.tls=false"
+      - "traefik.http.routers.metabase.entrypoints=websecure"
+      - "traefik.http.routers.metabase.tls=true"
       - "traefik.http.services.metabase.loadbalancer.server.port=3000"

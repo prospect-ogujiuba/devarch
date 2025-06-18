@@ -21,6 +21,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.python.rule=Host(`python.test`)"
-      - "traefik.http.routers.python.entrypoints=web"
-      # - "traefik.http.routers.python.tls=false"
+      - "traefik.http.routers.python.entrypoints=websecure"
+      - "traefik.http.routers.python.tls=true"
       - "traefik.http.services.python.loadbalancer.server.port=8000"

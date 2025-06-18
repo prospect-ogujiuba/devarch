@@ -18,6 +18,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.postgres-exporter.rule=Host(`postgres-exporter.test`)"
-      - "traefik.http.routers.postgres-exporter.entrypoints=web"
-      # - "traefik.http.routers.postgres-exporter.tls=false"
+      - "traefik.http.routers.postgres-exporter.entrypoints=websecure"
+      - "traefik.http.routers.postgres-exporter.tls=true"
       - "traefik.http.services.postgres-exporter.loadbalancer.server.port=9187"

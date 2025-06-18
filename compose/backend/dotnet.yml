@@ -24,6 +24,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.dotnet.rule=Host(`dotnet.test`)"
-      - "traefik.http.routers.dotnet.entrypoints=web"
-      # - "traefik.http.routers.dotnet.tls=false"
+      - "traefik.http.routers.dotnet.entrypoints=websecure"
+      - "traefik.http.routers.dotnet.tls=true"
       - "traefik.http.services.dotnet.loadbalancer.server.port=80"

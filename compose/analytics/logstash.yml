@@ -23,6 +23,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.logstash.rule=Host(`logstash.test`)"
-      - "traefik.http.routers.logstash.entrypoints=web"
-      # - "traefik.http.routers.logstash.tls=false"
+      - "traefik.http.routers.logstash.entrypoints=websecure"
+      - "traefik.http.routers.logstash.tls=true"
       - "traefik.http.services.logstash.loadbalancer.server.port=9600"

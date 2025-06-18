@@ -20,6 +20,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.mailpit.rule=Host(`mailpit.test`)"
-      - "traefik.http.routers.mailpit.entrypoints=web"
-      # - "traefik.http.routers.mailpit.tls=false"
+      - "traefik.http.routers.mailpit.entrypoints=websecure"
+      - "traefik.http.routers.mailpit.tls=true"
       - "traefik.http.services.mailpit.loadbalancer.server.port=8025"

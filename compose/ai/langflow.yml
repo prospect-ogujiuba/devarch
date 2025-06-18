@@ -20,6 +20,6 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.langflow.rule=Host(`langflow.test`)"
-      - "traefik.http.routers.langflow.entrypoints=web"
-      # - "traefik.http.routers.langflow.tls=false"
+      - "traefik.http.routers.langflow.entrypoints=websecure"
+      - "traefik.http.routers.langflow.tls=true"
       - "traefik.http.services.langflow.loadbalancer.server.port=7860"
