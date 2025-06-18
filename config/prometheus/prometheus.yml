@@ -8,37 +8,85 @@ rule_files:
 
 scrape_configs:
   # Prometheus itself
-  - job_name: 'prometheus'
+  - job_name: "prometheus"
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ["localhost:9090"]
 
   # Grafana
-  - job_name: 'grafana'
+  - job_name: "grafana"
     static_configs:
-      - targets: ['grafana:3000']
+      - targets: ["grafana:3000"]
 
-  # Node exporter (if you add it later)
-  # - job_name: 'node-exporter'
-  #   static_configs:
-  #     - targets: ['node-exporter:9100']
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['traefik:8080']  # Replace with your Traefik host IP
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    scrape_timeout: 10s
+    relabel_configs:
+      - target_label: service
+        replacement: traefik-proxy
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: microservices-traefik
 
-  # Application metrics (customize as needed)
-  # - job_name: 'node-app'
-  #   static_configs:
-  #     - targets: ['node:3000']
-  #   metrics_path: '/metrics'
+  # System and Infrastructure Monitoring
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
 
-  # - job_name: 'python-app'
-  #   static_configs:
-  #     - targets: ['python:8000']
-  #   metrics_path: '/metrics'
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
 
-  # - job_name: 'go-app'
-  #   static_configs:
-  #     - targets: ['go:8080']
-  #   metrics_path: '/metrics'
+  # Database Exporters
+  - job_name: 'mysql-exporter'
+    static_configs:
+      - targets: ['mysqld-exporter:9104']
 
-  # - job_name: 'dotnet-app'
-  #   static_configs:
-  #     - targets: ['dotnet:80']
-  #   metrics_path: '/metrics'
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  - job_name: 'mongodb-exporter'
+    static_configs:
+      - targets: ['mongodb-exporter:9216']
+
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # Network and Service Monitoring
+  - job_name: 'blackbox-exporter'
+    static_configs:
+      - targets: ['blackbox-exporter:9115']
+
+# HTTP probes for web services
+  - job_name: 'blackbox-http'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - https://nginx.test
+        - https://grafana.test
+        - https://metabase.test
+        - https://adminer.test
+        - https://phpmyadmin.test
+        - https://mongodb.test
+        - https://nocodb.test
+        - https://pgadmin.test
+        - https://redis.test
+        - https://n8n.test
+        - https://langflow.test
+        - https://kibana.test
+        - https://mailpit.test
+        - https://gitea.test
+        - https://matomo.test
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115

@@ -283,7 +283,7 @@ get_startup_categories() {
 start_service_file() {
     local service_file="$1"
     local category="$2"
-    local full_path="$COMPOSE_DIR/$service_file"
+    local full_path="$(resolve_service_path "$service_file" "$category")"
     
     if [[ ! -f "$full_path" ]]; then
         print_status "warning" "Service file not found: $service_file"

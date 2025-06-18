@@ -1,0 +1,29 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  node-exporter:
+    container_name: node-exporter
+    image: prom/node-exporter:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9101:9100"  # External 9101, internal 9100
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--web.listen-address=:9100'
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.node-exporter.rule=Host(`node-exporter.test`)"
+      - "traefik.http.routers.node-exporter.entrypoints=web"
+      # - "traefik.http.routers.node-exporter.tls=false"
+      - "traefik.http.services.node-exporter.loadbalancer.server.port=9100"

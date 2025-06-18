@@ -1,11 +1,9 @@
 #!/bin/zsh
 
 # =============================================================================
-# MICROSERVICES CONFIGURATION MANAGEMENT
+# MICROSERVICES CONFIGURATION MANAGEMENT - ENHANCED
 # =============================================================================
-# Central configuration file for all scripts in the microservices architecture
-# This file should be sourced by all other scripts for consistent behavior
-# Optimized for zsh but maintains compatibility
+# Smart configuration with automatic path resolution and flexible overrides
 
 # =============================================================================
 # SCRIPT METADATA & PATHS
@@ -30,36 +28,343 @@ export NETWORK_NAME="microservices-net"
 export CONTAINER_RUNTIME="podman"  # Change to "docker" if using Docker instead
 
 # =============================================================================
-# SERVICE CATEGORIES & COMPOSE FILES
+# SERVICE CATEGORIES & COMPOSE FILES - SMART CONFIGURATION
 # =============================================================================
 
-# Define service categories and their compose files using zsh associative arrays
+# Smart service definitions - automatically resolves paths based on category
 typeset -A SERVICE_CATEGORIES
 SERVICE_CATEGORIES=(
-    [database]="database/mariadb.yml database/mysql.yml database/postgres.yml database/mongodb.yml database/redis.yml"
-    [dbms]="dbms/adminer.yml dbms/phpmyadmin.yml dbms/mongo-express.yml dbms/metabase.yml dbms/nocodb.yml dbms/pgadmin.yml dbms/redis-commander.yml"
-    [backend]="backend/dotnet.yml backend/go.yml backend/node.yml backend/php.yml backend/python.yml"
-    [analytics]="analytics/elasticsearch.yml analytics/kibana.yml analytics/logstash.yml analytics/grafana.yml analytics/prometheus.yml analytics/matomo.yml"
-    [ai-services]="ai/langflow.yml ai/n8n.yml"
-    [mail]="mail/mailpit.yml"
-    [project]="project/gitea.yml"
-    [proxy]="proxy/traefik.yml"
+    [proxy]="traefik.yml"
+    [database]="mariadb.yml mysql.yml postgres.yml mongodb.yml redis.yml"
+    [exporters]="blackbox-exporter.yml mongodb-exporter.yml mysqld-exporter.yml node-exporter.yml postgres-exporter.yml redis-exporter.yml"
+    [dbms]="adminer.yml phpmyadmin.yml mongo-express.yml metabase.yml nocodb.yml pgadmin.yml redis-commander.yml"
+    [backend]="php.yml node.yml python.yml go.yml dotnet.yml"
+    [analytics]="elasticsearch.yml kibana.yml logstash.yml grafana.yml prometheus.yml matomo.yml cadvisor.yml"
+    [ai-services]="langflow.yml n8n.yml"
+    [mail]="mailpit.yml"
+    [project]="gitea.yml"
+)
+
+# Optional: Override category paths if you need different directory structure
+typeset -A CATEGORY_PATH_OVERRIDES
+CATEGORY_PATH_OVERRIDES=(
+    # [category]="custom/path"
+    # Example: [backend]="apps/backend"
+    # Example: [legacy]="old-services"
+)
+
+# Optional: Full path overrides for specific services (for maximum flexibility)
+typeset -A SERVICE_PATH_OVERRIDES
+SERVICE_PATH_OVERRIDES=(
+    # [service.yml]="full/custom/path/service.yml"
+    # Example: [special-service.yml]="legacy/docker-compose.yml"
+    # Example: [nginx.yml]="infrastructure/nginx/docker-compose.yml"
 )
 
 # Service startup order (critical for dependencies) - zsh array
 SERVICE_STARTUP_ORDER=(
+    "proxy"
     "database"
+    "exporters"
     "dbms" 
     "backend"
     "analytics"
     "ai-services"
     "mail"
     "project"
-    "proxy"
 )
 
 # =============================================================================
-# DATABASE CREDENTIALS
+# SMART PATH RESOLUTION FUNCTIONS
+# =============================================================================
+
+# Function to resolve the full path for a service file
+resolve_service_path() {
+    local service_file="$1"
+    local category="$2"
+    local resolved_path=""
+    
+    # Check for specific service override first
+    if [[ -n "${SERVICE_PATH_OVERRIDES[$service_file]}" ]]; then
+        resolved_path="$COMPOSE_DIR/${SERVICE_PATH_OVERRIDES[$service_file]}"
+        echo "$resolved_path"
+        return 0
+    fi
+    
+    # Check for category path override
+    local category_path="$category"
+    if [[ -n "${CATEGORY_PATH_OVERRIDES[$category]}" ]]; then
+        category_path="${CATEGORY_PATH_OVERRIDES[$category]}"
+    fi
+    
+    # Construct the standard path
+    local full_path="$COMPOSE_DIR/$category_path/$service_file"
+    
+    # Verify the file exists, if not try fallback locations
+    if [[ -f "$full_path" ]]; then
+        resolved_path="$full_path"
+        echo "$resolved_path"
+        return 0
+    fi
+    
+    # Fallback 1: Try without category subdirectory (flat structure)
+    local flat_path="$COMPOSE_DIR/$service_file"
+    if [[ -f "$flat_path" ]]; then
+        resolved_path="$flat_path"
+        echo "$resolved_path"
+        return 0
+    fi
+    
+    # Fallback 2: Search in all subdirectories
+    local found_path
+    found_path=$(find "$COMPOSE_DIR" -name "$service_file" -type f 2>/dev/null | head -1)
+    if [[ -n "$found_path" ]]; then
+        resolved_path="$found_path"
+        echo "$resolved_path"
+        return 0
+    fi
+    
+    # Return the expected path even if it doesn't exist (for error reporting)
+    resolved_path="$full_path"
+    echo "$resolved_path"
+    return 1
+}
+
+# Enhanced function to get service files for a category with full paths
+get_service_files() {
+    local category="$1"
+    local return_paths="${2:-false}"  # if true, return full paths instead of just filenames
+    
+    if [[ -z "${SERVICE_CATEGORIES[$category]}" ]]; then
+        print_status "error" "Unknown service category: $category"
+        return 1
+    fi
+    
+    local service_files="${SERVICE_CATEGORIES[$category]}"
+    
+    if [[ "$return_paths" == "true" ]]; then
+        # Return full resolved paths
+        local -a files paths
+        files=(${=service_files})
+        
+        for service_file in "${files[@]}"; do
+            local resolved_path
+            resolved_path=$(resolve_service_path "$service_file" "$category")
+            paths+=("$resolved_path")
+        done
+        
+        echo "${paths[@]}"
+    else
+        # Return just the filenames (original behavior)
+        echo "$service_files"
+    fi
+}
+
+# Function to validate all service files exist
+validate_service_files() {
+    local category="$1"
+    local -a missing_files valid_files
+    
+    if [[ -z "${SERVICE_CATEGORIES[$category]}" ]]; then
+        print_status "error" "Unknown service category: $category"
+        return 1
+    fi
+    
+    local service_files="${SERVICE_CATEGORIES[$category]}"
+    local -a files
+    files=(${=service_files})
+    
+    print_status "step" "Validating $category service files..."
+    
+    for service_file in "${files[@]}"; do
+        local resolved_path
+        resolved_path=$(resolve_service_path "$service_file" "$category")
+        
+        if [[ -f "$resolved_path" ]]; then
+            valid_files+=("$service_file")
+            if [[ "$VERBOSE_VALIDATION" == "true" ]]; then
+                print_status "info" "✓ Found: $service_file -> $resolved_path"
+            fi
+        else
+            missing_files+=("$service_file")
+            print_status "warning" "❌ Missing: $service_file (expected at $resolved_path)"
+        fi
+    done
+    
+    if [[ ${#missing_files[@]} -gt 0 ]]; then
+        print_status "warning" "Category '$category' has ${#missing_files[@]} missing file(s): ${missing_files[*]}"
+        print_status "info" "Available files: ${valid_files[*]}"
+        return 1
+    else
+        print_status "success" "All $category service files found (${#valid_files[@]} files)"
+        return 0
+    fi
+}
+
+# Function to list all available service files with their resolved paths
+list_all_services() {
+    echo "=== SERVICE FILE MAPPING ==="
+    echo ""
+    
+    for category in "${SERVICE_STARTUP_ORDER[@]}"; do
+        echo "Category: $category"
+        echo "----------------------------------------"
+        
+        if [[ -n "${SERVICE_CATEGORIES[$category]}" ]]; then
+            local service_files="${SERVICE_CATEGORIES[$category]}"
+            local -a files
+            files=(${=service_files})
+            
+            for service_file in "${files[@]}"; do
+                # Use a simple approach without persistent variables
+                local file_path="$(resolve_service_path "$service_file" "$category" 2>/dev/null)"
+                local status_icon="❌ MISSING"
+                
+                [[ -f "$file_path" ]] && status_icon="✅ EXISTS"
+                
+                printf "  %-25s -> %s [%s]\n" "$service_file" "$file_path" "$status_icon"
+            done
+        else
+            echo "  No services defined"
+        fi
+        echo ""
+    done
+}
+
+# Enhanced start function with smart path resolution
+start_service_category() {
+    local category="$1"
+    local service_files
+    service_files=$(get_service_files "$category")
+    
+    if [[ -z "$service_files" ]]; then
+        return 1
+    fi
+    
+    print_status "step" "Starting $category services..."
+    
+    # Split service_files into array using zsh word splitting
+    local -a files
+    files=(${=service_files})
+    
+    local started=0 failed=0
+    
+    for service_file in "${files[@]}"; do
+        local full_path
+        full_path=$(resolve_service_path "$service_file" "$category")
+        
+        if [[ -f "$full_path" ]]; then
+            print_status "info" "Starting services from $service_file..."
+            if eval "$COMPOSE_CMD -f \"$full_path\" up -d $ERROR_REDIRECT"; then
+                ((started++))
+            else
+                print_status "error" "Failed to start services from $service_file"
+                ((failed++))
+            fi
+        else
+            print_status "warning" "Service file not found: $full_path"
+            ((failed++))
+        fi
+    done
+    
+    if [[ $failed -eq 0 ]]; then
+        print_status "success" "$category services started successfully ($started/$((started + failed)))"
+    else
+        print_status "warning" "$category services partially started ($started/$((started + failed))) - $failed failed"
+    fi
+    
+    return $failed
+}
+
+# Enhanced stop function with smart path resolution
+stop_service_category() {
+    local category="$1"
+    local service_files
+    service_files=$(get_service_files "$category")
+    
+    if [[ -z "$service_files" ]]; then
+        return 1
+    fi
+    
+    print_status "step" "Stopping $category services..."
+    
+    # Split service_files into array using zsh word splitting
+    local -a files
+    files=(${=service_files})
+    
+    for service_file in "${files[@]}"; do
+        local full_path
+        full_path=$(resolve_service_path "$service_file" "$category")
+        
+        if [[ -f "$full_path" ]]; then
+            print_status "info" "Stopping services from $service_file..."
+            eval "$COMPOSE_CMD -f \"$full_path\" down $ERROR_REDIRECT" || true
+        else
+            print_status "warning" "Service file not found: $full_path (skipping)"
+        fi
+    done
+    
+    print_status "success" "$category services stopped"
+}
+
+# =============================================================================
+# CONFIGURATION UTILITIES
+# =============================================================================
+
+# Function to add a service override
+add_service_override() {
+    local service_file="$1"
+    local custom_path="$2"
+    
+    SERVICE_PATH_OVERRIDES[$service_file]="$custom_path"
+    print_status "success" "Added service override: $service_file -> $custom_path"
+}
+
+# Function to add a category override
+add_category_override() {
+    local category="$1"
+    local custom_path="$2"
+    
+    CATEGORY_PATH_OVERRIDES[$category]="$custom_path"
+    print_status "success" "Added category override: $category -> $custom_path"
+}
+
+# Function to show current configuration
+show_configuration() {
+    echo "=== SMART CONFIGURATION STATUS ==="
+    echo ""
+    echo "Project Root: $PROJECT_ROOT"
+    echo "Compose Dir:  $COMPOSE_DIR"
+    echo "Container Runtime: $CONTAINER_RUNTIME"
+    echo ""
+    
+    echo "Service Categories:"
+    for category in "${SERVICE_STARTUP_ORDER[@]}"; do
+        local count
+        count=$(echo "${SERVICE_CATEGORIES[$category]}" | wc -w)
+        printf "  %-15s: %d services\n" "$category" "$count"
+    done
+    echo ""
+    
+    if [[ ${#CATEGORY_PATH_OVERRIDES[@]} -gt 0 ]]; then
+        echo "Category Path Overrides:"
+        for category in "${(@k)CATEGORY_PATH_OVERRIDES}"; do
+            printf "  %-15s -> %s\n" "$category" "${CATEGORY_PATH_OVERRIDES[$category]}"
+        done
+        echo ""
+    fi
+    
+    if [[ ${#SERVICE_PATH_OVERRIDES[@]} -gt 0 ]]; then
+        echo "Service Path Overrides:"
+        for service in "${(@k)SERVICE_PATH_OVERRIDES}"; do
+            printf "  %-25s -> %s\n" "$service" "${SERVICE_PATH_OVERRIDES[$service]}"
+        done
+        echo ""
+    fi
+}
+
+# =============================================================================
+# DATABASE CREDENTIALS (unchanged)
 # =============================================================================
 
 export MARIADB_ROOT_PASSWORD="123456"
@@ -69,7 +374,7 @@ export MONGO_ROOT_PASSWORD="123456"
 export ADMIN_PASSWORD="123456"
 
 # =============================================================================
-# SSL CONFIGURATION
+# SSL CONFIGURATION (unchanged)
 # =============================================================================
 
 export SSL_DOMAIN="*.test"
@@ -77,7 +382,7 @@ export SSL_CERT_DIR="/etc/letsencrypt/live/wildcard.test"
 export SSL_DAYS_VALID="3650"  # 10 years for development
 
 # =============================================================================
-# RUNTIME DETECTION & COMMAND SETUP
+# RUNTIME DETECTION & COMMAND SETUP (unchanged)
 # =============================================================================
 
 # Detect if we should use sudo (for Docker on Linux)
@@ -98,10 +403,6 @@ detect_sudo_requirement() {
         exit 1
     fi
 }
-
-# =============================================================================
-# UTILITY FUNCTIONS
-# =============================================================================
 
 # Set up command execution context
 setup_command_context() {
@@ -145,6 +446,10 @@ setup_command_context() {
         export COMPOSE_PROVIDER="native"
     fi
 }
+
+# =============================================================================
+# UTILITY FUNCTIONS (unchanged but enhanced error messages)
+# =============================================================================
 
 # Function to handle errors consistently
 handle_error() {
@@ -278,76 +583,8 @@ ensure_network_exists() {
     fi
 }
 
-# Function to get service files for a category
-get_service_files() {
-    local category="$1"
-    if [[ -n "${SERVICE_CATEGORIES[$category]}" ]]; then
-        echo "${SERVICE_CATEGORIES[$category]}"
-    else
-        print_status "error" "Unknown service category: $category"
-        return 1
-    fi
-}
-
-# Function to start services from a category
-start_service_category() {
-    local category="$1"
-    local service_files
-    service_files=$(get_service_files "$category")
-    
-    if [[ -z "$service_files" ]]; then
-        return 1
-    fi
-    
-    print_status "step" "Starting $category services..."
-    
-    # Split service_files into array using zsh word splitting
-    local -a files
-    files=(${=service_files})
-    
-    for service_file in "${files[@]}"; do
-        local full_path="$COMPOSE_DIR/$service_file"
-        if [[ -f "$full_path" ]]; then
-            print_status "info" "Starting services from $service_file..."
-            eval "$COMPOSE_CMD -f \"$full_path\" up -d $ERROR_REDIRECT"
-            check_status "Failed to start services from $service_file"
-        else
-            print_status "warning" "Service file not found: $full_path"
-        fi
-    done
-    
-    print_status "success" "$category services started successfully"
-}
-
-# Function to stop services from a category
-stop_service_category() {
-    local category="$1"
-    local service_files
-    service_files=$(get_service_files "$category")
-    
-    if [[ -z "$service_files" ]]; then
-        return 1
-    fi
-    
-    print_status "step" "Stopping $category services..."
-    
-    # Split service_files into array using zsh word splitting
-    local -a files
-    files=(${=service_files})
-    
-    for service_file in "${files[@]}"; do
-        local full_path="$COMPOSE_DIR/$service_file"
-        if [[ -f "$full_path" ]]; then
-            print_status "info" "Stopping services from $service_file..."
-            eval "$COMPOSE_CMD -f \"$full_path\" down $ERROR_REDIRECT" || true
-        fi
-    done
-    
-    print_status "success" "$category services stopped"
-}
-
 # =============================================================================
-# TRAEFIK SPECIFIC FUNCTIONS
+# TRAEFIK SPECIFIC FUNCTIONS (unchanged)
 # =============================================================================
 
 # Function to validate Traefik setup
@@ -430,7 +667,7 @@ reload_traefik_config() {
 }
 
 # =============================================================================
-# OS DETECTION
+# OS DETECTION (unchanged)
 # =============================================================================
 
 detect_os() {
@@ -450,7 +687,7 @@ detect_os() {
 }
 
 # =============================================================================
-# INITIALIZATION
+# INITIALIZATION (enhanced)
 # =============================================================================
 
 # Auto-detect environment when this script is sourced
@@ -471,7 +708,7 @@ if [[ ! -f "$PROJECT_ROOT/.env" ]]; then
 fi
 
 # =============================================================================
-# EXPORTED FUNCTIONS
+# EXPORTED FUNCTIONS (enhanced)
 # =============================================================================
 
 # Make utility functions available to other scripts
@@ -496,8 +733,21 @@ else
     export -f get_traefik_api 2>/dev/null || true
     export -f show_traefik_routes 2>/dev/null || true
     export -f reload_traefik_config 2>/dev/null || true
+    # Enhanced functions
+    export -f resolve_service_path 2>/dev/null || true
+    export -f validate_service_files 2>/dev/null || true
+    export -f list_all_services 2>/dev/null || true
+    export -f add_service_override 2>/dev/null || true
+    export -f add_category_override 2>/dev/null || true
+    export -f show_configuration 2>/dev/null || true
 fi
 
-print_status "info" "Configuration loaded successfully"
+print_status "info" "Smart configuration loaded successfully"
 print_status "info" "Container runtime: $CONTAINER_RUNTIME (sudo: $DEFAULT_SUDO)"
 print_status "info" "Project root: $PROJECT_ROOT"
+
+# Optional: Validate all service files on load (uncomment if desired)
+# VERBOSE_VALIDATION=false
+# for category in "${SERVICE_STARTUP_ORDER[@]}"; do
+#     validate_service_files "$category" >/dev/null 2>&1
+# done

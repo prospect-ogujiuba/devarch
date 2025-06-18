@@ -14,11 +14,6 @@ api:
 entryPoints:
   web:
     address: :80
-    # http:
-    #   redirections:
-    #     entryPoint:
-    #       to: websecure
-    #       scheme: https
   websecure:
     address: :443
 
@@ -33,6 +28,25 @@ tls:
         - "TLSv1.2"
         - "TLSv1.3"
       minVersion: "VersionTLS12"
+
+# Add Prometheus metrics configuration - uses existing dashboard port 8080
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+    # Configure latency buckets for better metrics granularity
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+      - 10.0
+      - 30.0
+    # Add custom header labels for enhanced monitoring
+    headerLabels:
+      useragent: User-Agent
+      host: X-Forwarded-Host
 
 providers:
   # File provider for static configuration

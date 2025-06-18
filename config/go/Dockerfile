@@ -23,36 +23,37 @@ RUN go install github.com/cosmtrek/air@v1.49.0 && \
 RUN mkdir -p /app
 WORKDIR /app
 
-# Create a simple file server that serves the /var/www/html directory
-RUN cat > main.go << 'EOF'
-package main
-
-import (
-    "fmt"
-    "log"
-    "net/http"
-    "os"
-)
-
-func main() {
-    port := os.Getenv("PORT")
-    if port == "" {
-        port = "8080"
-    }
-
-    // Serve files from /var/www/html
-    fs := http.FileServer(http.Dir("/var/www/html"))
-    http.Handle("/", fs)
-
-    fmt.Printf("Go file server running on port %s\n", port)
-    fmt.Println("Serving files from /var/www/html")
-    
-    log.Fatal(http.ListenAndServe(":"+port, nil))
-}
-EOF
+# Create the Go file server using echo instead of heredoc
+RUN echo 'package main' > main.go && \
+    echo '' >> main.go && \
+    echo 'import (' >> main.go && \
+    echo '    "fmt"' >> main.go && \
+    echo '    "log"' >> main.go && \
+    echo '    "net/http"' >> main.go && \
+    echo '    "os"' >> main.go && \
+    echo ')' >> main.go && \
+    echo '' >> main.go && \
+    echo 'func main() {' >> main.go && \
+    echo '    port := os.Getenv("PORT")' >> main.go && \
+    echo '    if port == "" {' >> main.go && \
+    echo '        port = "8080"' >> main.go && \
+    echo '    }' >> main.go && \
+    echo '' >> main.go && \
+    echo '    // Serve files from /var/www/html' >> main.go && \
+    echo '    fs := http.FileServer(http.Dir("/var/www/html"))' >> main.go && \
+    echo '    http.Handle("/", fs)' >> main.go && \
+    echo '' >> main.go && \
+    echo '    fmt.Printf("Go file server running on port %s\\n", port)' >> main.go && \
+    echo '    fmt.Println("Serving files from /var/www/html")' >> main.go && \
+    echo '    ' >> main.go && \
+    echo '    log.Fatal(http.ListenAndServe(":"+port, nil))' >> main.go && \
+    echo '}' >> main.go
 
 # Build the file server
-RUN go mod init fileserver && go build -o fileserver main.go
+RUN go mod init fileserver && go build -o /usr/local/bin/fileserver main.go
+
+# Verify the binary exists and is executable
+RUN ls -la /usr/local/bin/fileserver && chmod +x /usr/local/bin/fileserver
 
 # Create app directory
 WORKDIR /var/www/html
@@ -65,4 +66,4 @@ RUN chown -R app:app /var/www/html
 EXPOSE 8080 8000 3000 9000
 
 # Run the Go file server
-CMD ["/app/fileserver"]
+CMD ["fileserver"]
