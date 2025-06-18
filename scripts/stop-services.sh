@@ -32,6 +32,10 @@ opt_preserve_volumes=false        # Preserve volumes (opposite of remove_volumes
 opt_cleanup_service_images=false  # Only remove images for stopped services
 opt_cleanup_service_volumes=false # Only remove volumes for stopped services
 opt_preserve_data=false           # Never touch named volumes with data
+opt_cleanup_older_than=""         # Age in days (e.g., "7d", "30d")
+opt_cleanup_large_volumes=false   # Remove large unused volumes
+opt_max_volume_size="500"         # Maximum volume size in MB to remove
+opt_max_volumes_remove="3"        # Maximum number of volumes to remove
 
 # =============================================================================
 # USAGE & HELP
@@ -81,6 +85,15 @@ CLEANUP OPTIONS:
     --remove-images    Remove all downloaded container images
     --remove-volumes   Remove all data volumes (DESTROYS ALL DATA)
     --remove-networks  Remove created Docker networks
+
+SMART CLEANUP OPTIONS:
+    --cleanup-service-images    Remove images only for stopped services
+    --cleanup-service-volumes   Remove volumes only for stopped services
+    --cleanup-older-than AGE    Remove resources older than AGE (e.g., 7d, 2w)
+    --cleanup-large-volumes     Remove large unused volumes to free space
+    --max-volume-size SIZE      Max volume size in MB to consider for removal (default: 500)
+    --max-volumes COUNT         Max number of volumes to remove (default: 3)
+    --cleanup-orphans          Remove containers not managed by compose files
 
 EXAMPLES:
     $0                                 # Stop all services gracefully
@@ -164,6 +177,40 @@ parse_arguments() {
                 opt_remove_volumes=false
                 opt_cleanup_service_volumes=false
                 shift
+                ;;
+            --cleanup-older-than)
+                if [[ -n "$2" && "$2" != -* ]]; then
+                    # Parse format like "7d", "30d", "1w" 
+                    local age_value="${2%d}"  # Remove 'd' suffix
+                    age_value="${age_value%w}"  # Remove 'w' suffix
+                    if [[ "$2" == *"w" ]]; then
+                        age_value=$((age_value * 7))  # Convert weeks to days
+                    fi
+                    opt_cleanup_older_than="$age_value"
+                    shift 2
+                else
+                    handle_error "Option $1 requires an age value (e.g., 7d, 2w)"
+                fi
+                ;;
+            --cleanup-large-volumes)
+                opt_cleanup_large_volumes=true
+                shift
+                ;;
+            --max-volume-size)
+                if [[ -n "$2" && "$2" =~ ^[0-9]+$ ]]; then
+                    opt_max_volume_size="$2"
+                    shift 2
+                else
+                    handle_error "Option $1 requires a numeric size in MB"
+                fi
+                ;;
+            --max-volumes)
+                if [[ -n "$2" && "$2" =~ ^[0-9]+$ ]]; then
+                    opt_max_volumes_remove="$2"
+                    shift 2
+                else
+                    handle_error "Option $1 requires a numeric count"
+                fi
                 ;;
             -x|--exclude)
                 if [[ -n "$2" && "$2" != -* ]]; then
@@ -850,15 +897,34 @@ run_shutdown_process() {
 }
 
 run_cleanup_operations() {
-    print_status "step" "Running cleanup operations..."
+    print_status "step" "Running smart cleanup operations..."
     
-    # Global cleanup (existing functionality)
+    # Age-based cleanup
+    if [[ -n "$opt_cleanup_older_than" ]]; then
+        cleanup_old_resources "$opt_cleanup_older_than" "$opt_dry_run"
+    fi
+    
+    # Large volume cleanup
+    if [[ "$opt_cleanup_large_volumes" == "true" ]]; then
+        cleanup_large_volumes "$opt_max_volume_size" "$opt_max_volumes_remove" "$opt_dry_run"
+    fi
+    
+    # Service-specific orphan cleanup
+    if [[ "$opt_cleanup_orphans" == "true" ]]; then
+        local target_services=""
+        if [[ -n "$opt_services_only" ]]; then
+            target_services="$opt_services_only"
+        fi
+        cleanup_service_orphans "$target_services" "$opt_dry_run"
+    fi
+    
+    # Existing global cleanup (images, volumes, networks)
     cleanup_images
     cleanup_volumes  
     cleanup_networks
     cleanup_system
     
-    print_status "success" "Cleanup operations completed"
+    print_status "success" "Smart cleanup operations completed"
 }
 
 show_completion_info() {

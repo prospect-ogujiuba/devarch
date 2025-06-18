@@ -573,6 +573,314 @@ stop_service_category() {
 }
 
 # =============================================================================
+# AGE-BASED RESOURCE CLEANUP FUNCTION
+# =============================================================================
+
+# Function to get resource age in days
+get_resource_age() {
+    local resource_type="$1"  # container, image, volume
+    local resource_id="$2"
+    
+    local created_date
+    case "$resource_type" in
+        "container")
+            created_date=$(eval "$CONTAINER_CMD inspect --format='{{.Created}}' $resource_id 2>/dev/null" || echo "")
+            ;;
+        "image")
+            created_date=$(eval "$CONTAINER_CMD inspect --format='{{.Created}}' $resource_id 2>/dev/null" || echo "")
+            ;;
+        "volume")
+            created_date=$(eval "$CONTAINER_CMD volume inspect --format='{{.CreatedAt}}' $resource_id 2>/dev/null" || echo "")
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+    
+    if [[ -n "$created_date" ]]; then
+        # Convert to epoch and calculate days
+        local created_epoch=$(date -d "$created_date" +%s 2>/dev/null || echo "0")
+        local current_epoch=$(date +%s)
+        local age_days=$(( (current_epoch - created_epoch) / 86400 ))
+        echo "$age_days"
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Function to cleanup old resources
+cleanup_old_resources() {
+    local max_age_days="${1:-7}"  # Default 7 days
+    local dry_run="${2:-false}"
+    
+    print_status "step" "Cleaning up resources older than $max_age_days days..."
+    
+    local removed_containers=0 removed_images=0 removed_volumes=0
+    
+    # Cleanup old stopped containers
+    local containers
+    containers=$(eval "$CONTAINER_CMD ps -a --filter 'status=exited' --format '{{.ID}}' 2>/dev/null" || echo "")
+    
+    if [[ -n "$containers" ]]; then
+        local container_list
+        container_list=(${(f)containers})
+        
+        for container in "${container_list[@]}"; do
+            local age=$(get_resource_age "container" "$container")
+            if [[ $? -eq 0 && $age -gt $max_age_days ]]; then
+                if [[ "$dry_run" == "true" ]]; then
+                    echo "DRY RUN: Remove old container: $container (${age}d old)"
+                else
+                    if eval "$CONTAINER_CMD rm $container $ERROR_REDIRECT"; then
+                        ((removed_containers++))
+                    fi
+                fi
+            fi
+        done
+    fi
+    
+    # Cleanup old unused images
+    local images
+    images=$(eval "$CONTAINER_CMD images --filter 'dangling=false' --format '{{.ID}}' 2>/dev/null" || echo "")
+    
+    if [[ -n "$images" ]]; then
+        local image_list
+        image_list=(${(f)images})
+        
+        for image in "${image_list[@]}"; do
+            # Check if image is being used
+            local in_use=$(eval "$CONTAINER_CMD ps -a --filter ancestor=$image --format '{{.ID}}' 2>/dev/null" || echo "")
+            if [[ -z "$in_use" ]]; then
+                local age=$(get_resource_age "image" "$image")
+                if [[ $? -eq 0 && $age -gt $max_age_days ]]; then
+                    if [[ "$dry_run" == "true" ]]; then
+                        echo "DRY RUN: Remove old image: $image (${age}d old)"
+                    else
+                        if eval "$CONTAINER_CMD rmi $image $ERROR_REDIRECT"; then
+                            ((removed_images++))
+                        fi
+                    fi
+                fi
+            fi
+        done
+    fi
+    
+    if [[ "$dry_run" == "false" ]]; then
+        print_status "success" "Cleaned up: $removed_containers containers, $removed_images images"
+    fi
+}
+
+# =============================================================================
+# SIZE-BASED VOLUME CLEANUP FUNCTION
+# =============================================================================
+# Add this function to config.sh after the age-based cleanup function
+
+# Function to get volume size in MB
+get_volume_size() {
+    local volume_name="$1"
+    
+    # Get volume mount point and calculate size
+    local mount_point
+    mount_point=$(eval "$CONTAINER_CMD volume inspect --format='{{.Mountpoint}}' $volume_name 2>/dev/null" || echo "")
+    
+    if [[ -n "$mount_point" ]]; then
+        # Use du to get size in MB
+        local size_mb
+        size_mb=$(sudo du -sm "$mount_point" 2>/dev/null | cut -f1 || echo "0")
+        echo "$size_mb"
+        return 0
+    else
+        echo "0"
+        return 1
+    fi
+}
+
+# Function to cleanup large unused volumes when disk space is low
+cleanup_large_volumes() {
+    local min_size_mb="${1:-100}"    # Minimum size to consider (default 100MB)
+    local max_volumes="${2:-5}"      # Maximum volumes to remove
+    local dry_run="${3:-false}"
+    
+    print_status "step" "Cleaning up large unused volumes (>${min_size_mb}MB)..."
+    
+    # Get all volumes
+    local volumes
+    volumes=$(eval "$CONTAINER_CMD volume ls -q 2>/dev/null" || echo "")
+    
+    if [[ -z "$volumes" ]]; then
+        print_status "info" "No volumes found"
+        return 0
+    fi
+    
+    # Build array of volumes with sizes
+    local -a volume_data
+    local volume_list
+    volume_list=(${(f)volumes})
+    
+    for volume in "${volume_list[@]}"; do
+        # Check if volume is in use
+        local in_use
+        in_use=$(eval "$CONTAINER_CMD ps -a --filter volume=$volume --format '{{.ID}}' 2>/dev/null" || echo "")
+        
+        if [[ -z "$in_use" ]]; then
+            local size_mb=$(get_volume_size "$volume")
+            if [[ $size_mb -gt $min_size_mb ]]; then
+                volume_data+=("$size_mb:$volume")
+            fi
+        fi
+    done
+    
+    if [[ ${#volume_data[@]} -eq 0 ]]; then
+        print_status "info" "No large unused volumes found"
+        return 0
+    fi
+    
+    # Sort by size (largest first) and process
+    local sorted_volumes
+    sorted_volumes=($(printf '%s\n' "${volume_data[@]}" | sort -nr))
+    
+    local removed_count=0 total_size=0
+    
+    for volume_entry in "${sorted_volumes[@]}"; do
+        if [[ $removed_count -ge $max_volumes ]]; then
+            break
+        fi
+        
+        local size_mb="${volume_entry%%:*}"
+        local volume_name="${volume_entry##*:}"
+        
+        if [[ "$dry_run" == "true" ]]; then
+            echo "DRY RUN: Remove large volume: $volume_name (${size_mb}MB)"
+        else
+            print_status "info" "Removing large volume: $volume_name (${size_mb}MB)"
+            if eval "$CONTAINER_CMD volume rm $volume_name $ERROR_REDIRECT"; then
+                ((removed_count++))
+                total_size=$((total_size + size_mb))
+            fi
+        fi
+    done
+    
+    if [[ "$dry_run" == "false" && $removed_count -gt 0 ]]; then
+        print_status "success" "Removed $removed_count large volumes, freed ${total_size}MB"
+    fi
+}
+
+# =============================================================================
+# SERVICE-SPECIFIC ORPHAN CLEANUP FUNCTION
+# =============================================================================
+# Add this function to config.sh after the size-based cleanup function
+
+# Function to cleanup orphaned resources for specific services
+cleanup_service_orphans() {
+    local service_names="${1:-}"     # Comma-separated list, empty = all
+    local dry_run="${2:-false}"
+    
+    if [[ -n "$service_names" ]]; then
+        print_status "step" "Cleaning up orphaned resources for services: $service_names"
+    else
+        print_status "step" "Cleaning up all orphaned microservice resources..."
+    fi
+    
+    local removed_containers=0 removed_images=0 removed_volumes=0
+    
+    # Get all containers not managed by compose
+    local orphaned_containers
+    orphaned_containers=$(eval "$CONTAINER_CMD ps -a --filter 'label!=com.docker.compose.project' --format '{{.ID}} {{.Names}}' 2>/dev/null" || echo "")
+    
+    if [[ -n "$orphaned_containers" ]]; then
+        local container_list
+        container_list=(${(f)orphaned_containers})
+        
+        for container_info in "${container_list[@]}"; do
+            local container_id="${container_info%% *}"
+            local container_name="${container_info##* }"
+            
+            # Check if this orphan belongs to our services
+            local should_remove=false
+            
+            if [[ -z "$service_names" ]]; then
+                # Remove if it's in our network
+                local networks
+                networks=$(eval "$CONTAINER_CMD inspect --format='{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}' $container_id 2>/dev/null" || echo "")
+                if [[ "$networks" == *"$NETWORK_NAME"* ]]; then
+                    should_remove=true
+                fi
+            else
+                # Check against specific service names
+                local -a target_services
+                target_services=(${(s:,:)service_names})
+                
+                for service in "${target_services[@]}"; do
+                    if [[ "$container_name" == *"$service"* ]]; then
+                        should_remove=true
+                        break
+                    fi
+                done
+            fi
+            
+            if [[ "$should_remove" == "true" ]]; then
+                if [[ "$dry_run" == "true" ]]; then
+                    echo "DRY RUN: Remove orphaned container: $container_name"
+                else
+                    if eval "$CONTAINER_CMD rm -f $container_id $ERROR_REDIRECT"; then
+                        ((removed_containers++))
+                    fi
+                fi
+            fi
+        done
+    fi
+    
+    # Clean up dangling images related to our services
+    local dangling_images
+    dangling_images=$(eval "$CONTAINER_CMD images --filter 'dangling=true' -q 2>/dev/null" || echo "")
+    
+    if [[ -n "$dangling_images" ]]; then
+        local image_list
+        image_list=(${(f)dangling_images})
+        
+        for image in "${image_list[@]}"; do
+            if [[ "$dry_run" == "true" ]]; then
+                echo "DRY RUN: Remove dangling image: $image"
+            else
+                if eval "$CONTAINER_CMD rmi $image $ERROR_REDIRECT"; then
+                    ((removed_images++))
+                fi
+            fi
+        done
+    fi
+    
+    # Clean up unused volumes not attached to any container
+    local unused_volumes
+    unused_volumes=$(eval "$CONTAINER_CMD volume ls --filter 'dangling=true' -q 2>/dev/null" || echo "")
+    
+    if [[ -n "$unused_volumes" ]]; then
+        local volume_list
+        volume_list=(${(f)unused_volumes})
+        
+        for volume in "${volume_list[@]}"; do
+            # Double-check it's really unused
+            local in_use
+            in_use=$(eval "$CONTAINER_CMD ps -a --filter volume=$volume --format '{{.ID}}' 2>/dev/null" || echo "")
+            
+            if [[ -z "$in_use" ]]; then
+                if [[ "$dry_run" == "true" ]]; then
+                    echo "DRY RUN: Remove unused volume: $volume"
+                else
+                    if eval "$CONTAINER_CMD volume rm $volume $ERROR_REDIRECT"; then
+                        ((removed_volumes++))
+                    fi
+                fi
+            fi
+        done
+    fi
+    
+    if [[ "$dry_run" == "false" ]]; then
+        print_status "success" "Cleaned up orphans: $removed_containers containers, $removed_images images, $removed_volumes volumes"
+    fi
+}
+
+# =============================================================================
 # CONFIGURATION UTILITIES
 # =============================================================================
 
