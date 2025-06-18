@@ -14,7 +14,6 @@ services:
       - "127.0.0.1:8030:3000" # Node.js application port
     volumes:
       - ../../apps:/app
-      - ../../logs/node:/var/log/node
     working_dir: /app
     networks:
       - microservices-net

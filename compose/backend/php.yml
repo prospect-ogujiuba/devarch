@@ -21,7 +21,6 @@ services:
     labels:
       # Enable Traefik for PHP container
       - "traefik.enable=true"
-
       # Simplified PHP router for catch-all domains
       - "traefik.http.routers.php.rule=HostRegexp(`^[a-zA-Z0-9-]+\\.test$$`)"
       - "traefik.http.routers.php.entrypoints=websecure"

@@ -7,6 +7,7 @@ FOLDERS_TO_PROCESS=(
     "compose"
     "config" 
     "scripts"
+    "apps"
 )
 
 # Output directory
@@ -189,7 +190,7 @@ process_folder() {
 
 # Main function
 main() {
-    local project_name=Devarch
+    local project_name=$(basename "$(pwd)")
     
     echo "Smart Context Sync for: $project_name"
     echo "=================================="
@@ -217,8 +218,52 @@ main() {
         echo "## Git Status" >> "$index_file"
         echo "Branch: $(git branch --show-current 2>/dev/null || echo 'unknown')" >> "$index_file"
         echo "" >> "$index_file"
+        
         echo "Recent commits:" >> "$index_file"
-        git log --oneline -5 2>/dev/null >> "$index_file" || echo "No git history" >> "$index_file"
+        git log --oneline -20 2>/dev/null >> "$index_file" || echo "No git history" >> "$index_file"
+        echo "" >> "$index_file"
+        
+        # Working directory status
+        echo "Working directory:" >> "$index_file"
+        if git diff --quiet && git diff --cached --quiet; then
+            echo "Clean (no changes)" >> "$index_file"
+        else
+            echo "Has uncommitted changes:" >> "$index_file"
+            git status --porcelain 2>/dev/null | head -10 >> "$index_file"
+            if [[ $(git status --porcelain 2>/dev/null | wc -l) -gt 10 ]]; then
+                echo "... (showing first 10 of $(git status --porcelain 2>/dev/null | wc -l) changes)" >> "$index_file"
+            fi
+        fi
+        echo "" >> "$index_file"
+        
+        # Remote information
+        echo "Remote info:" >> "$index_file"
+        local remote_url=$(git remote get-url origin 2>/dev/null || echo "No remote origin")
+        echo "Origin: $remote_url" >> "$index_file"
+        
+        # Ahead/behind status
+        local ahead_behind=$(git rev-list --left-right --count origin/$(git branch --show-current)...HEAD 2>/dev/null || echo "0	0")
+        local behind=$(echo "$ahead_behind" | cut -f1)
+        local ahead=$(echo "$ahead_behind" | cut -f2)
+        if [[ "$ahead" != "0" || "$behind" != "0" ]]; then
+            echo "Sync status: $ahead commits ahead, $behind commits behind origin" >> "$index_file"
+        else
+            echo "Sync status: Up to date with origin" >> "$index_file"
+        fi
+        echo "" >> "$index_file"
+        
+        # Recent tags
+        local recent_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "No tags")
+        echo "Latest tag: $recent_tag" >> "$index_file"
+        
+        # Stash info
+        local stash_count=$(git stash list 2>/dev/null | wc -l)
+        if [[ "$stash_count" -gt 0 ]]; then
+            echo "Stashes: $stash_count stashed changes" >> "$index_file"
+            git stash list --oneline 2>/dev/null | head -3 >> "$index_file"
+        else
+            echo "Stashes: None" >> "$index_file"
+        fi
         echo "" >> "$index_file"
     fi
     

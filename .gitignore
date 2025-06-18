@@ -4,7 +4,7 @@ apps/**
 # But NOT the apps folder itself
 !apps/
 !apps/serverinfo/
-
+context
 # Other ignores
 .env
 .DS_Store
