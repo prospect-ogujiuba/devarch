@@ -1,0 +1,1185 @@
+# devarch - compose
+Generated: Wed Jun 18 13:42:22 EDT 2025
+Folder: compose
+
+## Folder Structure
+compose/ai/langflow.yml
+compose/ai/n8n.yml
+compose/analytics/cadvisor.yml
+compose/analytics/elasticsearch.yml
+compose/analytics/grafana.yml
+compose/analytics/kibana.yml
+compose/analytics/logstash.yml
+compose/analytics/matomo.yml
+compose/analytics/otel-collector.yml
+compose/analytics/prometheus.yml
+compose/backend/dotnet.yml
+compose/backend/go.yml
+compose/backend/node.yml
+compose/backend/php.yml
+compose/backend/python.yml
+compose/database/mariadb.yml
+compose/database/mongodb.yml
+compose/database/mysql.yml
+compose/database/postgres.yml
+compose/database/redis.yml
+compose/dbms/adminer.yml
+compose/dbms/metabase.yml
+compose/dbms/mongo-express.yml
+compose/dbms/nocodb.yml
+compose/dbms/pgadmin.yml
+compose/dbms/phpmyadmin.yml
+compose/dbms/redis-commander.yml
+compose/exporters/blackbox-exporter.yml
+compose/exporters/mongodb-exporter.yml
+compose/exporters/mysqld-exporter.yml
+compose/exporters/node-exporter.yml
+compose/exporters/postgres-exporter.yml
+compose/exporters/redis-exporter.yml
+compose/mail/mailpit.yml
+compose/management/portainer.yml
+compose/project/gitea.yml
+compose/proxy/nginx-proxy-manager.yml
+compose/proxy/traefik.yml
+
+## Files
+
+### compose/ai/langflow.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  langflow_data:
+
+services:
+  langflow:
+    container_name: langflow
+    image: langflowai/langflow:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:9110:7860" # Local access to Langflow
+    volumes:
+      - langflow_data:/app/data
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.langflow.rule=Host(`langflow.test`)"
+      - "traefik.http.routers.langflow.entrypoints=websecure"
+      - "traefik.http.routers.langflow.tls=true"
+      - "traefik.http.services.langflow.loadbalancer.server.port=7860"
+```
+
+### compose/ai/n8n.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  n8n_data:
+
+services:
+  n8n:
+    container_name: n8n
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:9100:5678" # Local access to n8n
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`n8n.test`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls=true"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+```
+
+### compose/analytics/cadvisor.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  cadvisor:
+    container_name: cadvisor
+    image: gcr.io/cadvisor/cadvisor:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8181:8080" # External 8181, internal 8080
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/containers/storage:/var/lib/containers/storage:ro # For Podman
+      - /dev/disk/:/dev/disk:ro
+    command:
+      - "--port=8080"
+      - "--housekeeping_interval=30s"
+      - "--store_container_labels=false"
+      - "--whitelisted_container_labels=io.kubernetes.container.name,io.kubernetes.pod.name,io.kubernetes.pod.namespace"
+    security_opt:
+      - label=disable
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cadvisor.rule=Host(`cadvisor.test`)"
+      - "traefik.http.routers.cadvisor.entrypoints=websecure"
+      - "traefik.http.routers.cadvisor.tls=true"
+      - "traefik.http.services.cadvisor.loadbalancer.server.port=8080"
+```
+
+### compose/analytics/elasticsearch.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  elasticsearch_data:
+
+services:
+  elasticsearch:
+    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "127.0.0.1:9130:9200" # Local access to Elasticsearch HTTP
+      - "127.0.0.1:9131:9300" # Local access to Elasticsearch transport
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.elasticsearch.rule=Host(`elasticsearch.test`)"
+      - "traefik.http.routers.elasticsearch.entrypoints=websecure"
+      - "traefik.http.routers.elasticsearch.tls=true"
+      - "traefik.http.services.elasticsearch.loadbalancer.server.port=9200"
+```
+
+### compose/analytics/grafana.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  grafana_data:
+
+services:
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    user: "0"
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:9001:3000" # Local access to Grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.test`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+```
+
+### compose/analytics/kibana.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:8.12.2
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:9120:5601" # Local access to Kibana
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kibana.rule=Host(`kibana.test`)"
+      - "traefik.http.routers.kibana.entrypoints=websecure"
+      - "traefik.http.routers.kibana.tls=true"
+      - "traefik.http.services.kibana.loadbalancer.server.port=5601"
+```
+
+### compose/analytics/logstash.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  logstash_data:
+
+services:
+  logstash:
+    container_name: logstash
+    image: docker.elastic.co/logstash/logstash:8.12.2
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:5000:5000" # TCP input
+      - "127.0.0.1:5044:5044" # Beats input
+      - "127.0.0.1:9600:9600" # API endpoint
+    volumes:
+      - ../../config/logstash:/usr/share/logstash/config:ro
+      - logstash_data:/usr/share/logstash/data
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.logstash.rule=Host(`logstash.test`)"
+      - "traefik.http.routers.logstash.entrypoints=websecure"
+      - "traefik.http.routers.logstash.tls=true"
+      - "traefik.http.services.logstash.loadbalancer.server.port=9600"
+```
+
+### compose/analytics/matomo.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  matomo_data:
+
+services:
+  matomo:
+    container_name: matomo
+    image: matomo:apache
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:9010:80" # Local access to Matomo
+    volumes:
+      - matomo_data:/var/www/html
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.matomo.rule=Host(`matomo.test`)"
+      - "traefik.http.routers.matomo.entrypoints=websecure"
+      - "traefik.http.routers.matomo.tls=true"
+      - "traefik.http.services.matomo.loadbalancer.server.port=80"
+```
+
+### compose/analytics/otel-collector.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    restart: unless-stopped
+    command:
+      - --config=/etc/otelcol-contrib/config.yaml
+    volumes:
+      # Fixed: correct path mapping for your file structure
+      - ../../config/otel-collector/otel-collector.yml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      # Bind to localhost for security
+      - "127.0.0.1:4317:4317"   # OTLP gRPC receiver
+      - "127.0.0.1:4318:4318"   # OTLP HTTP receiver
+      - "127.0.0.1:8889:8889"   # Prometheus metrics
+      - "127.0.0.1:13133:13133" # Health check endpoint
+      - "127.0.0.1:1777:1777"   # pprof endpoint
+    networks:
+      - microservices-net
+    # Add dependency to ensure Elasticsearch is running first
+    labels:
+      # Enable Traefik for OpenTelemetry Collector metrics endpoint
+      - "traefik.enable=true"
+      - "traefik.http.routers.otel-collector.rule=Host(`otel.test`)"
+      - "traefik.http.routers.otel-collector.entrypoints=websecure"
+      - "traefik.http.routers.otel-collector.tls=true"
+      - "traefik.http.services.otel-collector.loadbalancer.server.port=8889"```
+
+### compose/analytics/prometheus.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  prometheus_data:
+
+services:
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
+    user: "0"
+    ports:
+      - "127.0.0.1:9090:9090" # Local access to Prometheus
+    volumes:
+      - ../../config/prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.test`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls=true"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+```
+
+### compose/backend/dotnet.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  dotnet:
+    container_name: dotnet
+    build:
+      context: ../../config/dotnet
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8010:80" # HTTP
+      - "127.0.0.1:8011:443" # HTTPS
+    volumes:
+      - ../../apps:/app
+      - ../../logs/dotnet:/var/log/dotnet
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dotnet.rule=Host(`dotnet.test`)"
+      - "traefik.http.routers.dotnet.entrypoints=websecure"
+      - "traefik.http.routers.dotnet.tls=true"
+      - "traefik.http.services.dotnet.loadbalancer.server.port=80"
+```
+
+### compose/backend/go.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  go:
+    container_name: go
+    build:
+      context: ../../config/go
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8020:8080" # Go application port
+    volumes:
+      - ../../apps:/app
+      - ../../logs/go:/var/log/go
+    working_dir: /app
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.go.rule=Host(`go.test`)"
+      - "traefik.http.routers.go.entrypoints=websecure"
+      - "traefik.http.routers.go.tls=true"
+      - "traefik.http.services.go.loadbalancer.server.port=8080"
+```
+
+### compose/backend/node.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  node:
+    container_name: node
+    build:
+      context: ../../config/node
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8030:3000" # Node.js application port
+    volumes:
+      - ../../apps:/app
+      - ../../logs/node:/var/log/node
+    working_dir: /app
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.node.rule=Host(`node.test`)"
+      - "traefik.http.routers.node.entrypoints=websecure"
+      - "traefik.http.routers.node.tls=true"
+      - "traefik.http.services.node.loadbalancer.server.port=3000"
+```
+
+### compose/backend/php.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  php:
+    container_name: php
+    build:
+      context: ../../config/php
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+      - "5173:5173"
+    volumes:
+      - ../../apps:/var/www/html
+      - ../../scripts:/var/www/scripts
+      - ../../.env:/var/www/.env
+      - ../../config/php/php.ini:/usr/local/etc/php/php.ini:ro
+    networks:
+      - microservices-net
+    labels:
+      # Enable Traefik for PHP container
+      - "traefik.enable=true"
+
+      # Simplified PHP router for catch-all domains
+      - "traefik.http.routers.php.rule=HostRegexp(`^[a-zA-Z0-9-]+\\.test$$`)"
+      - "traefik.http.routers.php.entrypoints=websecure"
+      - "traefik.http.routers.php.tls=true"
+      - "traefik.http.routers.php.priority=1"
+      - "traefik.http.services.php.loadbalancer.server.port=8000"
+```
+
+### compose/backend/python.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  python:
+    container_name: python
+    build:
+      context: ../../config/python
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8040:8000" # Python application port (FastAPI/Django)
+    volumes:
+      - ../../apps:/app
+      - ../../logs/python:/var/log/python
+    working_dir: /app
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.python.rule=Host(`python.test`)"
+      - "traefik.http.routers.python.entrypoints=websecure"
+      - "traefik.http.routers.python.tls=true"
+      - "traefik.http.services.python.loadbalancer.server.port=8000"
+```
+
+### compose/database/mariadb.yml
+```
+version: '3.8'
+
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  mariadb_data:
+
+services:
+  mariadb:
+    container_name: mariadb
+    image: mariadb:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8501:3306"  # Local access to MariaDB
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MARIADB_DATABASE}
+      - MYSQL_USER=${MARIADB_USER}
+      - MYSQL_PASSWORD=${MARIADB_PASSWORD}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - microservices-net```
+
+### compose/database/mongodb.yml
+```
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  mongodb_data:
+  mongodb_dump:
+
+services:
+  mongodb:
+    container_name: mongodb
+    image: mongo:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8503:27017"  # Local access to MongoDB
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - mongodb_data:/data/db
+      - mongodb_dump:/dump
+    networks:
+      - microservices-net
+```
+
+### compose/database/mysql.yml
+```
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  mysql_data:
+
+services:
+  mysql:
+    container_name: mysql
+    image: mysql:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8505:3306"  # Local access to MySQL
+    volumes:
+      - mysql_data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+    networks:
+      - microservices-net```
+
+### compose/database/postgres.yml
+```
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  postgres_data:
+
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8502:5432" # Local access to PostgreSQL
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - microservices-net
+```
+
+### compose/database/redis.yml
+```
+version: "3.8"
+
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  redis_data:
+
+services:
+  redis:
+    container_name: redis
+    image: redis:alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8504:6379"  # Local access to Redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - microservices-net```
+
+### compose/dbms/adminer.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  adminer:
+    container_name: adminer
+    image: adminer:latest
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8082:8080" # Keep for direct access during testing
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adminer.rule=Host(`adminer.test`)"
+      - "traefik.http.routers.adminer.entrypoints=websecure"
+      - "traefik.http.routers.adminer.tls=true"
+      - "traefik.http.services.adminer.loadbalancer.server.port=8080"
+```
+
+### compose/dbms/metabase.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  metabase_data:
+
+services:
+  metabase:
+    container_name: metabase
+    image: metabase/metabase:latest
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8085:3000" # Local access to Metabase
+    volumes:
+      - metabase_data:/metabase-data
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.metabase.rule=Host(`metabase.test`)"
+      - "traefik.http.routers.metabase.entrypoints=websecure"
+      - "traefik.http.routers.metabase.tls=true"
+      - "traefik.http.services.metabase.loadbalancer.server.port=3000"
+```
+
+### compose/dbms/mongo-express.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  mongo-express:
+    container_name: mongo-express
+    image: mongo-express:latest
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8084:8081" # Local access to Mongo Express
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mongo-express.rule=Host(`mongodb.test`)"
+      - "traefik.http.routers.mongo-express.entrypoints=websecure"
+      - "traefik.http.routers.mongo-express.tls=true"
+      - "traefik.http.services.mongo-express.loadbalancer.server.port=8081"
+```
+
+### compose/dbms/nocodb.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  nocodb_data:
+
+services:
+  nocodb:
+    container_name: nocodb
+    image: nocodb/nocodb:latest
+    restart: unless-stopped
+    environment:
+      - NC_DB=pg://${POSTGRES_HOST}:${POSTGRES_PORT}?u=${POSTGRES_USER}&p=${POSTGRES_PASSWORD}&d=nocodb
+      - NC_ADMIN_EMAIL=${ADMIN_EMAIL}
+      - NC_ADMIN_PASSWORD=${ADMIN_PASSWORD_2}
+      - NC_SERVER_HOST=0.0.0.0
+      - NC_SERVER_PORT=8080
+      - NC_DISABLE_TELE=true
+      - NC_PUBLIC_URL=https://${NOCODB_DOMAIN}
+      - NC_REDIS_URL=redis://redis:6379
+      - NC_TOOL_DIR=/usr/app/data/
+      - NC_ATTACHMENT_FIELD_SIZE=20971520
+      - NC_SMTP_FROM=${ADMIN_EMAIL}
+      - NC_SMTP_HOST=mailpit
+      - NC_SMTP_PORT=1025
+      - NC_SMTP_USERNAME=
+      - NC_SMTP_PASSWORD=
+      - NC_SMTP_SECURE=false
+    ports:
+      - "127.0.0.1:8086:8080"
+    volumes:
+      - nocodb_data:/usr/app/data
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nocodb.rule=Host(`nocodb.test`)"
+      - "traefik.http.routers.nocodb.entrypoints=websecure"
+      - "traefik.http.routers.nocodb.tls=true"
+      - "traefik.http.services.nocodb.loadbalancer.server.port=8080"
+```
+
+### compose/dbms/pgadmin.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  pgadmin_data:
+
+services:
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8087:80" # Local access to pgAdmin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.test`)"
+      - "traefik.http.routers.pgadmin.entrypoints=websecure"
+      - "traefik.http.routers.pgadmin.tls=true"
+      - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
+```
+
+### compose/dbms/phpmyadmin.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  phpmyadmin:
+    container_name: phpmyadmin
+    image: phpmyadmin:latest
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8083:80" # Local access to phpMyAdmin
+    networks:
+      - microservices-net
+    volumes:
+      - ../../config/phpmyadmin/config.inc.php:/etc/phpmyadmin/config.user.inc.php:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.test`)"
+      - "traefik.http.routers.phpmyadmin.entrypoints=websecure"
+      - "traefik.http.routers.phpmyadmin.tls=true"
+      - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"
+```
+
+### compose/dbms/redis-commander.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  redis-commander:
+    container_name: redis-commander
+    image: rediscommander/redis-commander:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - HTTP_USER=${REDIS_COMMANDER_USER:-admin}
+      - HTTP_PASSWORD=${REDIS_COMMANDER_PASSWORD:-123456}
+      - ADDRESS=0.0.0.0
+      - PORT=8081
+    ports:
+      - "127.0.0.1:8088:8081" # Local access to Redis Commander
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redis-commander.rule=Host(`redis.test`)"
+      - "traefik.http.routers.redis-commander.entrypoints=websecure"
+      - "traefik.http.routers.redis-commander.tls=true"
+      - "traefik.http.services.redis-commander.loadbalancer.server.port=8081"
+```
+
+### compose/exporters/blackbox-exporter.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  blackbox-exporter:
+    container_name: blackbox-exporter
+    image: prom/blackbox-exporter:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9115:9115"
+    volumes:
+      - ../../config/prometheus/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.blackbox-exporter.rule=Host(`blackbox.test`)"
+      - "traefik.http.routers.blackbox-exporter.entrypoints=websecure"
+      - "traefik.http.routers.blackbox-exporter.tls=true"
+      - "traefik.http.services.blackbox-exporter.loadbalancer.server.port=9115"
+    command:
+      - "--config.file=/etc/blackbox_exporter/config.yml"
+```
+
+### compose/exporters/mongodb-exporter.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  mongodb-exporter:
+    container_name: mongodb-exporter
+    image: bitnami/mongodb-exporter:latest
+    restart: unless-stopped
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017
+    ports:
+      - "127.0.0.1:9216:9216"
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mongodb-exporter.rule=Host(`mongodb-exporter.test`)"
+      - "traefik.http.routers.mongodb-exporter.entrypoints=websecure"
+      - "traefik.http.routers.mongodb-exporter.tls=true"
+      - "traefik.http.services.mongodb-exporter.loadbalancer.server.port=9216"
+```
+
+### compose/exporters/mysqld-exporter.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  mysqld-exporter:
+    container_name: mysqld-exporter
+    image: prom/mysqld-exporter:v0.15.1
+    restart: unless-stopped
+    environment:
+      - MYSQLD_EXPORTER_PASSWORD=123456
+    command:
+      - "--mysqld.address=mariadb:3306"
+      - "--mysqld.username=root"
+      - "--web.listen-address=:9104"
+    ports:
+      - "127.0.0.1:9104:9104"
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mysqld-exporter.rule=Host(`mysql-exporter.test`)"
+      - "traefik.http.routers.mysqld-exporter.entrypoints=websecure"
+      - "traefik.http.routers.mysqld-exporter.tls=true"
+      - "traefik.http.services.mysqld-exporter.loadbalancer.server.port=9104"
+```
+
+### compose/exporters/node-exporter.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  node-exporter:
+    container_name: node-exporter
+    image: prom/node-exporter:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9101:9100" # External 9101, internal 9100
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.rootfs=/rootfs"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+      - "--web.listen-address=:9100"
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.node-exporter.rule=Host(`node-exporter.test`)"
+      - "traefik.http.routers.node-exporter.entrypoints=websecure"
+      - "traefik.http.routers.node-exporter.tls=true"
+      - "traefik.http.services.node-exporter.loadbalancer.server.port=9100"
+```
+
+### compose/exporters/postgres-exporter.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  postgres-exporter:
+    container_name: postgres-exporter
+    image: prometheuscommunity/postgres-exporter:latest
+    restart: unless-stopped
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:123456@postgres:5432/postgres?sslmode=disable
+      - PG_EXPORTER_WEB_LISTEN_ADDRESS=:9187
+      - PG_EXPORTER_EXTEND_QUERY_PATH=/etc/postgres_exporter/queries.yaml
+    ports:
+      - "127.0.0.1:9187:9187"
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.postgres-exporter.rule=Host(`postgres-exporter.test`)"
+      - "traefik.http.routers.postgres-exporter.entrypoints=websecure"
+      - "traefik.http.routers.postgres-exporter.tls=true"
+      - "traefik.http.services.postgres-exporter.loadbalancer.server.port=9187"
+```
+
+### compose/exporters/redis-exporter.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+services:
+  redis-exporter:
+    container_name: redis-exporter
+    image: oliver006/redis_exporter:latest
+    restart: unless-stopped
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+      - REDIS_EXPORTER_WEB_LISTEN_ADDRESS=:9121
+    ports:
+      - "127.0.0.1:9121:9121"
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redis-exporter.rule=Host(`redis-exporter.test`)"
+      - "traefik.http.routers.redis-exporter.entrypoints=websecure"
+      - "traefik.http.routers.redis-exporter.tls=true"
+      - "traefik.http.services.redis-exporter.loadbalancer.server.port=9121"
+```
+
+### compose/mail/mailpit.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  mailpit_data:
+
+services:
+  mailpit:
+    container_name: mailpit
+    image: axllent/mailpit
+    env_file: ../../.env
+    volumes:
+      - mailpit_data:/data
+    ports:
+      - "127.0.0.1:9201:1025" # Local access to SMTP
+      - "127.0.0.1:9200:8025" # Local access to web UI
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mailpit.rule=Host(`mailpit.test`)"
+      - "traefik.http.routers.mailpit.entrypoints=websecure"
+      - "traefik.http.routers.mailpit.tls=true"
+      - "traefik.http.services.mailpit.loadbalancer.server.port=8025"
+```
+
+### compose/management/portainer.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  portainer_data:
+
+services:
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:lts
+    privileged: true
+    ports:
+      - "127.0.0.1:9443:9443" # Local HTTPS access to Portainer
+      - "127.0.0.1:8001:8000" # Local access to TCP tunnel for Edge agents
+      - "127.0.0.1:9000:9000" # Uncomment for HTTP access (legacy)
+    volumes:
+      - /run/podman/podman.sock:/var/run/docker.sock
+      - portainer_data:/data
+      - ../../config/portainer/password:/run/secrets/portainer_password:ro
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.test`)"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls=true"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+    command:
+      - --admin-password-file=/run/secrets/portainer_password
+```
+
+### compose/project/gitea.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  gitea_data:
+
+services:
+  gitea:
+    container_name: gitea
+    image: gitea/gitea:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:9210:3000" # Local access to Gitea web
+      - "2222:22" # SSH access for Git
+    volumes:
+      - gitea_data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gitea.rule=Host(`gitea.test`)"
+      - "traefik.http.routers.gitea.entrypoints=websecure"
+      - "traefik.http.routers.gitea.tls=true"
+      - "traefik.http.services.gitea.loadbalancer.server.port=3000"
+```
+
+### compose/proxy/nginx-proxy-manager.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  npm_data:
+  npm_letsencrypt:
+
+services:
+  nginx-proxy-manager:
+    container_name: nginx-proxy-manager
+    build:
+      context: ../../config/nginx
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"
+    volumes:
+      - ../../apps:/var/www/html
+      - ../../config/nginx/custom:/data/nginx/custom
+      - /etc/localtime:/etc/localtime:ro
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nginx-proxy-manager.rule=Host(`nginx.test`)"
+      - "traefik.http.routers.nginx-proxy-manager.entrypoints=websecure"
+      - "traefik.http.routers.nginx-proxy-manager.tls=true"
+      - "traefik.http.services.nginx-proxy-manager.loadbalancer.server.port=81"
+```
+
+### compose/proxy/traefik.yml
+```
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  traefik_certs:
+
+services:
+  traefik:
+    image: docker.io/library/traefik:v3.4.1
+    container_name: traefik
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "80:80" # HTTP
+      - "443:443" # HTTPS
+      - "8080:8080" # Dashboard
+    volumes:
+      - ../../config/traefik:/etc/traefik/:ro
+      - ../../config/traefik/certs/:/var/traefik/certs/:rw
+      - /run/podman/podman.sock:/var/run/podman/podman.sock:ro
+    networks:
+      - microservices-net
+    labels:
+      # Enable Traefik for the dashboard
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.test`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.tls=true"
+      - "traefik.http.services.traefik-dashboard.loadbalancer.server.port=8080"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"```
+
+---
+Files processed: 38

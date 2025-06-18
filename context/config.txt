@@ -1,0 +1,1618 @@
+# devarch - config
+Generated: Wed Jun 18 13:42:22 EDT 2025
+Folder: config
+
+## Folder Structure
+config/dotnet/Dockerfile
+config/go/Dockerfile
+config/logstash/logstash.yml
+config/logstash/pipeline.conf
+config/nginx/Dockerfile
+config/nginx/custom/events.conf
+config/nginx/custom/http.conf
+config/nginx/custom/http_top.conf
+config/nginx/custom/root_top.conf
+config/nginx/custom/server_proxy.conf
+config/node/Dockerfile
+config/otel-collector/otel-collector.yml
+config/php/Dockerfile
+config/php/php.ini
+config/phpmyadmin/config.inc.php
+config/portainer/password
+config/prometheus/.my.cnf
+config/prometheus/blackbox.yml
+config/prometheus/prometheus.yml
+config/prometheus/rules/alerts.yml
+config/python/Dockerfile
+config/traefik/certs/acme.json
+config/traefik/certs/local.crt
+config/traefik/certs/local.key
+config/traefik/traefik.yml
+
+## Files
+
+### config/dotnet/Dockerfile
+```
+FROM mcr.microsoft.com/dotnet/sdk:8.0
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    wget \
+    zsh \
+    vim \
+    nano \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Oh My Zsh
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" || true
+
+# Install .NET tools
+RUN dotnet tool install --global dotnet-ef && \
+    dotnet tool install --global dotnet-aspnet-codegenerator && \
+    dotnet tool install --global dotnet-dev-certs && \
+    dotnet tool install --global dotnet-watch
+
+# Add tools to PATH
+ENV PATH="$PATH:/root/.dotnet/tools"
+
+# Set the working directory
+WORKDIR /var/www/html
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash app || echo "User app already exists"
+RUN chown -R app:app /var/www/html
+
+# Expose common .NET ports
+EXPOSE 80 443 5000 5001 8080
+
+# Install Python for a simple HTTP server (most reliable approach)
+RUN apt-get update && apt-get install -y python3 && rm -rf /var/lib/apt/lists/*
+
+# Use Python's built-in HTTP server - simple and reliable
+CMD ["python3", "-m", "http.server", "80"]```
+
+### config/go/Dockerfile
+```
+FROM golang:1.21-alpine AS builder
+
+# Install system dependencies
+RUN apk add --no-cache \
+    git \
+    curl \
+    bash \
+    zsh \
+    vim \
+    nano \
+    build-base
+
+# Install Oh My Zsh
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" || true
+
+# Install Go development tools
+RUN go install github.com/cosmtrek/air@v1.49.0 && \
+    go install github.com/go-delve/delve/cmd/dlv@v1.21.2 && \
+    go install golang.org/x/tools/cmd/goimports@v0.13.0 && \
+    go install honnef.co/go/tools/cmd/staticcheck@2023.1.6
+
+# Create a simple Go file server
+RUN mkdir -p /app
+WORKDIR /app
+
+# Create the Go file server using echo instead of heredoc
+RUN echo 'package main' > main.go && \
+    echo '' >> main.go && \
+    echo 'import (' >> main.go && \
+    echo '    "fmt"' >> main.go && \
+    echo '    "log"' >> main.go && \
+    echo '    "net/http"' >> main.go && \
+    echo '    "os"' >> main.go && \
+    echo ')' >> main.go && \
+    echo '' >> main.go && \
+    echo 'func main() {' >> main.go && \
+    echo '    port := os.Getenv("PORT")' >> main.go && \
+    echo '    if port == "" {' >> main.go && \
+    echo '        port = "8080"' >> main.go && \
+    echo '    }' >> main.go && \
+    echo '' >> main.go && \
+    echo '    // Serve files from /var/www/html' >> main.go && \
+    echo '    fs := http.FileServer(http.Dir("/var/www/html"))' >> main.go && \
+    echo '    http.Handle("/", fs)' >> main.go && \
+    echo '' >> main.go && \
+    echo '    fmt.Printf("Go file server running on port %s\\n", port)' >> main.go && \
+    echo '    fmt.Println("Serving files from /var/www/html")' >> main.go && \
+    echo '    ' >> main.go && \
+    echo '    log.Fatal(http.ListenAndServe(":"+port, nil))' >> main.go && \
+    echo '}' >> main.go
+
+# Build the file server
+RUN go mod init fileserver && go build -o /usr/local/bin/fileserver main.go
+
+# Verify the binary exists and is executable
+RUN ls -la /usr/local/bin/fileserver && chmod +x /usr/local/bin/fileserver
+
+# Create app directory
+WORKDIR /var/www/html
+
+# Create non-root user
+RUN adduser -D -s /bin/bash app
+RUN chown -R app:app /var/www/html
+
+# Expose common Go ports
+EXPOSE 8080 8000 3000 9000
+
+# Run the Go file server
+CMD ["fileserver"]```
+
+### config/logstash/logstash.yml
+```
+http.host: "0.0.0.0"
+xpack.monitoring.elasticsearch.hosts: [ "http://elasticsearch:9200" ]
+
+# Pipeline configuration
+path.config: /usr/share/logstash/pipeline
+config.reload.automatic: true
+config.reload.interval: 3s
+
+# Logging
+log.level: info
+path.logs: /var/log/logstash```
+
+### config/logstash/pipeline.conf
+```
+input {
+  beats {
+    port => 5044
+  }
+  
+  tcp {
+    port => 5000
+  }
+  
+  # Example: logs from your applications
+  # file {
+  #   path => "/var/log/apps/*/*.log"
+  #   start_position => "beginning"
+  #   sincedb_path => "/dev/null"
+  # }
+}
+
+filter {
+  # Parse JSON logs if they exist
+  if [message] =~ /^\{/ {
+    json {
+      source => "message"
+    }
+  }
+  
+  # Add timestamp parsing
+  if [timestamp] {
+    date {
+      match => [ "timestamp", "ISO8601" ]
+    }
+  }
+  
+  # Tag logs by source
+  if [fields][service] {
+    mutate {
+      add_tag => [ "%{[fields][service]}" ]
+    }
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => ["elasticsearch:9200"]
+    index => "logstash-%{+YYYY.MM.dd}"
+  }
+  
+  # Debug output (remove in production)
+  stdout {
+    codec => rubydebug
+  }
+}```
+
+### config/nginx/Dockerfile
+```
+FROM jc21/nginx-proxy-manager:latest
+
+# Install required packages
+RUN apt-get update && apt-get install -y \
+    zsh \
+    git \
+    curl \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Oh My Zsh and set Zsh as default shell
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" \
+    && chsh -s $(which zsh)```
+
+### config/nginx/custom/events.conf
+```
+worker_connections 1024;
+```
+
+### config/nginx/custom/http.conf
+```
+# Frontend/Backend Applications (Default Server Block)
+server {
+    listen 80;
+    http2 on;
+    listen 443 ssl;
+    server_name nginx.test;
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/wildcard.test/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/wildcard.test/privkey.pem;
+
+    # Force HTTPS redirect
+    if ($scheme != "https" ) {
+        return 301 https://$host$request_uri;
+    }
+
+    # Add recommended timeout settings
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+
+    location / {
+        # Change from localhost to the container name
+        proxy_pass http://nginx-proxy-manager:81;
+        proxy_http_version 1.1;
+
+        # Keep your existing header configuration
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /api {
+        # Change from localhost to the container name
+        proxy_pass http://nginx-proxy-manager:81/api;
+        proxy_http_version 1.1;
+
+        # Keep your existing header configuration
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    error_log /var/log/nginx/nginx-admin.error.log;
+    access_log /var/log/nginx/nginx-admin.access.log;
+}
+
+# Analytics & Monitoring Stack
+server {
+    listen 80;
+    http2 on;
+    listen 443 ssl;
+    server_name matomo.test;
+
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/wildcard.test/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/wildcard.test/privkey.pem;
+
+    # Force HTTPS redirect
+    if ($scheme != "https" ) {
+        return 301 https://$host$request_uri;
+    }
+
+    location / {
+        proxy_pass http://matomo:80;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Extended timeouts for analytics
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+
+        # Buffering settings for large analytics data
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
+    }
+
+    # Allow larger uploads for log imports
+    client_max_body_size 100M;
+
+    error_log /var/log/nginx/matomo.error.log;
+    access_log /var/log/nginx/matomo.access.log;
+}
+
+server {
+    listen 80;
+    http2 on;
+    listen 443 ssl;
+    server_name metabase.test;
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/wildcard.test/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/wildcard.test/privkey.pem;
+
+    # Force HTTPS redirect
+    if ($scheme != "https" ) {
+        return 301 https://$host$request_uri;
+    }
+
+    location / {
+        proxy_pass http://metabase:3000;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Increased timeouts
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+
+        # Buffering settings
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
+
+        # Disable buffering for long polling
+        proxy_buffering off;
+    }
+
+    client_max_body_size 100M;
+
+    error_log /var/log/nginx/metabase.error.log;
+    access_log /var/log/nginx/metabase.access.log;
+}
+
+server {
+    listen 80;
+    http2 on;
+    listen 443 ssl;
+    server_name grafana.test;
+
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/wildcard.test/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/wildcard.test/privkey.pem;
+
+    # Force HTTPS redirect
+    if ($scheme != "https" ) {
+        return 301 https://$host$request_uri;
+    }
+
+    location / {
+        proxy_pass http://grafana:3000;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    error_log /var/log/nginx/grafana.error.log;
+    access_log /var/log/nginx/grafana.access.log;
+}
+
+server {
+    listen 80;
+    http2 on;
+    listen 443 ssl;
+    server_name prometheus.test;
+
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/wildcard.test/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/wildcard.test/privkey.pem;
+
+    # Force HTTPS redirect
+    if ($scheme != "https" ) {
+        return 301 https://$host$request_uri;
+    }
+
+    location / {
+        proxy_pass http://prometheus:9090;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    error_log /var/log/nginx/prometheus.error.log;
+    access_log /var/log/nginx/prometheus.access.log;
+}
+
+# Database Management Tools
+server {
+    listen 80;
+    http2 on;
+    listen 443 ssl;
+    server_name adminer.test;
+
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/wildcard.test/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/wildcard.test/privkey.pem;
+
+    # Force HTTPS redirect
+    if ($scheme != "https" ) {
+        return 301 https://$host$request_uri;
+    }
+
+    location / {
+        proxy_pass http://adminer:8080;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    error_log /var/log/nginx/adminer.error.log;
+    access_log /var/log/nginx/adminer.access.log;
+}
+
+server {
+    listen 80;
+    http2 on;
+    listen 443 ssl;
+    server_name phpmyadmin.test;
+
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/wildcard.test/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/wildcard.test/privkey.pem;
+
+    # Force HTTPS redirect
+    if ($scheme != "https" ) {
+        return 301 https://$host$request_uri;
+    }
+
+    location / {
+        proxy_pass http://phpmyadmin:80;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    error_log /var/log/nginx/phpmyadmin.error.log;
+    access_log /var/log/nginx/phpmyadmin.access.log;
+}
+
+server {
+    listen 80;
+    http2 on;
+    listen 443 ssl;
+    server_name mongodb.test;
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/wildcard.test/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/wildcard.test/privkey.pem;
+
+    # Force HTTPS redirect
+    if ($scheme != "https" ) {
+        return 301 https://$host$request_uri;
+    }
+
+    location / {
+        proxy_pass http://mongo-express:5432;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Timeouts for MongoDB operations
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        
+        # Buffering settings for large queries
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
+    }
+
+    # Allow larger uploads for bulk operations
+    client_max_body_size 100M;
+
+    error_log /var/log/nginx/mongodb.error.log;
+    access_log /var/log/nginx/mongodb.access.log;
+}
+
+server {
+    listen 80;
+    http2 on;
+    listen 443 ssl;
+    server_name pgadmin.test;
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/wildcard.test/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/wildcard.test/privkey.pem;
+
+    # Force HTTPS redirect
+    if ($scheme != "https" ) {
+        return 301 https://$host$request_uri;
+    }
+
+    location / {
+        proxy_pass http://pgadmin:80;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Timeouts for PgAdmin operations
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        
+        # Buffering settings for large queries
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
+    }
+
+    # Allow larger uploads for bulk operations
+    client_max_body_size 100M;
+
+    error_log /var/log/nginx/pgadmin.error.log;
+    access_log /var/log/nginx/pgadmin.access.log;
+}
+
+# Redis Commander
+server {
+    listen 80;
+    http2 on;
+    listen 443 ssl;
+    server_name redis.test;
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/wildcard.test/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/wildcard.test/privkey.pem;
+
+    # Force HTTPS redirect
+    if ($scheme != "https" ) {
+        return 301 https://$host$request_uri;
+    }
+
+    location / {
+        proxy_pass http://redis-commander:8081;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Timeouts for Redis operations
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        
+        # Buffering settings for large queries
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
+    }
+
+    # Allow larger uploads for bulk operations
+    client_max_body_size 50M;
+
+    error_log /var/log/nginx/redis-commander.error.log;
+    access_log /var/log/nginx/redis-commander.access.log;
+}
+
+# Database Tools & Interfaces
+server {
+    listen 80;
+    http2 on;
+    listen 443 ssl;
+    server_name nocodb.test;
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/wildcard.test/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/wildcard.test/privkey.pem;
+
+    # Force HTTPS redirect
+    if ($scheme != "https" ) {
+        return 301 https://$host$request_uri;
+    }
+
+    # Allow large file uploads
+    client_max_body_size 100M;
+
+    location / {
+        proxy_pass http://nocodb:8080;
+        proxy_http_version 1.1;
+
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        # Timeouts for data operations
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        
+        # Buffering settings
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
+    }
+
+    error_log /var/log/nginx/nocodb.error.log;
+    access_log /var/log/nginx/nocodb.access.log;
+}
+
+
+# Mail Testing Stack
+server {
+    listen 80;
+    http2 on;
+    listen 443 ssl;
+    server_name mailpit.test;
+
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/wildcard.test/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/wildcard.test/privkey.pem;
+
+    # Force HTTPS redirect
+    if ($scheme != "https" ) {
+        return 301 https://$host$request_uri;
+    }
+
+    location / {
+        proxy_pass http://mailpit:8025;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    error_log /var/log/nginx/mailpit.error.log;
+    access_log /var/log/nginx/mailpit.access.log;
+}
+
+#HTML, CSS, JS and PHP Applications
+server {
+    listen 80 default_server;
+    http2 on;
+    listen 443 ssl default_server;
+    server_name ~^(?<appname>[^.]+)\.test$;
+
+... (file truncated - showing first 500 of 714 lines)
+```
+
+### config/nginx/custom/http_top.conf
+```
+# Global SSL parameters that should be available to all virtual hosts
+ssl_session_timeout 1d;
+ssl_session_cache shared:SSL:50m;
+ssl_session_tickets off;
+
+# Modern SSL configuration
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+
+# OCSP Stapling
+ssl_stapling on;
+ssl_stapling_verify on;
+resolver_timeout 2s;
+
+# Define an upstream for PHP-FPM
+upstream php-upstream {
+    server php:9000;
+}
+
+# Define upstream for NocoDB
+upstream nocodb-upstream {
+    server nocodb:8080;
+}
+```
+
+### config/nginx/custom/server_proxy.conf
+```
+# Add security headers for SSL-enabled proxy hosts
+add_header Strict-Transport-Security "max-age=63072000" always;
+add_header X-Frame-Options "SAMEORIGIN";
+add_header X-XSS-Protection "1; mode=block";
+add_header X-Content-Type-Options "nosniff";
+
+# Common proxy settings for all proxy hosts
+proxy_set_header Host $host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+
+# WebSocket support
+proxy_set_header Upgrade $http_upgrade;
+proxy_set_header Connection "upgrade";
+
+# Default timeouts
+proxy_connect_timeout 60s;
+proxy_send_timeout 60s;
+proxy_read_timeout 60s;
+```
+
+### config/node/Dockerfile
+```
+FROM node:lts-alpine
+
+# Install system dependencies
+RUN apk add --no-cache \
+    git \
+    curl \
+    bash \
+    zsh \
+    vim \
+    nano
+
+# Install Oh My Zsh
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" || true
+
+# Install global development tools
+RUN npm install -g \
+    nodemon \
+    pm2 \
+    @nestjs/cli \
+    create-react-app \
+    create-next-app \
+    express-generator \
+    typescript \
+    ts-node \
+    serve
+
+# Create app directory
+WORKDIR /var/www/html
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
+# Set up directory permissions
+RUN chown -R nextjs:nodejs /var/www/html
+
+# Expose common Node.js ports
+EXPOSE 3000 3001 8080 8000
+
+# Start a simple HTTP server that can serve any directory
+# This keeps the container running and ready to serve files
+CMD ["serve", "-s", ".", "-p", "3000", "--cors"]```
+
+### config/otel-collector/otel-collector.yml
+```
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+  memory_limiter:
+    limit_mib: 256
+    check_interval: 1s
+
+exporters:
+  # Just use debug - it ALWAYS works
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug]
+  
+  telemetry:
+    logs:
+      level: info
+  
+  extensions: [health_check]
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133```
+
+### config/php/Dockerfile
+```
+# Use the official PHP 8.3 FPM base image with Debian bookworm
+FROM php:8.3-fpm
+
+# Arguments for versions (makes it easier to update)
+ARG NODE_VERSION=lts
+ARG MAILPIT_VERSION=v1.22.3
+ARG COMPOSER_VERSION=latest
+
+# Install dependencies and PHP extensions in a single layer to reduce image size
+RUN apt-get update && apt-get install -y \
+    sudo \
+    default-mysql-client \
+    vim \
+    nano \
+    git \
+    curl \
+    wget \
+    zsh \
+    libpng-dev \
+    libjpeg-dev \
+    libwebp-dev \
+    libfreetype6-dev \
+    libonig-dev \
+    libzip-dev \
+    libpq-dev \
+    unzip \
+    ca-certificates \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j$(nproc) \
+        gd \
+        mbstring \
+        zip \
+        opcache \
+        pdo \
+        pdo_mysql \
+        pdo_pgsql \
+        mysqli \
+    && pecl install redis mongodb \
+    && docker-php-ext-enable redis opcache pdo_mysql pdo_pgsql mongodb \
+    # Install Node.js in the same layer
+    && curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g npm@latest \
+    # Cleanup
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /tmp/pear
+
+    
+# Install and configure Composer
+COPY --from=composer:${COMPOSER_VERSION} /usr/bin/composer /usr/bin/composer
+ENV COMPOSER_ALLOW_SUPERUSER=1
+ENV PATH="/root/.composer/vendor/bin:${PATH}"
+    
+# Install development tools
+RUN composer global require laravel/installer && \
+    curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
+    chmod +x wp-cli.phar && \
+    mv wp-cli.phar /usr/local/bin/wp
+
+# Install Mailpit
+RUN wget https://github.com/axllent/mailpit/releases/download/${MAILPIT_VERSION}/mailpit-linux-amd64.tar.gz \
+    && tar xzf mailpit-linux-amd64.tar.gz \
+    && mv mailpit /usr/local/bin/ \
+    && chmod +x /usr/local/bin/mailpit \
+    && rm mailpit-linux-amd64.tar.gz \
+    && mailpit version
+
+# Install Oh My Zsh and set Zsh as default shell
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" \
+    && chsh -s $(which zsh)
+
+# Set permissions for the container user
+RUN chown -R www-data:www-data /var/www/html
+
+# Set the working directory
+WORKDIR /var/www/html
+
+# Expose ports for PHP-FPM and Mailpit
+EXPOSE 9000 8025 1025
+
+# Default command
+CMD ["php-fpm"]```
+
+### config/php/php.ini
+```
+[PHP]
+; Development settings
+display_errors = On
+display_startup_errors = On
+error_reporting = E_ALL
+log_errors = On
+memory_limit = 512M
+max_execution_time = 300
+upload_max_filesize = 64M
+post_max_size = 64M
+
+[opcache]
+opcache.enable = 1
+opcache.memory_consumption = 256
+opcache.interned_strings_buffer = 16
+opcache.max_accelerated_files = 10000
+opcache.revalidate_freq = 0
+opcache.validate_timestamps = 1
+opcache.save_comments = 1
+opcache.enable_cli = 1
+
+[xdebug]
+xdebug.mode = develop,debug
+xdebug.client_host = host.docker.internal
+xdebug.start_with_request = yes
+xdebug.log_level = 0
+
+[mail]
+# sendmail_path = "/usr/local/bin/mhsendmail --smtp-addr=mailhog:1025"
+; Alternative mail configuration for Mailpit
+sendmail_path = "/usr/local/bin/mailpit sendmail --smtp-addr=mailpit:1025"```
+
+### config/phpmyadmin/config.inc.php
+```
+<?php
+$i = 0;
+
+// MySQL container
+$i++;
+$cfg['Servers'][$i]['host'] = 'mysql';
+$cfg['Servers'][$i]['auth_type'] = 'cookie';
+$cfg['Servers'][$i]['verbose'] = 'MySQL';
+
+// MariaDB container
+$i++;
+$cfg['Servers'][$i]['host'] = 'mariadb';
+$cfg['Servers'][$i]['auth_type'] = 'cookie';
+$cfg['Servers'][$i]['verbose'] = 'MariaDB';
+```
+
+### config/portainer/password
+```
+123456```
+
+### config/prometheus/.my.cnf
+```
+[client]
+user=root
+password=123456
+host=mariadb
+port=3306
+
+[mysql]
+user=root
+password=123456
+host=mariadb
+port=3306
+
+[mysqldump]
+user=root
+password=123456
+host=mariadb
+port=3306```
+
+### config/prometheus/blackbox.yml
+```
+modules:
+  http_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: []  # Defaults to 2xx
+      method: GET
+      headers:
+        Host: "microservices.test"
+        Accept-Language: "en-US"
+      no_follow_redirects: false
+      fail_if_ssl: false
+      fail_if_not_ssl: false
+      tls_config:
+        insecure_skip_verify: true
+      preferred_ip_protocol: "ip4"
+
+  http_post_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      method: POST
+      headers:
+        Content-Type: "application/json"
+      body: '{}'
+
+  tcp_connect:
+    prober: tcp
+    timeout: 5s
+
+  pop3s_banner:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      query_response:
+        - expect: "^+OK"
+      tls: true
+      tls_config:
+        insecure_skip_verify: true
+
+  grpc:
+    prober: grpc
+    timeout: 5s
+    grpc:
+      tls: true
+      tls_config:
+        insecure_skip_verify: true
+
+  grpc_plain:
+    prober: grpc
+    timeout: 5s
+    grpc:
+      tls: false
+      service: "grpc.health.v1.Health"
+
+  ssh_banner:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      query_response:
+        - expect: "^SSH-2.0-"
+
+  irc_banner:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      query_response:
+        - send: "NICK prober"
+        - send: "USER prober prober prober :prober"
+        - expect: "PING :([^ ]+)"
+          send: "PONG :${1}"
+        - expect: "^:[^ ]+ 001"
+
+  icmp:
+    prober: icmp
+    timeout: 5s
+    icmp:
+      preferred_ip_protocol: "ip4"
+      source_ip_address: "127.0.0.1"```
+
+### config/prometheus/prometheus.yml
+```
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Grafana
+  - job_name: "grafana"
+    static_configs:
+      - targets: ["grafana:3000"]
+
+  # Traefik reverse proxy
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['traefik:8080']
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    scrape_timeout: 10s
+    relabel_configs:
+      - target_label: service
+        replacement: traefik-proxy
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: microservices-traefik
+
+  # System and Infrastructure Monitoring
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  # Database Exporters
+  - job_name: 'mysqld-exporter'
+    static_configs:
+      - targets: ['mysqld-exporter:9104']
+
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  - job_name: 'mongodb-exporter'
+    static_configs:
+      - targets: ['mongodb-exporter:9216']
+
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # Network and Service Monitoring
+  - job_name: 'blackbox-exporter'
+    static_configs:
+      - targets: ['blackbox-exporter:9115']
+
+  # HTTP probes for web services - Complete list of all sites
+  - job_name: 'blackbox-http'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        # Reverse Proxy & Management
+        - https://nginx.test
+        - https://traefik.test
+        
+        # Database Management Tools
+        - https://adminer.test
+        - https://phpmyadmin.test
+        - https://mongodb.test
+        - https://metabase.test
+        - https://nocodb.test
+        - https://pgadmin.test
+        - https://redis.test
+        
+        # Backend Application Services
+        - https://dotnet.test
+        - https://go.test
+        - https://node.test
+        - https://python.test
+        
+        # Analytics & Monitoring Stack
+        - https://elasticsearch.test
+        - https://kibana.test
+        - https://logstash.test
+        - https://grafana.test
+        - https://prometheus.test
+        - https://matomo.test
+        
+        # AI & Workflow Services, Mail & Project Management
+        - https://langflow.test
+        - https://n8n.test
+        - https://mailpit.test
+        - https://gitea.test
+        
+        # Monitoring Exporters & Tools
+        - https://blackbox.test
+        - https://mongodb-exporter.test
+        - https://mysql-exporter.test
+        - https://node-exporter.test
+        - https://postgres-exporter.test
+        - https://redis-exporter.test
+        - https://cadvisor.test
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Backend application services (using container names and internal ports)
+  - job_name: 'microservices-backend'
+    static_configs:
+      - targets:
+          - 'dotnet:80'      # .NET Core service
+          - 'go:8080'        # Go service
+          - 'node:3000'      # Node.js service
+          - 'python:8000'    # Python service
+          - 'php:8000'       # PHP service
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: 'dotnet:.*'
+        target_label: service
+        replacement: 'dotnet-backend'
+      - source_labels: [__address__]
+        regex: 'go:.*'
+        target_label: service
+        replacement: 'go-backend'
+      - source_labels: [__address__]
+        regex: 'node:.*'
+        target_label: service
+        replacement: 'nodejs-backend'
+      - source_labels: [__address__]
+        regex: 'python:.*'
+        target_label: service
+        replacement: 'python-backend'
+      - source_labels: [__address__]
+        regex: 'php:.*'
+        target_label: service
+        replacement: 'php-backend'
+
+  # Database services (internal container access)
+  - job_name: 'database-services'
+    static_configs:
+      - targets:
+          - 'mariadb:3306'
+          - 'mysql:3306'
+          - 'postgres:5432'
+          - 'mongodb:27017'
+          - 'redis:6379'
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+    scrape_timeout: 15s
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: 'mariadb:.*'
+        target_label: service
+        replacement: 'mariadb'
+      - source_labels: [__address__]
+        regex: 'mysql:.*'
+        target_label: service
+        replacement: 'mysql'
+      - source_labels: [__address__]
+        regex: 'postgres:.*'
+        target_label: service
+        replacement: 'postgres'
+      - source_labels: [__address__]
+        regex: 'mongodb:.*'
+        target_label: service
+        replacement: 'mongodb'
+      - source_labels: [__address__]
+        regex: 'redis:.*'
+        target_label: service
+        replacement: 'redis'
+      - target_label: service_type
+        replacement: 'database'
+
+  # Analytics and observability stack (using container names)
+  - job_name: 'analytics-stack'
+    static_configs:
+      - targets:
+          - 'grafana:3000'
+          - 'elasticsearch:9200'
+          - 'kibana:5601'
+          - 'logstash:9600'
+          - 'matomo:80'
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: 'grafana:.*'
+        target_label: service
+        replacement: 'grafana'
+      - source_labels: [__address__]
+        regex: 'elasticsearch:.*'
+        target_label: service
+        replacement: 'elasticsearch'
+      - source_labels: [__address__]
+        regex: 'kibana:.*'
+        target_label: service
+        replacement: 'kibana'
+      - source_labels: [__address__]
+        regex: 'logstash:.*'
+        target_label: service
+        replacement: 'logstash'
+      - source_labels: [__address__]
+        regex: 'matomo:.*'
+        target_label: service
+        replacement: 'matomo'
+      - target_label: service_type
+        replacement: 'analytics'
+
+  # AI and automation services (using container names)
+  - job_name: 'ai-automation'
+    static_configs:
+      - targets:
+          - 'langflow:7860'
+          - 'n8n:5678'
+    scrape_interval: 20s
+    metrics_path: '/metrics'
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: 'langflow:.*'
+        target_label: service
+        replacement: 'langflow'
+      - source_labels: [__address__]
+        regex: 'n8n:.*'
+        target_label: service
+        replacement: 'n8n'
+      - target_label: service_type
+        replacement: 'ai-automation'
+
+  # Database management tools (using container names and internal ports)
+  - job_name: 'db-management-tools'
+    static_configs:
+      - targets:
+          - 'adminer:8080'
+          - 'phpmyadmin:80'
+          - 'mongo-express:8081'
+          - 'metabase:3000'
+          - 'nocodb:8080'
+          - 'pgadmin:80'
+          - 'redis-commander:8081'
+    scrape_interval: 60s
+    metrics_path: '/metrics'
+    scrape_timeout: 10s
+    honor_labels: false
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: 'adminer:.*'
+        target_label: service
+        replacement: 'adminer'
+      - source_labels: [__address__]
+        regex: 'phpmyadmin:.*'
+        target_label: service
+        replacement: 'phpmyadmin'
+      - source_labels: [__address__]
+        regex: 'mongo-express:.*'
+        target_label: service
+        replacement: 'mongo-express'
+      - source_labels: [__address__]
+        regex: 'metabase:.*'
+        target_label: service
+        replacement: 'metabase'
+      - source_labels: [__address__]
+        regex: 'nocodb:.*'
+        target_label: service
+        replacement: 'nocodb'
+      - source_labels: [__address__]
+        regex: 'pgadmin:.*'
+        target_label: service
+        replacement: 'pgadmin'
+      - source_labels: [__address__]
+        regex: 'redis-commander:.*'
+        target_label: service
+        replacement: 'redis-commander'
+      - target_label: service_type
+        replacement: 'db-tools'
+
+  # Supporting services (using container names)
+  - job_name: 'supporting-services'
+    static_configs:
+      - targets:
+          - 'mailpit:8025'
+          - 'gitea:3000'
+          - 'nginx-proxy-manager:81'
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: 'mailpit:.*'
+        target_label: service
+        replacement: 'mailpit'
+      - source_labels: [__address__]
+        regex: 'gitea:.*'
+        target_label: service
+        replacement: 'gitea'
+      - source_labels: [__address__]
+        regex: 'nginx-proxy-manager:.*'
+        target_label: service
+        replacement: 'nginx-proxy-manager'
+      - target_label: service_type
+        replacement: 'supporting'```
+
+### config/prometheus/rules/alerts.yml
+```
+groups:
+  - name: microservices.rules
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.instance }} is down"
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"```
+
+### config/python/Dockerfile
+```
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    wget \
+    zsh \
+    vim \
+    nano \
+    build-essential \
+    libpq-dev \
+    libmariadb-dev \
+    libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Oh My Zsh
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" || true
+
+# Install global Python tools and a simple HTTP server
+RUN pip install --no-cache-dir \
+    pipenv \
+    poetry \
+    virtualenv \
+    uvicorn \
+    gunicorn \
+    pytest \
+    black \
+    flake8 \
+    mypy \
+    fastapi \
+    flask \
+    django \
+    streamlit
+
+# Create app directory
+WORKDIR /var/www/html
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash app
+RUN chown -R app:app /var/www/html
+
+# Expose common Python ports
+EXPOSE 8000 8080 5000 3000
+
+# Run a simple HTTP server that serves the current directory
+# This keeps the container running and ready to serve files
+CMD ["python", "-m", "http.server", "8000"]```
+
+### config/traefik/traefik.yml
+```
+# Traefik Configuration
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+log:
+  level: INFO
+
+accesslog: {}
+
+# OpenTelemetry tracing configuration pointing to collector
+tracing:
+  serviceName: traefik
+  sampleRate: 1.0
+  otlp:
+    http:
+      endpoint: http://otel-collector:4318/v1/traces
+      headers:
+        content-type: application/json
+    # Alternative gRPC configuration (comment out HTTP above to use this)
+    # grpc:
+    #   endpoint: otel-collector:4317
+    #   insecure: true
+
+api:
+  dashboard: true
+  insecure: true  # Set to true for development, false for production
+
+entryPoints:
+  web:
+    address: :80
+    # Uncomment for automatic HTTPS redirect
+    # http:
+    #   redirections:
+    #     entrypoint:
+    #       to: websecure
+    #       scheme: https
+  websecure:
+    address: :443
+
+serversTransport:
+  insecureSkipVerify: true
+
+# TLS Configuration with local certificates
+tls:
+  certificates:
+    - certFile: /var/traefik/certs/local.crt
+      keyFile: /var/traefik/certs/local.key
+      stores:
+        - default
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /var/traefik/certs/local.crt
+        keyFile: /var/traefik/certs/local.key
+  options:
+    default:
+      minVersion: "VersionTLS12"
+      maxVersion: "VersionTLS13"
+      cipherSuites:
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+
+# Prometheus metrics configuration
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+    # Configure latency buckets for better metrics granularity
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+      - 10.0
+      - 30.0
+    # Add custom header labels for enhanced monitoring
+    headerLabels:
+      useragent: User-Agent
+      host: X-Forwarded-Host
+
+providers:
+  # File provider for static configuration
+  file:
+    directory: /etc/traefik
+    watch: true
+  
+  # Docker provider configured for Podman
+  docker:
+    endpoint: "unix:///var/run/podman/podman.sock"
+    network: microservices-net
+    exposedByDefault: false
+    watch: true```
+
+---
+Files processed: 21

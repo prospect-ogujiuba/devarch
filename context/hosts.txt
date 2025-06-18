@@ -1,0 +1,15 @@
+# Microservices Host File Entries
+# Dynamically generated from Docker Compose files
+# Add these to your system hosts file (/etc/hosts on Linux/Mac, C:\Windows\System32\drivers\etc\hosts on Windows)
+# Generated on: Wed Jun 18 13:42:22 EDT 2025
+# Source: Parsed from compose/ directory
+
+# All Services
+127.0.0.1 adminer.test blackbox.test cadvisor.test dotnet.test elasticsearch.test gitea.test
+127.0.0.1 go.test grafana.test kibana.test langflow.test logstash.test mailpit.test
+127.0.0.1 matomo.test metabase.test mongodb-exporter.test mongodb.test mysql-exporter.test n8n.test
+127.0.0.1 nginx.test nocodb.test node-exporter.test node.test otel.test pgadmin.test
+127.0.0.1 php.test phpmyadmin.test portainer.test postgres-exporter.test prometheus.test python.test
+127.0.0.1 redis-exporter.test redis.test traefik.test
+
+# Summary: 33 domains found
