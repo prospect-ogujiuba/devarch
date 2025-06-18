@@ -205,6 +205,267 @@ validate_service_files() {
     fi
 }
 
+# =============================================================================
+# ENHANCED SERVICE RESOLUTION FUNCTIONS
+# =============================================================================
+# Add these functions to config.sh after the existing resolve_service_path function
+
+# Function to find which category a service belongs to
+find_service_category() {
+    local service_name="$1"
+    local service_file="${service_name}.yml"
+    
+    # Search through all categories
+    for category in "${(@k)SERVICE_CATEGORIES}"; do
+        local service_files="${SERVICE_CATEGORIES[$category]}"
+        if [[ "$service_files" == *"$service_file"* ]]; then
+            echo "$category"
+            return 0
+        fi
+    done
+    
+    # Not found in any category
+    return 1
+}
+
+# Function to get service file path for a given service name
+get_service_path() {
+    local service_name="$1"
+    local category
+    
+    # Find which category this service belongs to
+    category=$(find_service_category "$service_name")
+    if [[ $? -eq 0 ]]; then
+        local service_file="${service_name}.yml"
+        resolve_service_path "$service_file" "$category"
+        return 0
+    else
+        # Service not found
+        return 1
+    fi
+}
+
+# Function to validate if a service exists
+validate_service_exists() {
+    local service_name="$1"
+    local service_path
+    
+    service_path=$(get_service_path "$service_name")
+    if [[ $? -eq 0 && -f "$service_path" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Function to list all available services
+list_all_service_names() {
+    local -a all_services
+    
+    for category in "${(@k)SERVICE_CATEGORIES}"; do
+        local service_files="${SERVICE_CATEGORIES[$category]}"
+        local -a files
+        files=(${=service_files})
+        
+        for service_file in "${files[@]}"; do
+            local service_name="${service_file%.yml}"
+            all_services+=("$service_name")
+        done
+    done
+    
+    # Remove duplicates and sort
+    printf '%s\n' "${all_services[@]}" | sort -u
+}
+
+# =============================================================================
+# CORE SERVICE MANAGEMENT FUNCTIONS
+# =============================================================================
+# Add these functions to config.sh after the enhanced service resolution functions
+
+# Function to start a single service
+start_single_service() {
+    local service_name="$1"
+    local force_recreate="${2:-false}"
+    local service_path
+    
+    print_status "step" "Starting service: $service_name"
+    
+    # Get service path
+    service_path=$(get_service_path "$service_name")
+    if [[ $? -ne 0 ]]; then
+        print_status "error" "Service '$service_name' not found"
+        print_status "info" "Available services: $(list_all_service_names | tr '\n' ' ')"
+        return 1
+    fi
+    
+    # Build compose command
+    local compose_args=("-f" "$service_path" "up" "-d")
+    if [[ "$force_recreate" == "true" ]]; then
+        compose_args+=("--force-recreate")
+    fi
+    
+    # Execute command
+    if eval "$COMPOSE_CMD ${compose_args[*]} $ERROR_REDIRECT"; then
+        print_status "success" "Service '$service_name' started successfully"
+        return 0
+    else
+        print_status "error" "Failed to start service '$service_name'"
+        return 1
+    fi
+}
+
+# Function to stop a single service
+stop_single_service() {
+    local service_name="$1"
+    local remove_volumes="${2:-false}"
+    local timeout="${3:-30}"
+    local service_path
+    
+    print_status "step" "Stopping service: $service_name"
+    
+    # Get service path
+    service_path=$(get_service_path "$service_name")
+    if [[ $? -ne 0 ]]; then
+        print_status "error" "Service '$service_name' not found"
+        return 1
+    fi
+    
+    # Build compose command
+    local compose_args=("-f" "$service_path" "down")
+    compose_args+=("--timeout" "$timeout")
+    
+    if [[ "$remove_volumes" == "true" ]]; then
+        compose_args+=("--volumes")
+    fi
+    
+    # Execute command
+    if eval "$COMPOSE_CMD ${compose_args[*]} $ERROR_REDIRECT"; then
+        print_status "success" "Service '$service_name' stopped successfully"
+        return 0
+    else
+        print_status "warning" "Service '$service_name' may have already been stopped"
+        return 1
+    fi
+}
+
+# Function to rebuild a single service
+rebuild_single_service() {
+    local service_name="$1"
+    local no_cache="${2:-false}"
+    local service_path
+    
+    print_status "step" "Rebuilding service: $service_name"
+    
+    # Get service path
+    service_path=$(get_service_path "$service_name")
+    if [[ $? -ne 0 ]]; then
+        print_status "error" "Service '$service_name' not found"
+        return 1
+    fi
+    
+    # Stop service first
+    print_status "info" "Stopping service for rebuild..."
+    stop_single_service "$service_name" "false" "10"
+    
+    # Build compose command
+    local compose_args=("-f" "$service_path" "build")
+    if [[ "$no_cache" == "true" ]]; then
+        compose_args+=("--no-cache")
+    fi
+    
+    # Build the service
+    print_status "info" "Building service..."
+    if eval "$COMPOSE_CMD ${compose_args[*]} $ERROR_REDIRECT"; then
+        print_status "info" "Starting rebuilt service..."
+        start_single_service "$service_name" "true"
+        return $?
+    else
+        print_status "error" "Failed to rebuild service '$service_name'"
+        return 1
+    fi
+}
+
+# Function to restart a single service
+restart_single_service() {
+    local service_name="$1"
+    local service_path
+    
+    print_status "step" "Restarting service: $service_name"
+    
+    # Get service path
+    service_path=$(get_service_path "$service_name")
+    if [[ $? -ne 0 ]]; then
+        print_status "error" "Service '$service_name' not found"
+        return 1
+    fi
+    
+    # Use compose restart for graceful restart
+    if eval "$COMPOSE_CMD -f '$service_path' restart $ERROR_REDIRECT"; then
+        print_status "success" "Service '$service_name' restarted successfully"
+        return 0
+    else
+        print_status "warning" "Compose restart failed, trying stop/start..."
+        stop_single_service "$service_name" "false" "10"
+        start_single_service "$service_name" "false"
+        return $?
+    fi
+}
+
+# Function to show logs for a single service
+show_service_logs() {
+    local service_name="$1"
+    local follow="${2:-false}"
+    local tail_lines="${3:-100}"
+    local service_path
+    
+    # Get service path
+    service_path=$(get_service_path "$service_name")
+    if [[ $? -ne 0 ]]; then
+        print_status "error" "Service '$service_name' not found"
+        return 1
+    fi
+    
+    # Build logs command
+    local compose_args=("-f" "$service_path" "logs" "--tail" "$tail_lines")
+    if [[ "$follow" == "true" ]]; then
+        compose_args+=("-f")
+        print_status "info" "Following logs for '$service_name' (Ctrl+C to exit)..."
+    else
+        print_status "info" "Showing last $tail_lines lines for '$service_name'..."
+    fi
+    
+    # Execute logs command (don't redirect - we want to see the logs)
+    eval "$COMPOSE_CMD ${compose_args[*]}"
+}
+
+# Function to get service status
+get_service_status() {
+    local service_name="$1"
+    local service_path
+    
+    # Get service path
+    service_path=$(get_service_path "$service_name")
+    if [[ $? -ne 0 ]]; then
+        echo "NOT_FOUND"
+        return 1
+    fi
+    
+    # Get container name from service
+    local container_name="$service_name"
+    
+    # Check if container exists and get status
+    local container_status
+    container_status=$(eval "$CONTAINER_CMD inspect --format='{{.State.Status}}' $container_name 2>/dev/null")
+    
+    if [[ $? -eq 0 && -n "$container_status" ]]; then
+        echo "$container_status"
+        return 0
+    else
+        echo "STOPPED"
+        return 1
+    fi
+}
+
 # Function to list all available service files with their resolved paths
 list_all_services() {
     echo "=== SERVICE FILE MAPPING ==="

@@ -8,6 +8,7 @@ FOLDERS_TO_PROCESS=(
     "config" 
     "scripts"
     "apps"
+    "docs"
 )
 
 # Output directory
