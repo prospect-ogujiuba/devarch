@@ -24,16 +24,17 @@ tracing:
 
 api:
   dashboard: true
-  insecure: false  # Set to true for development, false for production
+  insecure: true  # Set to true for development, false for production
 
 entryPoints:
   web:
     address: :80
-    http:
-      redirections:
-        entrypoint:
-          to: websecure
-          scheme: https
+    # Uncomment for automatic HTTPS redirect
+    # http:
+    #   redirections:
+    #     entrypoint:
+    #       to: websecure
+    #       scheme: https
   websecure:
     address: :443
 

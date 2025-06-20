@@ -40,8 +40,3 @@ EXPOSE 3000 3001 8080 8000
 # Start a simple HTTP server that can serve any directory
 # This keeps the container running and ready to serve files
 CMD ["serve", "-s", ".", "-p", "3000", "--cors"]
-# Add project handler for dynamic routing
-COPY project-handler.js /var/www/project-handler.js
-
-# Use the project handler as entry point  
-CMD ["node", "/var/www/project-handler.js"]

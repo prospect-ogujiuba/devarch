@@ -5,6 +5,8 @@ apps/**
 !apps/
 !apps/serverinfo/
 context/
+backup/
 # Other ignores
 .env
 .DS_Store
+.gateway-backup-location

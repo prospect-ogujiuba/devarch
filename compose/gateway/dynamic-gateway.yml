@@ -1,0 +1,30 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  dynamic-gateway:
+    container_name: dynamic-gateway
+    build:
+      context: ../../config/gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8888:8888"
+    volumes:
+      - ../../apps:/var/www/html
+      - ../../config/gateway/gateway.php:/var/www/gateway.php:ro
+    networks:
+      - microservices-net
+    environment:
+      - NODE_CONTAINER=node
+      - PYTHON_CONTAINER=python
+      - GO_CONTAINER=go
+      - DOTNET_CONTAINER=dotnet
+      - PHP_CONTAINER=php
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dynamic-gateway.rule=HostRegexp(`^[a-zA-Z0-9-]+\\.test$$`)"
+      - "traefik.http.routers.dynamic-gateway.entrypoints=websecure"
+      - "traefik.http.routers.dynamic-gateway.tls=true"
+      - "traefik.http.routers.dynamic-gateway.priority=10"
+      - "traefik.http.services.dynamic-gateway.loadbalancer.server.port=8888"

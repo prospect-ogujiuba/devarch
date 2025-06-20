@@ -46,5 +46,3 @@ EXPOSE 8000 8080 5000 3000
 # Run a simple HTTP server that serves the current directory
 # This keeps the container running and ready to serve files
 CMD ["python", "-m", "http.server", "8000"]
-# Add support for project detection headers
-ENV PYTHONPATH=/var/www/html

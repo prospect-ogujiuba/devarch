@@ -7,7 +7,6 @@ FOLDERS_TO_PROCESS=(
     "compose"
     "config" 
     "scripts"
-    "apps"
     "docs"
 )
 
@@ -91,6 +90,20 @@ EOF
             esac
         fi
     done
+
+    # if [[ -d "apps" ]]; then
+        echo "  Scanning apps directory for projects..."
+        for app_dir in apps/*/; do
+            if [[ -d "$app_dir" ]]; then
+                local app_name=$(basename "$app_dir")
+                # Skip hidden directories and common non-project folders
+                if [[ "$app_name" != .* && "$app_name" != "node_modules" && "$app_name" != "vendor" ]]; then
+                    all_domains+=("${app_name}.test")
+                    echo "    Found app: ${app_name}.test"
+                fi
+            fi
+        done
+    # fi
     
     # Remove duplicates and sort
     local unique_domains=($(printf '%s\n' "${all_domains[@]}" | sort -u))
@@ -271,9 +284,18 @@ main() {
     # Add project structure to index
     echo "## Project Structure" >> "$index_file"
     if command -v tree >/dev/null 2>&1; then
-        tree -I 'node_modules|.git|dist|build|venv|__pycache__|target|context' >> "$index_file"
+        # Use tree but limit depth and exclude deep app contents
+        tree -I 'node_modules|.git|dist|build|venv|__pycache__|target|context' -L 2 >> "$index_file"
     else
-        find . -type d -not -path '*/.*' -not -path '*/node_modules/*' -not -path '*/dist/*' -not -path '*/build/*' -not -path '*/context/*' | sort >> "$index_file"
+        # Manual listing - show top level and apps folder contents
+        echo "." >> "$index_file"
+        find . -maxdepth 1 -type d -not -path '*/.*' -not -path '.' | sort >> "$index_file"
+        
+        # Show apps folder contents specifically
+        if [[ -d "./apps" ]]; then
+            echo "apps/" >> "$index_file"
+            find ./apps -maxdepth 1 -type d -not -path './apps' | sed 's|./apps/|  ├── |' | sort >> "$index_file"
+        fi
     fi
     echo "" >> "$index_file"
     

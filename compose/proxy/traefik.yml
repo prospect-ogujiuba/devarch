@@ -16,7 +16,7 @@ services:
       - "443:443" # HTTPS
       - "8080:8080" # Dashboard
     volumes:
-      - ../../config/traefik:/etc/traefik/:ro
+      - ../../config/traefik/:/etc/traefik/:ro
       - ../../config/traefik/certs/:/var/traefik/certs/:rw
       - /run/podman/podman.sock:/var/run/podman/podman.sock:ro
     networks:

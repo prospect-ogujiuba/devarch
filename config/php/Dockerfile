@@ -77,7 +77,7 @@ RUN chown -R www-data:www-data /var/www/html
 WORKDIR /var/www/html
 
 # Expose ports for PHP-FPM and Mailpit
-EXPOSE 9000 8025 1025
+EXPOSE 8000 5173 9000 8025 1025
 
 # Default command
 CMD ["php-fpm"]
