@@ -15,9 +15,9 @@ services:
     restart: unless-stopped
     env_file: ../../.env
     ports:
-      - "80:80"
-      - "443:443"
-      - "81:81"
+      - "127.0.0.1:9080:80"
+      - "127.0.0.1:8443:443"
+      - "127.0.0.1:9081:81"
     volumes:
       - ../../apps:/var/www/html
       - ../../config/nginx/custom:/data/nginx/custom
