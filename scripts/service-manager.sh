@@ -196,16 +196,6 @@ validate_service_required() {
     fi
 }
 
-validate_service_exists() {
-    if [[ -n "$SERVICE_NAME" ]]; then
-        if ! validate_service_exists "$SERVICE_NAME"; then
-            print_status "error" "Service '$SERVICE_NAME' not found"
-            print_status "info" "Available services: $(list_all_service_names | tr '\n' ' ')"
-            exit 1
-        fi
-    fi
-}
-
 # =============================================================================
 # COMMAND EXECUTION FUNCTIONS
 # =============================================================================
@@ -321,14 +311,14 @@ cmd_status() {
 cmd_ps() {
     print_status "info" "Running Services:"
     echo ""
-    
-    # Use podman ps with our network filter
-    if eval "$CONTAINER_CMD ps --filter 'network=$NETWORK_NAME' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' $ERROR_REDIRECT"; then
-        eval "$CONTAINER_CMD ps --filter 'network=$NETWORK_NAME' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+
+    if output=$(eval "$CONTAINER_CMD ps --filter 'network=$NETWORK_NAME' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'" 2>/dev/null); then
+        echo "$output"
     else
         print_status "warning" "Could not list running containers"
     fi
 }
+
 
 cmd_list() {
     print_status "info" "Available Services:"

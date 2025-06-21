@@ -67,9 +67,9 @@ SERVICE_PATH_OVERRIDES=(
 
 # Service startup order (critical for dependencies) - zsh array
 SERVICE_STARTUP_ORDER=(
-    "management"   # Add management first - Portainer should start early for container oversight
-    "gateway"
     "proxy"
+    "gateway"
+    "management"
     "database"
     "exporters"
     "dbms" 
