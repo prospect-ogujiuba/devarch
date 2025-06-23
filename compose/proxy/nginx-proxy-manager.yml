@@ -17,7 +17,7 @@ services:
     ports:
       - "80:80" # HTTP
       - "443:443" # HTTPS
-      - "8080:8080" # Dashboard
+      - "81:81" # Dashboard
     volumes:
       - ../../apps:/var/www/html
       - ../../config/nginx/custom:/data/nginx/custom
