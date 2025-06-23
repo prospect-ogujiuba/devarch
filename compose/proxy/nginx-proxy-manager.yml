@@ -15,13 +15,15 @@ services:
     restart: unless-stopped
     env_file: ../../.env
     ports:
-      - "127.0.0.1:9080:80"
-      - "127.0.0.1:8443:443"
-      - "127.0.0.1:9081:81"
+      - "80:80" # HTTP
+      - "443:443" # HTTPS
+      - "8080:8080" # Dashboard
     volumes:
       - ../../apps:/var/www/html
       - ../../config/nginx/custom:/data/nginx/custom
       - /etc/localtime:/etc/localtime:ro
+      - ../../config/traefik/certs/local.crt:/etc/letsencrypt/live/mkcert.test/local.crt
+      - ../../config/traefik/certs/local.key:/etc/letsencrypt/live/mkcert.test/local.key
       - npm_data:/data
       - npm_letsencrypt:/etc/letsencrypt
     networks:
