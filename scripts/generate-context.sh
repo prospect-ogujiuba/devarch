@@ -36,103 +36,73 @@ is_text_file() {
 generate_hosts_file() {
     local hosts_file="$CONTEXT_DIR/hosts.txt"
     local compose_dir="compose"
-    
+
     echo "Generating dynamic hosts file entries from compose files..."
-    
-    # Create hosts file header
+
     cat > "$hosts_file" << 'EOF'
 # Microservices Host File Entries
-# Dynamically generated from Docker Compose files
+# Dynamically generated from Docker Compose and App directories
 # Add these to your system hosts file (/etc/hosts on Linux/Mac, C:\Windows\System32\drivers\etc\hosts on Windows)
 EOF
     echo "# Generated on: $(date)" >> "$hosts_file"
-    echo "# Source: Parsed from $compose_dir/ directory" >> "$hosts_file"
+    echo "# Source: Parsed from $compose_dir/ and apps/ directory" >> "$hosts_file"
     echo "" >> "$hosts_file"
-    
-    # Check if compose directory exists
-    if [[ ! -d "$compose_dir" ]]; then
-        echo "# ERROR: $compose_dir directory not found!" >> "$hosts_file"
-        echo "Warning: $compose_dir directory not found, cannot generate dynamic hosts"
-        return 1
-    fi
-    
-    # Simple approach - just collect all domains
-    local all_domains=()
-    
-    # Parse all compose files
+
+    local compose_domains=()
+    local app_domains=()
+
+    # Parse Compose domains
     for compose_file in $(find "$compose_dir" -name "*.yml" -o -name "*.yaml" 2>/dev/null | sort); do
         echo "  Parsing $compose_file..."
-        
-        # Extract Host rules
-        local domains=$(grep -o 'Host(`[^`]*`)' "$compose_file" 2>/dev/null | sed 's/Host(`//g' | sed 's/`)//g')
-        
-        # Add found domains
+        local domains=$(grep -o 'Host(`[^`]*`)' "$compose_file" | sed 's/Host(`//g' | sed 's/`)//g')
         for domain in $domains; do
-            if [[ "$domain" == *.test ]]; then
-                if [[ "$domain" != *'$'* ]]; then
-                    if [[ "$domain" != *'['* ]]; then
-                        all_domains+=("$domain")
-                    fi
-                fi
-            fi
+            [[ "$domain" == *.test && "$domain" != *'$'* && "$domain" != *'['* ]] && compose_domains+=("$domain")
         done
-        
-        # If no domains found, use filename
+
         if [[ -z "$domains" ]]; then
             local filename=$(basename "$compose_file" .yml)
-            case "$filename" in
-                mariadb|mysql|postgres|mongodb|redis|elasticsearch|logstash)
-                    # Skip database services
-                    ;;
-                *)
-                    all_domains+=("${filename}.test")
-                    ;;
+            case "$filename" in mariadb|mysql|postgres|mongodb|redis|elasticsearch|logstash) ;; 
+            *) compose_domains+=("${filename}.test") ;; 
             esac
         fi
     done
 
-    # if [[ -d "apps" ]]; then
-        echo "  Scanning apps directory for projects..."
-        for app_dir in apps/*/; do
-            if [[ -d "$app_dir" ]]; then
-                local app_name=$(basename "$app_dir")
-                # Skip hidden directories and common non-project folders
-                if [[ "$app_name" != .* && "$app_name" != "node_modules" && "$app_name" != "vendor" ]]; then
-                    all_domains+=("${app_name}.test")
-                    echo "    Found app: ${app_name}.test"
-                fi
-            fi
-        done
-    # fi
-    
-    # Remove duplicates and sort
-    local unique_domains=($(printf '%s\n' "${all_domains[@]}" | sort -u))
-    
-    # Output domains grouped by lines
-    echo "# All Services" >> "$hosts_file"
-    local line="127.0.0.1"
-    local count=0
-    
-    for domain in "${unique_domains[@]}"; do
-        line="$line $domain"
-        count=$((count + 1))
-        
-        if [[ $count -eq 6 ]]; then
-            echo "$line" >> "$hosts_file"
-            line="127.0.0.1"
-            count=0
-        fi
+    # Parse App domains
+    echo "  Scanning apps directory for projects..."
+    for app_dir in apps/*/; do
+        [[ -d "$app_dir" ]] || continue
+        local app_name=$(basename "$app_dir")
+        [[ "$app_name" != .* && "$app_name" != "node_modules" && "$app_name" != "vendor" ]] && app_domains+=("${app_name}.test")
     done
-    
-    # Output remaining domains
-    if [[ $count -gt 0 ]]; then
-        echo "$line" >> "$hosts_file"
+
+    # Output Compose domains
+    if [[ ${#compose_domains[@]} -gt 0 ]]; then
+        echo "# Compose Services" >> "$hosts_file"
+        local line="127.0.0.1" count=0
+        for domain in $(printf '%s\n' "${compose_domains[@]}" | sort -u); do
+            line="$line $domain"
+            count=$((count + 1))
+            [[ $count -eq 6 ]] && { echo "$line" >> "$hosts_file"; line="127.0.0.1"; count=0; }
+        done
+        [[ $count -gt 0 ]] && echo "$line" >> "$hosts_file"
+        echo "" >> "$hosts_file"
     fi
-    
-    echo "" >> "$hosts_file"
-    echo "# Summary: ${#unique_domains[@]} domains found" >> "$hosts_file"
-    
-    echo "Generated dynamic hosts file: $hosts_file (${#unique_domains[@]} unique domains)"
+
+    # Output App domains
+    if [[ ${#app_domains[@]} -gt 0 ]]; then
+        echo "# App Services" >> "$hosts_file"
+        local line="127.0.0.1" count=0
+        for domain in $(printf '%s\n' "${app_domains[@]}" | sort -u); do
+            line="$line $domain"
+            count=$((count + 1))
+            [[ $count -eq 6 ]] && { echo "$line" >> "$hosts_file"; line="127.0.0.1"; count=0; }
+        done
+        [[ $count -gt 0 ]] && echo "$line" >> "$hosts_file"
+        echo "" >> "$hosts_file"
+    fi
+
+    echo "# Summary: $(( ${#compose_domains[@]} + ${#app_domains[@]} )) domains found" >> "$hosts_file"
+    echo "Generated dynamic hosts file: $hosts_file"
 }
 
 # Process a single folder

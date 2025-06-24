@@ -1,4 +1,4 @@
-# Traefik Configuration
+# Traefik Configuration - Updated for NPM Integration
 global:
   checkNewVersion: false
   sendAnonymousUsage: false
@@ -17,14 +17,10 @@ tracing:
       endpoint: http://otel-collector:4318/v1/traces
       headers:
         content-type: application/json
-    # Alternative gRPC configuration (comment out HTTP above to use this)
-    # grpc:
-    #   endpoint: otel-collector:4317
-    #   insecure: true
 
 api:
   dashboard: true
-  insecure: false  # Set to true for development, false for production
+  insecure: false
 
 entryPoints:
   web:
@@ -67,7 +63,6 @@ metrics:
     addEntryPointsLabels: true
     addRoutersLabels: true
     addServicesLabels: true
-    # Configure latency buckets for better metrics granularity
     buckets:
       - 0.1
       - 0.3
@@ -75,20 +70,57 @@ metrics:
       - 5.0
       - 10.0
       - 30.0
-    # Add custom header labels for enhanced monitoring
     headerLabels:
       useragent: User-Agent
       host: X-Forwarded-Host
 
 providers:
-  # File provider for static configuration
   file:
     directory: /etc/traefik
     watch: true
   
-  # Docker provider configured for Podman
   docker:
     endpoint: "unix:///var/run/podman/podman.sock"
     network: microservices-net
     exposedByDefault: false
     watch: true
+
+# Static route configuration for NPM integration
+http:
+  routers:
+    # Route ALL *.test domains to NPM (except known services)
+    npm-dev-projects:
+      rule: "HostRegexp(`{subdomain:[a-zA-Z0-9-]+}\\.test`) && !Host(`traefik.test`, `npm.test`, `grafana.test`, `prometheus.test`, `adminer.test`, `phpmyadmin.test`, `mongodb.test`, `metabase.test`, `nocodb.test`, `pgadmin.test`, `redis.test`, `mailpit.test`, `gitea.test`, `n8n.test`, `langflow.test`, `matomo.test`, `kibana.test`, `elasticsearch.test`, `logstash.test`, `cadvisor.test`, `blackbox.test`, `node-exporter.test`, `postgres-exporter.test`, `redis-exporter.test`, `mysql-exporter.test`, `mongodb-exporter.test`, `otel.test`)"
+      entrypoints:
+        - websecure
+      service: npm-dev-projects
+      tls: true
+      priority: 1  # Lower priority so specific service routes take precedence
+
+    # NPM Admin Dashboard
+    npm-admin:
+      rule: "Host(`npm.test`)"
+      entrypoints:
+        - websecure
+      service: npm-admin
+      tls: true
+      priority: 100
+
+  services:
+    # Route development projects to NPM HTTPS port
+    npm-dev-projects:
+      loadBalancer:
+        servers:
+          - url: "https://nginx-proxy-manager:443"
+        passHostHeader: true
+        serversTransport: insecureTransport
+
+    # NPM Admin Dashboard
+    npm-admin:
+      loadBalancer:
+        servers:
+          - url: "http://nginx-proxy-manager:81"
+
+  serversTransports:
+    insecureTransport:
+      insecureSkipVerify: true
