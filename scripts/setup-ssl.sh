@@ -93,7 +93,7 @@ install_mkcert() {
 }
 
 generate_certificates() {
-    print_status "step" "Generating SSL certificates with mkcert..."
+    print_status "step" "Generating SSL certificates with mkcert for dual domain structure..."
     
     # Create output directory
     mkdir -p "$CERT_OUTPUT_DIR"
@@ -103,34 +103,40 @@ generate_certificates() {
     print_status "info" "Setting up mkcert Certificate Authority..."
     mkcert -install
     
-    # Generate certificate with all needed domains
-    local domain="$opt_custom_domain"
-    local base_domain="${domain#\*.}"  # Remove *. prefix
+    print_status "info" "Generating certificate for infrastructure (.test) and development (.dev.test) domains..."
     
-    print_status "info" "Generating certificate for $domain and subdomains..."
-    
+    # Generate certificate with BOTH domain patterns
     mkcert -cert-file "local.crt" -key-file "local.key" \
-        "$domain" \
-        "$base_domain" \
+        "*.test" \
+        "*.dev.test" \
+        "test" \
+        "dev.test" \
         "localhost" \
-        "nginx.$base_domain" \
-        "adminer.$base_domain" \
-        "grafana.$base_domain" \
-        "prometheus.$base_domain" \
-        "postgres.$base_domain" \
-        "redis.$base_domain" \
-        "mongodb.$base_domain" \
-        "mailpit.$base_domain" \
-        "gitea.$base_domain" \
-        "matomo.$base_domain" \
-        "metabase.$base_domain" \
-        "nocodb.$base_domain" \
-        "n8n.$base_domain" \
-        "langflow.$base_domain"
+        "127.0.0.1" \
+        "::1" \
+        "nginx.test" \
+        "npm.test" \
+        "traefik.test" \
+        "adminer.test" \
+        "grafana.test" \
+        "prometheus.test" \
+        "postgres.test" \
+        "redis.test" \
+        "mongodb.test" \
+        "mailpit.test" \
+        "gitea.test" \
+        "matomo.test" \
+        "metabase.test" \
+        "nocodb.test" \
+        "n8n.test" \
+        "langflow.test" \
+        "projects.dev.test"
     
     if [[ $? -eq 0 ]]; then
         print_status "success" "Certificates generated successfully!"
-        print_status "info" "Files created:"
+        print_status "info" "Certificate covers:"
+        echo "  🏗️  Infrastructure: *.test (managed by Traefik)"
+        echo "  🧪 Development: *.dev.test (managed via NPM)"
         echo "  📄 $CERT_OUTPUT_DIR/local.crt"
         echo "  🔑 $CERT_OUTPUT_DIR/local.key"
         return 0
@@ -185,7 +191,7 @@ main() {
     parse_arguments "$@"
     setup_command_context "$opt_use_sudo" "$opt_show_errors"
     
-    print_status "step" "Setting up SSL certificates with mkcert..."
+    print_status "step" "Setting up SSL certificates for dual domain architecture..."
     
     # Check for existing certificates
     if [[ -f "$CERT_OUTPUT_DIR/local.crt" && "$opt_force_regenerate" == "false" ]]; then
@@ -199,11 +205,16 @@ main() {
     # Generate certificates
     generate_certificates
     
-    print_status "success" "SSL setup completed! Certificates are ready for Traefik."
+    print_status "success" "SSL setup completed for dual domain architecture!"
     echo ""
-    echo "🔗 Test your setup:"
-    echo "   https://nginx.test"
-    echo "   https://grafana.test"
+    echo "🔗 Test your infrastructure services:"
+    echo "   https://npm.test (Nginx Proxy Manager)"
+    echo "   https://traefik.test (Traefik Dashboard)"
+    echo "   https://grafana.test (Grafana)"
+    echo ""
+    echo "🔗 Test your development projects:"
+    echo "   https://projects.dev.test (Project listing)"
+    echo "   https://[project-name].dev.test (Individual projects)"
     echo ""
     echo "✅ Certificates automatically trusted by your system and browsers!"
 }

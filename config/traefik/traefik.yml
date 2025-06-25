@@ -1,4 +1,6 @@
-# Traefik Configuration - Updated for NPM Integration
+# config/traefik/traefik.yml
+# Updated configuration with clean domain separation
+
 global:
   checkNewVersion: false
   sendAnonymousUsage: false
@@ -8,7 +10,7 @@ log:
 
 accesslog: {}
 
-# OpenTelemetry tracing configuration pointing to collector
+# OpenTelemetry tracing configuration
 tracing:
   serviceName: traefik
   sampleRate: 1.0
@@ -85,36 +87,49 @@ providers:
     exposedByDefault: false
     watch: true
 
-# Static route configuration for NPM integration
+# Static route configuration - CLEAN SEPARATION
 http:
   routers:
-    # Route ALL *.test domains to NPM (except known services)
+    # === DEVELOPMENT PROJECTS ROUTING ===
+    # Single rule to handle ALL *.dev.test domains → NPM
     npm-dev-projects:
-      rule: "HostRegexp(`{subdomain:[a-zA-Z0-9-]+}\\.test`) && !Host(`traefik.test`, `npm.test`, `grafana.test`, `prometheus.test`, `adminer.test`, `phpmyadmin.test`, `mongodb.test`, `metabase.test`, `nocodb.test`, `pgadmin.test`, `redis.test`, `mailpit.test`, `gitea.test`, `n8n.test`, `langflow.test`, `matomo.test`, `kibana.test`, `elasticsearch.test`, `logstash.test`, `cadvisor.test`, `blackbox.test`, `node-exporter.test`, `postgres-exporter.test`, `redis-exporter.test`, `mysql-exporter.test`, `mongodb-exporter.test`, `otel.test`)"
+      rule: "HostRegexp(`{subdomain:[a-zA-Z0-9-]+}\\.dev\\.test`)"
       entrypoints:
         - websecure
       service: npm-dev-projects
       tls: true
-      priority: 1  # Lower priority so specific service routes take precedence
+      priority: 10  # Lower priority so specific service routes take precedence
 
+    # === INFRASTRUCTURE SERVICES ROUTING ===
     # NPM Admin Dashboard
     npm-admin:
-      rule: "Host(`npm.test`)"
+      rule: "Host(`nginx.test`)"
       entrypoints:
         - websecure
       service: npm-admin
       tls: true
       priority: 100
+ 
+    # Traefik Dashboard (self-reference)
+    traefik-dashboard:
+      rule: "Host(`traefik.test`)"
+      entrypoints:
+        - websecure
+      service: api@internal
+      tls: true
+      priority: 100
 
   services:
-    # Route development projects to NPM HTTPS port
+    # === DEVELOPMENT PROJECTS SERVICE ===
+    # Route ALL *.dev.test to NPM's main HTTP port
     npm-dev-projects:
       loadBalancer:
         servers:
-          - url: "https://nginx-proxy-manager:443"
+          - url: "http://nginx-proxy-manager:80"
         passHostHeader: true
         serversTransport: insecureTransport
 
+    # === INFRASTRUCTURE SERVICES ===
     # NPM Admin Dashboard
     npm-admin:
       loadBalancer:

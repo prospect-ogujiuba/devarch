@@ -15,20 +15,25 @@ services:
     restart: unless-stopped
     env_file: ../../.env
     ports:
-      - "80:80" # HTTP
-      - "443:443" # HTTPS
-      - "8080:8080" # Dashboard
+      # ONLY local admin access - no external ports
+      - "127.0.0.1:9080:81"  # Admin dashboard for direct local access
+      # Port 80 is internal only for Traefik to access
     volumes:
       - ../../apps:/var/www/html
       - ../../config/nginx/custom:/data/nginx/custom
+      - ../../config/nginx/dev-projects.conf:/etc/nginx/conf.d/dev-projects.conf
       - /etc/localtime:/etc/localtime:ro
-      - ../../config/traefik/certs/local.crt:/etc/letsencrypt/live/mkcert.test/local.crt
-      - ../../config/traefik/certs/local.key:/etc/letsencrypt/live/mkcert.test/local.key
+      - ../../config/traefik/certs/local.crt:/etc/ssl/certs/local.crt:ro
+      - ../../config/traefik/certs/local.key:/etc/ssl/private/local.key:ro
       - npm_data:/data
       - npm_letsencrypt:/etc/letsencrypt
     networks:
       - microservices-net
+    environment:
+      # Ensure NPM uses the certificates we provide
+      - DISABLE_IPV6=true
     labels:
+      # ONLY the admin interface gets Traefik routing
       - "traefik.enable=true"
       - "traefik.http.routers.nginx-proxy-manager.rule=Host(`nginx.test`)"
       - "traefik.http.routers.nginx-proxy-manager.entrypoints=websecure"
