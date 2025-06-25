@@ -37,7 +37,7 @@ generate_hosts_file() {
     local hosts_file="$CONTEXT_DIR/hosts.txt"
     local compose_dir="compose"
 
-    echo "Generating dynamic hosts file entries from compose files..."
+    echo "Generating dynamic hosts file entries from compose files and apps..."
 
     cat > "$hosts_file" << 'EOF'
 # Microservices Host File Entries
@@ -51,7 +51,7 @@ EOF
     local compose_domains=()
     local app_domains=()
 
-    # Parse Compose domains
+    # Parse Compose domains (infrastructure services - keep .test)
     for compose_file in $(find "$compose_dir" -name "*.yml" -o -name "*.yaml" 2>/dev/null | sort); do
         echo "  Parsing $compose_file..."
         local domains=$(grep -o 'Host(`[^`]*`)' "$compose_file" | sed 's/Host(`//g' | sed 's/`)//g')
@@ -67,17 +67,17 @@ EOF
         fi
     done
 
-    # Parse App domains
-    echo "  Scanning apps directory for projects..."
+    # Parse App domains (development projects - NOW USE .test instead of .dev)
+    echo "  Scanning apps directory for development projects..."
     for app_dir in apps/*/; do
         [[ -d "$app_dir" ]] || continue
         local app_name=$(basename "$app_dir")
         [[ "$app_name" != .* && "$app_name" != "node_modules" && "$app_name" != "vendor" ]] && app_domains+=("${app_name}.test")
     done
 
-    # Output Compose domains
+    # Output Infrastructure Services (Compose domains)
     if [[ ${#compose_domains[@]} -gt 0 ]]; then
-        echo "# Compose Services" >> "$hosts_file"
+        echo "# Infrastructure Services (.test domains)" >> "$hosts_file"
         local line="127.0.0.1" count=0
         for domain in $(printf '%s\n' "${compose_domains[@]}" | sort -u); do
             line="$line $domain"
@@ -88,9 +88,9 @@ EOF
         echo "" >> "$hosts_file"
     fi
 
-    # Output App domains
+    # Output Development Projects (App domains - NOW ALL .test)
     if [[ ${#app_domains[@]} -gt 0 ]]; then
-        echo "# App Services" >> "$hosts_file"
+        echo "# Development Projects (.test domains)" >> "$hosts_file"
         local line="127.0.0.1" count=0
         for domain in $(printf '%s\n' "${app_domains[@]}" | sort -u); do
             line="$line $domain"
@@ -101,7 +101,15 @@ EOF
         echo "" >> "$hosts_file"
     fi
 
-    echo "# Summary: $(( ${#compose_domains[@]} + ${#app_domains[@]} )) domains found" >> "$hosts_file"
+    # Add special development domains (UPDATED)
+    echo "# Development Tools" >> "$hosts_file"
+    echo "127.0.0.1 projects.test" >> "$hosts_file"
+    echo "" >> "$hosts_file"
+
+    echo "# Summary: $(( ${#compose_domains[@]} + ${#app_domains[@]} + 1 )) domains found" >> "$hosts_file"
+    echo "# Infrastructure (.test): ${#compose_domains[@]} domains" >> "$hosts_file"
+    echo "# Development (.test): $(( ${#app_domains[@]} + 1 )) domains" >> "$hosts_file"
+    
     echo "Generated dynamic hosts file: $hosts_file"
 }
 

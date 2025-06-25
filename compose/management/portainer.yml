@@ -25,6 +25,6 @@ services:
       - "traefik.http.routers.portainer.rule=Host(`portainer.test`)"
       - "traefik.http.routers.portainer.entrypoints=websecure"
       - "traefik.http.routers.portainer.tls=true"
-      - "traefik.http.services.portainer.loadbalancer.server.port=9002"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
     command:
       - --admin-password-file=/run/secrets/portainer_password

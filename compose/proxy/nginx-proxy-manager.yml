@@ -15,13 +15,12 @@ services:
     restart: unless-stopped
     env_file: ../../.env
     ports:
-      # ONLY local admin access - no external ports
-      - "127.0.0.1:9080:81"  # Admin dashboard for direct local access
-      # Port 80 is internal only for Traefik to access
+      - "127.0.0.1:81:81"   # Admin interface
+      - "127.0.0.1:80:80"               # HTTP traffic for .dev domains
+      - "127.0.0.1:443:443"             # HTTPS traffic for .dev domains
     volumes:
       - ../../apps:/var/www/html
       - ../../config/nginx/custom:/data/nginx/custom
-      - ../../config/nginx/dev-projects.conf:/etc/nginx/conf.d/dev-projects.conf
       - /etc/localtime:/etc/localtime:ro
       - ../../config/traefik/certs/local.crt:/etc/ssl/certs/local.crt:ro
       - ../../config/traefik/certs/local.key:/etc/ssl/private/local.key:ro
@@ -30,10 +29,9 @@ services:
     networks:
       - microservices-net
     environment:
-      # Ensure NPM uses the certificates we provide
       - DISABLE_IPV6=true
     labels:
-      # ONLY the admin interface gets Traefik routing
+      # Only admin interface gets Traefik routing
       - "traefik.enable=true"
       - "traefik.http.routers.nginx-proxy-manager.rule=Host(`nginx.test`)"
       - "traefik.http.routers.nginx-proxy-manager.entrypoints=websecure"

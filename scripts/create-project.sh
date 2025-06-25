@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Dynamic Project Creator
+# Dynamic Project Creator - Updated for .dev domains
 
 PROJECT_NAME="$1"
 PROJECT_TYPE="$2"
@@ -51,6 +51,7 @@ app.get('/', (req, res) => {
         <p>Port: ${PORT}</p>
         <p>Environment: ${process.env.NODE_ENV || 'development'}</p>
         <p>Time: ${new Date().toISOString()}</p>
+        <p>Domain: ${req.get('host')}</p>
     `);
 });
 
@@ -67,29 +68,18 @@ JS
         ;;
         
     "react")
-        npx create-react-app . --template typescript
+        npm create vite@latest . -- --template react-ts
+        npm install
         npm run build
         ;;
         
     "nextjs")
         npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
-        # Update next.config.js for dynamic routing
-        cat > next.config.js << 'JS'
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  output: 'standalone',
-  experimental: {
-    appDir: true,
-  },
-}
-
-module.exports = nextConfig
-JS
         ;;
         
     "python"|"flask")
         cat > app.py << 'PY'
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import os
 from datetime import datetime
 
@@ -102,6 +92,7 @@ def hello():
     <p>Project: {os.path.basename(os.getcwd())}</p>
     <p>Port: {os.environ.get('PORT', 8000)}</p>
     <p>Time: {datetime.now().isoformat()}</p>
+    <p>Host: {request.host}</p>
     """
 
 @app.route('/api/health')
@@ -109,7 +100,8 @@ def health():
     return jsonify({
         'status': 'healthy',
         'project': os.path.basename(os.getcwd()),
-        'timestamp': datetime.now().isoformat()
+        'timestamp': datetime.now().isoformat(),
+        'host': request.host
     })
 
 if __name__ == '__main__':
@@ -156,7 +148,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
         <p>Time: %s</p>
         <p>Method: %s</p>
         <p>Path: %s</p>
-    `, projectName, port, time.Now().Format(time.RFC3339), r.Method, r.URL.Path)
+        <p>Host: %s</p>
+    `, projectName, port, time.Now().Format(time.RFC3339), r.Method, r.URL.Path, r.Host)
     
     w.Header().Set("Content-Type", "text/html")
     fmt.Fprint(w, html)
@@ -183,16 +176,18 @@ GO
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
-app.MapGet("/", () => 
+app.MapGet("/", (HttpContext context) => 
 {
     var projectName = System.IO.Path.GetFileName(Directory.GetCurrentDirectory());
     var port = Environment.GetEnvironmentVariable("PORT") ?? "80";
+    var host = context.Request.Host.ToString();
     
     return Results.Content($@"
         <h1>🔵 .NET Project: {projectName}</h1>
         <p>Port: {port}</p>
         <p>Environment: {app.Environment.EnvironmentName}</p>
         <p>Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}</p>
+        <p>Host: {host}</p>
     ", "text/html");
 });
 
@@ -206,6 +201,7 @@ CS
 <?php
 $projectName = basename(dirname(__DIR__));
 $port = $_ENV['PORT'] ?? '8000';
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 ?>
 <!DOCTYPE html>
 <html>
@@ -217,6 +213,7 @@ $port = $_ENV['PORT'] ?? '8000';
     <p>Port: <?= $port ?></p>
     <p>PHP Version: <?= phpversion() ?></p>
     <p>Time: <?= date('Y-m-d H:i:s') ?></p>
+    <p>Host: <?= $host ?></p>
     <p>Server: <?= $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown' ?></p>
 </body>
 </html>
@@ -237,6 +234,7 @@ PHP
     <p>Environment: {{ app()->environment() }}</p>
     <p>Time: {{ now()->format('Y-m-d H:i:s') }}</p>
     <p>Laravel Version: {{ app()->version() }}</p>
+    <p>Host: {{ request()->getHost() }}</p>
 </body>
 </html>
 BLADE
@@ -245,12 +243,13 @@ BLADE
     *)
         echo "❓ Unknown project type: $PROJECT_TYPE"
         echo "Creating basic project structure..."
-        echo "<h1>Project: $PROJECT_NAME</h1>" > index.html
+        mkdir -p public
+        echo "<h1>Project: $PROJECT_NAME</h1><p>Host: \${_SERVER['HTTP_HOST'] ?? 'localhost'}</p>" > public/index.html
         ;;
 esac
 
 echo "✅ Project created: $PROJECT_NAME"
-echo "🌐 Access at: https://$PROJECT_NAME.test"
+echo "🌐 Access at: https://$PROJECT_NAME.dev"  # Updated to .dev
 echo "📁 Files in: $PROJECT_DIR"
 
 # Show next steps based on project type

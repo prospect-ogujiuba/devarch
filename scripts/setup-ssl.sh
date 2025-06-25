@@ -93,7 +93,7 @@ install_mkcert() {
 }
 
 generate_certificates() {
-    print_status "step" "Generating SSL certificates with mkcert for dual domain structure..."
+    print_status "step" "Generating SSL certificates with mkcert for .test/.dev structure..."
     
     # Create output directory
     mkdir -p "$CERT_OUTPUT_DIR"
@@ -103,14 +103,14 @@ generate_certificates() {
     print_status "info" "Setting up mkcert Certificate Authority..."
     mkcert -install
     
-    print_status "info" "Generating certificate for infrastructure (.test) and development (.dev.test) domains..."
+    print_status "info" "Generating certificate for infrastructure (.test) and development (.dev) domains..."
     
-    # Generate certificate with BOTH domain patterns
+    # Generate certificate with BOTH domain patterns (single level)
     mkcert -cert-file "local.crt" -key-file "local.key" \
         "*.test" \
-        "*.dev.test" \
+        "*.dev" \
         "test" \
-        "dev.test" \
+        "dev" \
         "localhost" \
         "127.0.0.1" \
         "::1" \
@@ -130,13 +130,13 @@ generate_certificates() {
         "nocodb.test" \
         "n8n.test" \
         "langflow.test" \
-        "projects.dev.test"
+        "projects.dev"
     
     if [[ $? -eq 0 ]]; then
         print_status "success" "Certificates generated successfully!"
         print_status "info" "Certificate covers:"
         echo "  🏗️  Infrastructure: *.test (managed by Traefik)"
-        echo "  🧪 Development: *.dev.test (managed via NPM)"
+        echo "  🧪 Development: *.dev (managed via NPM)"
         echo "  📄 $CERT_OUTPUT_DIR/local.crt"
         echo "  🔑 $CERT_OUTPUT_DIR/local.key"
         return 0
@@ -191,7 +191,7 @@ main() {
     parse_arguments "$@"
     setup_command_context "$opt_use_sudo" "$opt_show_errors"
     
-    print_status "step" "Setting up SSL certificates for dual domain architecture..."
+    print_status "step" "Setting up SSL certificates for .test/.dev architecture..."
     
     # Check for existing certificates
     if [[ -f "$CERT_OUTPUT_DIR/local.crt" && "$opt_force_regenerate" == "false" ]]; then
@@ -205,7 +205,7 @@ main() {
     # Generate certificates
     generate_certificates
     
-    print_status "success" "SSL setup completed for dual domain architecture!"
+    print_status "success" "SSL setup completed for .test/.dev architecture!"
     echo ""
     echo "🔗 Test your infrastructure services:"
     echo "   https://npm.test (Nginx Proxy Manager)"
@@ -213,10 +213,10 @@ main() {
     echo "   https://grafana.test (Grafana)"
     echo ""
     echo "🔗 Test your development projects:"
-    echo "   https://projects.dev.test (Project listing)"
-    echo "   https://[project-name].dev.test (Individual projects)"
+    echo "   https://projects.dev (Project listing)"
+    echo "   https://[project-name].dev (Individual projects)"
     echo ""
-    echo "✅ Certificates automatically trusted by your system and browsers!"
+    echo "✅ Single-level wildcards work perfectly in all browsers!"
 }
 
 # Only run main if script is executed directly

@@ -34,7 +34,7 @@ export CONTAINER_RUNTIME="podman"  # Change to "docker" if using Docker instead
 # Smart service definitions - automatically resolves paths based on category
 typeset -A SERVICE_CATEGORIES
 SERVICE_CATEGORIES=(
-    [proxy]="traefik.yml nginx-proxy-manager.yml"
+    [proxy]="nginx-proxy-manager.yml traefik.yml"
     [database]="mariadb.yml mysql.yml postgres.yml mongodb.yml redis.yml"
     [exporters]="blackbox-exporter.yml mongodb-exporter.yml mysqld-exporter.yml node-exporter.yml postgres-exporter.yml redis-exporter.yml"
     [dbms]="adminer.yml phpmyadmin.yml mongo-express.yml metabase.yml nocodb.yml pgadmin.yml redis-commander.yml"
