@@ -1,10 +1,9 @@
 #!/bin/zsh
 
 # =============================================================================
-# MICROSERVICES INSTALLATION SCRIPT
+# MICROSERVICES INSTALLATION SCRIPT - SIMPLIFIED
 # =============================================================================
-# Streamlined installation script that leverages other modular scripts
-# for a clean, maintainable setup process
+# Streamlined installation using service-manager for all service operations
 
 # Source the central configuration
 . "$(dirname "$0")/config.sh"
@@ -18,10 +17,10 @@ opt_use_sudo="$DEFAULT_SUDO"
 opt_show_errors=false
 opt_skip_confirmation=false
 opt_skip_db_setup=false
-opt_skip_ssl=false
-opt_skip_trust=false
-opt_quick_mode=false
 opt_categories_only=""
+opt_parallel=false
+opt_force_recreate=false
+opt_rebuild_services=false
 
 # =============================================================================
 # USAGE & HELP
@@ -33,34 +32,35 @@ Usage: $0 [OPTIONS]
 
 DESCRIPTION:
     Complete installation script for the microservices architecture.
-    Installs services in proper dependency order with optional configurations.
+    Uses service-manager for robust dependency handling and service management.
 
 OPTIONS:
     -s, --sudo              Use sudo for container commands
     -e, --errors            Show detailed error messages
     -y, --yes               Skip confirmation prompts
-    -q, --quick             Quick mode: skip SSL and trust setup
     -d, --skip-db           Skip database initialization
-    --skip-ssl              Skip SSL certificate generation
     -c, --categories LIST   Install only specific categories (comma-separated)
+    -p, --parallel          Start services in parallel within categories
+    -f, --force             Force recreate containers during installation
+    -r, --rebuild           Rebuild services before starting them
     -h, --help              Show this help message
 
 CATEGORIES:
-    database, db-tools, backend, analytics, ai-services, mail, project, erp, proxy
+    $(printf '%s, ' "${SERVICE_STARTUP_ORDER[@]}" | sed 's/, $//')
 
 EXAMPLES:
     $0                                   # Full installation with prompts
     $0 -y                                # Full installation, no prompts
-    $0 -q                                # Quick installation (no SSL setup)
     $0 -c database,backend               # Install only database and backend services
     $0 -s -e -y                          # Use sudo, show errors, skip prompts
-    $0 --categories proxy --skip-db      # Install only proxy, skip database setup
+    $0 -c proxy -d                       # Install only proxy, skip database setup
+    $0 -p -f                             # Parallel installation with forced recreation
 
 NOTES:
-    - Services are installed in dependency order automatically
+    - Services are installed in dependency order automatically via service-manager
     - Database services are always installed first when included
-    - SSL certificates work across all operating systems
-    - Use --quick mode for development-only setups
+    - Parallel mode speeds up installation but may be harder to debug
+    - Force recreation ensures clean containers but takes longer
 EOF
 }
 
@@ -83,18 +83,8 @@ parse_arguments() {
                 opt_skip_confirmation=true
                 shift
                 ;;
-            -q|--quick)
-                opt_quick_mode=true
-                opt_skip_ssl=true
-                opt_skip_trust=true
-                shift
-                ;;
             -d|--skip-db)
                 opt_skip_db_setup=true
-                shift
-                ;;
-            --skip-ssl)
-                opt_skip_ssl=true
                 shift
                 ;;
             -c|--categories)
@@ -102,8 +92,20 @@ parse_arguments() {
                     opt_categories_only="$2"
                     shift 2
                 else
-                    handle_error "Option $1 requires a value"
+                    handle_error "Option $1 requires a comma-separated list of categories"
                 fi
+                ;;
+            -p|--parallel)
+                opt_parallel=true
+                shift
+                ;;
+            -f|--force)
+                opt_force_recreate=true
+                shift
+                ;;
+            -r|--rebuild)
+                opt_rebuild_services=true
+                shift
                 ;;
             -h|--help)
                 show_usage
@@ -126,6 +128,11 @@ validate_environment() {
     # Check for container runtime
     if ! command -v "$CONTAINER_RUNTIME" >/dev/null 2>&1; then
         handle_error "$CONTAINER_RUNTIME is not installed or not in PATH"
+    fi
+    
+    # Check service-manager exists
+    if [[ ! -f "$SCRIPT_DIR/service-manager.sh" ]]; then
+        handle_error "service-manager.sh not found at $SCRIPT_DIR/service-manager.sh"
     fi
     
     # Check compose functionality
@@ -179,8 +186,9 @@ show_installation_summary() {
     echo "  Use Sudo: $opt_use_sudo"
     echo "  Show Errors: $opt_show_errors"
     echo "  Skip DB Setup: $opt_skip_db_setup"
-    echo "  Skip SSL Setup: $opt_skip_ssl"
-    echo "  Skip Trust Setup: $opt_skip_trust"
+    echo "  Parallel Mode: $opt_parallel"
+    echo "  Force Recreate: $opt_force_recreate"
+    echo "  Rebuild Services: $opt_rebuild_services"
     
     if [[ -n "$opt_categories_only" ]]; then
         echo "  Categories: $opt_categories_only"
@@ -194,7 +202,7 @@ show_installation_summary() {
 confirm_installation() {
     if [[ "$opt_skip_confirmation" == "false" ]]; then
         echo "This script will install and configure the microservices environment."
-        echo "The installation will create containers, networks, and SSL certificates."
+        echo "The installation will create containers, networks, and volumes."
         echo ""
         read "response?Do you want to continue? (y/N): "
         
@@ -206,82 +214,93 @@ confirm_installation() {
 }
 
 install_services() {
-    local -a categories_to_install
+    print_status "step" "Starting service installation via service-manager..."
     
+    # Build service-manager arguments
+    local -a service_manager_args
+    
+    # Determine the command
     if [[ -n "$opt_categories_only" ]]; then
-        categories_to_install=(${(s:,:)opt_categories_only})
+        service_manager_args+=("start" "--categories" "$opt_categories_only")
     else
-        categories_to_install=("${SERVICE_STARTUP_ORDER[@]}")
+        service_manager_args+=("start-all")
     fi
     
-    print_status "step" "Starting service installation..."
+    # Add service-manager options based on install options
+    [[ "$opt_use_sudo" == "true" ]] && service_manager_args+=("--sudo")
+    [[ "$opt_show_errors" == "true" ]] && service_manager_args+=("--errors")
+    [[ "$opt_parallel" == "true" ]] && service_manager_args+=("--parallel")
+    [[ "$opt_force_recreate" == "true" ]] && service_manager_args+=("--force-services")
+    [[ "$opt_rebuild_services" == "true" ]] && service_manager_args+=("--rebuild-services")
     
-    # Ensure network exists first
-    ensure_network_exists
+    # Always wait for health checks during installation
+    service_manager_args+=("--health-timeout" "120")
     
-    # Install each category in order
-    for category in "${categories_to_install[@]}"; do
-        print_status "step" "Installing $category services..."
-        start_service_category "$category"
+    print_status "info" "Executing: service-manager.sh ${service_manager_args[*]}"
+    
+    # Execute service-manager
+    if "$SCRIPT_DIR/service-manager.sh" "${service_manager_args[@]}"; then
+        print_status "success" "Service installation completed successfully!"
         
-        # Special handling for database category
-        if [[ "$category" == "database" ]]; then
-            # Wait for MongoDB specifically if it's being installed
-            if [[ -n "${SERVICE_CATEGORIES[database]}" ]] && [[ "${SERVICE_CATEGORIES[database]}" == *"mongodb.yml"* ]]; then
-                wait_for_mongodb
-            fi
-            
-            # Wait a bit for other databases to initialize
-            print_status "step" "Waiting for databases to initialize..."
-            sleep 10
-            
-            # Run database setup if not skipped
-            if [[ "$opt_skip_db_setup" == "false" ]]; then
-                run_database_setup
-            fi
+        # Handle database setup if needed
+        handle_database_setup
+    else
+        handle_error "Service installation failed. Check logs for details."
+    fi
+}
+
+handle_database_setup() {
+    # Check if database category was installed
+    local db_installed=false
+    
+    if [[ -n "$opt_categories_only" ]]; then
+        # Check if database was in the requested categories
+        if [[ "$opt_categories_only" == *"database"* ]]; then
+            db_installed=true
+        fi
+    else
+        # Full installation includes database
+        db_installed=true
+    fi
+    
+    if [[ "$db_installed" == "true" && "$opt_skip_db_setup" == "false" ]]; then
+        print_status "step" "Waiting for databases to initialize..."
+        sleep 10
+        
+        # Wait for MongoDB specifically if it's installed
+        if [[ -n "${SERVICE_CATEGORIES[database]}" ]] && [[ "${SERVICE_CATEGORIES[database]}" == *"mongodb.yml"* ]]; then
+            wait_for_mongodb 60
         fi
         
-        # Brief pause between categories
-        sleep 2
-    done
-    
-    print_status "success" "Service installation completed!"
+        run_database_setup
+    else
+        if [[ "$opt_skip_db_setup" == "true" ]]; then
+            print_status "info" "Database setup skipped as requested"
+        else
+            print_status "info" "No database category installed, skipping database setup"
+        fi
+    fi
 }
 
 run_database_setup() {
     print_status "step" "Running database setup..."
     
+    # Check if setup-databases.sh exists
+    if [[ ! -f "$SCRIPT_DIR/setup-databases.sh" ]]; then
+        print_status "warning" "setup-databases.sh not found, skipping database initialization"
+        return 0
+    fi
+    
     local setup_args=()
-    [[ "$opt_use_sudo" == "true" ]] && setup_args+=("-s")
-    [[ "$opt_show_errors" == "true" ]] && setup_args+=("-e")
-    setup_args+=("-m" "-p")  # Setup both MariaDB and PostgreSQL
+    [[ "$opt_use_sudo" == "true" ]] && setup_args+=("--sudo")
+    [[ "$opt_show_errors" == "true" ]] && setup_args+=("--errors")
+    setup_args+=("--all")  # Setup all available databases
     
     if "$SCRIPT_DIR/setup-databases.sh" "${setup_args[@]}"; then
         print_status "success" "Database setup completed"
     else
         print_status "warning" "Database setup encountered issues but continuing..."
-    fi
-}
-
-setup_ssl_certificates() {
-    if [[ "$opt_skip_ssl" == "true" ]]; then
-        print_status "info" "Skipping SSL certificate generation"
-        return 0
-    fi
-    
-    print_status "step" "Setting up SSL certificates with mkcert..."
-    
-    local ssl_args=()
-    [[ "$opt_use_sudo" == "true" ]] && ssl_args+=("-s")
-    [[ "$opt_show_errors" == "true" ]] && ssl_args+=("-e")
-    [[ "$opt_force_regenerate" == "true" ]] && ssl_args+=("-f")
-    
-    if "$SCRIPT_DIR/setup-ssl.sh" "${ssl_args[@]}"; then
-        print_status "success" "SSL certificates generated and automatically trusted"
-        return 0
-    else
-        print_status "warning" "SSL setup encountered issues but continuing..."
-        return 1
+        print_status "info" "You can run database setup manually later: ./scripts/setup-databases.sh --all"
     fi
 }
 
@@ -292,56 +311,37 @@ show_completion_message() {
     echo "========================================================"
     echo ""
     
-    if [[ "$opt_quick_mode" == "true" ]]; then
-        echo "Quick mode installation completed. Services are accessible via localhost ports."
-        echo "Run the following for SSL setup later:"
-        echo "  $SCRIPT_DIR/setup-ssl.sh"
+    echo "Your microservices environment is now ready!"
+    echo ""
+    echo "Quick commands to get started:"
+    echo "  ./scripts/service-manager.sh status        # Check service status"
+    echo "  ./scripts/service-manager.sh ps            # List running containers"
+    echo "  ./scripts/service-manager.sh logs SERVICE  # View service logs"
+    echo ""
+    
+    # Show service URLs if proxy is installed
+    local proxy_installed=false
+    if [[ -n "$opt_categories_only" ]]; then
+        [[ "$opt_categories_only" == *"proxy"* ]] && proxy_installed=true
+    else
+        proxy_installed=true
+    fi
+    
+    if [[ "$proxy_installed" == "true" ]]; then
+        echo "Service URLs (add to /etc/hosts):"
+        if [[ -f "$PROJECT_ROOT/context/hosts.txt" ]]; then
+            echo "  Check: ./context/hosts.txt for complete host entries"
+        fi
+        echo "  Example: https://nginx.test (Nginx Proxy Manager)"
+        echo "  Example: https://portainer.test (Container Management)"
         echo ""
     fi
     
-    echo "You can now access your services:"
+    echo "For troubleshooting:"
+    echo "  ./scripts/service-manager.sh --help        # View all options"
+    echo "  ./scripts/service-manager.sh down SERVICE  # Stop specific service"
+    echo "  ./scripts/service-manager.sh stop-all      # Stop all services"
     echo ""
-    echo "🌐 Web Interfaces:"
-    echo "  - Nginx Proxy Manager: https://nginx.test (or http://localhost:81)"
-    echo "  - Grafana Dashboard: https://grafana.test (or http://localhost:9001)"
-    echo "  - Metabase Analytics: https://metabase.test (or http://localhost:8085)"
-    echo ""
-    echo "🗄️  Database Tools:"
-    echo "  - Adminer: https://adminer.test (or http://localhost:8082)"
-    echo "  - phpMyAdmin: https://phpmyadmin.test (or http://localhost:8083)"
-    echo "  - Mongo Express: https://mongodb.test (or http://localhost:8084)"
-    echo ""
-    echo "🤖 AI & Analytics:"
-    echo "  - n8n Workflows: https://n8n.test (or http://localhost:9100)"
-    echo "  - Langflow: https://langflow.test (or http://localhost:9110)"
-    echo "  - Kibana: https://kibana.test (or http://localhost:9120)"
-    echo ""
-    echo "📊 Business Applications:"
-    echo "  - Matomo Analytics: https://matomo.test (or http://localhost:9010)"
-    echo ""
-    echo "💻 Development Tools:"
-    echo "  - Mailpit: https://mailpit.test (or http://localhost:9200)"
-    echo "  - Gitea: https://gitea.test (or http://localhost:9210)"
-    echo ""
-    echo "📋 Management Commands:"
-    echo "  - View all services: $SCRIPT_DIR/show-services.sh"
-    echo "  - Stop all services: $SCRIPT_DIR/stop-services.sh"
-    echo "  - Start services: $SCRIPT_DIR/start-services.sh"
-    echo "  - Individual service: $SCRIPT_DIR/service-manager.sh [command] [service]"
-    echo ""
-    echo "🔧 Default Credentials:"
-    echo "  - Username: admin"
-    echo "  - Password: 123456"
-    echo "  - Email: admin@site.test"
-    echo ""
-    if [[ "$opt_skip_ssl" == "false" ]]; then
-        echo "🔒 SSL Certificates:"
-        echo "  - Automatically generated and trusted with mkcert"
-        echo "  - All https:// URLs should work without browser warnings"
-        echo "  - Certificates located: ./config/traefik/certs/"
-        echo ""
-    fi
-    echo "========================================================"
 }
 
 # =============================================================================
@@ -366,11 +366,8 @@ main() {
     # Start installation process
     print_status "step" "Starting microservices installation..."
     
-    # Install services
+    # Install services via service-manager
     install_services
-    
-    # Setup SSL if not skipped
-    setup_ssl_certificates
     
     # Show completion message
     show_completion_message

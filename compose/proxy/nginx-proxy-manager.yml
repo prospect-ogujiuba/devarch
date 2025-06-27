@@ -30,10 +30,3 @@ services:
       - microservices-net
     environment:
       - DISABLE_IPV6=true
-    labels:
-      # Only admin interface gets Traefik routing
-      - "traefik.enable=true"
-      - "traefik.http.routers.nginx-proxy-manager.rule=Host(`nginx.test`)"
-      - "traefik.http.routers.nginx-proxy-manager.entrypoints=websecure"
-      - "traefik.http.routers.nginx-proxy-manager.tls=true"
-      - "traefik.http.services.nginx-proxy-manager.loadbalancer.server.port=81"

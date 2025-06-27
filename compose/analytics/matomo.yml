@@ -16,9 +16,3 @@ services:
       - matomo_data:/var/www/html
     networks:
       - microservices-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.matomo.rule=Host(`matomo.test`)"
-      - "traefik.http.routers.matomo.entrypoints=websecure"
-      - "traefik.http.routers.matomo.tls=true"
-      - "traefik.http.services.matomo.loadbalancer.server.port=80"
