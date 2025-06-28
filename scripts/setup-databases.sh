@@ -317,23 +317,23 @@ setup_mariadb() {
     # Enhanced MariaDB setup with better conflict handling
     local mariadb_setup_sql="
 -- Create databases with IF NOT EXISTS to avoid conflicts
-CREATE DATABASE IF NOT EXISTS npm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS matomo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS ${DB_MYSQL_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS ${MATOMO_DATABASE_DBNAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Drop and recreate users to ensure clean state
-DROP USER IF EXISTS 'mariadb_user'@'%';
-DROP USER IF EXISTS 'npm_user'@'%';
-DROP USER IF EXISTS 'matomo_user'@'%';
+DROP USER IF EXISTS '${MARIADB_USER}'@'%';
+DROP USER IF EXISTS '${DB_MYSQL_USER}'@'%';
+DROP USER IF EXISTS '${MATOMO_DATABASE_USERNAME}'@'%';
 
 -- Create users
-CREATE USER 'mariadb_user'@'%' IDENTIFIED BY '${ADMIN_PASSWORD}';
-CREATE USER 'npm_user'@'%' IDENTIFIED BY '${ADMIN_PASSWORD}';
-CREATE USER 'matomo_user'@'%' IDENTIFIED BY '${ADMIN_PASSWORD}';
+CREATE USER '${MARIADB_USER}'@'%' IDENTIFIED BY '${MARIADB_PASSWORD}';
+CREATE USER '${DB_MYSQL_USER}'@'%' IDENTIFIED BY '${DB_MYSQL_PASSWORD}';
+CREATE USER '${MATOMO_DATABASE_USERNAME}'@'%' IDENTIFIED BY '${MATOMO_DATABASE_PASSWORD}';
 
 -- Grant privileges
-GRANT ALL PRIVILEGES ON *.* TO 'mariadb_user'@'%' WITH GRANT OPTION;
-GRANT ALL PRIVILEGES ON npm.* TO 'npm_user'@'%';
-GRANT ALL PRIVILEGES ON matomo.* TO 'matomo_user'@'%';
+GRANT ALL PRIVILEGES ON *.* TO '${MARIADB_USER}'@'%' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON ${DB_MYSQL_NAME}.* TO '${DB_MYSQL_USER}'@'%';
+GRANT ALL PRIVILEGES ON ${MATOMO_DATABASE_DBNAME}.* TO '${MATOMO_DATABASE_USERNAME}'@'%';
 
 FLUSH PRIVILEGES;
 "
@@ -365,13 +365,13 @@ setup_mysql() {
     # Create databases and users for MySQL
     local mysql_setup_sql="
 -- Drop and recreate users to ensure clean state
-DROP USER IF EXISTS 'mysql_user'@'%';
+DROP USER IF EXISTS '${MYSQL_CUSTOM_USER}'@'%';
 
 -- Create user
-CREATE USER 'mysql_user'@'%' IDENTIFIED BY '${ADMIN_PASSWORD}';
+CREATE USER '${MYSQL_CUSTOM_USER}'@'%' IDENTIFIED BY '${MYSQL_CUSTOM_USER_PASSWORD}';
 
 -- Grant full root-level privileges
-GRANT ALL PRIVILEGES ON *.* TO 'mysql_user'@'%' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_CUSTOM_USER}'@'%' WITH GRANT OPTION;
 
 -- Apply changes
 FLUSH PRIVILEGES;
@@ -399,35 +399,35 @@ setup_postgres() {
     
     # Enhanced PostgreSQL setup with conflict resolution
     local postgres_setup_sql="
--- Drop and recreate privileged postgres_user first
-DROP ROLE IF EXISTS postgres_user;
-CREATE ROLE postgres_user WITH LOGIN PASSWORD '${ADMIN_PASSWORD}' SUPERUSER CREATEDB CREATEROLE;
+-- Drop and recreate privileged ${POSTGRES_CUSTOM_USER} first
+DROP ROLE IF EXISTS ${POSTGRES_CUSTOM_USER};
+CREATE ROLE ${POSTGRES_CUSTOM_USER} WITH LOGIN PASSWORD '${POSTGRES_CUSTOM_USER_PASSWORD}' SUPERUSER CREATEDB CREATEROLE;
 
 -- Terminate existing connections to databases we might need to recreate
 SELECT pg_terminate_backend(pid) FROM pg_stat_activity 
-WHERE datname IN ('metabase', 'nocodb') AND pid <> pg_backend_pid();
+WHERE datname IN ('${MB_DB_NAME}', 'nocodb') AND pid <> pg_backend_pid();
 
 -- Wait a moment for connections to close
 SELECT pg_sleep(2);
 
 -- Drop existing databases if they exist (CASCADE to handle dependencies)
-DROP DATABASE IF EXISTS metabase;
+DROP DATABASE IF EXISTS ${MB_DB_NAME};
 DROP DATABASE IF EXISTS nocodb;
 
 -- Drop existing users if they exist
-DROP USER IF EXISTS metabase_user;
+DROP USER IF EXISTS ${MB_DB_USER};
 DROP USER IF EXISTS nocodb_user;
 
 -- Create standard users
-CREATE USER metabase_user WITH PASSWORD '${ADMIN_PASSWORD}';
+CREATE USER ${MB_DB_USER} WITH PASSWORD '${ADMIN_PASSWORD}';
 CREATE USER nocodb_user WITH PASSWORD '${ADMIN_PASSWORD}';
 
 -- Create databases
-CREATE DATABASE metabase OWNER metabase_user;
+CREATE DATABASE ${MB_DB_NAME} OWNER ${MB_DB_USER};
 CREATE DATABASE nocodb OWNER nocodb_user;
 
 -- Grant additional privileges
-GRANT ALL PRIVILEGES ON DATABASE metabase TO metabase_user;
+GRANT ALL PRIVILEGES ON DATABASE ${MB_DB_NAME} TO ${MB_DB_USER};
 GRANT ALL PRIVILEGES ON DATABASE nocodb TO nocodb_user;
 "
     
@@ -459,18 +459,18 @@ setup_mongodb() {
 use admin;
 
 // Drop the user if it already exists
-try { db.dropUser('mongodb_user'); } catch(e) { print('mongodb_user did not exist'); }
+try { db.dropUser('${MONGO_CUSTOM_USER}'); } catch(e) { print('${MONGO_CUSTOM_USER} did not exist'); }
 
 // Create a new superuser with root privileges
 db.createUser({
-    user: 'mongodb_user',
-    pwd: '${ADMIN_PASSWORD}',
+    user: '${MONGO_CUSTOM_USER}',
+    pwd: '${MONGO_CUSTOM_USER_PASSWORD}',
     roles: [
         { role: 'root', db: 'admin' }
     ]
 });
 
-print('MongoDB superuser mongodb_user created successfully');
+print('MongoDB superuser ${MONGO_CUSTOM_USER} created successfully');
 "
 
     if eval "$CONTAINER_CMD exec -i mongodb mongosh --quiet 2>/dev/null <<EOF
