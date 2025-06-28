@@ -91,31 +91,13 @@ scrape_configs:
   # Database management tools (using container names and internal ports)
   - job_name: 'db-management-tools'
     static_configs:
-      - targets:
-          - 'adminer:8080'
-          - 'phpmyadmin:80'
-          - 'mongo-express:8081'
           - 'metabase:3000'
           - 'nocodb:8080'
-          - 'pgadmin:80'
-          - 'redis-commander:8081'
     scrape_interval: 60s
     metrics_path: '/metrics'
     scrape_timeout: 10s
     honor_labels: false
     relabel_configs:
-      - source_labels: [__address__]
-        regex: 'adminer:.*'
-        target_label: service
-        replacement: 'adminer'
-      - source_labels: [__address__]
-        regex: 'phpmyadmin:.*'
-        target_label: service
-        replacement: 'phpmyadmin'
-      - source_labels: [__address__]
-        regex: 'mongo-express:.*'
-        target_label: service
-        replacement: 'mongo-express'
       - source_labels: [__address__]
         regex: 'metabase:.*'
         target_label: service
@@ -124,13 +106,5 @@ scrape_configs:
         regex: 'nocodb:.*'
         target_label: service
         replacement: 'nocodb'
-      - source_labels: [__address__]
-        regex: 'pgadmin:.*'
-        target_label: service
-        replacement: 'pgadmin'
-      - source_labels: [__address__]
-        regex: 'redis-commander:.*'
-        target_label: service
-        replacement: 'redis-commander'
       - target_label: service_type
         replacement: 'db-tools'

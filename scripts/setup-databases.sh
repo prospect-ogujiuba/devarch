@@ -405,30 +405,30 @@ CREATE ROLE ${POSTGRES_CUSTOM_USER} WITH LOGIN PASSWORD '${POSTGRES_CUSTOM_USER_
 
 -- Terminate existing connections to databases we might need to recreate
 SELECT pg_terminate_backend(pid) FROM pg_stat_activity 
-WHERE datname IN ('${MB_DB_NAME}', 'nocodb') AND pid <> pg_backend_pid();
+WHERE datname IN ('${MB_DB_NAME}', '${NC_DATABASE_NAME}') AND pid <> pg_backend_pid();
 
 -- Wait a moment for connections to close
 SELECT pg_sleep(2);
 
 -- Drop existing databases if they exist (CASCADE to handle dependencies)
 DROP DATABASE IF EXISTS ${MB_DB_NAME};
-DROP DATABASE IF EXISTS nocodb;
+DROP DATABASE IF EXISTS ${NC_DATABASE_NAME};
 
 -- Drop existing users if they exist
 DROP USER IF EXISTS ${MB_DB_USER};
-DROP USER IF EXISTS nocodb_user;
+DROP USER IF EXISTS ${NC_DATABASE_USER};
 
 -- Create standard users
 CREATE USER ${MB_DB_USER} WITH PASSWORD '${ADMIN_PASSWORD}';
-CREATE USER nocodb_user WITH PASSWORD '${ADMIN_PASSWORD}';
+CREATE USER ${NC_DATABASE_USER} WITH PASSWORD '${ADMIN_PASSWORD}';
 
 -- Create databases
 CREATE DATABASE ${MB_DB_NAME} OWNER ${MB_DB_USER};
-CREATE DATABASE nocodb OWNER nocodb_user;
+CREATE DATABASE ${NC_DATABASE_NAME} OWNER ${NC_DATABASE_USER};
 
 -- Grant additional privileges
 GRANT ALL PRIVILEGES ON DATABASE ${MB_DB_NAME} TO ${MB_DB_USER};
-GRANT ALL PRIVILEGES ON DATABASE nocodb TO nocodb_user;
+GRANT ALL PRIVILEGES ON DATABASE ${NC_DATABASE_NAME} TO ${NC_DATABASE_USER};
 "
     
     if eval "$CONTAINER_CMD exec -i postgres psql -U postgres 2>/dev/null <<EOF

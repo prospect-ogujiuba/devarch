@@ -1,0 +1,35 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  nocodb_data:
+
+services:
+  nocodb:
+    container_name: nocodb
+    image: nocodb/nocodb:latest
+    restart: unless-stopped
+    environment:
+      - NC_DB=pg://${POSTGRES_HOST}:${POSTGRES_PORT}?u=${NC_DATABASE_USER}&p=${NC_DATABASE_USER_PASSWORD}&d=${NC_DATABASE_NAME}
+      - NC_ADMIN_EMAIL=${ADMIN_EMAIL}
+      - NC_ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - NC_SERVER_HOST=0.0.0.0
+      - NC_SERVER_PORT=8080
+      - NC_DISABLE_TELE=true
+      - NC_PUBLIC_URL=https://${NOCODB_DOMAIN}
+      - NC_REDIS_URL=redis://redis:6379
+      - NC_TOOL_DIR=/usr/app/data/
+      - NC_ATTACHMENT_FIELD_SIZE=20971520
+      - NC_SMTP_FROM=${ADMIN_EMAIL}
+      - NC_SMTP_HOST=
+      - NC_SMTP_PORT=
+      - NC_SMTP_USERNAME=
+      - NC_SMTP_PASSWORD=
+      - NC_SMTP_SECURE=false
+    ports:
+      - "127.0.0.1:8086:8080"
+    volumes:
+      - nocodb_data:/usr/app/data
+    networks:
+      - microservices-net
