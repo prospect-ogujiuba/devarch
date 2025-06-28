@@ -35,9 +35,10 @@ export CONTAINER_RUNTIME="podman"  # Change to "docker" if using Docker instead
 typeset -A SERVICE_CATEGORIES
 SERVICE_CATEGORIES=(
     [proxy]="nginx-proxy-manager.yml"
-    [database]="mariadb.yml mysql.yml postgres.yml mongodb.yml redis.yml"
-    [dbms]="metabase.yml nocodb.yml"
+    [management]="portainer.yml"
     [backend]="php.yml"
+    [database]="mariadb.yml mysql.yml postgres.yml mongodb.yml redis.yml"
+    [dbms]="adminer.yml phpmyadmin.yml mongo-express.yml metabase.yml nocodb.yml pgadmin.yml redis-commander.yml"
     [analytics]="matomo.yml prometheus.yml grafana.yml"
 )
 
@@ -58,9 +59,10 @@ SERVICE_PATH_OVERRIDES=(
 # Service startup order (critical for dependencies) - zsh array
 SERVICE_STARTUP_ORDER=(
     "proxy"
+    "management"
+    "backend"
     "database"
     "dbms" 
-    "backend"
     "analytics"
 )
 

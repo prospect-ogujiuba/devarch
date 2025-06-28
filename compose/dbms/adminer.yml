@@ -1,0 +1,13 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  adminer:
+    container_name: adminer
+    image: adminer:latest
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8082:8080" # Keep for direct access during testing
+    networks:
+      - microservices-net

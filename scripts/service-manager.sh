@@ -1306,8 +1306,12 @@ cleanup_networks_global() {
         print_status "info" "Network $NETWORK_NAME does not exist"
     fi
     
+    if [[ "$opt_remove_networks" == "false" ]]; then
+        return 0
+    else
+        eval "$CONTAINER_CMD network prune -f $ERROR_REDIRECT" || true
+    fi
     # Cleanup unused networks
-    eval "$CONTAINER_CMD network prune -f $ERROR_REDIRECT" || true
 }
 
 cleanup_system_global() {
