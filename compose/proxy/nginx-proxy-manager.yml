@@ -22,8 +22,8 @@ services:
       - ../../apps:/var/www/html
       - ../../config/nginx/custom:/data/nginx/custom
       - /etc/localtime:/etc/localtime:ro
-      - ../../config/traefik/certs/local.crt:/etc/ssl/certs/local.crt:ro
-      - ../../config/traefik/certs/local.key:/etc/ssl/private/local.key:ro
+      - ../../config/nginx/certs/local.crt:/etc/ssl/certs/local.crt:ro
+      - ../../config/nginx/certs/local.key:/etc/ssl/private/local.key:ro
       - npm_data:/data
       - npm_letsencrypt:/etc/letsencrypt
     networks:
