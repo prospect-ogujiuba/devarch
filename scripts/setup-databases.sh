@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 # =============================================================================
-# DATABASE SETUP SCRIPT - REFACTORED
+# DATABASE SETUP SCRIPT - FIXED
 # =============================================================================
 # Initializes databases and creates required schemas/users for all services
 # Now leverages config.sh and service-manager for better integration
@@ -156,12 +156,12 @@ detect_available_databases() {
     
     for db_service in "${database_services[@]}"; do
         if validate_service_exists "$db_service"; then
-            local status=$(get_service_status "$db_service")
-            if [[ "$status" == "running" ]]; then
+            local service_status=$(get_service_status "$db_service")
+            if [[ "$service_status" == "running" ]]; then
                 available_databases+=("$db_service")
                 print_status "info" "✓ $db_service is running and available"
             else
-                print_status "warning" "⚠️  $db_service exists but is not running (status: $status)"
+                print_status "warning" "⚠️  $db_service exists but is not running (status: $service_status)"
             fi
         else
             print_status "info" "ℹ️  $db_service service not found (not installed)"
@@ -245,23 +245,40 @@ wait_for_mysql_ready() {
     local container_name="$1"
     local counter=0
     
+    print_status "step" "Waiting for $container_name to be ready..."
+    
     while [[ $counter -lt $opt_timeout ]]; do
-        # Try direct connection with root user
-        if eval "$CONTAINER_CMD exec $container_name mariadb -u root -p\$MYSQL_ROOT_PASSWORD -e 'SELECT 1;' >/dev/null 2>&1"; then
+        # Method 1: Try connecting with root user using environment variables
+        if eval "$CONTAINER_CMD exec $container_name sh -c 'mariadb -u root -p\"\$MARIADB_ROOT_PASSWORD\" -e \"SELECT 1;\"' >/dev/null 2>&1"; then
             print_status "success" "$container_name is ready!"
             return 0
         fi
         
-        # Fallback: Check if mysqladmin ping works
-        if eval "$CONTAINER_CMD exec $container_name mysqladmin ping -h localhost -u root -p\$MYSQL_ROOT_PASSWORD >/dev/null 2>&1"; then
+        # Method 2: Try mysqladmin ping
+        if eval "$CONTAINER_CMD exec $container_name sh -c 'mysqladmin ping -h localhost -u root -p\"\$MARIADB_ROOT_PASSWORD\"' >/dev/null 2>&1"; then
             print_status "success" "$container_name is ready!"
             return 0
+        fi
+        
+        # Method 3: Try without password (for initial setup)
+        if eval "$CONTAINER_CMD exec $container_name sh -c 'mariadb -u root -e \"SELECT 1;\"' >/dev/null 2>&1"; then
+            print_status "success" "$container_name is ready!"
+            return 0
+        fi
+        
+        # Method 4: Check if MariaDB process is running
+        if eval "$CONTAINER_CMD exec $container_name pgrep mysqld >/dev/null 2>&1"; then
+            print_status "info" "$container_name process is running, trying connection..."
+            # Give it a few more seconds for the socket to be ready
+            sleep 2
+            counter=$((counter + 2))
+            continue
         fi
         
         # Check if container is still running
-        local status=$(get_service_status "$container_name")
-        if [[ "$status" != "running" ]]; then
-            handle_error "$container_name container is not running (status: $status)"
+        local container_status=$(get_service_status "$container_name")
+        if [[ "$container_status" != "running" ]]; then
+            handle_error "$container_name container is not running (status: $container_status)"
         fi
         
         print_status "info" "$container_name not ready yet... ($counter/$opt_timeout seconds)"
@@ -269,12 +286,21 @@ wait_for_mysql_ready() {
         counter=$((counter + 3))
     done
     
+    # Final diagnostic attempt
+    print_status "warning" "Connection timeout reached. Running diagnostics..."
+    print_status "info" "Container status:"
+    eval "$CONTAINER_CMD exec $container_name ps aux | grep mysql" || true
+    print_status "info" "MariaDB error log (last 10 lines):"
+    eval "$CONTAINER_CMD exec $container_name tail -10 /var/log/mysql/error.log" 2>/dev/null || true
+    
     handle_error "$container_name connection timeout after $opt_timeout seconds"
 }
 
 wait_for_postgres_ready() {
     local container_name="$1"
     local counter=0
+    
+    print_status "step" "Waiting for $container_name to be ready..."
     
     while [[ $counter -lt $opt_timeout ]]; do
         # Check if PostgreSQL is ready
@@ -287,9 +313,9 @@ wait_for_postgres_ready() {
         fi
         
         # Check if container is still running
-        local status=$(get_service_status "$container_name")
-        if [[ "$status" != "running" ]]; then
-            handle_error "$container_name container is not running (status: $status)"
+        local container_status=$(get_service_status "$container_name")
+        if [[ "$container_status" != "running" ]]; then
+            handle_error "$container_name container is not running (status: $container_status)"
         fi
         
         print_status "info" "$container_name not ready yet... ($counter/$opt_timeout seconds)"
@@ -301,7 +327,7 @@ wait_for_postgres_ready() {
 }
 
 # =============================================================================
-# DATABASE SETUP FUNCTIONS
+# DATABASE SETUP FUNCTIONS - IMPROVED
 # =============================================================================
 
 setup_mariadb() {
@@ -312,43 +338,74 @@ setup_mariadb() {
     
     print_status "step" "Setting up MariaDB databases and users..."
     
-    wait_for_database_ready "mariadb" "mariadb"
+    wait_for_mysql_ready "mariadb"
     
-    # Enhanced MariaDB setup with better conflict handling
-    local mariadb_setup_sql="
+    # Create a temporary SQL file for better reliability
+    local temp_sql="/tmp/mariadb_setup_$$.sql"
+    
+    # Create SQL commands with proper escaping
+    cat > "$temp_sql" << EOF
 -- Create databases with IF NOT EXISTS to avoid conflicts
-CREATE DATABASE IF NOT EXISTS ${DB_MYSQL_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS ${MATOMO_DATABASE_DBNAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS \`${DB_MYSQL_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS \`${MATOMO_DATABASE_DBNAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Drop and recreate users to ensure clean state
 DROP USER IF EXISTS '${MARIADB_USER}'@'%';
 DROP USER IF EXISTS '${DB_MYSQL_USER}'@'%';
 DROP USER IF EXISTS '${MATOMO_DATABASE_USERNAME}'@'%';
 
--- Create users
+-- Create users with proper authentication
 CREATE USER '${MARIADB_USER}'@'%' IDENTIFIED BY '${MARIADB_PASSWORD}';
 CREATE USER '${DB_MYSQL_USER}'@'%' IDENTIFIED BY '${DB_MYSQL_PASSWORD}';
 CREATE USER '${MATOMO_DATABASE_USERNAME}'@'%' IDENTIFIED BY '${MATOMO_DATABASE_PASSWORD}';
 
 -- Grant privileges
 GRANT ALL PRIVILEGES ON *.* TO '${MARIADB_USER}'@'%' WITH GRANT OPTION;
-GRANT ALL PRIVILEGES ON ${DB_MYSQL_NAME}.* TO '${DB_MYSQL_USER}'@'%';
-GRANT ALL PRIVILEGES ON ${MATOMO_DATABASE_DBNAME}.* TO '${MATOMO_DATABASE_USERNAME}'@'%';
+GRANT ALL PRIVILEGES ON \`${DB_MYSQL_NAME}\`.* TO '${DB_MYSQL_USER}'@'%';
+GRANT ALL PRIVILEGES ON \`${MATOMO_DATABASE_DBNAME}\`.* TO '${MATOMO_DATABASE_USERNAME}'@'%';
 
+-- Apply changes
 FLUSH PRIVILEGES;
-"
+
+-- Show results
+SHOW DATABASES;
+SELECT User, Host FROM mysql.user WHERE User IN ('${MARIADB_USER}', '${DB_MYSQL_USER}', '${MATOMO_DATABASE_USERNAME}');
+EOF
     
-    # Use mariadb command with better error handling
-    if eval "$CONTAINER_CMD exec -i mariadb mariadb -u root -p\$MYSQL_ROOT_PASSWORD 2>/dev/null << 'EOF'
-$mariadb_setup_sql
-EOF"; then
-        print_status "success" "MariaDB databases and users created successfully"
+    # Copy SQL file to container and execute
+    if eval "$CONTAINER_CMD cp '$temp_sql' mariadb:/tmp/setup.sql"; then
+        print_status "info" "Executing MariaDB setup commands..."
+        
+        # Try multiple connection methods
+        local success=false
+        
+        # Method 1: With password
+        if eval "$CONTAINER_CMD exec mariadb sh -c 'mariadb -u root -p\"\$MARIADB_ROOT_PASSWORD\" < /tmp/setup.sql'"; then
+            success=true
+        # Method 2: Without password (for fresh installations)
+        elif eval "$CONTAINER_CMD exec mariadb sh -c 'mariadb -u root < /tmp/setup.sql'"; then
+            success=true
+        fi
+        
+        # Clean up
+        eval "$CONTAINER_CMD exec mariadb rm -f /tmp/setup.sql"
+        rm -f "$temp_sql"
+        
+        if [[ "$success" == "true" ]]; then
+            print_status "success" "MariaDB databases and users created successfully"
+            
+            # Verify setup
+            print_status "info" "Verifying database setup..."
+            eval "$CONTAINER_CMD exec mariadb sh -c 'mariadb -u root -p\"\$MARIADB_ROOT_PASSWORD\" -e \"SHOW DATABASES;\"'" || true
+        else
+            print_status "error" "Failed to setup MariaDB databases"
+            print_status "info" "Attempting to show MariaDB error details..."
+            eval "$CONTAINER_CMD logs mariadb --tail 20" || true
+            return 1
+        fi
     else
-        print_status "error" "Failed to setup MariaDB databases"
-        print_status "info" "Attempting to show MariaDB error details..."
-        # Show what went wrong
-        eval "$CONTAINER_CMD exec mariadb mariadb -u root -p\$MYSQL_ROOT_PASSWORD -e 'SHOW DATABASES;' 2>&1" || true
-        return 1
+        rm -f "$temp_sql"
+        handle_error "Failed to copy SQL setup file to MariaDB container"
     fi
 }
 
@@ -360,30 +417,61 @@ setup_mysql() {
     
     print_status "step" "Setting up MySQL databases and users..."
     
-    wait_for_database_ready "mysql" "mysql"
+    # Wait for MySQL to be ready (reuse the MariaDB function as they're compatible)
+    wait_for_mysql_ready "mysql"
     
-    # Create databases and users for MySQL
-    local mysql_setup_sql="
--- Drop and recreate users to ensure clean state
+    # Create a temporary SQL file
+    local temp_sql="/tmp/mysql_setup_$$.sql"
+    
+    cat > "$temp_sql" << EOF
+-- Create database if it doesn't exist
+CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Drop and recreate user to ensure clean state
 DROP USER IF EXISTS '${MYSQL_CUSTOM_USER}'@'%';
 
--- Create user
+-- Create user with proper authentication
 CREATE USER '${MYSQL_CUSTOM_USER}'@'%' IDENTIFIED BY '${MYSQL_CUSTOM_USER_PASSWORD}';
 
--- Grant full root-level privileges
+-- Grant full privileges
 GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_CUSTOM_USER}'@'%' WITH GRANT OPTION;
 
 -- Apply changes
 FLUSH PRIVILEGES;
-"
-    
-    if eval "$CONTAINER_CMD exec -i mysql mysql -u root -p\"\$MYSQL_ROOT_PASSWORD\" 2>/dev/null <<EOF
-$mysql_setup_sql
+
+-- Show results
+SHOW DATABASES;
+SELECT User, Host FROM mysql.user WHERE User = '${MYSQL_CUSTOM_USER}';
 EOF
-    "; then
-        print_status "success" "MySQL databases and users created successfully"
+    
+    # Copy SQL file to container and execute
+    if eval "$CONTAINER_CMD cp '$temp_sql' mysql:/tmp/setup.sql"; then
+        print_status "info" "Executing MySQL setup commands..."
+        
+        local success=false
+        
+        # Try with password first
+        if eval "$CONTAINER_CMD exec mysql sh -c 'mysql -u root -p\"\$MYSQL_ROOT_PASSWORD\" < /tmp/setup.sql'"; then
+            success=true
+        # Try without password
+        elif eval "$CONTAINER_CMD exec mysql sh -c 'mysql -u root < /tmp/setup.sql'"; then
+            success=true
+        fi
+        
+        # Clean up
+        eval "$CONTAINER_CMD exec mysql rm -f /tmp/setup.sql"
+        rm -f "$temp_sql"
+        
+        if [[ "$success" == "true" ]]; then
+            print_status "success" "MySQL databases and users created successfully"
+        else
+            print_status "error" "Failed to setup MySQL databases"
+            eval "$CONTAINER_CMD logs mysql --tail 20" || true
+            return 1
+        fi
     else
-        handle_error "Failed to setup MySQL databases"
+        rm -f "$temp_sql"
+        handle_error "Failed to copy SQL setup file to MySQL container"
     fi
 }
 
@@ -395,11 +483,13 @@ setup_postgres() {
     
     print_status "step" "Setting up PostgreSQL databases and users..."
     
-    wait_for_database_ready "postgres" "postgres"
+    wait_for_postgres_ready "postgres"
     
-    # Enhanced PostgreSQL setup with conflict resolution
-    local postgres_setup_sql="
--- Drop and recreate privileged ${POSTGRES_CUSTOM_USER} first
+    # Create a temporary SQL file
+    local temp_sql="/tmp/postgres_setup_$$.sql"
+    
+    cat > "$temp_sql" << EOF
+-- Drop and recreate privileged user first
 DROP ROLE IF EXISTS ${POSTGRES_CUSTOM_USER};
 CREATE ROLE ${POSTGRES_CUSTOM_USER} WITH LOGIN PASSWORD '${POSTGRES_CUSTOM_USER_PASSWORD}' SUPERUSER CREATEDB CREATEROLE;
 
@@ -429,18 +519,35 @@ CREATE DATABASE ${NC_DATABASE_NAME} OWNER ${NC_DATABASE_USER};
 -- Grant additional privileges
 GRANT ALL PRIVILEGES ON DATABASE ${MB_DB_NAME} TO ${MB_DB_USER};
 GRANT ALL PRIVILEGES ON DATABASE ${NC_DATABASE_NAME} TO ${NC_DATABASE_USER};
-"
-    
-    if eval "$CONTAINER_CMD exec -i postgres psql -U postgres 2>/dev/null <<EOF
-$postgres_setup_sql
+
+-- Show results
+\l
+\du
 EOF
-    "; then
-        print_status "success" "PostgreSQL databases and users created successfully"
+    
+    # Copy SQL file to container and execute
+    if eval "$CONTAINER_CMD cp '$temp_sql' postgres:/tmp/setup.sql"; then
+        print_status "info" "Executing PostgreSQL setup commands..."
+        
+        if eval "$CONTAINER_CMD exec postgres psql -U postgres -f /tmp/setup.sql"; then
+            print_status "success" "PostgreSQL databases and users created successfully"
+            
+            # Clean up
+            eval "$CONTAINER_CMD exec postgres rm -f /tmp/setup.sql"
+            rm -f "$temp_sql"
+        else
+            print_status "error" "Failed to setup PostgreSQL databases"
+            print_status "info" "Attempting to show PostgreSQL error details..."
+            eval "$CONTAINER_CMD logs postgres --tail 20" || true
+            
+            # Clean up
+            eval "$CONTAINER_CMD exec postgres rm -f /tmp/setup.sql"
+            rm -f "$temp_sql"
+            return 1
+        fi
     else
-        print_status "error" "Failed to setup PostgreSQL databases"
-        print_status "info" "Attempting to show PostgreSQL error details..."
-        eval "$CONTAINER_CMD exec postgres psql -U postgres -c '\l' 2>&1" || true
-        return 1
+        rm -f "$temp_sql"
+        handle_error "Failed to copy SQL setup file to PostgreSQL container"
     fi
 }
 
@@ -452,14 +559,23 @@ setup_mongodb() {
     
     print_status "step" "Setting up MongoDB root-like user..."
 
-    wait_for_database_ready "mongodb" "mongodb"
+    # Use the specialized MongoDB wait function from config.sh
+    wait_for_mongodb "$opt_timeout"
 
-    local mongodb_setup_js="
+    # Create a temporary JavaScript file
+    local temp_js="/tmp/mongodb_setup_$$.js"
+    
+    cat > "$temp_js" << EOF
 // Switch to the admin database
 use admin;
 
 // Drop the user if it already exists
-try { db.dropUser('${MONGO_CUSTOM_USER}'); } catch(e) { print('${MONGO_CUSTOM_USER} did not exist'); }
+try { 
+    db.dropUser('${MONGO_CUSTOM_USER}'); 
+    print('${MONGO_CUSTOM_USER} user dropped'); 
+} catch(e) { 
+    print('${MONGO_CUSTOM_USER} did not exist'); 
+}
 
 // Create a new superuser with root privileges
 db.createUser({
@@ -471,18 +587,34 @@ db.createUser({
 });
 
 print('MongoDB superuser ${MONGO_CUSTOM_USER} created successfully');
-"
 
-    if eval "$CONTAINER_CMD exec -i mongodb mongosh --quiet 2>/dev/null <<EOF
-$mongodb_setup_js
+// Show users
+db.getUsers();
 EOF
-    "; then
-        print_status "success" "MongoDB superuser created successfully"
+    
+    # Copy JavaScript file to container and execute
+    if eval "$CONTAINER_CMD cp '$temp_js' mongodb:/tmp/setup.js"; then
+        print_status "info" "Executing MongoDB setup commands..."
+        
+        if eval "$CONTAINER_CMD exec mongodb mongosh --quiet /tmp/setup.js"; then
+            print_status "success" "MongoDB superuser created successfully"
+            
+            # Clean up
+            eval "$CONTAINER_CMD exec mongodb rm -f /tmp/setup.js"
+            rm -f "$temp_js"
+        else
+            print_status "error" "Failed to setup MongoDB user"
+            print_status "info" "Attempting to show MongoDB error details..."
+            eval "$CONTAINER_CMD logs mongodb --tail 20" || true
+            
+            # Clean up
+            eval "$CONTAINER_CMD exec mongodb rm -f /tmp/setup.js"
+            rm -f "$temp_js"
+            return 1
+        fi
     else
-        print_status "error" "Failed to setup MongoDB user"
-        print_status "info" "Attempting to show MongoDB error details..."
-        eval "$CONTAINER_CMD exec mongodb mongosh --eval 'show users' 2>&1" || true
-        return 1
+        rm -f "$temp_js"
+        handle_error "Failed to copy JavaScript setup file to MongoDB container"
     fi
 }
 
@@ -562,6 +694,23 @@ run_database_setup() {
     echo "  Check status: ./scripts/service-manager.sh status"
     echo "  View logs: ./scripts/service-manager.sh logs [database_name]"
     echo "  Restart service: ./scripts/service-manager.sh restart [database_name]"
+}
+
+run_database_diagnostics() {
+    print_status "step" "Running database diagnostics..."
+    
+    echo ""
+    print_status "info" "Container Status:"
+    for db in mariadb mysql postgres mongodb redis; do
+        if validate_service_exists "$db"; then
+            local status=$(get_service_status "$db")
+            echo "  $db: $status"
+            if [[ "$status" == "running" ]]; then
+                local logs=$(eval "$CONTAINER_CMD logs $db --tail 1 2>/dev/null" || echo "no logs")
+                echo "    Last log: $logs"
+            fi
+        fi
+    done
 }
 
 main() {

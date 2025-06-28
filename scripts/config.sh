@@ -1,9 +1,9 @@
 #!/bin/zsh
 
 # =============================================================================
-# MICROSERVICES CONFIGURATION MANAGEMENT - SIMPLIFIED
+# MICROSERVICES CONFIGURATION MANAGEMENT - FIXED
 # =============================================================================
-# Smart configuration with automatic path resolution and service-manager integration
+# Smart configuration with NO INFINITE LOOPS - removed service-manager delegation
 
 # =============================================================================
 # SCRIPT METADATA & PATHS
@@ -38,8 +38,7 @@ SERVICE_CATEGORIES=(
     [database]="mariadb.yml mysql.yml postgres.yml mongodb.yml redis.yml"
     [dbms]="metabase.yml nocodb.yml"
     [backend]="php.yml"
-    [analytics]="matomo.yml"
-    [management]="portainer.yml"
+    [analytics]="matomo.yml prometheus.yml grafana.yml"
 )
 
 # Optional: Override category paths if you need different directory structure
@@ -59,12 +58,42 @@ SERVICE_PATH_OVERRIDES=(
 # Service startup order (critical for dependencies) - zsh array
 SERVICE_STARTUP_ORDER=(
     "proxy"
-    "management"
     "database"
     "dbms" 
     "backend"
     "analytics"
 )
+
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+# Function to print colored output
+print_status() {
+    local level="$1"
+    local message="$2"
+    
+    case "$level" in
+        "info")
+            echo "ℹ️  $message"
+            ;;
+        "success")
+            echo "✅ $message"
+            ;;
+        "warning")
+            echo "⚠️  $message"
+            ;;
+        "error")
+            echo "❌ $message"
+            ;;
+        "step")
+            echo "🔄 $message"
+            ;;
+        *)
+            echo "$message"
+            ;;
+    esac
+}
 
 # =============================================================================
 # SMART PATH RESOLUTION FUNCTIONS
@@ -294,95 +323,10 @@ list_all_services() {
 }
 
 # =============================================================================
-# SERVICE MANAGEMENT WRAPPER FUNCTIONS
+# DIRECT SERVICE OPERATIONS (NO DELEGATION TO AVOID LOOPS)
 # =============================================================================
-# These functions provide backwards compatibility and delegate to service-manager
 
-# Function to start a single service (delegates to service-manager)
-start_single_service() {
-    local service_name="$1"
-    local force_recreate="${2:-false}"
-    
-    local args=("up" "$service_name")
-    [[ "$force_recreate" == "true" ]] && args+=("--force")
-    
-    # Use current script context for service-manager
-    local service_manager="$SCRIPT_DIR/service-manager.sh"
-    if [[ -f "$service_manager" ]]; then
-        "$service_manager" "${args[@]}"
-    else
-        print_status "error" "service-manager.sh not found at $service_manager"
-        return 1
-    fi
-}
-
-# Function to stop a single service (delegates to service-manager)
-stop_single_service() {
-    local service_name="$1"
-    local remove_volumes="${2:-false}"
-    local timeout="${3:-30}"
-    
-    local args=("down" "$service_name" "--timeout" "$timeout")
-    [[ "$remove_volumes" == "true" ]] && args+=("--remove-volumes")
-    
-    local service_manager="$SCRIPT_DIR/service-manager.sh"
-    if [[ -f "$service_manager" ]]; then
-        "$service_manager" "${args[@]}"
-    else
-        print_status "error" "service-manager.sh not found at $service_manager"
-        return 1
-    fi
-}
-
-# Function to rebuild a single service (delegates to service-manager)
-rebuild_single_service() {
-    local service_name="$1"
-    local no_cache="${2:-false}"
-    
-    local args=("rebuild" "$service_name")
-    [[ "$no_cache" == "true" ]] && args+=("--no-cache")
-    
-    local service_manager="$SCRIPT_DIR/service-manager.sh"
-    if [[ -f "$service_manager" ]]; then
-        "$service_manager" "${args[@]}"
-    else
-        print_status "error" "service-manager.sh not found at $service_manager"
-        return 1
-    fi
-}
-
-# Function to restart a single service (delegates to service-manager)
-restart_single_service() {
-    local service_name="$1"
-    
-    local service_manager="$SCRIPT_DIR/service-manager.sh"
-    if [[ -f "$service_manager" ]]; then
-        "$service_manager" restart "$service_name"
-    else
-        print_status "error" "service-manager.sh not found at $service_manager"
-        return 1
-    fi
-}
-
-# Function to show logs for a single service (delegates to service-manager)
-show_service_logs() {
-    local service_name="$1"
-    local follow="${2:-false}"
-    local tail_lines="${3:-100}"
-    
-    local args=("logs" "$service_name" "--tail" "$tail_lines")
-    [[ "$follow" == "true" ]] && args+=("--follow")
-    
-    local service_manager="$SCRIPT_DIR/service-manager.sh"
-    if [[ -f "$service_manager" ]]; then
-        "$service_manager" "${args[@]}"
-    else
-        print_status "error" "service-manager.sh not found at $service_manager"
-        return 1
-    fi
-}
-
-# Function to get service status (lightweight, stays in config)
+# Function to get service status (lightweight, direct implementation)
 get_service_status() {
     local service_name="$1"
     local service_path
@@ -410,28 +354,180 @@ get_service_status() {
     fi
 }
 
-# Enhanced start function with smart path resolution (delegates to service-manager)
-start_service_category() {
-    local category="$1"
+# Direct service operations (simple implementations to avoid infinite loops)
+start_single_service() {
+    local service_name="$1"
+    local force_recreate="${2:-false}"
     
-    local service_manager="$SCRIPT_DIR/service-manager.sh"
-    if [[ -f "$service_manager" ]]; then
-        "$service_manager" start --categories "$category"
+    local service_path
+    service_path=$(get_service_path "$service_name")
+    if [[ $? -ne 0 ]]; then
+        print_status "error" "Service '$service_name' not found"
+        return 1
+    fi
+    
+    print_status "step" "Starting service: $service_name"
+    
+    local compose_args=("-f" "$service_path" "up" "-d")
+    [[ "$force_recreate" == "true" ]] && compose_args+=("--force-recreate")
+    
+    if eval "$COMPOSE_CMD ${compose_args[*]} $ERROR_REDIRECT"; then
+        print_status "success" "Service $service_name started"
+        return 0
     else
-        print_status "error" "service-manager.sh not found at $service_manager"
+        print_status "error" "Failed to start service: $service_name"
         return 1
     fi
 }
 
-# Enhanced stop function with smart path resolution (delegates to service-manager)
+stop_single_service() {
+    local service_name="$1"
+    local remove_volumes="${2:-false}"
+    local timeout="${3:-30}"
+    
+    local service_path
+    service_path=$(get_service_path "$service_name")
+    if [[ $? -ne 0 ]]; then
+        print_status "error" "Service '$service_name' not found"
+        return 1
+    fi
+    
+    print_status "step" "Stopping service: $service_name"
+    
+    local compose_args=("-f" "$service_path" "down" "--timeout" "$timeout")
+    [[ "$remove_volumes" == "true" ]] && compose_args+=("--volumes")
+    
+    if eval "$COMPOSE_CMD ${compose_args[*]} $ERROR_REDIRECT"; then
+        print_status "success" "Service $service_name stopped"
+        return 0
+    else
+        print_status "error" "Failed to stop service: $service_name"
+        return 1
+    fi
+}
+
+restart_single_service() {
+    local service_name="$1"
+    
+    print_status "step" "Restarting service: $service_name"
+    
+    if stop_single_service "$service_name" && start_single_service "$service_name"; then
+        print_status "success" "Service $service_name restarted"
+        return 0
+    else
+        print_status "error" "Failed to restart service: $service_name"
+        return 1
+    fi
+}
+
+rebuild_single_service() {
+    local service_name="$1"
+    local no_cache="${2:-false}"
+    
+    local service_path
+    service_path=$(get_service_path "$service_name")
+    if [[ $? -ne 0 ]]; then
+        print_status "error" "Service '$service_name' not found"
+        return 1
+    fi
+    
+    print_status "step" "Rebuilding service: $service_name"
+    
+    # Stop service first
+    stop_single_service "$service_name"
+    
+    # Build with optional no-cache
+    local build_args=("-f" "$service_path" "build")
+    [[ "$no_cache" == "true" ]] && build_args+=("--no-cache")
+    
+    if eval "$COMPOSE_CMD ${build_args[*]} $ERROR_REDIRECT"; then
+        # Start service after build
+        start_single_service "$service_name" "true"
+        print_status "success" "Service $service_name rebuilt"
+        return 0
+    else
+        print_status "error" "Failed to rebuild service: $service_name"
+        return 1
+    fi
+}
+
+show_service_logs() {
+    local service_name="$1"
+    local follow="${2:-false}"
+    local tail_lines="${3:-100}"
+    
+    local service_path
+    service_path=$(get_service_path "$service_name")
+    if [[ $? -ne 0 ]]; then
+        print_status "error" "Service '$service_name' not found"
+        return 1
+    fi
+    
+    local log_args=("-f" "$service_path" "logs" "--tail" "$tail_lines")
+    [[ "$follow" == "true" ]] && log_args+=("-f")
+    
+    eval "$COMPOSE_CMD ${log_args[*]}"
+}
+
+# Category operations (simple implementations)
+start_service_category() {
+    local category="$1"
+    
+    if [[ -z "${SERVICE_CATEGORIES[$category]}" ]]; then
+        print_status "error" "Unknown service category: $category"
+        return 1
+    fi
+    
+    print_status "step" "Starting $category services..."
+    
+    local service_files="${SERVICE_CATEGORIES[$category]}"
+    local -a files
+    files=(${=service_files})
+    
+    local failed=0
+    for service_file in "${files[@]}"; do
+        local service_name="${service_file%.yml}"
+        if ! start_single_service "$service_name"; then
+            ((failed++))
+        fi
+    done
+    
+    if [[ $failed -eq 0 ]]; then
+        print_status "success" "$category services started successfully"
+        return 0
+    else
+        print_status "warning" "$failed service(s) in $category failed to start"
+        return 1
+    fi
+}
+
 stop_service_category() {
     local category="$1"
     
-    local service_manager="$SCRIPT_DIR/service-manager.sh"
-    if [[ -f "$service_manager" ]]; then
-        "$service_manager" stop --categories "$category"
+    if [[ -z "${SERVICE_CATEGORIES[$category]}" ]]; then
+        print_status "error" "Unknown service category: $category"
+        return 1
+    fi
+    
+    print_status "step" "Stopping $category services..."
+    
+    local service_files="${SERVICE_CATEGORIES[$category]}"
+    local -a files
+    files=(${=service_files})
+    
+    local failed=0
+    for service_file in "${files[@]}"; do
+        local service_name="${service_file%.yml}"
+        if ! stop_single_service "$service_name"; then
+            ((failed++))
+        fi
+    done
+    
+    if [[ $failed -eq 0 ]]; then
+        print_status "success" "$category services stopped successfully"
+        return 0
     else
-        print_status "error" "service-manager.sh not found at $service_manager"
+        print_status "warning" "$failed service(s) in $category had issues stopping"
         return 1
     fi
 }
@@ -493,22 +589,54 @@ show_configuration() {
 }
 
 # =============================================================================
-# DATABASE CREDENTIALS
+# DATABASE CREDENTIALS & ENVIRONMENT VARIABLES
 # =============================================================================
 
-export MARIADB_ROOT_PASSWORD="123456"
-export MYSQL_ROOT_PASSWORD="123456"
-export POSTGRES_PASSWORD="123456"
-export MONGO_ROOT_PASSWORD="123456"
-export ADMIN_PASSWORD="123456"
+# Source .env file if it exists to get all your custom variable names
+if [[ -f "$PROJECT_ROOT/.env" ]]; then
+    # Source the .env file safely
+    set -a
+    source "$PROJECT_ROOT/.env"
+    set +a
+    print_status "info" "Environment variables loaded from .env"
+else
+    print_status "warning" "No .env file found at $PROJECT_ROOT/.env"
+    print_status "info" "Using fallback default values"
+fi
 
-# =============================================================================
-# SSL CONFIGURATION
-# =============================================================================
+# Fallback defaults if .env doesn't exist or variables are missing
+export MARIADB_ROOT_PASSWORD="${MARIADB_ROOT_PASSWORD:-123456}"
+export MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-123456}"
+export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-123456}"
+export MONGO_ROOT_PASSWORD="${MONGO_ROOT_PASSWORD:-123456}"
+export ADMIN_PASSWORD="${ADMIN_PASSWORD:-123456}"
+export ADMIN_USER="${ADMIN_USER:-admin}"
+export ADMIN_EMAIL="${ADMIN_EMAIL:-admin@test.local}"
+export MARIADB_USER="${MARIADB_USER:-mariadb_user}"
+export MARIADB_PASSWORD="${MARIADB_PASSWORD:-123456}"
+export MARIADB_HOST="${MARIADB_HOST:-mariadb}"
 
-export SSL_DOMAIN="*.test"
-export SSL_CERT_DIR="/etc/letsencrypt/live/wildcard.test"
-export SSL_DAYS_VALID="3650"  # 10 years for development
+# Additional .env variables that might be used by database setup
+export DB_MYSQL_NAME="${DB_MYSQL_NAME:-npm}"
+export DB_MYSQL_USER="${DB_MYSQL_USER:-npm_user}"
+export DB_MYSQL_PASSWORD="${DB_MYSQL_PASSWORD:-${ADMIN_PASSWORD}}"
+export MATOMO_DATABASE_DBNAME="${MATOMO_DATABASE_DBNAME:-matomo}"
+export MATOMO_DATABASE_USERNAME="${MATOMO_DATABASE_USERNAME:-matomo_user}"
+export MATOMO_DATABASE_PASSWORD="${MATOMO_DATABASE_PASSWORD:-${ADMIN_PASSWORD}}"
+export MYSQL_CUSTOM_USER="${MYSQL_CUSTOM_USER:-mysql_user}"
+export MYSQL_CUSTOM_USER_PASSWORD="${MYSQL_CUSTOM_USER_PASSWORD:-${ADMIN_PASSWORD}}"
+export POSTGRES_CUSTOM_USER="${POSTGRES_CUSTOM_USER:-postgres_user}"
+export POSTGRES_CUSTOM_USER_PASSWORD="${POSTGRES_CUSTOM_USER_PASSWORD:-${ADMIN_PASSWORD}}"
+export MB_DB_NAME="${MB_DB_NAME:-metabase}"
+export MB_DB_USER="${MB_DB_USER:-metabase_user}"
+export NC_DATABASE_NAME="${NC_DATABASE_NAME:-nocodb}"
+export NC_DATABASE_USER="${NC_DATABASE_USER:-nocodb_user}"
+export MONGO_CUSTOM_USER="${MONGO_CUSTOM_USER:-mongodb_user}"
+export MONGO_CUSTOM_USER_PASSWORD="${MONGO_CUSTOM_USER_PASSWORD:-${ADMIN_PASSWORD}}"
+
+# GitHub integration variables (if you use them)
+export GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+export GITHUB_USER="${GITHUB_USER:-}"
 
 # =============================================================================
 # RUNTIME DETECTION & COMMAND SETUP
@@ -597,33 +725,6 @@ check_status() {
     fi
 }
 
-# Function to print colored output
-print_status() {
-    local level="$1"
-    local message="$2"
-    
-    case "$level" in
-        "info")
-            echo "ℹ️  $message"
-            ;;
-        "success")
-            echo "✅ $message"
-            ;;
-        "warning")
-            echo "⚠️  $message"
-            ;;
-        "error")
-            echo "❌ $message"
-            ;;
-        "step")
-            echo "🔄 $message"
-            ;;
-        *)
-            echo "$message"
-            ;;
-    esac
-}
-
 # Function to wait for service health (lightweight version)
 wait_for_service_health() {
     local service_name="$1"
@@ -696,8 +797,6 @@ ensure_network_exists() {
             eval "$CONTAINER_CMD network create --driver bridge \"$NETWORK_NAME\" $ERROR_REDIRECT"
             check_status "Failed to create network: $NETWORK_NAME"
             print_status "success" "Network created: $NETWORK_NAME"
-        else
-            print_status "info" "Network already exists: $NETWORK_NAME"
         fi
     else
         # Docker doesn't have 'network exists' - use 'network ls' instead
@@ -706,8 +805,6 @@ ensure_network_exists() {
             eval "$CONTAINER_CMD network create --driver bridge \"$NETWORK_NAME\" $ERROR_REDIRECT"
             check_status "Failed to create network: $NETWORK_NAME"
             print_status "success" "Network created: $NETWORK_NAME"
-        else
-            print_status "info" "Network already exists: $NETWORK_NAME"
         fi
     fi
 }
@@ -753,43 +850,9 @@ if [[ ! -f "$PROJECT_ROOT/.env" ]]; then
     print_status "info" "Consider copying .env-sample to .env"
 fi
 
-# =============================================================================
-# EXPORTED FUNCTIONS
-# =============================================================================
-
-# Make utility functions available to other scripts
-if [[ -n "$ZSH_VERSION" ]]; then
-    # ZSH: Functions are automatically available in sourced scripts
-    # No need to export individual functions
-    :
-else
-    # Bash: Export functions explicitly
-    export -f handle_error 2>/dev/null || true
-    export -f check_status 2>/dev/null || true
-    export -f print_status 2>/dev/null || true
-    export -f wait_for_service_health 2>/dev/null || true
-    export -f wait_for_mongodb 2>/dev/null || true
-    export -f ensure_network_exists 2>/dev/null || true
-    export -f get_service_files 2>/dev/null || true
-    export -f start_service_category 2>/dev/null || true
-    export -f stop_service_category 2>/dev/null || true
-    export -f setup_command_context 2>/dev/null || true
-    export -f resolve_service_path 2>/dev/null || true
-    export -f validate_service_files 2>/dev/null || true
-    export -f list_all_services 2>/dev/null || true
-    export -f add_service_override 2>/dev/null || true
-    export -f add_category_override 2>/dev/null || true
-    export -f show_configuration 2>/dev/null || true
-    # Service management wrapper functions
-    export -f start_single_service 2>/dev/null || true
-    export -f stop_single_service 2>/dev/null || true
-    export -f restart_single_service 2>/dev/null || true
-    export -f rebuild_single_service 2>/dev/null || true
-    export -f show_service_logs 2>/dev/null || true
-    export -f get_service_status 2>/dev/null || true
+# Only show this message once when sourced directly
+if [[ "${(%):-%x}" == "${0}" ]]; then
+    print_status "info" "Smart configuration loaded successfully"
+    print_status "info" "Container runtime: $CONTAINER_RUNTIME (sudo: $DEFAULT_SUDO)"
+    print_status "info" "Project root: $PROJECT_ROOT"
 fi
-
-print_status "info" "Smart configuration loaded successfully"
-print_status "info" "Container runtime: $CONTAINER_RUNTIME (sudo: $DEFAULT_SUDO)"
-print_status "info" "Project root: $PROJECT_ROOT"
-print_status "info" "Service operations delegated to: service-manager.sh"
