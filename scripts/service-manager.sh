@@ -772,7 +772,7 @@ cmd_start() {
     
     # Start individual services first
     for service in "${RESOLVED_SERVICES[@]}"; do
-        start_individual_service_enhanced "$service"
+        start_individual_service "$service"
         sleep 1
     done
     
@@ -804,13 +804,13 @@ cmd_stop() {
     
     # Stop categories in reverse dependency order
     for category in "${RESOLVED_CATEGORIES[@]}"; do
-        stop_category_enhanced "$category"
+        stop_category "$category"
         sleep 1
     done
     
     # Stop individual services
     for service in "${RESOLVED_SERVICES[@]}"; do
-        stop_individual_service_enhanced "$service"
+        stop_individual_service "$service"
     done
     
     # Run cleanup operations
@@ -879,7 +879,7 @@ cmd_stop_all() {
 # ENHANCED BULK OPERATION HELPERS
 # =============================================================================
 
-start_individual_service_enhanced() {
+start_individual_service() {
     local service_name="$1"
     
     print_status "step" "Starting individual service: $service_name"
@@ -893,7 +893,7 @@ start_individual_service_enhanced() {
     fi
 }
 
-stop_individual_service_enhanced() {
+stop_individual_service() {
     local service_name="$1"
     
     print_status "step" "Stopping individual service: $service_name"
@@ -932,7 +932,7 @@ start_category_sequential() {
     local failed=0
     for service_file in "${files[@]}"; do
         local service_name="${service_file%.yml}"
-        if ! start_individual_service_enhanced "$service_name"; then
+        if ! start_individual_service "$service_name"; then
             ((failed++))
         fi
         
@@ -970,9 +970,9 @@ start_category_parallel() {
     for service_file in "${files[@]}"; do
         local service_name="${service_file%.yml}"
         if [[ "$opt_dry_run" == "true" ]]; then
-            start_individual_service_enhanced "$service_name"
+            start_individual_service "$service_name"
         else
-            start_individual_service_enhanced "$service_name" &
+            start_individual_service "$service_name" &
             pids+=($!)
         fi
     done
@@ -994,7 +994,7 @@ start_category_parallel() {
     fi
 }
 
-stop_category_enhanced() {
+stop_category() {
     local category="$1"
     local service_files
     
@@ -1015,7 +1015,7 @@ stop_category_enhanced() {
     local failed=0
     for service_file in "${files[@]}"; do
         local service_name="${service_file%.yml}"
-        if ! stop_individual_service_enhanced "$service_name"; then
+        if ! stop_individual_service "$service_name"; then
             ((failed++))
         fi
     done
@@ -1212,11 +1212,23 @@ run_cleanup_operations() {
         cleanup_service_orphans "$target_services" "$opt_dry_run"
     fi
     
-    # Global cleanup operations
-    cleanup_images_global
-    cleanup_volumes_global
-    cleanup_networks_global
-    cleanup_system_global
+    # Global cleanup operations - NOW PROPERLY CONDITIONAL
+    if [[ "$opt_remove_images" == "true" ]]; then
+        cleanup_images_global
+    fi
+    
+    if [[ "$opt_remove_volumes" == "true" ]]; then
+        cleanup_volumes_global
+    fi
+    
+    if [[ "$opt_remove_networks" == "true" ]]; then
+        cleanup_networks_global
+    fi
+    
+    # System cleanup - should probably have its own flag or be tied to other cleanup options
+    if [[ "$opt_cleanup_orphans" == "true" || "$opt_remove_images" == "true" || "$opt_remove_volumes" == "true" ]]; then
+        cleanup_system_global
+    fi
 }
 
 cleanup_images_global() {

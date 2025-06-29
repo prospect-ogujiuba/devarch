@@ -14,8 +14,6 @@ services:
     ports:
       - "127.0.0.1:8502:5432" # Local access to PostgreSQL
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - mongodb_data:/data/db
-      - mongodb_dump:/dump
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - microservices-net
