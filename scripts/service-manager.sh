@@ -1332,6 +1332,248 @@ cleanup_system_global() {
     fi
 }
 
+cleanup_old_resources() {
+    local max_age_days="$1"
+    local dry_run="${2:-false}"
+    
+    if [[ -z "$max_age_days" || ! "$max_age_days" =~ ^[0-9]+$ ]]; then
+        print_status "error" "Invalid age specified for cleanup: $max_age_days"
+        return 1
+    fi
+    
+    print_status "step" "Cleaning up resources older than $max_age_days days..."
+    
+    if [[ "$dry_run" == "true" ]]; then
+        echo "DRY RUN: Would remove containers, images, and volumes older than $max_age_days days"
+        return 0
+    fi
+    
+    local removed_containers=0 removed_images=0 removed_volumes=0
+    local cutoff_date=$(date -d "$max_age_days days ago" '+%Y-%m-%d')
+    
+    # Clean up old containers (stopped ones only)
+    print_status "info" "Removing containers older than $cutoff_date..."
+    local old_containers
+    old_containers=$(eval "$CONTAINER_CMD ps -a --filter 'status=exited' --format '{{.ID}} {{.CreatedAt}}' 2>/dev/null" || echo "")
+    
+    if [[ -n "$old_containers" ]]; then
+        while IFS= read -r line; do
+            if [[ -n "$line" ]]; then
+                local container_id=$(echo "$line" | awk '{print $1}')
+                local created_date=$(echo "$line" | awk '{print $2}')
+                
+                # Simple date comparison (assumes YYYY-MM-DD format)
+                if [[ "$created_date" < "$cutoff_date" ]]; then
+                    if eval "$CONTAINER_CMD rm -f $container_id $ERROR_REDIRECT"; then
+                        ((removed_containers++))
+                    fi
+                fi
+            fi
+        done <<< "$old_containers"
+    fi
+    
+    # Clean up old images (unused ones only)
+    print_status "info" "Removing unused images older than $cutoff_date..."
+    if eval "$CONTAINER_CMD image prune -a --filter \"until=${max_age_days}h\" -f $ERROR_REDIRECT"; then
+        # Count is approximate since we can't get exact numbers from prune
+        removed_images=1
+    fi
+    
+    # Clean up old volumes (unused ones only)
+    print_status "info" "Removing unused volumes older than $cutoff_date..."
+    if eval "$CONTAINER_CMD volume prune --filter \"until=${max_age_days}h\" -f $ERROR_REDIRECT"; then
+        # Count is approximate since we can't get exact numbers from prune
+        removed_volumes=1
+    fi
+    
+    if [[ $removed_containers -gt 0 || $removed_images -gt 0 || $removed_volumes -gt 0 ]]; then
+        print_status "success" "Cleanup completed: ~$removed_containers containers, $removed_images image groups, $removed_volumes volume groups"
+    else
+        print_status "info" "No old resources found to clean up"
+    fi
+}
+
+cleanup_large_volumes() {
+    local max_size_mb="$1"
+    local max_count="${2:-3}"
+    local dry_run="${3:-false}"
+    
+    if [[ -z "$max_size_mb" || ! "$max_size_mb" =~ ^[0-9]+$ ]]; then
+        print_status "error" "Invalid size specified for volume cleanup: $max_size_mb"
+        return 1
+    fi
+    
+    print_status "step" "Finding volumes larger than ${max_size_mb}MB..."
+    
+    if [[ "$dry_run" == "true" ]]; then
+        echo "DRY RUN: Would remove up to $max_count volumes larger than ${max_size_mb}MB"
+        return 0
+    fi
+    
+    # Get list of volumes with sizes
+    local volumes_info
+    volumes_info=$(eval "$CONTAINER_CMD volume ls --format '{{.Name}}' 2>/dev/null" || echo "")
+    
+    if [[ -z "$volumes_info" ]]; then
+        print_status "info" "No volumes found"
+        return 0
+    fi
+    
+    local -a large_volumes
+    local removed_count=0
+    
+    # Check each volume size
+    while IFS= read -r volume_name; do
+        if [[ -n "$volume_name" ]]; then
+            # Get volume mount point to check size
+            local volume_path
+            volume_path=$(eval "$CONTAINER_CMD volume inspect $volume_name --format '{{.Mountpoint}}' 2>/dev/null" || echo "")
+            
+            if [[ -n "$volume_path" ]]; then
+                # Check if volume is in use
+                local in_use
+                in_use=$(eval "$CONTAINER_CMD ps -a --filter \"volume=$volume_name\" --format '{{.Names}}' 2>/dev/null" || echo "")
+                
+                if [[ -z "$in_use" ]]; then
+                    # Get size in MB
+                    local size_mb
+                    if [[ "$USE_PODMAN" == "true" ]]; then
+                        # For podman, use du on the volume path
+                        size_mb=$(sudo du -sm "$volume_path" 2>/dev/null | awk '{print $1}' || echo "0")
+                    else
+                        # For docker, also use du but might need different approach
+                        size_mb=$(sudo du -sm "$volume_path" 2>/dev/null | awk '{print $1}' || echo "0")
+                    fi
+                    
+                    if [[ "$size_mb" -gt "$max_size_mb" ]]; then
+                        large_volumes+=("$volume_name:$size_mb")
+                    fi
+                fi
+            fi
+        fi
+    done <<< "$volumes_info"
+    
+    if [[ ${#large_volumes[@]} -eq 0 ]]; then
+        print_status "info" "No large unused volumes found"
+        return 0
+    fi
+    
+    # Sort by size (descending) and remove largest ones first
+    local -a sorted_volumes
+    sorted_volumes=($(printf '%s\n' "${large_volumes[@]}" | sort -t: -k2 -rn))
+    
+    print_status "info" "Found ${#sorted_volumes[@]} large volume(s), removing up to $max_count..."
+    
+    for volume_info in "${sorted_volumes[@]}"; do
+        if [[ $removed_count -ge $max_count ]]; then
+            break
+        fi
+        
+        local volume_name="${volume_info%:*}"
+        local volume_size="${volume_info#*:}"
+        
+        print_status "step" "Removing volume: $volume_name (${volume_size}MB)"
+        
+        if eval "$CONTAINER_CMD volume rm -f $volume_name $ERROR_REDIRECT"; then
+            ((removed_count++))
+            print_status "success" "Removed $volume_name (${volume_size}MB)"
+        else
+            print_status "warning" "Failed to remove $volume_name"
+        fi
+    done
+    
+    if [[ $removed_count -gt 0 ]]; then
+        print_status "success" "Removed $removed_count large volume(s)"
+    fi
+}
+
+cleanup_service_orphans() {
+    local target_services="$1"
+    local dry_run="${2:-false}"
+    
+    print_status "step" "Cleaning up orphaned containers..."
+    
+    if [[ "$dry_run" == "true" ]]; then
+        echo "DRY RUN: Would remove containers not managed by compose files"
+        return 0
+    fi
+    
+    # Get all running containers
+    local all_containers
+    all_containers=$(eval "$CONTAINER_CMD ps -a --format '{{.Names}}' 2>/dev/null" || echo "")
+    
+    if [[ -z "$all_containers" ]]; then
+        print_status "info" "No containers found"
+        return 0
+    fi
+    
+    # Get list of managed services from our categories
+    local -a managed_services
+    for category in "${SERVICE_STARTUP_ORDER[@]}"; do
+        local service_files
+        service_files=$(get_service_files "$category")
+        if [[ -n "$service_files" ]]; then
+            local -a files
+            files=(${=service_files})
+            for service_file in "${files[@]}"; do
+                local service_name="${service_file%.yml}"
+                managed_services+=("$service_name")
+            done
+        fi
+    done
+    
+    # If target_services specified, only check those
+    if [[ -n "$target_services" ]]; then
+        local -a target_list
+        target_list=(${(s:,:)target_services})
+        managed_services=("${target_list[@]}")
+    fi
+    
+    local removed_count=0
+    
+    # Check each container
+    while IFS= read -r container_name; do
+        if [[ -n "$container_name" ]]; then
+            # Skip if it's in our managed services list
+            local is_managed=false
+            for managed_service in "${managed_services[@]}"; do
+                if [[ "$container_name" == "$managed_service" ]]; then
+                    is_managed=true
+                    break
+                fi
+            done
+            
+            # Skip containers in our project network (likely managed)
+            if eval "$CONTAINER_CMD inspect $container_name --format '{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}' 2>/dev/null | grep -q $NETWORK_NAME"; then
+                is_managed=true
+            fi
+            
+            if [[ "$is_managed" == "false" ]]; then
+                # Check if container has compose labels (indicating it's managed by compose)
+                local has_compose_labels
+                has_compose_labels=$(eval "$CONTAINER_CMD inspect $container_name --format '{{index .Config.Labels \"com.docker.compose.project\"}}' 2>/dev/null" || echo "")
+                
+                if [[ -z "$has_compose_labels" ]]; then
+                    print_status "step" "Removing orphaned container: $container_name"
+                    
+                    if eval "$CONTAINER_CMD rm -f $container_name $ERROR_REDIRECT"; then
+                        ((removed_count++))
+                        print_status "info" "Removed orphaned container: $container_name"
+                    else
+                        print_status "warning" "Failed to remove container: $container_name"
+                    fi
+                fi
+            fi
+        fi
+    done <<< "$all_containers"
+    
+    if [[ $removed_count -gt 0 ]]; then
+        print_status "success" "Removed $removed_count orphaned container(s)"
+    else
+        print_status "info" "No orphaned containers found"
+    fi
+}
+
 # =============================================================================
 # MAIN EXECUTION
 # =============================================================================
