@@ -3,24 +3,63 @@
 # =============================================================================
 # WORDPRESS INSTALLATION SCRIPT - ENHANCED & UNIFIED
 # =============================================================================
-# Unified WordPress installer with multiple presets and config.sh integration
+# Unified WordPress installer with centralized path and configuration management
 
 # Source the central configuration
 . "$(dirname "$0")/../config.sh"
 
 # =============================================================================
-# SCRIPT OPTIONS & DEFAULTS
+# CENTRALIZED CONFIGURATION MANAGEMENT
 # =============================================================================
 
-SITE_NAME=""
-SITE_TITLE=""
-opt_preset="bare"
-opt_force=false
-opt_skip_email=false
-opt_skip_permissions=false
-opt_custom_domain=""
+# Site-specific configuration (set during argument parsing)
+typeset -A SITE_CONFIG
+SITE_CONFIG=(
+    [name]=""
+    [title]=""
+    [domain]=""
+    [preset]="bare"
+    [force]=false
+    [skip_email]=false
+    [skip_permissions]=false
+)
 
-# WordPress presets
+# Path configuration - centralized for easy management
+typeset -A PATHS
+PATHS=(
+    # Host paths (outside containers)
+    [host_apps]="$APPS_DIR"
+    [host_site]=""  # Will be set to $APPS_DIR/$SITE_NAME
+    [host_env]="$PROJECT_ROOT/.env"
+    
+    # Container paths (inside PHP container)
+    [container_root]="/var/www/html"
+    [container_site]=""  # Will be set to /var/www/html/$SITE_NAME  
+    [container_wp]=""    # Will be set to /var/www/html/$SITE_NAME/public
+    [container_content]=""  # Will be set to /var/www/html/$SITE_NAME/public/wp-content
+    [container_plugins]="" # Will be set to wp-content/plugins
+    [container_themes]=""  # Will be set to wp-content/themes
+    [container_uploads]="" # Will be set to wp-content/uploads
+)
+
+# Database configuration
+typeset -A DB_CONFIG
+DB_CONFIG=(
+    [host]="$MARIADB_HOST"
+    [name]=""  # Will be set to site name
+    [user]="$MARIADB_USER"
+    [password]="$MARIADB_PASSWORD"
+)
+
+# WordPress admin configuration
+typeset -A WP_ADMIN
+WP_ADMIN=(
+    [user]="$ADMIN_USER"
+    [password]="$ADMIN_PASSWORD"
+    [email]="$ADMIN_EMAIL"
+)
+
+# WordPress presets configuration
 typeset -A WORDPRESS_PRESETS
 WORDPRESS_PRESETS=(
     [bare]="Minimal WordPress with basic plugins"
@@ -29,6 +68,98 @@ WORDPRESS_PRESETS=(
     [loaded]="WordPress with all development tools and debugging plugins"
     [starred]="WordPress with starred repository plugins only"
 )
+
+# Plugin collections for each preset
+typeset -A PRESET_PLUGINS
+PRESET_PLUGINS=(
+    [bare]="all-in-one-wp-migration"
+    [clean]="typerocket-pro-v6 all-in-one-wp-migration admin-site-enhancements-pro makermaker makerblocks"
+    [custom]="typerocket-pro-v6 all-in-one-wp-migration admin-site-enhancements-pro advanced-custom-fields-pro acf-extended-pro makermaker makerblocks gravityforms manual-image-crop"
+    [loaded]="typerocket-pro-v6 all-in-one-wp-migration admin-site-enhancements-pro advanced-custom-fields-pro acf-extended-pro makermaker makerblocks gravityforms manual-image-crop"
+    [starred]="gravityforms advanced-custom-fields-pro woocommerce-subscriptions facetwp"
+)
+
+# Theme collections for each preset
+typeset -A PRESET_THEMES
+PRESET_THEMES=(
+    [bare]=""
+    [clean]="makerstarter"
+    [custom]="makerstarter"
+    [loaded]="makerstarter"
+    [starred]=""
+)
+
+# WordPress repository plugins for loaded preset
+WP_REPO_PLUGINS=(
+    "debug-bar"
+    "debug-bar-actions-and-filters-addon"
+    "classic-editor"
+    "default-featured-image"
+    "plugin-inspector"
+    "log-deprecated-notices"
+    "query-monitor"
+    "theme-check"
+    "wordpress-beta-tester"
+    "show-current-template"
+    "theme-inspector"
+    "view-admin-as"
+)
+
+# =============================================================================
+# PATH MANAGEMENT FUNCTIONS
+# =============================================================================
+
+setup_site_paths() {
+    local site_name="$1"
+    
+    # Set site-specific paths
+    PATHS[host_site]="${PATHS[host_apps]}/$site_name"
+    PATHS[container_site]="${PATHS[container_root]}/$site_name"
+    PATHS[container_wp]="${PATHS[container_site]}/public"
+    PATHS[container_content]="${PATHS[container_wp]}/wp-content"
+    PATHS[container_plugins]="${PATHS[container_content]}/plugins"
+    PATHS[container_themes]="${PATHS[container_content]}/themes"
+    PATHS[container_uploads]="${PATHS[container_content]}/uploads"
+    
+    # Set database name
+    DB_CONFIG[name]="$site_name"
+}
+
+get_path() {
+    local path_key="$1"
+    echo "${PATHS[$path_key]}"
+}
+
+get_db_config() {
+    local config_key="$1"
+    echo "${DB_CONFIG[$config_key]}"
+}
+
+get_wp_admin() {
+    local admin_key="$1"
+    echo "${WP_ADMIN[$admin_key]}"
+}
+
+# =============================================================================
+# CONTAINER COMMAND HELPERS
+# =============================================================================
+
+exec_php() {
+    local command="$1"
+    eval "$CONTAINER_CMD exec php $command"
+}
+
+exec_php_wp() {
+    local wp_command="$1"
+    local wp_path=$(get_path "container_wp")
+    exec_php "wp $wp_command --path='$wp_path' --allow-root"
+}
+
+exec_php_wp_quiet() {
+    local wp_command="$1"
+    local wp_path=$(get_path "container_wp")
+    exec_php "wp $wp_command --path='$wp_path' --allow-root" 2>/dev/null || true
+}
 
 # =============================================================================
 # USAGE & HELP
@@ -39,8 +170,8 @@ show_usage() {
 Usage: $0 <site-name> [OPTIONS]
 
 DESCRIPTION:
-    Unified WordPress installer with multiple presets and config.sh integration.
-    Consolidates functionality from all individual WordPress install scripts.
+    Unified WordPress installer with centralized configuration management.
+    All paths and settings are managed in a single location for consistency.
 
 ARGUMENTS:
     site-name           Name for the WordPress site (will be database name)
@@ -68,12 +199,12 @@ EXAMPLES:
 REQUIREMENTS:
     - PHP container must be running (use: service-manager.sh up php)
     - MariaDB container must be running (use: service-manager.sh up mariadb)
-    - Apps directory: $APPS_DIR
+    - Apps directory: $(get_path "host_apps")
 
 NOTES:
-    - Sites are created in: $APPS_DIR/<site-name>
+    - Sites are created in: $(get_path "host_apps")/<site-name>
     - Database name matches site name
-    - Uses environment variables from: $PROJECT_ROOT/.env
+    - Uses environment variables from: ${PATHS[host_env]}
     - Accessible at: https://<site-name>.test (or custom domain)
 EOF
 }
@@ -89,17 +220,27 @@ parse_arguments() {
         exit 1
     fi
     
-    SITE_NAME="$1"
+    local site_name="$1"
     shift
     
-    # Default title is formatted site name
-    SITE_TITLE=$(echo "$SITE_NAME" | sed 's/[_-]/ /g' | sed 's/\b\w/\U&/g')
+    # Validate site name
+    if [[ ! "$site_name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        handle_error "Site name can only contain letters, numbers, hyphens, and underscores"
+    fi
+    
+    # Set up site configuration
+    SITE_CONFIG[name]="$site_name"
+    SITE_CONFIG[title]=$(echo "$site_name" | sed 's/[_-]/ /g' | sed 's/\b\w/\U&/g')
+    SITE_CONFIG[domain]="${site_name}.test"
+    
+    # Set up paths based on site name
+    setup_site_paths "$site_name"
     
     while [[ $# -gt 0 ]]; do
         case $1 in
             -t|--title)
                 if [[ -n "$2" && "$2" != -* ]]; then
-                    SITE_TITLE="$2"
+                    SITE_CONFIG[title]="$2"
                     shift 2
                 else
                     handle_error "Option $1 requires a site title"
@@ -108,7 +249,7 @@ parse_arguments() {
             -p|--preset)
                 if [[ -n "$2" && "$2" != -* ]]; then
                     if [[ -n "${WORDPRESS_PRESETS[$2]}" ]]; then
-                        opt_preset="$2"
+                        SITE_CONFIG[preset]="$2"
                         shift 2
                     else
                         handle_error "Invalid preset: $2. Available: ${(k)WORDPRESS_PRESETS}"
@@ -119,22 +260,22 @@ parse_arguments() {
                 ;;
             -d|--domain)
                 if [[ -n "$2" && "$2" != -* ]]; then
-                    opt_custom_domain="$2"
+                    SITE_CONFIG[domain]="$2"
                     shift 2
                 else
                     handle_error "Option $1 requires a domain name"
                 fi
                 ;;
             -f|--force)
-                opt_force=true
+                SITE_CONFIG[force]=true
                 shift
                 ;;
             --skip-email)
-                opt_skip_email=true
+                SITE_CONFIG[skip_email]=true
                 shift
                 ;;
             --skip-permissions)
-                opt_skip_permissions=true
+                SITE_CONFIG[skip_permissions]=true
                 shift
                 ;;
             -h|--help)
@@ -146,16 +287,6 @@ parse_arguments() {
                 ;;
         esac
     done
-    
-    # Validate site name
-    if [[ ! "$SITE_NAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
-        handle_error "Site name can only contain letters, numbers, hyphens, and underscores"
-    fi
-    
-    # Set domain
-    if [[ -z "$opt_custom_domain" ]]; then
-        opt_custom_domain="${SITE_NAME}.test"
-    fi
 }
 
 # =============================================================================
@@ -190,36 +321,38 @@ validate_environment() {
     done
     
     # Check apps directory exists
-    if [[ ! -d "$APPS_DIR" ]]; then
-        print_status "step" "Creating apps directory: $APPS_DIR"
-        mkdir -p "$APPS_DIR"
+    local host_apps=$(get_path "host_apps")
+    if [[ ! -d "$host_apps" ]]; then
+        print_status "step" "Creating apps directory: $host_apps"
+        mkdir -p "$host_apps"
     fi
     
     # Check .env file exists and source it
-    if [[ ! -f "$PROJECT_ROOT/.env" ]]; then
-        handle_error "Environment file not found: $PROJECT_ROOT/.env"
+    local env_file="${PATHS[host_env]}"
+    if [[ ! -f "$env_file" ]]; then
+        handle_error "Environment file not found: $env_file"
     fi
     
-    # Source environment variables (using config.sh context)
+    # Source environment variables
     set -a
-    source "$PROJECT_ROOT/.env"
+    source "$env_file"
     set +a
     
     print_status "success" "Environment validation passed"
 }
 
 validate_site_setup() {
-    local site_path="$APPS_DIR/$SITE_NAME"
+    local site_path=$(get_path "host_site")
     
     print_status "step" "Validating site setup..."
     
     # Check if site already exists
     if [[ -d "$site_path" ]]; then
-        if [[ "$opt_force" == "true" ]]; then
-            print_status "warning" "Site '$SITE_NAME' exists, removing due to --force flag"
+        if [[ "${SITE_CONFIG[force]}" == "true" ]]; then
+            print_status "warning" "Site '${SITE_CONFIG[name]}' exists, removing due to --force flag"
             rm -rf "$site_path"
         else
-            handle_error "Site '$SITE_NAME' already exists. Use --force to overwrite."
+            handle_error "Site '${SITE_CONFIG[name]}' already exists. Use --force to overwrite."
         fi
     fi
     
@@ -231,47 +364,50 @@ validate_site_setup() {
 # =============================================================================
 
 install_wordpress_core() {
-    local site_dir="$APPS_DIR/$SITE_NAME"
-    local wp_dir="$site_dir/public"
+    local container_site=$(get_path "container_site")
+    local container_wp=$(get_path "container_wp")
     
     print_status "step" "Installing WordPress core..."
     
     # Create directory structure
-    mkdir -p "$site_dir"
+    if ! exec_php "mkdir -p $container_site"; then
+        handle_error "Failed to create WordPress directory"
+    fi
     
-    # Download WordPress using config.sh container commands
+    # Download WordPress
     print_status "info" "Downloading WordPress..."
-    if ! eval "$CONTAINER_CMD exec php wp core download --path='$wp_dir' --allow-root"; then
+    if ! exec_php "wp core download --path='$container_wp' --allow-root"; then
         handle_error "Failed to download WordPress"
     fi
     
     # Create wp-config.php
     print_status "info" "Creating wp-config.php..."
-    local db_config_cmd="wp config create --dbname='$SITE_NAME' --dbuser='$MARIADB_USER' --dbpass='$MARIADB_PASSWORD' --dbhost='$MARIADB_HOST' --path='$wp_dir' --allow-root"
+    local db_config_cmd="config create --dbname='$(get_db_config name)' --dbuser='$(get_db_config user)' --dbpass='$(get_db_config password)' --dbhost='$(get_db_config host)'"
     
-    if ! eval "$CONTAINER_CMD exec php $db_config_cmd"; then
+    if ! exec_php_wp "$db_config_cmd"; then
         handle_error "Failed to create wp-config.php"
     fi
     
-    # Set debugging
-    eval "$CONTAINER_CMD exec php wp config set WP_DEBUG false --raw --path='$wp_dir' --allow-root"
+    # Set debugging and other config
+    exec_php_wp "config set WP_DEBUG false --raw"
+    exec_php_wp "config set AUTOMATIC_UPDATER_DISABLED true --raw"
     
     # Create database
     print_status "info" "Creating database..."
-    if ! eval "$CONTAINER_CMD exec php wp db create --path='$wp_dir' --allow-root"; then
+    if ! exec_php_wp "db create"; then
         handle_error "Failed to create database"
     fi
     
     # Install WordPress
     print_status "info" "Installing WordPress..."
-    local install_cmd="wp core install --url='$opt_custom_domain' --title='$SITE_TITLE' --admin_user='$ADMIN_USER' --admin_password='$ADMIN_PASSWORD' --admin_email='$ADMIN_EMAIL' --path='$wp_dir' --allow-root"
+    local install_cmd="core install --url='${SITE_CONFIG[domain]}' --title='${SITE_CONFIG[title]}' --admin_user='$(get_wp_admin user)' --admin_password='$(get_wp_admin password)' --admin_email='$(get_wp_admin email)'"
     
-    if ! eval "$CONTAINER_CMD exec php $install_cmd"; then
+    if ! exec_php_wp "$install_cmd"; then
         handle_error "Failed to install WordPress"
     fi
     
     # Configure uploads
-    eval "$CONTAINER_CMD exec php wp option update uploads_use_yearmonth_folders 0 --path='$wp_dir' --allow-root"
+    exec_php_wp "option update uploads_use_yearmonth_folders 0"
     
     print_status "success" "WordPress core installed successfully"
 }
@@ -281,32 +417,29 @@ install_wordpress_core() {
 # =============================================================================
 
 configure_wordpress_preset() {
-    local wp_dir="$APPS_DIR/$SITE_NAME/public"
+    local preset="${SITE_CONFIG[preset]}"
     
-    print_status "step" "Configuring WordPress preset: $opt_preset"
+    print_status "step" "Configuring WordPress preset: $preset"
     
     # Clean up default content
-    cleanup_default_content "$wp_dir"
+    cleanup_default_content
+    
+    # Install preset plugins
+    install_preset_plugins "$preset"
+    
+    # Install preset themes
+    install_preset_themes "$preset"
     
     # Apply preset-specific configuration
-    case "$opt_preset" in
-        "bare")
-            configure_preset_bare "$wp_dir"
-            ;;
+    case "$preset" in
         "clean")
-            configure_preset_clean "$wp_dir"
+            configure_preset_clean
             ;;
         "custom")
-            configure_preset_custom "$wp_dir"
+            configure_preset_custom
             ;;
         "loaded")
-            configure_preset_loaded "$wp_dir"
-            ;;
-        "starred")
-            configure_preset_starred "$wp_dir"
-            ;;
-        *)
-            handle_error "Unknown preset: $opt_preset"
+            configure_preset_loaded
             ;;
     esac
     
@@ -314,164 +447,74 @@ configure_wordpress_preset() {
 }
 
 cleanup_default_content() {
-    local wp_dir="$1"
-    
     print_status "info" "Cleaning up default content..."
     
     # Delete default posts and pages
-    eval "$CONTAINER_CMD exec php wp post delete 1 --force --path='$wp_dir' --allow-root" 2>/dev/null || true
-    eval "$CONTAINER_CMD exec php wp post delete 2 --force --path='$wp_dir' --allow-root" 2>/dev/null || true
-    eval "$CONTAINER_CMD exec php wp post delete 3 --force --path='$wp_dir' --allow-root" 2>/dev/null || true
+    exec_php_wp_quiet "post delete 1 --force"
+    exec_php_wp_quiet "post delete 2 --force"
+    exec_php_wp_quiet "post delete 3 --force"
     
     # Delete default plugins
-    eval "$CONTAINER_CMD exec php wp plugin delete akismet hello --path='$wp_dir' --allow-root" 2>/dev/null || true
+    exec_php_wp_quiet "plugin delete akismet hello"
 }
 
-configure_preset_bare() {
-    local wp_dir="$1"
+install_preset_plugins() {
+    local preset="$1"
+    local plugins_string="${PRESET_PLUGINS[$preset]}"
     
-    print_status "info" "Configuring bare preset..."
+    if [[ -z "$plugins_string" ]]; then
+        return 0
+    fi
     
-    # Install minimal plugins
-    local plugins=("all-in-one-wp-migration")
+    # Convert string to array
+    local plugins=(${(s: :)plugins_string})
     
-    install_github_plugins "$wp_dir" "${plugins[@]}"
+    if [[ ${#plugins[@]} -gt 0 ]]; then
+        install_github_plugins "${plugins[@]}"
+    fi
+}
+
+install_preset_themes() {
+    local preset="$1"
+    local themes_string="${PRESET_THEMES[$preset]}"
     
-    # Set up basic directory structure
-    setup_basic_directories "$wp_dir"
+    if [[ -z "$themes_string" ]]; then
+        return 0
+    fi
+    
+    # Convert string to array
+    local themes=(${(s: :)themes_string})
+    
+    if [[ ${#themes[@]} -gt 0 ]]; then
+        install_github_themes "${themes[@]}"
+        delete_default_themes
+    fi
 }
 
 configure_preset_clean() {
-    local wp_dir="$1"
-    
     print_status "info" "Configuring clean preset..."
-    
-    # Install clean preset plugins
-    local plugins=(
-        "typerocket-pro-v6"
-        "all-in-one-wp-migration"
-        "admin-site-enhancements-pro"
-        "makermaker"
-        "makerblocks"
-    )
-    
-    install_github_plugins "$wp_dir" "${plugins[@]}"
-    
-    # Install clean preset themes
-    local themes=("makerstarter")
-    install_github_themes "$wp_dir" "${themes[@]}"
-    
-    # Delete default themes
-    delete_default_themes "$wp_dir"
-    
-    # Set up directories and Galaxy files
-    setup_basic_directories "$wp_dir"
-    setup_galaxy_files "$wp_dir" "makermaker"
+    setup_basic_directories
+    setup_galaxy_files "makermaker"
 }
 
 configure_preset_custom() {
-    local wp_dir="$1"
-    
     print_status "info" "Configuring custom preset..."
-    
-    # Install custom preset plugins
-    local plugins=(
-        "typerocket-pro-v6"
-        "all-in-one-wp-migration"
-        "admin-site-enhancements-pro"
-        "advanced-custom-fields-pro"
-        "acf-extended-pro"
-        "makermaker"
-        "makerblocks"
-        "gravityforms"
-        "manual-image-crop"
-    )
-    
-    install_github_plugins "$wp_dir" "${plugins[@]}"
-    
-    # Install custom preset themes
-    local themes=("makerstarter")
-    install_github_themes "$wp_dir" "${themes[@]}"
-    
-    # Delete default themes
-    delete_default_themes "$wp_dir"
-    
-    # Set up directories and Galaxy files
-    setup_basic_directories "$wp_dir"
-    setup_galaxy_files "$wp_dir" "typerocket-galaxy"
-    setup_typerocket_integration "$wp_dir"
+    setup_basic_directories
+    setup_galaxy_files "typerocket-galaxy"
+    setup_typerocket_integration
 }
 
 configure_preset_loaded() {
-    local wp_dir="$1"
-    
     print_status "info" "Configuring loaded preset..."
     
-    # Install loaded preset plugins
-    local plugins=(
-        "typerocket-pro-v6"
-        "all-in-one-wp-migration"
-        "admin-site-enhancements-pro"
-        "advanced-custom-fields-pro"
-        "acf-extended-pro"
-        "makermaker"
-        "makerblocks"
-        "gravityforms"
-        "manual-image-crop"
-    )
-    
-    install_github_plugins "$wp_dir" "${plugins[@]}"
-    
-    # Install WordPress repository plugins for development
-    local wp_repo_plugins=(
-        "debug-bar"
-        "debug-bar-actions-and-filters-addon"
-        "classic-editor"
-        "default-featured-image"
-        "plugin-inspector"
-        "log-deprecated-notices"
-        "query-monitor"
-        "theme-check"
-        "wordpress-beta-tester"
-        "show-current-template"
-        "theme-inspector"
-        "view-admin-as"
-    )
-    
+    # Install WordPress repository plugins
     print_status "info" "Installing WordPress repository plugins..."
-    for plugin in "${wp_repo_plugins[@]}"; do
-        eval "$CONTAINER_CMD exec php wp plugin install $plugin --path='$wp_dir' --allow-root" || true
+    for plugin in "${WP_REPO_PLUGINS[@]}"; do
+        exec_php_wp_quiet "plugin install $plugin"
     done
     
-    # Install themes
-    local themes=("makerstarter")
-    install_github_themes "$wp_dir" "${themes[@]}"
-    
-    # Delete default themes
-    delete_default_themes "$wp_dir"
-    
-    # Set up directories and Galaxy files
-    setup_basic_directories "$wp_dir"
-    setup_galaxy_files "$wp_dir" "makermaker"
-}
-
-configure_preset_starred() {
-    local wp_dir="$1"
-    
-    print_status "info" "Configuring starred preset..."
-    
-    # Install starred repository plugins
-    local plugins=(
-        "gravityforms"
-        "advanced-custom-fields-pro"
-        "woocommerce-subscriptions"
-        "facetwp"
-    )
-    
-    install_github_plugins "$wp_dir" "${plugins[@]}"
-    
-    # Set up basic directories
-    setup_basic_directories "$wp_dir"
+    setup_basic_directories
+    setup_galaxy_files "makermaker"
 }
 
 # =============================================================================
@@ -479,8 +522,6 @@ configure_preset_starred() {
 # =============================================================================
 
 install_github_plugins() {
-    local wp_dir="$1"
-    shift
     local plugins=("$@")
     
     if [[ ${#plugins[@]} -eq 0 ]]; then
@@ -489,8 +530,7 @@ install_github_plugins() {
     
     print_status "info" "Installing GitHub plugins..."
     
-    # Change to plugins directory
-    local plugins_dir="$wp_dir/wp-content/plugins"
+    local plugins_dir=$(get_path "container_plugins")
     
     for plugin_name in "${plugins[@]}"; do
         print_status "info" "Installing plugin: $plugin_name"
@@ -498,9 +538,9 @@ install_github_plugins() {
         local plugin_repo="https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/${plugin_name}.git"
         
         # Clone plugin repository
-        if eval "$CONTAINER_CMD exec php git clone '$plugin_repo' '$plugins_dir/$plugin_name'"; then
+        if exec_php "git clone '$plugin_repo' '$plugins_dir/$plugin_name'"; then
             # Activate plugin
-            if eval "$CONTAINER_CMD exec php wp plugin activate '$plugin_name' --path='$wp_dir' --allow-root"; then
+            if exec_php_wp "plugin activate '$plugin_name'"; then
                 print_status "success" "Plugin $plugin_name installed and activated"
             else
                 print_status "warning" "Plugin $plugin_name installed but failed to activate"
@@ -512,8 +552,6 @@ install_github_plugins() {
 }
 
 install_github_themes() {
-    local wp_dir="$1"
-    shift
     local themes=("$@")
     
     if [[ ${#themes[@]} -eq 0 ]]; then
@@ -522,8 +560,7 @@ install_github_themes() {
     
     print_status "info" "Installing GitHub themes..."
     
-    # Change to themes directory
-    local themes_dir="$wp_dir/wp-content/themes"
+    local themes_dir=$(get_path "container_themes")
     
     for theme_name in "${themes[@]}"; do
         print_status "info" "Installing theme: $theme_name"
@@ -531,9 +568,9 @@ install_github_themes() {
         local theme_repo="https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/${theme_name}.git"
         
         # Clone theme repository
-        if eval "$CONTAINER_CMD exec php git clone '$theme_repo' '$themes_dir/$theme_name'"; then
+        if exec_php "git clone '$theme_repo' '$themes_dir/$theme_name'"; then
             # Activate theme
-            if eval "$CONTAINER_CMD exec php wp theme activate '$theme_name' --path='$wp_dir' --allow-root"; then
+            if exec_php_wp "theme activate '$theme_name'"; then
                 print_status "success" "Theme $theme_name installed and activated"
             else
                 print_status "warning" "Theme $theme_name installed but failed to activate"
@@ -545,14 +582,12 @@ install_github_themes() {
 }
 
 delete_default_themes() {
-    local wp_dir="$1"
-    
     print_status "info" "Removing default themes..."
     
     local default_themes=("twentytwentythree" "twentytwentyfour" "twentytwentyfive")
     
     for theme in "${default_themes[@]}"; do
-        eval "$CONTAINER_CMD exec php wp theme delete '$theme' --path='$wp_dir' --allow-root" 2>/dev/null || true
+        exec_php_wp_quiet "theme delete '$theme'"
     done
 }
 
@@ -561,36 +596,34 @@ delete_default_themes() {
 # =============================================================================
 
 setup_basic_directories() {
-    local wp_dir="$1"
-    
     print_status "info" "Setting up directory structure..."
     
+    local wp_content=$(get_path "container_content")
+    local uploads=$(get_path "container_uploads")
+    
     # Create and set permissions for AI1WM directories
-    local ai1wm_backups="$wp_dir/wp-content/ai1wm-backups"
-    local ai1wm_storage="$wp_dir/wp-content/plugins/all-in-one-wp-migration/storage"
+    local ai1wm_backups="$wp_content/ai1wm-backups"
+    local ai1wm_storage="$wp_content/plugins/all-in-one-wp-migration/storage"
     
-    eval "$CONTAINER_CMD exec php mkdir -p '$ai1wm_backups'" || true
-    eval "$CONTAINER_CMD exec php mkdir -p '$ai1wm_storage'" || true
+    exec_php "mkdir -p '$ai1wm_backups'" || true
+    exec_php "mkdir -p '$ai1wm_storage'" || true
+    exec_php "mkdir -p '$uploads'" || true
     
-    # Create uploads directory
-    local uploads_dir="$wp_dir/wp-content/uploads"
-    eval "$CONTAINER_CMD exec php mkdir -p '$uploads_dir'" || true
-    
-    if [[ "$opt_skip_permissions" == "false" ]]; then
+    if [[ "${SITE_CONFIG[skip_permissions]}" == "false" ]]; then
         print_status "info" "Setting directory permissions..."
         
-        # Set permissions using config.sh container commands
-        eval "$CONTAINER_CMD exec php chmod -R 777 '$ai1wm_backups'" || true
-        eval "$CONTAINER_CMD exec php chmod -R 777 '$ai1wm_storage'" || true
-        eval "$CONTAINER_CMD exec php chmod -R 777 '$uploads_dir'" || true
-        eval "$CONTAINER_CMD exec php chmod -R 777 '$wp_dir/wp-content/themes'" || true
-        eval "$CONTAINER_CMD exec php chmod -R 777 '$wp_dir/wp-content/plugins'" || true
+        exec_php "chmod -R 777 '$ai1wm_backups'" || true
+        exec_php "chmod -R 777 '$ai1wm_storage'" || true
+        exec_php "chmod -R 777 '$uploads'" || true
+        exec_php "chmod -R 777 '$(get_path container_themes)'" || true
+        exec_php "chmod -R 777 '$(get_path container_plugins)'" || true
     fi
 }
 
 setup_galaxy_files() {
-    local wp_dir="$1"
-    local galaxy_type="$2"
+    local galaxy_type="$1"
+    local wp_dir=$(get_path "container_wp")
+    local site_name="${SITE_CONFIG[name]}"
     
     print_status "info" "Setting up Galaxy files..."
     
@@ -600,44 +633,39 @@ setup_galaxy_files() {
             local galaxy_file="$galaxy_dir/galaxy_makermaker"
             local galaxy_config="$galaxy_dir/galaxy-makermaker-config.php"
             
-            # Copy Galaxy files
-            eval "$CONTAINER_CMD exec php cp '$galaxy_file' '$wp_dir/'" || true
-            
-            # Update config with site name
-            eval "$CONTAINER_CMD exec php sed \"s/\\$sitename = 'playground'/\\$sitename = '$SITE_NAME'/\" '$galaxy_config' > '$galaxy_config.tmp'" || true
-            eval "$CONTAINER_CMD exec php mv '$galaxy_config.tmp' '$galaxy_config'" || true
-            eval "$CONTAINER_CMD exec php cp '$galaxy_config' '$wp_dir/'" || true
+            exec_php "cp '$galaxy_file' '$wp_dir/'" || true
+            exec_php "sed \"s/\\$sitename = 'playground'/\\$sitename = '$site_name'/\" '$galaxy_config' > '$galaxy_config.tmp'" || true
+            exec_php "mv '$galaxy_config.tmp' '$galaxy_config'" || true
+            exec_php "cp '$galaxy_config' '$wp_dir/'" || true
             ;;
         "typerocket-galaxy")
             local typerocket_dir="$wp_dir/wp-content/plugins/typerocket-pro-v6/typerocket"
             local galaxy_file="$typerocket_dir/galaxy"
             local galaxy_config="$wp_dir/wp-content/plugins/makermaker/galaxy/galaxy-config.php"
             
-            # Copy TypeRocket Galaxy files
-            eval "$CONTAINER_CMD exec php cp '$galaxy_file' '$wp_dir/'" || true
-            eval "$CONTAINER_CMD exec php cp '$galaxy_config' '$wp_dir/'" || true
+            exec_php "cp '$galaxy_file' '$wp_dir/'" || true
+            exec_php "cp '$galaxy_config' '$wp_dir/'" || true
             
             # Also copy Makermaker Galaxy files
-            setup_galaxy_files "$wp_dir" "makermaker"
+            setup_galaxy_files "makermaker"
             ;;
     esac
 }
 
 setup_typerocket_integration() {
-    local wp_dir="$1"
-    
     print_status "info" "Setting up TypeRocket integration..."
     
+    local wp_dir=$(get_path "container_wp")
     local typerocket_dir="$wp_dir/wp-content/plugins/typerocket-pro-v6/typerocket"
     local makerstarter_dir="$wp_dir/wp-content/themes/makerstarter"
     
     # Copy TypeRocket override folders to Maker Starter theme
-    if [[ -d "$typerocket_dir" && -d "$makerstarter_dir" ]]; then
-        eval "$CONTAINER_CMD exec php cp -R '$typerocket_dir/app' '$makerstarter_dir/'" || true
-        eval "$CONTAINER_CMD exec php cp -R '$typerocket_dir/config' '$makerstarter_dir/'" || true
-        eval "$CONTAINER_CMD exec php cp -R '$typerocket_dir/resources' '$makerstarter_dir/'" || true
-        eval "$CONTAINER_CMD exec php cp -R '$typerocket_dir/routes' '$makerstarter_dir/'" || true
-        eval "$CONTAINER_CMD exec php mkdir -p '$makerstarter_dir/storage'" || true
+    if exec_php "test -d '$typerocket_dir' && test -d '$makerstarter_dir'"; then
+        exec_php "cp -R '$typerocket_dir/app' '$makerstarter_dir/'" || true
+        exec_php "cp -R '$typerocket_dir/config' '$makerstarter_dir/'" || true
+        exec_php "cp -R '$typerocket_dir/resources' '$makerstarter_dir/'" || true
+        exec_php "cp -R '$typerocket_dir/routes' '$makerstarter_dir/'" || true
+        exec_php "mkdir -p '$makerstarter_dir/storage'" || true
     fi
 }
 
@@ -646,47 +674,48 @@ setup_typerocket_integration() {
 # =============================================================================
 
 finalize_installation() {
-    local wp_dir="$APPS_DIR/$SITE_NAME/public"
-    
     print_status "step" "Finalizing WordPress installation..."
     
     # Set permalink structure
     print_status "info" "Setting permalink structure..."
-    eval "$CONTAINER_CMD exec php wp rewrite structure '%postname%' --path='$wp_dir' --allow-root"
+    exec_php_wp "rewrite structure '%postname%'"
     
     # Set final permissions if not skipped
-    if [[ "$opt_skip_permissions" == "false" ]]; then
+    if [[ "${SITE_CONFIG[skip_permissions]}" == "false" ]]; then
         print_status "info" "Setting final file permissions..."
-        eval "$CONTAINER_CMD exec php chown -R www-data:www-data /var/www/html/"
-        eval "$CONTAINER_CMD exec php chmod -R 777 /var/www/html/"
+        exec_php "chown -R www-data:www-data $(get_path container_root)"
+        exec_php "chmod -R 777 $(get_path container_root)"
     fi
     
     # Send emails if not skipped
-    if [[ "$opt_skip_email" == "false" ]]; then
-        send_installation_emails "$wp_dir"
+    if [[ "${SITE_CONFIG[skip_email]}" == "false" ]]; then
+        send_installation_emails
     fi
     
     print_status "success" "WordPress installation finalized"
 }
 
 send_installation_emails() {
-    local wp_dir="$1"
-    
     print_status "info" "Sending installation emails..."
+    
+    local admin_email=$(get_wp_admin "email")
+    local site_title="${SITE_CONFIG[title]}"
+    local site_path=$(get_path "host_site")
+    local domain="${SITE_CONFIG[domain]}"
     
     # Installation summary email
     local email_subject="WordPress Installation Summary"
-    local email_body="$SITE_TITLE installed successfully at $APPS_DIR/$SITE_NAME and accessible at https://$opt_custom_domain"
+    local email_body="$site_title installed successfully at $site_path and accessible at https://$domain"
     
-    eval "$CONTAINER_CMD exec php wp eval \"wp_mail('$ADMIN_EMAIL', '$email_subject', '$email_body');\" --path='$wp_dir' --allow-root" || true
+    exec_php_wp_quiet "eval \"wp_mail('$admin_email', '$email_subject', '$email_body');\""
     
     # Test email
     local test_subject="Test Email from WordPress Setup Script"
     local test_body="This is a test email to verify that the mail configuration is working correctly.\\n\\nThanks,\\nThe Setup Script"
     
-    eval "$CONTAINER_CMD exec php wp eval \"wp_mail('$ADMIN_EMAIL', '$test_subject', '$test_body');\" --path='$wp_dir' --allow-root" || true
+    exec_php_wp_quiet "eval \"wp_mail('$admin_email', '$test_subject', '$test_body');\""
     
-    print_status "success" "Installation emails sent to $ADMIN_EMAIL"
+    print_status "success" "Installation emails sent to $admin_email"
 }
 
 # =============================================================================
@@ -701,33 +730,33 @@ show_completion_message() {
     echo ""
     
     echo "Site Details:"
-    echo "  Name: $SITE_NAME"
-    echo "  Title: $SITE_TITLE"
-    echo "  Preset: $opt_preset (${WORDPRESS_PRESETS[$opt_preset]})"
-    echo "  Location: $APPS_DIR/$SITE_NAME"
-    echo "  URL: https://$opt_custom_domain"
+    echo "  Name: ${SITE_CONFIG[name]}"
+    echo "  Title: ${SITE_CONFIG[title]}"
+    echo "  Preset: ${SITE_CONFIG[preset]} (${WORDPRESS_PRESETS[${SITE_CONFIG[preset]}]})"
+    echo "  Location: $(get_path host_site)"
+    echo "  URL: https://${SITE_CONFIG[domain]}"
     echo ""
     
     echo "Database Information:"
-    echo "  Database: $SITE_NAME"
-    echo "  User: $MARIADB_USER"
-    echo "  Password: $MARIADB_PASSWORD"
-    echo "  Host: $MARIADB_HOST"
+    echo "  Database: $(get_db_config name)"
+    echo "  User: $(get_db_config user)"
+    echo "  Password: $(get_db_config password)"
+    echo "  Host: $(get_db_config host)"
     echo ""
     
     echo "Admin Access:"
-    echo "  Username: $ADMIN_USER"
-    echo "  Password: $ADMIN_PASSWORD"
-    echo "  Email: $ADMIN_EMAIL"
-    echo "  Login: https://$opt_custom_domain/wp-admin"
+    echo "  Username: $(get_wp_admin user)"
+    echo "  Password: $(get_wp_admin password)"
+    echo "  Email: $(get_wp_admin email)"
+    echo "  Login: https://${SITE_CONFIG[domain]}/wp-admin"
     echo ""
     
     echo "Next Steps:"
     echo "  1. Add to hosts file (if not done already):"
-    echo "     echo '127.0.0.1 $opt_custom_domain' | sudo tee -a /etc/hosts"
+    echo "     echo '127.0.0.1 ${SITE_CONFIG[domain]}' | sudo tee -a /etc/hosts"
     echo ""
     echo "  2. Access your site:"
-    echo "     https://$opt_custom_domain"
+    echo "     https://${SITE_CONFIG[domain]}"
     echo ""
     
     echo "Management Commands:"
@@ -738,8 +767,8 @@ show_completion_message() {
     echo ""
     
     echo "WordPress Commands:"
-    echo "  WP-CLI: $CONTAINER_CMD exec php wp --path='$APPS_DIR/$SITE_NAME/public'"
-    echo "  Update plugins: $CONTAINER_CMD exec php wp plugin update --all --path='$APPS_DIR/$SITE_NAME/public' --allow-root"
+    echo "  WP-CLI: $CONTAINER_CMD exec php wp --path='$(get_path container_wp)'"
+    echo "  Update plugins: $CONTAINER_CMD exec php wp plugin update --all --path='$(get_path container_wp)' --allow-root"
     echo "  Backup site: Use All-in-One WP Migration plugin"
     echo ""
 }
@@ -757,10 +786,10 @@ main() {
     
     # Show installation summary
     print_status "info" "WordPress Installation Summary:"
-    echo "  Site: $SITE_NAME ($SITE_TITLE)"
-    echo "  Preset: $opt_preset"
-    echo "  Domain: $opt_custom_domain"
-    echo "  Location: $APPS_DIR/$SITE_NAME"
+    echo "  Site: ${SITE_CONFIG[name]} (${SITE_CONFIG[title]})"
+    echo "  Preset: ${SITE_CONFIG[preset]}"
+    echo "  Domain: ${SITE_CONFIG[domain]}"
+    echo "  Location: $(get_path host_site)"
     echo ""
     
     # Validate environment and requirements
