@@ -1,0 +1,22 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  redis-exporter:
+    container_name: redis-exporter
+    image: oliver006/redis_exporter:latest
+    restart: unless-stopped
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+      - REDIS_EXPORTER_WEB_LISTEN_ADDRESS=:9121
+    ports:
+      - "127.0.0.1:9121:9121"
+    networks:
+      - microservices-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redis-exporter.rule=Host(`redis-exporter.test`)"
+      - "traefik.http.routers.redis-exporter.entrypoints=websecure"
+      - "traefik.http.routers.redis-exporter.tls=true"
+      - "traefik.http.services.redis-exporter.loadbalancer.server.port=9121"
