@@ -1,10 +1,10 @@
 #!/bin/zsh
 
 # =============================================================================
-# DATABASE SETUP SCRIPT - FIXED
+# DATABASE SETUP SCRIPT - FIXED & ENHANCED
 # =============================================================================
-# Initializes databases and creates required schemas/users for all services
-# Now leverages config.sh and service-manager for better integration
+# Combines enhanced detection/validation with working database setup methods
+# Uses the old proven database setup methods with new service integration
 
 # Source the central configuration
 . "$(dirname "$0")/config.sh"
@@ -21,6 +21,7 @@ opt_setup_mysql=false
 opt_setup_postgres=false
 opt_setup_mongodb=false
 opt_setup_all=false
+opt_create_test_data=false
 opt_timeout=120
 
 # =============================================================================
@@ -33,7 +34,7 @@ Usage: $0 [OPTIONS]
 
 DESCRIPTION:
     Initializes databases and creates required schemas, users, and configurations
-    for all microservices. Leverages config.sh and service-manager integration.
+    for all microservices. Uses proven database setup methods with enhanced detection.
 
 OPTIONS:
     -s, --sudo              Use sudo for container commands
@@ -43,6 +44,7 @@ OPTIONS:
     -p, --postgres          Setup PostgreSQL databases
     -g, --mongodb           Setup MongoDB databases
     -a, --all               Setup all available databases
+    -t, --test-data         Create test data in databases
     -T, --timeout SECONDS   Database connection timeout (default: 120)
     -h, --help              Show this help message
 
@@ -57,12 +59,14 @@ DATABASES CREATED:
         
     MongoDB:
         - admin (Administrative)
-        - Additional collections as needed
+        - langflow (AI workflows)
+        - n8n (Automation)
 
 EXAMPLES:
     $0 -a                           # Setup all databases
     $0 -m -p                        # Setup MariaDB and PostgreSQL only
     $0 -s -e -a                     # Use sudo, show errors, setup all
+    $0 --postgres --test-data       # Setup PostgreSQL with test data
     $0 --all --timeout 180          # Setup all with 3-minute timeout
 
 NOTES:
@@ -112,6 +116,10 @@ parse_arguments() {
                 opt_setup_mongodb=true
                 shift
                 ;;
+            -t|--test-data)
+                opt_create_test_data=true
+                shift
+                ;;
             -T|--timeout)
                 if [[ -n "$2" && "$2" =~ ^[0-9]+$ ]]; then
                     opt_timeout="$2"
@@ -143,7 +151,7 @@ parse_arguments() {
 }
 
 # =============================================================================
-# DATABASE DETECTION & VALIDATION
+# DATABASE DETECTION & VALIDATION (Enhanced from new version)
 # =============================================================================
 
 detect_available_databases() {
@@ -213,121 +221,84 @@ validate_requested_databases() {
 }
 
 # =============================================================================
-# ENHANCED DATABASE WAITING FUNCTIONS
+# DATABASE WAITING FUNCTIONS (From old version - proven to work)
 # =============================================================================
 
-wait_for_database_ready() {
+wait_for_database() {
     local db_type="$1"
     local container_name="$2"
+    local timeout="$opt_timeout"
+    local counter=0
     
     print_status "step" "Waiting for $db_type ($container_name) to be ready..."
     
-    # Use config.sh utilities for consistent behavior
-    case "$db_type" in
-        "mariadb"|"mysql")
-            wait_for_mysql_ready "$container_name"
-            ;;
-        "postgres")
-            wait_for_postgres_ready "$container_name"
-            ;;
-        "mongodb")
-            # Use the specialized MongoDB function from config.sh
-            wait_for_mongodb "$opt_timeout"
-            ;;
-        *)
-            print_status "warning" "Unknown database type: $db_type"
-            return 1
-            ;;
-    esac
-}
-
-wait_for_mysql_ready() {
-    local container_name="$1"
-    local counter=0
-    
-    print_status "step" "Waiting for $container_name to be ready..."
-    
-    while [[ $counter -lt $opt_timeout ]]; do
-        # Method 1: Try connecting with root user using environment variables
-        if eval "$CONTAINER_CMD exec $container_name sh -c 'mariadb -u root -p\"\$MARIADB_ROOT_PASSWORD\" -e \"SELECT 1;\"' >/dev/null 2>&1"; then
-            print_status "success" "$container_name is ready!"
-            return 0
-        fi
-        
-        # Method 2: Try mysqladmin ping
-        if eval "$CONTAINER_CMD exec $container_name sh -c 'mysqladmin ping -h localhost -u root -p\"\$MARIADB_ROOT_PASSWORD\"' >/dev/null 2>&1"; then
-            print_status "success" "$container_name is ready!"
-            return 0
-        fi
-        
-        # Method 3: Try without password (for initial setup)
-        if eval "$CONTAINER_CMD exec $container_name sh -c 'mariadb -u root -e \"SELECT 1;\"' >/dev/null 2>&1"; then
-            print_status "success" "$container_name is ready!"
-            return 0
-        fi
-        
-        # Method 4: Check if MariaDB process is running
-        if eval "$CONTAINER_CMD exec $container_name pgrep mysqld >/dev/null 2>&1"; then
-            print_status "info" "$container_name process is running, trying connection..."
-            # Give it a few more seconds for the socket to be ready
-            sleep 2
-            counter=$((counter + 2))
-            continue
-        fi
+    while [[ $counter -lt $timeout ]]; do
+        case "$db_type" in
+            "mariadb"|"mysql")
+                # Try direct connection with root user instead of healthcheck
+                if eval "$CONTAINER_CMD exec $container_name mariadb -u root -p\$MYSQL_ROOT_PASSWORD -e 'SELECT 1;' >/dev/null 2>&1"; then
+                    print_status "success" "$db_type is ready!"
+                    return 0
+                fi
+                
+                # Fallback: Check if mysqladmin ping works
+                if eval "$CONTAINER_CMD exec $container_name mysqladmin ping -h localhost -u root -p\$MYSQL_ROOT_PASSWORD >/dev/null 2>&1"; then
+                    print_status "success" "$db_type is ready!"
+                    return 0
+                fi
+                ;;
+            "postgres")
+                # More robust postgres check
+                if eval "$CONTAINER_CMD exec $container_name pg_isready -U postgres >/dev/null 2>&1"; then
+                    # Also verify we can actually connect
+                    if eval "$CONTAINER_CMD exec $container_name psql -U postgres -c 'SELECT 1;' >/dev/null 2>&1"; then
+                        print_status "success" "$db_type is ready!"
+                        return 0
+                    fi
+                fi
+                ;;
+            "mongodb")
+                if eval "$CONTAINER_CMD exec $container_name mongosh --quiet --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1"; then
+                    print_status "success" "$db_type is ready!"
+                    return 0
+                fi
+                ;;
+        esac
         
         # Check if container is still running
-        local container_status=$(get_service_status "$container_name")
-        if [[ "$container_status" != "running" ]]; then
-            handle_error "$container_name container is not running (status: $container_status)"
+        if ! eval "$CONTAINER_CMD ps --format '{{.Names}}' | grep -q '^$container_name$' 2>/dev/null"; then
+            handle_error "$container_name container is not running"
         fi
         
-        print_status "info" "$container_name not ready yet... ($counter/$opt_timeout seconds)"
-        sleep 3
+        print_status "info" "$db_type not ready yet... ($counter/$timeout seconds)"
+        sleep 3  # Increased sleep time
         counter=$((counter + 3))
     done
     
-    # Final diagnostic attempt
-    print_status "warning" "Connection timeout reached. Running diagnostics..."
-    print_status "info" "Container status:"
-    eval "$CONTAINER_CMD exec $container_name ps aux | grep mysql" || true
-    print_status "info" "MariaDB error log (last 10 lines):"
-    eval "$CONTAINER_CMD exec $container_name tail -10 /var/log/mysql/error.log" 2>/dev/null || true
-    
-    handle_error "$container_name connection timeout after $opt_timeout seconds"
+    handle_error "$db_type connection timeout after $timeout seconds"
 }
 
-wait_for_postgres_ready() {
-    local container_name="$1"
-    local counter=0
+validate_database_containers() {
+    print_status "step" "Validating database containers..."
     
-    print_status "step" "Waiting for $container_name to be ready..."
+    local -a required_containers=()
     
-    while [[ $counter -lt $opt_timeout ]]; do
-        # Check if PostgreSQL is ready
-        if eval "$CONTAINER_CMD exec $container_name pg_isready -U postgres >/dev/null 2>&1"; then
-            # Also verify we can actually connect
-            if eval "$CONTAINER_CMD exec $container_name psql -U postgres -c 'SELECT 1;' >/dev/null 2>&1"; then
-                print_status "success" "$container_name is ready!"
-                return 0
-            fi
+    [[ "$opt_setup_mariadb" == "true" ]] && required_containers+="mariadb"
+    [[ "$opt_setup_mysql" == "true" ]] && required_containers+="mysql"
+    [[ "$opt_setup_postgres" == "true" ]] && required_containers+="postgres"
+    [[ "$opt_setup_mongodb" == "true" ]] && required_containers+="mongodb"
+    
+    for container in "${required_containers[@]}"; do
+        if ! eval "$CONTAINER_CMD ps --format '{{.Names}}' | grep -q '^$container$' $ERROR_REDIRECT"; then
+            handle_error "$container container is not running. Please start database services first."
         fi
-        
-        # Check if container is still running
-        local container_status=$(get_service_status "$container_name")
-        if [[ "$container_status" != "running" ]]; then
-            handle_error "$container_name container is not running (status: $container_status)"
-        fi
-        
-        print_status "info" "$container_name not ready yet... ($counter/$opt_timeout seconds)"
-        sleep 3
-        counter=$((counter + 3))
     done
     
-    handle_error "$container_name connection timeout after $opt_timeout seconds"
+    print_status "success" "All required database containers are running"
 }
 
 # =============================================================================
-# DATABASE SETUP FUNCTIONS - IMPROVED
+# DATABASE SETUP FUNCTIONS (From old version - proven working methods)
 # =============================================================================
 
 setup_mariadb() {
@@ -338,74 +309,49 @@ setup_mariadb() {
     
     print_status "step" "Setting up MariaDB databases and users..."
     
-    wait_for_mysql_ready "mariadb"
+    wait_for_database "mariadb" "mariadb"
     
-    # Create a temporary SQL file for better reliability
-    local temp_sql="/tmp/mariadb_setup_$$.sql"
-    
-    # Create SQL commands with proper escaping
-    cat > "$temp_sql" << EOF
+    # Enhanced MariaDB setup with better conflict handling - using old proven method
+    local mariadb_setup_sql="
 -- Create databases with IF NOT EXISTS to avoid conflicts
-CREATE DATABASE IF NOT EXISTS \`${DB_MYSQL_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS \`${MATOMO_DATABASE_DBNAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS npm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS matomo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS microservices CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Drop and recreate users to ensure clean state
-DROP USER IF EXISTS '${MARIADB_USER}'@'%';
-DROP USER IF EXISTS '${DB_MYSQL_USER}'@'%';
-DROP USER IF EXISTS '${MATOMO_DATABASE_USERNAME}'@'%';
+DROP USER IF EXISTS 'npm_user'@'%';
+DROP USER IF EXISTS 'matomo_user'@'%';
+DROP USER IF EXISTS 'app_user'@'%';
 
--- Create users with proper authentication
-CREATE USER '${MARIADB_USER}'@'%' IDENTIFIED BY '${MARIADB_PASSWORD}';
-CREATE USER '${DB_MYSQL_USER}'@'%' IDENTIFIED BY '${DB_MYSQL_PASSWORD}';
-CREATE USER '${MATOMO_DATABASE_USERNAME}'@'%' IDENTIFIED BY '${MATOMO_DATABASE_PASSWORD}';
+-- Create users
+CREATE USER 'npm_user'@'%' IDENTIFIED BY '${ADMIN_PASSWORD}';
+CREATE USER 'matomo_user'@'%' IDENTIFIED BY '${ADMIN_PASSWORD}';
+CREATE USER 'app_user'@'%' IDENTIFIED BY '${ADMIN_PASSWORD}';
 
 -- Grant privileges
-GRANT ALL PRIVILEGES ON *.* TO '${MARIADB_USER}'@'%' WITH GRANT OPTION;
-GRANT ALL PRIVILEGES ON \`${DB_MYSQL_NAME}\`.* TO '${DB_MYSQL_USER}'@'%';
-GRANT ALL PRIVILEGES ON \`${MATOMO_DATABASE_DBNAME}\`.* TO '${MATOMO_DATABASE_USERNAME}'@'%';
+GRANT ALL PRIVILEGES ON npm.* TO 'npm_user'@'%';
+GRANT ALL PRIVILEGES ON matomo.* TO 'matomo_user'@'%';
+GRANT ALL PRIVILEGES ON microservices.* TO 'app_user'@'%';
 
--- Apply changes
 FLUSH PRIVILEGES;
-
--- Show results
-SHOW DATABASES;
-SELECT User, Host FROM mysql.user WHERE User IN ('${MARIADB_USER}', '${DB_MYSQL_USER}', '${MATOMO_DATABASE_USERNAME}');
-EOF
+"
     
-    # Copy SQL file to container and execute
-    if eval "$CONTAINER_CMD cp '$temp_sql' mariadb:/tmp/setup.sql"; then
-        print_status "info" "Executing MariaDB setup commands..."
+    # Use mariadb command with better error handling - OLD WORKING METHOD
+    if eval "$CONTAINER_CMD exec -i mariadb mariadb -u root -p\$MYSQL_ROOT_PASSWORD 2>/dev/null << 'EOF'
+$mariadb_setup_sql
+EOF"; then
+        print_status "success" "MariaDB databases and users created successfully"
         
-        # Try multiple connection methods
-        local success=false
-        
-        # Method 1: With password
-        if eval "$CONTAINER_CMD exec mariadb sh -c 'mariadb -u root -p\"\$MARIADB_ROOT_PASSWORD\" < /tmp/setup.sql'"; then
-            success=true
-        # Method 2: Without password (for fresh installations)
-        elif eval "$CONTAINER_CMD exec mariadb sh -c 'mariadb -u root < /tmp/setup.sql'"; then
-            success=true
-        fi
-        
-        # Clean up
-        eval "$CONTAINER_CMD exec mariadb rm -f /tmp/setup.sql"
-        rm -f "$temp_sql"
-        
-        if [[ "$success" == "true" ]]; then
-            print_status "success" "MariaDB databases and users created successfully"
-            
-            # Verify setup
-            print_status "info" "Verifying database setup..."
-            eval "$CONTAINER_CMD exec mariadb sh -c 'mariadb -u root -p\"\$MARIADB_ROOT_PASSWORD\" -e \"SHOW DATABASES;\"'" || true
-        else
-            print_status "error" "Failed to setup MariaDB databases"
-            print_status "info" "Attempting to show MariaDB error details..."
-            eval "$CONTAINER_CMD logs mariadb --tail 20" || true
-            return 1
+        # Create test data if requested
+        if [[ "$opt_create_test_data" == "true" ]]; then
+            create_mariadb_test_data
         fi
     else
-        rm -f "$temp_sql"
-        handle_error "Failed to copy SQL setup file to MariaDB container"
+        print_status "error" "Failed to setup MariaDB databases"
+        print_status "info" "Attempting to show MariaDB error details..."
+        # Show what went wrong
+        eval "$CONTAINER_CMD exec mariadb mariadb -u root -p\$MYSQL_ROOT_PASSWORD -e 'SHOW DATABASES;' 2>&1" || true
+        return 1
     fi
 }
 
@@ -417,61 +363,43 @@ setup_mysql() {
     
     print_status "step" "Setting up MySQL databases and users..."
     
-    # Wait for MySQL to be ready (reuse the MariaDB function as they're compatible)
-    wait_for_mysql_ready "mysql"
+    wait_for_database "mysql" "mysql"
     
-    # Create a temporary SQL file
-    local temp_sql="/tmp/mysql_setup_$$.sql"
-    
-    cat > "$temp_sql" << EOF
--- Create database if it doesn't exist
-CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    # Create databases and users for MySQL - FIXED VERSION
+    local mysql_setup_sql="
+-- WordPress Database
+CREATE DATABASE IF NOT EXISTS wordpress CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'wordpress_user'@'%' IDENTIFIED BY '${ADMIN_PASSWORD}';
+GRANT ALL PRIVILEGES ON wordpress.* TO 'wordpress_user'@'%';
 
--- Drop and recreate user to ensure clean state
-DROP USER IF EXISTS '${MYSQL_CUSTOM_USER}'@'%';
+-- General MySQL application database
+CREATE DATABASE IF NOT EXISTS mysql_apps CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'mysql_app_user'@'%' IDENTIFIED BY '${ADMIN_PASSWORD}';
+GRANT ALL PRIVILEGES ON mysql_apps.* TO 'mysql_app_user'@'%';
 
--- Create user with proper authentication
-CREATE USER '${MYSQL_CUSTOM_USER}'@'%' IDENTIFIED BY '${MYSQL_CUSTOM_USER_PASSWORD}';
+-- Laravel/PHP application database
+CREATE DATABASE IF NOT EXISTS laravel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'laravel_user'@'%' IDENTIFIED BY '${ADMIN_PASSWORD}';
+GRANT ALL PRIVILEGES ON laravel.* TO 'laravel_user'@'%';
 
--- Grant full privileges
-GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_CUSTOM_USER}'@'%' WITH GRANT OPTION;
-
--- Apply changes
 FLUSH PRIVILEGES;
-
--- Show results
-SHOW DATABASES;
-SELECT User, Host FROM mysql.user WHERE User = '${MYSQL_CUSTOM_USER}';
-EOF
+"
     
-    # Copy SQL file to container and execute
-    if eval "$CONTAINER_CMD cp '$temp_sql' mysql:/tmp/setup.sql"; then
-        print_status "info" "Executing MySQL setup commands..."
+    # Fixed: Remove $ERROR_REDIRECT from heredoc and handle errors properly
+    if eval "$CONTAINER_CMD exec -i mysql mysql -u root -p\$MYSQL_ROOT_PASSWORD 2>/dev/null << 'EOF'
+$mysql_setup_sql
+EOF"; then
+        print_status "success" "MySQL databases and users created successfully"
         
-        local success=false
-        
-        # Try with password first
-        if eval "$CONTAINER_CMD exec mysql sh -c 'mysql -u root -p\"\$MYSQL_ROOT_PASSWORD\" < /tmp/setup.sql'"; then
-            success=true
-        # Try without password
-        elif eval "$CONTAINER_CMD exec mysql sh -c 'mysql -u root < /tmp/setup.sql'"; then
-            success=true
-        fi
-        
-        # Clean up
-        eval "$CONTAINER_CMD exec mysql rm -f /tmp/setup.sql"
-        rm -f "$temp_sql"
-        
-        if [[ "$success" == "true" ]]; then
-            print_status "success" "MySQL databases and users created successfully"
-        else
-            print_status "error" "Failed to setup MySQL databases"
-            eval "$CONTAINER_CMD logs mysql --tail 20" || true
-            return 1
+        # Create test data if requested
+        if [[ "$opt_create_test_data" == "true" ]]; then
+            create_mysql_test_data
         fi
     else
-        rm -f "$temp_sql"
-        handle_error "Failed to copy SQL setup file to MySQL container"
+        print_status "error" "Failed to setup MySQL databases"
+        print_status "info" "Attempting to show MySQL error details..."
+        eval "$CONTAINER_CMD logs mysql --tail 20" || true
+        return 1
     fi
 }
 
@@ -483,71 +411,53 @@ setup_postgres() {
     
     print_status "step" "Setting up PostgreSQL databases and users..."
     
-    wait_for_postgres_ready "postgres"
+    wait_for_database "postgres" "postgres"
     
-    # Create a temporary SQL file
-    local temp_sql="/tmp/postgres_setup_$$.sql"
-    
-    cat > "$temp_sql" << EOF
--- Drop and recreate privileged user first
-DROP ROLE IF EXISTS ${POSTGRES_CUSTOM_USER};
-CREATE ROLE ${POSTGRES_CUSTOM_USER} WITH LOGIN PASSWORD '${POSTGRES_CUSTOM_USER_PASSWORD}' SUPERUSER CREATEDB CREATEROLE;
-
+    # Enhanced PostgreSQL setup with conflict resolution - OLD WORKING METHOD
+    local postgres_setup_sql="
 -- Terminate existing connections to databases we might need to recreate
 SELECT pg_terminate_backend(pid) FROM pg_stat_activity 
-WHERE datname IN ('${MB_DB_NAME}', '${NC_DATABASE_NAME}') AND pid <> pg_backend_pid();
+WHERE datname IN ('metabase', 'nocodb') AND pid <> pg_backend_pid();
 
 -- Wait a moment for connections to close
 SELECT pg_sleep(2);
 
 -- Drop existing databases if they exist (CASCADE to handle dependencies)
-DROP DATABASE IF EXISTS ${MB_DB_NAME};
-DROP DATABASE IF EXISTS ${NC_DATABASE_NAME};
+DROP DATABASE IF EXISTS metabase;
+DROP DATABASE IF EXISTS nocodb; 
 
 -- Drop existing users if they exist
-DROP USER IF EXISTS ${MB_DB_USER};
-DROP USER IF EXISTS ${NC_DATABASE_USER};
+DROP USER IF EXISTS metabase_user;
+DROP USER IF EXISTS nocodb_user;
 
--- Create standard users
-CREATE USER ${MB_DB_USER} WITH PASSWORD '${ADMIN_PASSWORD}';
-CREATE USER ${NC_DATABASE_USER} WITH PASSWORD '${ADMIN_PASSWORD}';
+-- Create users first
+CREATE USER metabase_user WITH PASSWORD '${ADMIN_PASSWORD}';
+CREATE USER nocodb_user WITH PASSWORD '${ADMIN_PASSWORD}';
 
 -- Create databases
-CREATE DATABASE ${MB_DB_NAME} OWNER ${MB_DB_USER};
-CREATE DATABASE ${NC_DATABASE_NAME} OWNER ${NC_DATABASE_USER};
+CREATE DATABASE metabase OWNER metabase_user;
+CREATE DATABASE nocodb OWNER nocodb_user;
 
 -- Grant additional privileges
-GRANT ALL PRIVILEGES ON DATABASE ${MB_DB_NAME} TO ${MB_DB_USER};
-GRANT ALL PRIVILEGES ON DATABASE ${NC_DATABASE_NAME} TO ${NC_DATABASE_USER};
-
--- Show results
-\l
-\du
-EOF
+GRANT ALL PRIVILEGES ON DATABASE metabase TO metabase_user;
+GRANT ALL PRIVILEGES ON DATABASE nocodb TO nocodb_user;
+"
     
-    # Copy SQL file to container and execute
-    if eval "$CONTAINER_CMD cp '$temp_sql' postgres:/tmp/setup.sql"; then
-        print_status "info" "Executing PostgreSQL setup commands..."
+    if eval "$CONTAINER_CMD exec -i postgres psql -U postgres 2>/dev/null << 'EOF'
+$postgres_setup_sql
+EOF"; then
+        print_status "success" "PostgreSQL databases and users created successfully"
         
-        if eval "$CONTAINER_CMD exec postgres psql -U postgres -f /tmp/setup.sql"; then
-            print_status "success" "PostgreSQL databases and users created successfully"
-            
-            # Clean up
-            eval "$CONTAINER_CMD exec postgres rm -f /tmp/setup.sql"
-            rm -f "$temp_sql"
-        else
-            print_status "error" "Failed to setup PostgreSQL databases"
-            print_status "info" "Attempting to show PostgreSQL error details..."
-            eval "$CONTAINER_CMD logs postgres --tail 20" || true
-            
-            # Clean up
-            eval "$CONTAINER_CMD exec postgres rm -f /tmp/setup.sql"
-            rm -f "$temp_sql"
-            return 1
+        # Create test data if requested
+        if [[ "$opt_create_test_data" == "true" ]]; then
+            create_postgres_test_data
         fi
     else
-        rm -f "$temp_sql"
-        handle_error "Failed to copy SQL setup file to PostgreSQL container"
+        print_status "error" "Failed to setup PostgreSQL databases"
+        print_status "info" "Attempting to show PostgreSQL error details..."
+        # Show current state
+        eval "$CONTAINER_CMD exec postgres psql -U postgres -c '\l' 2>&1" || true
+        return 1
     fi
 }
 
@@ -557,65 +467,382 @@ setup_mongodb() {
         return 0
     fi
     
-    print_status "step" "Setting up MongoDB root-like user..."
-
-    # Use the specialized MongoDB wait function from config.sh
-    wait_for_mongodb "$opt_timeout"
-
-    # Create a temporary JavaScript file
-    local temp_js="/tmp/mongodb_setup_$$.js"
+    print_status "step" "Setting up MongoDB databases and collections..."
     
-    cat > "$temp_js" << EOF
-// Switch to the admin database
-use admin;
-
-// Drop the user if it already exists
-try { 
-    db.dropUser('${MONGO_CUSTOM_USER}'); 
-    print('${MONGO_CUSTOM_USER} user dropped'); 
-} catch(e) { 
-    print('${MONGO_CUSTOM_USER} did not exist'); 
+    wait_for_database "mongodb" "mongodb"
+    
+    # Check if MongoDB has authentication enabled
+    print_status "info" "Checking MongoDB authentication status..."
+    
+    # Try without authentication first
+    if eval "$CONTAINER_CMD exec mongodb mongosh --quiet --eval 'db.adminCommand(\"listUsers\")' >/dev/null 2>&1"; then
+        print_status "info" "MongoDB running without authentication"
+        setup_mongodb_without_auth
+    else
+        print_status "info" "MongoDB requires authentication, checking for existing admin user..."
+        # Try with admin credentials from environment
+        if eval "$CONTAINER_CMD exec mongodb mongosh --quiet -u \$MONGO_INITDB_ROOT_USERNAME -p \$MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --eval 'db.adminCommand(\"listUsers\")' >/dev/null 2>&1"; then
+            print_status "info" "MongoDB authenticated with root credentials"
+            setup_mongodb_with_auth
+        else
+            print_status "warning" "MongoDB authentication failed, trying alternative setup..."
+            setup_mongodb_fallback
+        fi
+    fi
 }
 
-// Create a new superuser with root privileges
+setup_mongodb_without_auth() {
+    print_status "info" "Setting up MongoDB without authentication..."
+    
+    local mongodb_setup_js="
+// Switch to admin database for user management
+use admin;
+
+// Remove existing users if they exist
+try { db.dropUser('langflow_user'); } catch(e) { print('langflow_user did not exist'); }
+try { db.dropUser('n8n_user'); } catch(e) { print('n8n_user did not exist'); }
+try { db.dropUser('app_user'); } catch(e) { print('app_user did not exist'); }
+
+// Create application-specific users
 db.createUser({
-    user: '${MONGO_CUSTOM_USER}',
-    pwd: '${MONGO_CUSTOM_USER_PASSWORD}',
+    user: 'langflow_user',
+    pwd: '${ADMIN_PASSWORD}',
     roles: [
-        { role: 'root', db: 'admin' }
+        { role: 'readWrite', db: 'langflow' },
+        { role: 'dbAdmin', db: 'langflow' }
     ]
 });
 
-print('MongoDB superuser ${MONGO_CUSTOM_USER} created successfully');
+db.createUser({
+    user: 'n8n_user', 
+    pwd: '${ADMIN_PASSWORD}',
+    roles: [
+        { role: 'readWrite', db: 'n8n' },
+        { role: 'dbAdmin', db: 'n8n' }
+    ]
+});
 
-// Show users
-db.getUsers();
-EOF
+db.createUser({
+    user: 'app_user',
+    pwd: '${ADMIN_PASSWORD}',
+    roles: [
+        { role: 'readWrite', db: 'microservices' },
+        { role: 'dbAdmin', db: 'microservices' }
+    ]
+});
+
+// Create and initialize databases
+use langflow;
+db.flows.insertOne({ name: 'sample_flow', created_at: new Date() });
+
+use n8n;
+db.workflows.insertOne({ name: 'sample_workflow', created_at: new Date() });
+
+use microservices;
+db.config.insertOne({ service: 'mongodb', initialized: true, created_at: new Date() });
+
+print('MongoDB databases and users created successfully');
+"
     
-    # Copy JavaScript file to container and execute
-    if eval "$CONTAINER_CMD cp '$temp_js' mongodb:/tmp/setup.js"; then
-        print_status "info" "Executing MongoDB setup commands..."
+    if eval "$CONTAINER_CMD exec -i mongodb mongosh --quiet 2>/dev/null << 'EOF'
+$mongodb_setup_js
+EOF"; then
+        print_status "success" "MongoDB databases and users created successfully"
         
-        if eval "$CONTAINER_CMD exec mongodb mongosh --quiet /tmp/setup.js"; then
-            print_status "success" "MongoDB superuser created successfully"
-            
-            # Clean up
-            eval "$CONTAINER_CMD exec mongodb rm -f /tmp/setup.js"
-            rm -f "$temp_js"
-        else
-            print_status "error" "Failed to setup MongoDB user"
-            print_status "info" "Attempting to show MongoDB error details..."
-            eval "$CONTAINER_CMD logs mongodb --tail 20" || true
-            
-            # Clean up
-            eval "$CONTAINER_CMD exec mongodb rm -f /tmp/setup.js"
-            rm -f "$temp_js"
-            return 1
+        # Create test data if requested
+        if [[ "$opt_create_test_data" == "true" ]]; then
+            create_mongodb_test_data
         fi
     else
-        rm -f "$temp_js"
-        handle_error "Failed to copy JavaScript setup file to MongoDB container"
+        print_status "error" "Failed to setup MongoDB databases"
+        return 1
     fi
+}
+
+setup_mongodb_with_auth() {
+    print_status "info" "Setting up MongoDB with authentication..."
+    
+    local mongodb_setup_js="
+// Switch to admin database for user management
+use admin;
+
+// Remove existing users if they exist
+try { db.dropUser('langflow_user'); } catch(e) { print('langflow_user did not exist'); }
+try { db.dropUser('n8n_user'); } catch(e) { print('n8n_user did not exist'); }
+try { db.dropUser('app_user'); } catch(e) { print('app_user did not exist'); }
+
+// Create application-specific users
+db.createUser({
+    user: 'langflow_user',
+    pwd: '${ADMIN_PASSWORD}',
+    roles: [
+        { role: 'readWrite', db: 'langflow' },
+        { role: 'dbAdmin', db: 'langflow' }
+    ]
+});
+
+db.createUser({
+    user: 'n8n_user', 
+    pwd: '${ADMIN_PASSWORD}',
+    roles: [
+        { role: 'readWrite', db: 'n8n' },
+        { role: 'dbAdmin', db: 'n8n' }
+    ]
+});
+
+db.createUser({
+    user: 'app_user',
+    pwd: '${ADMIN_PASSWORD}',
+    roles: [
+        { role: 'readWrite', db: 'microservices' },
+        { role: 'dbAdmin', db: 'microservices' }
+    ]
+});
+
+print('MongoDB users created successfully');
+"
+    
+    if eval "$CONTAINER_CMD exec -i mongodb mongosh --quiet -u \$MONGO_INITDB_ROOT_USERNAME -p \$MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin 2>/dev/null << 'EOF'
+$mongodb_setup_js
+EOF"; then
+        print_status "success" "MongoDB databases and users created successfully"
+        
+        # Create test data if requested
+        if [[ "$opt_create_test_data" == "true" ]]; then
+            create_mongodb_test_data
+        fi
+    else
+        print_status "error" "Failed to setup MongoDB databases with authentication"
+        return 1
+    fi
+}
+
+setup_mongodb_fallback() {
+    print_status "info" "Attempting MongoDB fallback setup..."
+    
+    # Simple database creation without user management
+    local mongodb_fallback_js="
+// Create basic databases
+use langflow;
+db.flows.insertOne({ name: 'sample_flow', created_at: new Date(), setup_method: 'fallback' });
+
+use n8n;
+db.workflows.insertOne({ name: 'sample_workflow', created_at: new Date(), setup_method: 'fallback' });
+
+use microservices;
+db.config.insertOne({ service: 'mongodb', initialized: true, created_at: new Date(), setup_method: 'fallback' });
+
+print('MongoDB databases created with fallback method');
+"
+    
+    if eval "$CONTAINER_CMD exec -i mongodb mongosh --quiet 2>/dev/null << 'EOF'
+$mongodb_fallback_js
+EOF"; then
+        print_status "success" "MongoDB databases created with fallback method"
+        print_status "warning" "User management skipped due to authentication issues"
+    else
+        print_status "error" "Failed to setup MongoDB databases"
+        print_status "info" "Attempting to show MongoDB error details..."
+        eval "$CONTAINER_CMD logs mongodb --tail 20" || true
+        return 1
+    fi
+}
+
+# =============================================================================
+# TEST DATA CREATION FUNCTIONS (From old version)
+# =============================================================================
+
+create_mariadb_test_data() {
+    print_status "step" "Creating MariaDB test data..."
+    
+    local test_data_sql="
+USE microservices;
+
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO users (username, email) VALUES 
+('admin', 'admin@site.test'),
+('testuser', 'test@site.test'),
+('developer', 'dev@site.test')
+ON DUPLICATE KEY UPDATE username=VALUES(username);
+
+CREATE TABLE IF NOT EXISTS services (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    status ENUM('running', 'stopped', 'error') DEFAULT 'running',
+    port INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO services (name, status, port) VALUES
+('nginx', 'running', 80),
+('postgres', 'running', 5432),
+('redis', 'running', 6379)
+ON DUPLICATE KEY UPDATE name=VALUES(name);
+"
+    
+    eval "$CONTAINER_CMD exec -i mariadb mariadb -u root -p\$MYSQL_ROOT_PASSWORD << 'EOF'
+$test_data_sql
+EOF" $ERROR_REDIRECT
+    
+    print_status "success" "MariaDB test data created"
+}
+
+create_mysql_test_data() {
+    print_status "step" "Creating MySQL test data..."
+    
+    local test_data_sql="
+USE mysql_apps;
+
+CREATE TABLE IF NOT EXISTS applications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    framework VARCHAR(50),
+    language VARCHAR(30),
+    status ENUM('active', 'inactive', 'maintenance') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO applications (name, framework, language, status) VALUES
+('API Gateway', 'Express', 'Node.js', 'active'),
+('User Service', 'FastAPI', 'Python', 'active'),
+('Analytics Dashboard', 'Laravel', 'PHP', 'active')
+ON DUPLICATE KEY UPDATE name=VALUES(name);
+"
+    
+    eval "$CONTAINER_CMD exec -i mysql mysql -u root -p\$MYSQL_ROOT_PASSWORD 2>/dev/null << 'EOF'
+$test_data_sql
+EOF"
+    
+    print_status "success" "MySQL test data created"
+}
+
+create_postgres_test_data() {
+    print_status "step" "Creating PostgreSQL test data..."
+    
+    local test_data_sql="
+\\c microservices;
+
+CREATE TABLE IF NOT EXISTS projects (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    technology VARCHAR(50),
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO projects (name, description, technology, status) VALUES
+('Microservices Platform', 'Docker-based microservices architecture', 'Docker', 'active'),
+('Analytics Engine', 'Real-time data processing and visualization', 'Python', 'active'),
+('API Gateway', 'Centralized API management and routing', 'Go', 'active')
+ON CONFLICT (name) DO NOTHING;
+"
+    
+    eval "$CONTAINER_CMD exec -i postgres psql -U postgres 2>/dev/null << 'EOF'
+$test_data_sql
+EOF"
+    
+    print_status "success" "PostgreSQL test data created"
+}
+
+create_mongodb_test_data() {
+    print_status "step" "Creating MongoDB test data..."
+    
+    # Check authentication status and create test data accordingly
+    if eval "$CONTAINER_CMD exec mongodb mongosh --quiet --eval 'db.adminCommand(\"listUsers\")' >/dev/null 2>&1"; then
+        # No authentication required
+        create_mongodb_test_data_noauth
+    else
+        # Try with authentication
+        if eval "$CONTAINER_CMD exec mongodb mongosh --quiet -u \$MONGO_INITDB_ROOT_USERNAME -p \$MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --eval 'db.adminCommand(\"listUsers\")' >/dev/null 2>&1"; then
+            create_mongodb_test_data_auth
+        else
+            print_status "warning" "Cannot create MongoDB test data due to authentication issues"
+            return 0
+        fi
+    fi
+}
+
+create_mongodb_test_data_noauth() {
+    local test_data_js="
+use microservices;
+
+db.projects.insertMany([
+    {
+        name: 'Langflow AI Platform',
+        type: 'ai-workflow',
+        status: 'active',
+        technologies: ['Python', 'LangChain', 'React'],
+        created_at: new Date()
+    },
+    {
+        name: 'n8n Automation Hub', 
+        type: 'automation',
+        status: 'active',
+        technologies: ['Node.js', 'Vue.js', 'TypeScript'],
+        created_at: new Date()
+    },
+    {
+        name: 'Data Analytics Pipeline',
+        type: 'analytics',
+        status: 'active', 
+        technologies: ['Python', 'Pandas', 'MongoDB'],
+        created_at: new Date()
+    }
+]);
+
+print('MongoDB test data created successfully');
+"
+    
+    eval "$CONTAINER_CMD exec -i mongodb mongosh --quiet 2>/dev/null << 'EOF'
+$test_data_js
+EOF"
+    
+    print_status "success" "MongoDB test data created"
+}
+
+create_mongodb_test_data_auth() {
+    local test_data_js="
+use microservices;
+
+db.projects.insertMany([
+    {
+        name: 'Langflow AI Platform',
+        type: 'ai-workflow',
+        status: 'active',
+        technologies: ['Python', 'LangChain', 'React'],
+        created_at: new Date()
+    },
+    {
+        name: 'n8n Automation Hub', 
+        type: 'automation',
+        status: 'active',
+        technologies: ['Node.js', 'Vue.js', 'TypeScript'],
+        created_at: new Date()
+    },
+    {
+        name: 'Data Analytics Pipeline',
+        type: 'analytics',
+        status: 'active', 
+        technologies: ['Python', 'Pandas', 'MongoDB'],
+        created_at: new Date()
+    }
+]);
+
+print('MongoDB test data created successfully');
+"
+    
+    eval "$CONTAINER_CMD exec -i mongodb mongosh --quiet -u \$MONGO_INITDB_ROOT_USERNAME -p \$MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin 2>/dev/null << 'EOF'
+$test_data_js
+EOF"
+    
+    print_status "success" "MongoDB test data created"
 }
 
 # =============================================================================
@@ -628,6 +855,7 @@ show_setup_summary() {
     echo "  Use Sudo: $opt_use_sudo"
     echo "  Show Errors: $opt_show_errors"
     echo "  Connection Timeout: ${opt_timeout}s"
+    echo "  Create Test Data: $opt_create_test_data"
     echo ""
     echo "  Databases to setup:"
     [[ "$opt_setup_mariadb" == "true" ]] && echo "    ✓ MariaDB"
@@ -637,14 +865,26 @@ show_setup_summary() {
     echo ""
 }
 
-run_database_setup() {
+main() {
+    # Parse command line arguments
+    parse_arguments "$@"
+    
+    # Set up command context based on options
+    setup_command_context "$opt_use_sudo" "$opt_show_errors"
+    
+    # Show setup summary
+    show_setup_summary
+    
     print_status "step" "Starting enhanced database setup process..."
     
-    # Detect what's actually available
+    # Detect what's actually available (enhanced validation)
     detect_available_databases
     
     # Validate requested vs available
     validate_requested_databases
+    
+    # Validate containers are running
+    validate_database_containers
     
     # Setup each requested database type with enhanced error handling
     local setup_failed=0
@@ -694,37 +934,6 @@ run_database_setup() {
     echo "  Check status: ./scripts/service-manager.sh status"
     echo "  View logs: ./scripts/service-manager.sh logs [database_name]"
     echo "  Restart service: ./scripts/service-manager.sh restart [database_name]"
-}
-
-run_database_diagnostics() {
-    print_status "step" "Running database diagnostics..."
-    
-    echo ""
-    print_status "info" "Container Status:"
-    for db in mariadb mysql postgres mongodb redis; do
-        if validate_service_exists "$db"; then
-            local status=$(get_service_status "$db")
-            echo "  $db: $status"
-            if [[ "$status" == "running" ]]; then
-                local logs=$(eval "$CONTAINER_CMD logs $db --tail 1 2>/dev/null" || echo "no logs")
-                echo "    Last log: $logs"
-            fi
-        fi
-    done
-}
-
-main() {
-    # Parse command line arguments
-    parse_arguments "$@"
-    
-    # Set up command context based on options (from config.sh)
-    setup_command_context "$opt_use_sudo" "$opt_show_errors"
-    
-    # Show setup summary
-    show_setup_summary
-    
-    # Run the enhanced database setup
-    run_database_setup
 }
 
 # =============================================================================
