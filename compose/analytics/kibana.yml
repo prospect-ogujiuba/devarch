@@ -9,6 +9,6 @@ services:
     restart: unless-stopped
     env_file: ../../.env
     ports:
-      - "127.0.0.1:9120:5601" # Local access to Kibana
+      - "127.0.0.1:9120:5601"
     networks:
       - microservices-net

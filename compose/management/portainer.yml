@@ -17,14 +17,5 @@ services:
     volumes:
       - /run/user/1000/podman/podman.sock:/var/run/docker.sock
       - portainer_data:/data
-      - ../../config/portainer/password:/run/secrets/portainer_password:ro
     networks:
       - microservices-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.portainer.rule=Host(`portainer.test`)"
-      - "traefik.http.routers.portainer.entrypoints=websecure"
-      - "traefik.http.routers.portainer.tls=true"
-      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
-    command:
-      - --admin-password-file=/run/secrets/portainer_password

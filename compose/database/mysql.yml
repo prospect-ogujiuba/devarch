@@ -11,13 +11,13 @@ services:
     image: mysql:latest
     restart: unless-stopped
     env_file: ../../.env
+    environment:
+      - MYSQL_DATABASE=mysqldb_user
+      - MYSQL_USER=mysql_user
+      - MYSQL_ROOT_PASSWORD=${SHARED_ROOT_PASSWORD}
+      - MYSQL_PASSWORD=${SHARED_DB_PASSWORD}
     ports:
       - "127.0.0.1:8505:3306"
-    environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
     networks:

@@ -12,12 +12,12 @@ services:
       - REDIS_HOSTS=local:redis:6379
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      - HTTP_USER=${REDIS_COMMANDER_USER:-admin}
-      - HTTP_PASSWORD=${REDIS_COMMANDER_PASSWORD:-123456}
+      - HTTP_USER=${ADMIN_USER}
       - ADDRESS=0.0.0.0
       - PORT=8081
+      - REDIS_PASSWORD=${SHARED_DB_PASSWORD}
+      - HTTP_PASSWORD=${ADMIN__PASSWORD}
     ports:
-      - "127.0.0.1:8088:8081" # Local access to Redis Commander
+      - "127.0.0.1:8088:8081"
     networks:
       - microservices-net

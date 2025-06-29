@@ -12,9 +12,9 @@ services:
     restart: unless-stopped
     env_file: ../../.env
     ports:
-      - "127.0.0.1:5000:5000" # TCP input
-      - "127.0.0.1:5044:5044" # Beats input
-      - "127.0.0.1:9600:9600" # API endpoint
+      - "127.0.0.1:5000:5000"
+      - "127.0.0.1:5044:5044"
+      - "127.0.0.1:9600:9600"
     volumes:
       - ../../config/logstash:/usr/share/logstash/config:ro
       - logstash_data:/usr/share/logstash/data

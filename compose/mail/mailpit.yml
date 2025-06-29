@@ -10,16 +10,15 @@ services:
     container_name: mailpit
     image: axllent/mailpit
     env_file: ../../.env
+    environment:
+      - MP_MAX_MESSAGES=5000
+      - MP_DATABASE=/data/mailpit.db
+      - MP_SMTP_AUTH_ACCEPT_ANY=1
+      - MP_SMTP_AUTH_ALLOW_INSECURE=1
     volumes:
       - mailpit_data:/data
     ports:
-      - "127.0.0.1:9201:1025" # Local access to SMTP
-      - "127.0.0.1:9200:8025" # Local access to web UI
+      - "127.0.0.1:9201:1025"
+      - "127.0.0.1:9200:8025"
     networks:
       - microservices-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.mailpit.rule=Host(`mailpit.test`)"
-      - "traefik.http.routers.mailpit.entrypoints=websecure"
-      - "traefik.http.routers.mailpit.tls=true"
-      - "traefik.http.services.mailpit.loadbalancer.server.port=8025"

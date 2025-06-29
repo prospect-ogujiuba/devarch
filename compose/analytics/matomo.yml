@@ -10,8 +10,15 @@ services:
     container_name: matomo
     image: matomo:apache
     env_file: ../../.env
+    environment:
+      - MATOMO_DATABASE_HOST=mariadb
+      - MATOMO_DATABASE_ADAPTER=MYSQL
+      - MATOMO_DATABASE_TABLES_PREFIX=matomo_
+      - MATOMO_DATABASE_USERNAME=mariadb_user
+      - MATOMO_DATABASE_DBNAME=matomo
+      - MATOMO_DATABASE_PASSWORD=${SHARED_DB_PASSWORD}
     ports:
-      - "127.0.0.1:9010:80" # Local access to Matomo
+      - "127.0.0.1:9010:80"
     volumes:
       - matomo_data:/var/www/html
     networks:

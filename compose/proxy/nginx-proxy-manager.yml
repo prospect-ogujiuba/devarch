@@ -14,10 +14,19 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: ../../.env
+    environment:
+      # Non-sensitive configs directly in compose
+      - DB_MYSQL_HOST=mariadb
+      - DB_MYSQL_PORT=3306
+      - DB_MYSQL_USER=mariadb_user
+      - DB_MYSQL_PASSWORD=${SHARED_DB_PASSWORD}
+      - DB_MYSQL_NAME=npm
+      - INITIAL_ADMIN_EMAIL=${ADMIN_EMAIL}
+      - INITIAL_ADMIN_PASSWORD=${ADMIN_PASSWORD}
     ports:
-      - "127.0.0.1:81:81"   # Admin interface
-      - "127.0.0.1:80:80"               # HTTP traffic for .dev domains
-      - "127.0.0.1:443:443"             # HTTPS traffic for .dev domains
+      - "127.0.0.1:81:81"
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:443:443"
     volumes:
       - ../../apps:/var/www/html
       - ../../config/nginx/custom:/data/nginx/custom
@@ -28,5 +37,3 @@ services:
       - npm_letsencrypt:/etc/letsencrypt
     networks:
       - microservices-net
-    environment:
-      - DISABLE_IPV6=true

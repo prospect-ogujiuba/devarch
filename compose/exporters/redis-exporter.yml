@@ -14,9 +14,3 @@ services:
       - "127.0.0.1:9121:9121"
     networks:
       - microservices-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.redis-exporter.rule=Host(`redis-exporter.test`)"
-      - "traefik.http.routers.redis-exporter.entrypoints=websecure"
-      - "traefik.http.routers.redis-exporter.tls=true"
-      - "traefik.http.services.redis-exporter.loadbalancer.server.port=9121"

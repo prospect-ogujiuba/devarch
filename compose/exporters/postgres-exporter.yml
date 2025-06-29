@@ -8,16 +8,10 @@ services:
     image: prometheuscommunity/postgres-exporter:latest
     restart: unless-stopped
     environment:
-      - DATA_SOURCE_NAME=postgresql://postgres:123456@postgres:5432/postgres?sslmode=disable
+      - DATA_SOURCE_NAME=postgresql://postgres:${SHARED_DB_PASSWORD}@postgres:5432/postgres?sslmode=disable
       - PG_EXPORTER_WEB_LISTEN_ADDRESS=:9187
       - PG_EXPORTER_EXTEND_QUERY_PATH=/etc/postgres_exporter/queries.yaml
     ports:
       - "127.0.0.1:9187:9187"
     networks:
       - microservices-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.postgres-exporter.rule=Host(`postgres-exporter.test`)"
-      - "traefik.http.routers.postgres-exporter.entrypoints=websecure"
-      - "traefik.http.routers.postgres-exporter.tls=true"
-      - "traefik.http.services.postgres-exporter.loadbalancer.server.port=9187"

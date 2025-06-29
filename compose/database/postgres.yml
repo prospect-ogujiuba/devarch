@@ -11,8 +11,15 @@ services:
     image: postgres:latest
     restart: unless-stopped
     env_file: ../../.env
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_MULTIPLE_DATABASES=postgres,metabase,nocodb
+      - POSTGRES_PASSWORD=${SHARED_DB_PASSWORD}
     ports:
-      - "127.0.0.1:8502:5432" # Local access to PostgreSQL
+      - "127.0.0.1:8502:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:

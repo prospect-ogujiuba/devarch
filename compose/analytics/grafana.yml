@@ -11,8 +11,13 @@ services:
     image: grafana/grafana:latest
     user: "0"
     env_file: ../../.env
+    environment:
+      - GF_SECURITY_ADMIN_USER=${ADMIN_USER}
+      - GF_PATHS_DATA=/var/lib/grafana
+      - GF_PATHS_LOGS=/var/log/grafana
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD}
     ports:
-      - "127.0.0.1:9001:3000" # Local access to Grafana
+      - "127.0.0.1:9001:3000"
     volumes:
       - grafana_data:/var/lib/grafana
     networks:

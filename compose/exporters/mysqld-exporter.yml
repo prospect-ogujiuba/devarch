@@ -8,7 +8,7 @@ services:
     image: prom/mysqld-exporter:v0.15.1
     restart: unless-stopped
     environment:
-      - MYSQLD_EXPORTER_PASSWORD=123456
+      - MYSQLD_EXPORTER_PASSWORD=${SHARED_DB_PASSWORD}
     command:
       - "--mysqld.address=mariadb:3306"
       - "--mysqld.username=root"
@@ -17,9 +17,3 @@ services:
       - "127.0.0.1:9104:9104"
     networks:
       - microservices-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.mysqld-exporter.rule=Host(`mysql-exporter.test`)"
-      - "traefik.http.routers.mysqld-exporter.entrypoints=websecure"
-      - "traefik.http.routers.mysqld-exporter.tls=true"
-      - "traefik.http.services.mysqld-exporter.loadbalancer.server.port=9104"

@@ -7,8 +7,12 @@ services:
     container_name: phpmyadmin
     image: phpmyadmin:latest
     env_file: ../../.env
+    environment:
+      - PMA_HOST=mariadb
+      - PMA_USER=mariadb_user
+      - PMA_PASSWORD=${SHARED_DB_PASSWORD}
     ports:
-      - "127.0.0.1:8083:80" # Local access to phpMyAdmin
+      - "127.0.0.1:8083:80"
     networks:
       - microservices-net
     volumes:

@@ -11,8 +11,11 @@ services:
     image: dpage/pgadmin4:latest
     restart: unless-stopped
     env_file: ../../.env
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${ADMIN_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${ADMIN_PASSWORD}
     ports:
-      - "127.0.0.1:8087:80" # Local access to pgAdmin
+      - "127.0.0.1:8087:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     networks:
