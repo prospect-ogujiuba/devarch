@@ -141,6 +141,55 @@ get_wp_admin() {
 }
 
 # =============================================================================
+# DATABASE HELPER FUNCTIONS
+# =============================================================================
+
+check_database_exists() {
+    local db_name="$1"
+    exec_php_wp "db check" 2>/dev/null
+}
+
+ensure_database_ready() {
+    local db_name=$(get_db_config name)
+    
+    print_status "info" "Ensuring database is ready..."
+    
+    # First, try to connect to the database server
+    if ! exec_php "mysql -h $(get_db_config host) -u $(get_db_config user) -p$(get_db_config password) -e 'SELECT 1;'" 2>/dev/null; then
+        handle_error "Cannot connect to MariaDB server. Please check if the MariaDB container is running and credentials are correct."
+    fi
+    
+    # Check if database exists and is accessible
+    if check_database_exists "$db_name"; then
+        print_status "success" "Database '$db_name' is ready"
+        return 0
+    fi
+    
+    # Try to create the database
+    print_status "info" "Creating database '$db_name'..."
+    if exec_php_wp "db create" 2>/dev/null; then
+        print_status "success" "Database '$db_name' created successfully"
+        return 0
+    fi
+    
+    # If creation failed, check if it's because the database already exists
+    local create_output=$(exec_php_wp "db create" 2>&1)
+    if [[ "$create_output" == *"database exists"* ]] || [[ "$create_output" == *"ERROR 1007"* ]] || [[ "$create_output" == *"Can't create database"* ]]; then
+        print_status "info" "Database '$db_name' already exists"
+        
+        # Verify we can actually use it
+        if check_database_exists "$db_name"; then
+            print_status "success" "Database '$db_name' is accessible"
+            return 0
+        else
+            handle_error "Database '$db_name' exists but is not accessible. Please check database permissions."
+        fi
+    else
+        handle_error "Failed to create database '$db_name': $create_output"
+    fi
+}
+
+# =============================================================================
 # CONTAINER COMMAND HELPERS
 # =============================================================================
 
@@ -392,18 +441,39 @@ install_wordpress_core() {
     exec_php_wp "config set WP_DEBUG false --raw"
     exec_php_wp "config set AUTOMATIC_UPDATER_DISABLED true --raw"
     
-    # Create database
-    print_status "info" "Creating database..."
-    if ! exec_php_wp "db create"; then
-        handle_error "Failed to create database"
-    fi
+    # Ensure database is ready
+    ensure_database_ready
     
-    # Install WordPress
+    # Install WordPress (handle existing installation gracefully)
     print_status "info" "Installing WordPress..."
     local install_cmd="core install --url='${SITE_CONFIG[domain]}' --title='${SITE_CONFIG[title]}' --admin_user='$(get_wp_admin user)' --admin_password='$(get_wp_admin password)' --admin_email='$(get_wp_admin email)'"
     
-    if ! exec_php_wp "$install_cmd"; then
-        handle_error "Failed to install WordPress"
+    if exec_php_wp "$install_cmd" 2>/dev/null; then
+        print_status "success" "WordPress installed successfully"
+    else
+        # Check if WordPress is already installed
+        if exec_php_wp "core is-installed" 2>/dev/null; then
+            print_status "info" "WordPress is already installed"
+            
+            # Update site URL and title if they're different
+            local current_url=$(exec_php_wp "option get home" 2>/dev/null || echo "")
+            local current_title=$(exec_php_wp "option get blogname" 2>/dev/null || echo "")
+            
+            if [[ "$current_url" != "https://${SITE_CONFIG[domain]}" ]]; then
+                print_status "info" "Updating site URL to https://${SITE_CONFIG[domain]}"
+                exec_php_wp "option update home 'https://${SITE_CONFIG[domain]}'" || true
+                exec_php_wp "option update siteurl 'https://${SITE_CONFIG[domain]}'" || true
+            fi
+            
+            if [[ "$current_title" != "${SITE_CONFIG[title]}" ]]; then
+                print_status "info" "Updating site title to '${SITE_CONFIG[title]}'"
+                exec_php_wp "option update blogname '${SITE_CONFIG[title]}'" || true
+            fi
+        else
+            # Try installation again with more specific error handling
+            local install_output=$(exec_php_wp "$install_cmd" 2>&1)
+            handle_error "Failed to install WordPress: $install_output"
+        fi
     fi
     
     # Configure uploads
