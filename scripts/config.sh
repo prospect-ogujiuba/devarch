@@ -40,6 +40,8 @@ SERVICE_CATEGORIES=(
     [database]="mariadb.yml mysql.yml postgres.yml mongodb.yml redis.yml"
     [dbms]="adminer.yml phpmyadmin.yml mongo-express.yml metabase.yml nocodb.yml pgadmin.yml redis-commander.yml"
     [analytics]="matomo.yml prometheus.yml grafana.yml elasticsearch.yml kibana.yml logstash.yml otel-collector.yml"
+    [mail]="mailpit.yml"
+    [exporters]="blackbox-exporter.yml mongodb-exporter.yml mysqld-exporter.yml node-exporter.yml postgres-exporter.yml redis-exporter.yml"
 )
 
 # Optional: Override category paths if you need different directory structure
@@ -63,6 +65,8 @@ SERVICE_STARTUP_ORDER=(
     "backend"
     "database"
     "dbms" 
+    "mail"
+    "exporters"
     "analytics"
 )
 
