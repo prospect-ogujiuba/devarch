@@ -12,11 +12,13 @@ services:
     restart: unless-stopped
     env_file: ../../.env
     ports:
-      - "127.0.0.1:8505:3306" # Local access to MySQL
-    volumes:
-      - mysql_data:/var/lib/mysql
+      - "127.0.0.1:8505:3306"
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
     networks:
       - microservices-net

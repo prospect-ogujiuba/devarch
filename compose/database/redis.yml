@@ -12,6 +12,7 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:8504:6379" # Local access to Redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     networks:
