@@ -15,7 +15,7 @@ services:
       - "127.0.0.1:8001:8000" # Local access to TCP tunnel for Edge agents
       - "127.0.0.1:9002:9000" # Uncomment for HTTP access (legacy)
     volumes:
-      - /run/podman/podman.sock:/var/run/docker.sock
+      - /run/user/1000/podman/podman.sock:/var/run/docker.sock
       - portainer_data:/data
       - ../../config/portainer/password:/run/secrets/portainer_password:ro
     networks:
