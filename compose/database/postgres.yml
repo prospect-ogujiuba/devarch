@@ -13,10 +13,6 @@ services:
     env_file: ../../.env
     ports:
       - "127.0.0.1:8502:5432" # Local access to PostgreSQL
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
-      - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE}
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - mongodb_data:/data/db
