@@ -1,0 +1,23 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  elasticsearch_data:
+
+services:
+  elasticsearch:
+    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "127.0.0.1:9130:9200" # Local access to Elasticsearch HTTP
+      - "127.0.0.1:9131:9300" # Local access to Elasticsearch transport
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - microservices-net
