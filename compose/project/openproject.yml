@@ -1,0 +1,38 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  openproject_pgdata:
+  openproject_assets:
+
+services:
+  openproject:
+    container_name: openproject
+    image: openproject/openproject:16
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - OPENPROJECT_SECRET_KEY_BASE=${SHARED_PASSWORD}
+      - OPENPROJECT_SEED__ADMIN__USER__MAIL=${ADMIN_EMAIL}
+      - OPENPROJECT_SEED__ADMIN__USER__NAME=${ADMIN_USER}
+      - OPENPROJECT_SEED__ADMIN__USER__PASSWORD=${ADMIN_PASSWORD}
+      # - OPENPROJECT_HOST__NAME=openproject.${DOMAIN_SUFFIX}
+      - OPENPROJECT_HTTPS=false
+      - OPENPROJECT_DEFAULT__LANGUAGE=en
+      # Allow multiple hostnames for development
+      - OPENPROJECT_HOST__NAME__LOOSE_CHECK=true
+      - OPENPROJECT_EMAIL__DELIVERY__METHOD=smtp
+      - OPENPROJECT_SMTP__ADDRESS=mailpit
+      - OPENPROJECT_SMTP__PORT=1025
+      - OPENPROJECT_SMTP__DOMAIN=${DOMAIN_SUFFIX}
+      - OPENPROJECT_SMTP__AUTHENTICATION=none
+      - OPENPROJECT_SMTP__ENABLE__STARTTLS__AUTO=false
+      - OPENPROJECT_SMTP__OPENSSL__VERIFY__MODE=none
+    ports:
+      - "127.0.0.1:8089:80"
+    volumes:
+      - openproject_pgdata:/var/openproject/pgdata
+      - openproject_assets:/var/openproject/assets
+    networks:
+      - microservices-net

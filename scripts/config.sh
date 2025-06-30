@@ -41,6 +41,7 @@ SERVICE_CATEGORIES=(
     [exporters]="blackbox-exporter.yml mongodb-exporter.yml mysqld-exporter.yml node-exporter.yml postgres-exporter.yml redis-exporter.yml"
     [mail]="mailpit.yml"
     [management]="portainer.yml"
+    [project]="openproject.yml"
     [proxy]="nginx-proxy-manager.yml"
 )
 
@@ -65,6 +66,7 @@ SERVICE_STARTUP_ORDER=(
     "proxy"
     "management"
     "backend"
+    "project"
     "mail"
     "exporters"
     "analytics"
