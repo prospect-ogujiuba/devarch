@@ -1,0 +1,19 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  drawdb_data:
+
+services:
+  drawdb:
+    container_name: drawdb
+    image: xinsodev/drawdb:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8089:80"
+    volumes:
+      - drawdb_data:/usr/share/nginx/html/data
+    networks:
+      - microservices-net
