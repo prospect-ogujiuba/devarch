@@ -47,8 +47,8 @@ typeset -A DB_CONFIG
 DB_CONFIG=(
     [host]="$MARIADB_HOST"
     [name]=""  # Will be set to site name
-    [user]="$MARIADB_USER"
-    [password]="$MARIADB_PASSWORD"
+    [user]="root"
+    [password]="$MYSQL_ROOT_PASSWORD"
 )
 
 # WordPress admin configuration
