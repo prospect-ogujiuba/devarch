@@ -45,10 +45,10 @@ PATHS=(
 # Database configuration
 typeset -A DB_CONFIG
 DB_CONFIG=(
-    [host]="$MARIADB_HOST"
+    [host]="mariadb"
     [name]=""  # Will be set to site name
     [user]="root"
-    [password]="$MYSQL_ROOT_PASSWORD"
+    [password]="admin1234567"
 )
 
 # WordPress admin configuration
