@@ -654,7 +654,7 @@ export GITHUB_USER="${GITHUB_USER:-}"
 detect_sudo_requirement() {
     if command -v podman >/dev/null 2>&1; then
         export USE_PODMAN=true
-        export DEFAULT_SUDO=true
+        export DEFAULT_SUDO=false
     elif command -v docker >/dev/null 2>&1; then
         export USE_PODMAN=false
         # Check if user is in docker group
