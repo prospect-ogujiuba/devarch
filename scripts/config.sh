@@ -36,7 +36,7 @@ typeset -A SERVICE_CATEGORIES
 SERVICE_CATEGORIES=(
     [analytics]="matomo.yml prometheus.yml grafana.yml elasticsearch.yml kibana.yml logstash.yml otel-collector.yml"
     [backend]="php.yml"
-    [database]="mariadb.yml mysql.yml postgres.yml mongodb.yml redis.yml"
+    [database]="mariadb.yml mysql.yml postgres.yml mongodb.yml redis.yml mssql.yml"
     [dbms]="adminer.yml phpmyadmin.yml mongo-express.yml metabase.yml nocodb.yml pgadmin.yml redis-commander.yml drawdb.yml"
     [exporters]="blackbox-exporter.yml mongodb-exporter.yml mysqld-exporter.yml node-exporter.yml postgres-exporter.yml redis-exporter.yml"
     [mail]="mailpit.yml"
