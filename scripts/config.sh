@@ -337,23 +337,28 @@ list_all_services() {
 # Function to get service status (lightweight, direct implementation)
 get_service_status() {
     local service_name="$1"
+
+    # Resolve service path to validate existence
     local service_path
-    
-    # Get service path
     service_path=$(get_service_path "$service_name")
     if [[ $? -ne 0 ]]; then
         echo "NOT_FOUND"
         return 1
     fi
-    
-    # Get container name from service
-    local container_name="$service_name"
-    
-    # Check if container exists and get status
+
+    # Try to find the real container name via compose labels
+    # Works for both docker and podman compose
+    local cname=""
+    cname=$(eval "$CONTAINER_CMD ps --filter 'label=com.docker.compose.service=$service_name' --format '{{.Names}}' 2>/dev/null | head -n1")
+
+    # Fallback to literal service name if label search returns nothing
+    [[ -z "$cname" ]] && cname="$service_name"
+
+    # Query status
     local container_status
-    container_status=$(eval "$CONTAINER_CMD inspect --format='{{.State.Status}}' $container_name 2>/dev/null")
-    
-    if [[ $? -eq 0 && -n "$container_status" ]]; then
+    container_status=$(eval "$CONTAINER_CMD inspect --format='{{.State.Status}}' \"$cname\" 2>/dev/null")
+
+    if [[ -n "$container_status" ]]; then
         echo "$container_status"
         return 0
     else
@@ -671,41 +676,64 @@ detect_sudo_requirement() {
 
 # Set up command execution context
 setup_command_context() {
-    local use_sudo="${1:-$DEFAULT_SUDO}"
+    local want_sudo="${1:-$DEFAULT_SUDO}"   # "true" / "false"
     local show_errors="${2:-false}"
-    
-    if [[ "$use_sudo" == "true" ]]; then
-        export SUDO_PREFIX="sudo "
-    else
-        export SUDO_PREFIX=""
-    fi
-    
+
+    # stderr handling
     if [[ "$show_errors" == "true" ]]; then
         export ERROR_REDIRECT=""
     else
         export ERROR_REDIRECT="2>/dev/null"
     fi
-    
-    # Set container command based on runtime
+
+    # Decide engine
     if [[ "$USE_PODMAN" == "true" ]]; then
+        local rootless_has_net=""
+        local rootful_has_net=""
+
+        # Does our project network exist rootless?
+        if podman network exists "$NETWORK_NAME" >/dev/null 2>&1; then
+            rootless_has_net="yes"
+        fi
+        # Does it exist rootful?
+        if sudo -n podman network exists "$NETWORK_NAME" >/dev/null 2>&1; then
+            rootful_has_net="yes"
+        fi
+
+        # Choose namespace:
+        # 1) Prefer the one that already holds our project network
+        # 2) If neither exists yet, honor the user's flag
+        if [[ -n "$rootless_has_net" && -z "$rootful_has_net" ]]; then
+            export SUDO_PREFIX=""
+        elif [[ -z "$rootless_has_net" && -n "$rootful_has_net" ]]; then
+            export SUDO_PREFIX="sudo "
+        else
+            # nothing running yet
+            [[ "$want_sudo" == "true" ]] && export SUDO_PREFIX="sudo " || export SUDO_PREFIX=""
+        fi
+
         export CONTAINER_CMD="${SUDO_PREFIX}podman"
-        
-        # Check for native podman compose support first
-        if command -v "podman" >/dev/null 2>&1 && ${SUDO_PREFIX}podman compose --help >/dev/null 2>&1; then
+
+        # Prefer native 'podman compose' if available under the chosen namespace
+        if ${SUDO_PREFIX}podman compose version >/dev/null 2>&1; then
             export COMPOSE_CMD="${SUDO_PREFIX}podman compose"
             export COMPOSE_PROVIDER="native"
         else
-            # Fallback to podman-compose
             export COMPOSE_CMD="${SUDO_PREFIX}podman-compose"
             export COMPOSE_PROVIDER="external"
         fi
-        
-        # Set podman-specific environment variables
+
         export PODMAN_COMPOSE_WARNING_LOGS="false"
         export COMPOSE_IGNORE_ORPHANS="true"
         export PODMAN_USERNS="keep-id"
-        
+
     else
+        # Docker: keep your current behavior
+        if [[ "$want_sudo" == "true" ]]; then
+            export SUDO_PREFIX="sudo "
+        else
+            export SUDO_PREFIX=""
+        fi
         export CONTAINER_CMD="${SUDO_PREFIX}docker"
         export COMPOSE_CMD="${SUDO_PREFIX}docker compose"
         export COMPOSE_PROVIDER="native"
