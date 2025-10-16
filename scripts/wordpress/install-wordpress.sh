@@ -576,7 +576,6 @@ configure_preset_custom() {
     print_status "info" "Configuring custom preset..."
     setup_basic_directories
     setup_galaxy_files "typerocket-galaxy"
-    setup_typerocket_integration
 }
 
 configure_preset_loaded() {
@@ -751,23 +750,6 @@ setup_galaxy_files() {
             setup_galaxy_files "makermaker"
             ;;
     esac
-}
-
-setup_typerocket_integration() {
-    print_status "info" "Setting up TypeRocket integration..."
-    
-    local wp_dir=$(get_path "container_wp")
-    local typerocket_dir="$wp_dir/wp-content/plugins/typerocket-pro-v6/typerocket"
-    local makerstarter_dir="$wp_dir/wp-content/themes/makerstarter"
-    
-    # Copy TypeRocket override folders to Maker Starter theme
-    if exec_php "test -d '$typerocket_dir' && test -d '$makerstarter_dir'"; then
-        exec_php "cp -R '$typerocket_dir/app' '$makerstarter_dir/'" || true
-        exec_php "cp -R '$typerocket_dir/config' '$makerstarter_dir/'" || true
-        exec_php "cp -R '$typerocket_dir/resources' '$makerstarter_dir/'" || true
-        exec_php "cp -R '$typerocket_dir/routes' '$makerstarter_dir/'" || true
-        exec_php "mkdir -p '$makerstarter_dir/storage'" || true
-    fi
 }
 
 # =============================================================================
