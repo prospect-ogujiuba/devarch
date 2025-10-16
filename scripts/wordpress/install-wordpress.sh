@@ -38,6 +38,7 @@ PATHS=(
     [container_wp]=""    # Will be set to /var/www/html/$SITE_NAME/public
     [container_content]=""  # Will be set to /var/www/html/$SITE_NAME/public/wp-content
     [container_plugins]="" # Will be set to wp-content/plugins
+    [container_mu_plugins]="" # Will be set to wp-content/mu-plugins
     [container_themes]=""  # Will be set to wp-content/themes
     [container_uploads]="" # Will be set to wp-content/uploads
 )
@@ -73,9 +74,9 @@ WORDPRESS_PRESETS=(
 typeset -A PRESET_PLUGINS
 PRESET_PLUGINS=(
     [bare]="all-in-one-wp-migration"
-    [clean]="typerocket-pro-v6 all-in-one-wp-migration admin-site-enhancements-pro makermaker makerblocks"
-    [custom]="typerocket-pro-v6 all-in-one-wp-migration admin-site-enhancements-pro advanced-custom-fields-pro acf-extended-pro makermaker makerblocks gravityforms manual-image-crop"
-    [loaded]="typerocket-pro-v6 all-in-one-wp-migration admin-site-enhancements-pro advanced-custom-fields-pro acf-extended-pro makermaker makerblocks gravityforms manual-image-crop"
+    [clean]="all-in-one-wp-migration admin-site-enhancements-pro makermaker makerblocks"
+    [custom]="all-in-one-wp-migration admin-site-enhancements-pro advanced-custom-fields-pro acf-extended-pro makermaker makerblocks gravityforms manual-image-crop"
+    [loaded]="all-in-one-wp-migration admin-site-enhancements-pro advanced-custom-fields-pro acf-extended-pro makermaker makerblocks gravityforms manual-image-crop"
     [starred]="gravityforms advanced-custom-fields-pro woocommerce-subscriptions facetwp"
 )
 
@@ -118,6 +119,7 @@ setup_site_paths() {
     PATHS[container_wp]="${PATHS[container_site]}/public"
     PATHS[container_content]="${PATHS[container_wp]}/wp-content"
     PATHS[container_plugins]="${PATHS[container_content]}/plugins"
+    PATHS[container_mu_plugins]="${PATHS[container_content]}/mu-plugins"
     PATHS[container_themes]="${PATHS[container_content]}/themes"
     PATHS[container_uploads]="${PATHS[container_content]}/uploads"
     
@@ -493,6 +495,9 @@ configure_wordpress_preset() {
     
     # Clean up default content
     cleanup_default_content
+
+    # Install TypeRocket to mu-plugins
+    install_typerocket_mu_plugin "$preset"
     
     # Install preset plugins
     install_preset_plugins "$preset"
@@ -651,6 +656,31 @@ install_github_themes() {
     done
 }
 
+install_typerocket_mu_plugin() {
+    local preset="$1"
+    
+    # Only install for presets that need TypeRocket
+    if [[ "$preset" != "clean" && "$preset" != "custom" && "$preset" != "loaded" ]]; then
+        return 0
+    fi
+    
+    print_status "info" "Installing TypeRocket Pro to mu-plugins..."
+    
+    local mu_plugins_dir=$(get_path "container_mu_plugins")
+    local typerocket_repo="https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/typerocket-pro-v6.git"
+    
+    # Create mu-plugins directory
+    exec_php "mkdir -p '$mu_plugins_dir'" || true
+    
+    # Clone TypeRocket to mu-plugins
+    if exec_php "git clone '$typerocket_repo' '$mu_plugins_dir/typerocket-pro-v6'"; then
+        exec_php "mv '$mu_plugins_dir/typerocket-pro-v6/typerocket-pro-v6.php' '$mu_plugins_dir/'" || true
+        print_status "success" "TypeRocket Pro installed to mu-plugins"
+    else
+        print_status "warning" "Failed to install TypeRocket Pro to mu-plugins"
+    fi
+}
+
 delete_default_themes() {
     print_status "info" "Removing default themes..."
     
@@ -685,6 +715,7 @@ setup_basic_directories() {
         exec_php "chmod -R 777 '$ai1wm_backups'" || true
         exec_php "chmod -R 777 '$ai1wm_storage'" || true
         exec_php "chmod -R 777 '$uploads'" || true
+        exec_php "chmod -R 777 '$(get_path container_mu_plugins)'" || true
         exec_php "chmod -R 777 '$(get_path container_themes)'" || true
         exec_php "chmod -R 777 '$(get_path container_plugins)'" || true
     fi
@@ -709,7 +740,7 @@ setup_galaxy_files() {
             exec_php "cp '$galaxy_config' '$wp_dir/'" || true
             ;;
         "typerocket-galaxy")
-            local typerocket_dir="$wp_dir/wp-content/plugins/typerocket-pro-v6/typerocket"
+            local typerocket_dir="$wp_dir/wp-content/mu-plugins/typerocket-pro-v6/typerocket"
             local galaxy_file="$typerocket_dir/galaxy"
             local galaxy_config="$wp_dir/wp-content/plugins/makermaker/galaxy/galaxy-config.php"
             
