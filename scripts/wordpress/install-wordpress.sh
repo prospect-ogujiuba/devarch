@@ -734,8 +734,10 @@ setup_galaxy_files() {
             local galaxy_config="$galaxy_dir/galaxy-makermaker-config.php"
             
             exec_php "cp '$galaxy_file' '$wp_dir/'" || true
-            exec_php "sed \"s/\\$sitename = 'playground'/\\$sitename = '$site_name'/\" '$galaxy_config' > '$galaxy_config.tmp'" || true
-            exec_php "mv '$galaxy_config.tmp' '$galaxy_config'" || true
+            
+            # Fixed sed command with proper escaping
+            exec_php "sed -i \"s/\\\$sitename = 'playground'/\\\$sitename = '$site_name'/g\" '$galaxy_config'" || true
+            
             exec_php "cp '$galaxy_config' '$wp_dir/'" || true
             ;;
         "typerocket-galaxy")
