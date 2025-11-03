@@ -1,0 +1,18 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  kafka-exporter:
+    container_name: kafka-exporter
+    image: danielqsj/kafka-exporter:latest
+    restart: unless-stopped
+    command:
+      - --kafka.server=kafka:9092
+      - --web.listen-address=:9308
+    ports:
+      - "127.0.0.1:9308:9308"
+    networks:
+      - microservices-net
+    depends_on:
+      - kafka

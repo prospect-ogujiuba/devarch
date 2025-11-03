@@ -613,11 +613,27 @@ install_github_plugins() {
         
         # Clone plugin repository
         if exec_php "git clone '$plugin_repo' '$plugins_dir/$plugin_name'"; then
-            # Activate plugin
-            if exec_php_wp "plugin activate '$plugin_name'"; then
-                print_status "success" "Plugin $plugin_name installed and activated"
+            
+            # Run composer install for makermaker
+            if [[ "$plugin_name" == "makermaker" ]]; then
+                print_status "info" "Running composer install for makermaker plugin..."
+                if exec_php "sh -c 'cd $plugins_dir/$plugin_name && composer install'"; then
+                    print_status "success" "Composer dependencies installed for makermaker"
+                else
+                    print_status "warning" "Failed to install composer dependencies for makermaker"
+                fi
+            fi
+
+            # Skip activation for all-in-one-wp-migration
+            if [[ "$plugin_name" == "all-in-one-wp-migration" ]]; then
+                print_status "success" "Plugin $plugin_name installed (not activated)"
             else
-                print_status "warning" "Plugin $plugin_name installed but failed to activate"
+                # Activate plugin
+                if exec_php_wp "plugin activate '$plugin_name'"; then
+                    print_status "success" "Plugin $plugin_name installed and activated"
+                else
+                    print_status "warning" "Plugin $plugin_name installed but failed to activate"
+                fi
             fi
         else
             print_status "warning" "Failed to install plugin: $plugin_name"

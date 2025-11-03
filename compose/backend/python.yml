@@ -1,0 +1,42 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  python_venv:
+
+services:
+  python:
+    container_name: python
+    build:
+      context: ../../config/python
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - FLASK_ENV=development
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:${SHARED_DB_PASSWORD}@postgres:5432/python_db
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    ports:
+      - "127.0.0.1:8000:8000"  # Django/FastAPI
+      - "127.0.0.1:5000:5000"  # Flask
+      - "127.0.0.1:5555:5555"  # Flower (Celery monitoring)
+      - "127.0.0.1:8888:8888"  # Jupyter
+    volumes:
+      - ../../apps:/app
+      - python_venv:/venv
+      - ../../scripts:/scripts
+      - ../../config/python/requirements.txt:/requirements.txt:ro
+    networks:
+      - microservices-net
+    command: /bin/sh -c "while true; do sleep 1000; done"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

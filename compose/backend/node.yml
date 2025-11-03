@@ -1,0 +1,43 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  node_modules:
+  pnpm_store:
+
+services:
+  node:
+    container_name: node
+    build:
+      context: ../../config/node
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=postgresql://postgres:${SHARED_DB_PASSWORD}@postgres:5432/node_db
+      - MONGODB_URL=mongodb://root:${SHARED_ROOT_PASSWORD}@mongodb:27017
+      - REDIS_URL=redis://:${SHARED_DB_PASSWORD}@redis:6379
+      - RABBITMQ_URL=amqp://${ADMIN_USER}:${ADMIN_PASSWORD}@rabbitmq:5672
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key}
+    ports:
+      - "127.0.0.1:3000:3000"  # Main app
+      - "127.0.0.1:3001:3001"  # Additional services
+      - "127.0.0.1:9229:9229"  # Node debugger
+      - "127.0.0.1:4000:4000"  # GraphQL
+      - "127.0.0.1:5173:5173"  # Vite dev server
+    volumes:
+      - ../../apps:/app
+      - node_modules:/app/node_modules
+      - pnpm_store:/root/.pnpm-store
+      - ../../scripts:/scripts
+    networks:
+      - microservices-net
+    command: /bin/sh -c "while true; do sleep 1000; done"
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

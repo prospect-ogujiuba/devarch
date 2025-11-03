@@ -35,14 +35,16 @@ export CONTAINER_RUNTIME="podman"  # Change to "docker" if using Docker instead
 typeset -A SERVICE_CATEGORIES
 SERVICE_CATEGORIES=(
     [analytics]="matomo.yml prometheus.yml grafana.yml elasticsearch.yml kibana.yml logstash.yml otel-collector.yml"
-    [backend]="php.yml"
-    [database]="mariadb.yml mysql.yml postgres.yml mongodb.yml redis.yml mssql.yml"
+    [backend]="go.yml php.yml node.yml php.yml python.yml"
+    [database]="mariadb.yml mysql.yml postgres.yml mongodb.yml redis.yml mssql.yml memcached.yml"
     [dbms]="adminer.yml phpmyadmin.yml mongo-express.yml metabase.yml nocodb.yml pgadmin.yml redis-commander.yml drawdb.yml cloudbeaver.yml"
-    [exporters]="blackbox-exporter.yml mongodb-exporter.yml mysqld-exporter.yml node-exporter.yml postgres-exporter.yml redis-exporter.yml"
+    [exporters]="blackbox-exporter.yml mongodb-exporter.yml mysqld-exporter.yml node-exporter.yml postgres-exporter.yml redis-exporter.yml kafka-exporter.yml memcached-exporter.yml rabbitmq-exporter.yml"
     [mail]="mailpit.yml"
     [management]="portainer.yml"
+    [messaging]="kafka.yml rabbitmq.yml"
     [project]="openproject.yml"
     [proxy]="nginx-proxy-manager.yml"
+    [search]="meilisearch.yml typesense.yml"
 )
 
 # Optional: Override category paths if you need different directory structure
@@ -70,6 +72,8 @@ SERVICE_STARTUP_ORDER=(
     "mail"
     "exporters"
     "analytics"
+    "messaging"
+    "search"
 )
 
 # =============================================================================
