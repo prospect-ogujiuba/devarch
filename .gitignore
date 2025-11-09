@@ -10,3 +10,4 @@ backup/
 .env
 .DS_Store
 .gateway-backup-location
+.idea/
