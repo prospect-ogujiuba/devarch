@@ -25,11 +25,14 @@ services:
       - MONGODB_URL=mongodb://root:${SHARED_ROOT_PASSWORD}@mongodb:27017
       - REDIS_URL=redis://:${SHARED_DB_PASSWORD}@redis:6379
       - RABBITMQ_URL=amqp://${ADMIN_USER}:${ADMIN_PASSWORD}@rabbitmq:5672
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
+      - SMTP_FROM=noreply@devarch.test
     ports:
-      - "127.0.0.1:8080:8080"  # Main app
-      - "127.0.0.1:8081:8081"  # Metrics/Admin
-      - "127.0.0.1:2345:2345"  # Delve debugger
-      - "127.0.0.1:6060:6060"  # pprof
+      - "127.0.0.1:8400:8080"  # Main app
+      - "127.0.0.1:8401:8081"  # Metrics/Admin
+      - "127.0.0.1:8402:2345"  # Delve debugger
+      - "127.0.0.1:8403:6060"  # pprof
     volumes:
       - ../../apps:/app
       - go_mod:/go/pkg/mod

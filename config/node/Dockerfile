@@ -23,6 +23,9 @@ RUN apt-get update && apt-get install -y \
     zsh \
     sudo \
     htop \
+    # Mail relay
+    msmtp \
+    msmtp-mta \
     # Process manager dependencies
     dumb-init \
     && apt-get clean \
@@ -76,6 +79,13 @@ RUN npm install -g \
     cross-env \
     rimraf \
     npm-check-updates
+
+# Configure msmtp for mail relay
+RUN echo "account default" > /etc/msmtprc \
+    && echo "host mailpit" >> /etc/msmtprc \
+    && echo "port 1025" >> /etc/msmtprc \
+    && echo "from noreply@devarch.test" >> /etc/msmtprc \
+    && chmod 644 /etc/msmtprc
 
 # Install Oh My Zsh
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" && \

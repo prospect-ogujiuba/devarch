@@ -6,6 +6,20 @@
 # Smart configuration with NO INFINITE LOOPS - removed service-manager delegation
 
 # =============================================================================
+# BACKEND SERVICE PORT ALLOCATION STRATEGY
+# =============================================================================
+# Each runtime has a dedicated 100-port range for clean separation and
+# simultaneous operation without conflicts:
+#
+# PHP:    8100-8199 (main: 8100, vite: 8102)
+# Node:   8200-8299 (main: 8200, secondary: 8201, vite: 8202, graphql: 8203, debug: 9229)
+# Python: 8300-8399 (main: 8300, flask: 8301, jupyter: 8302, flower: 8303)
+# Go:     8400-8499 (main: 8400, metrics: 8401, debug: 8402, pprof: 8403)
+#
+# This allocation ensures all backend services can run simultaneously without
+# port conflicts, supporting the microservices architecture effectively.
+
+# =============================================================================
 # SCRIPT METADATA & PATHS
 # =============================================================================
 

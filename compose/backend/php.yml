@@ -9,8 +9,8 @@ services:
       context: ../../config/php
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
-      - "5173:5173"
+      - "8100:8000"
+      - "8102:5173"
     volumes:
       - ../../apps:/var/www/html
       - ../../scripts:/var/www/scripts

@@ -3,7 +3,6 @@ FROM php:8.3-fpm
 
 # Arguments for versions (makes it easier to update)
 ARG NODE_VERSION=lts
-ARG MAILPIT_VERSION=v1.22.3
 ARG COMPOSER_VERSION=latest
 
 # Install dependencies and PHP extensions in a single layer to reduce image size
@@ -16,6 +15,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     wget \
     zsh \
+    msmtp \
+    msmtp-mta \
     libpng-dev \
     libjpeg-dev \
     libwebp-dev \
@@ -23,6 +24,11 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libzip-dev \
     libpq-dev \
+    libmagickwand-dev \
+    librabbitmq-dev \
+    libicu-dev \
+    libxml2-dev \
+    libxslt1-dev \
     unzip \
     ca-certificates \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
@@ -35,8 +41,13 @@ RUN apt-get update && apt-get install -y \
         pdo_mysql \
         pdo_pgsql \
         mysqli \
-    && pecl install redis mongodb \
-    && docker-php-ext-enable redis opcache pdo_mysql pdo_pgsql mongodb \
+        exif \
+        intl \
+        bcmath \
+        soap \
+        xsl \
+    && pecl install redis mongodb imagick xdebug amqp \
+    && docker-php-ext-enable redis opcache pdo_mysql pdo_pgsql mongodb imagick xdebug amqp exif intl bcmath soap xsl \
     # Install Node.js in the same layer
     && curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
     && apt-get install -y nodejs \
@@ -50,21 +61,28 @@ RUN apt-get update && apt-get install -y \
 # Install and configure Composer
 COPY --from=composer:${COMPOSER_VERSION} /usr/bin/composer /usr/bin/composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
+ENV COMPOSER_MEMORY_LIMIT=-1
 ENV PATH="/root/.composer/vendor/bin:${PATH}"
-    
+
 # Install development tools
 RUN composer global require laravel/installer && \
     curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
     chmod +x wp-cli.phar && \
     mv wp-cli.phar /usr/local/bin/wp
 
-# Install Mailpit
-RUN wget https://github.com/axllent/mailpit/releases/download/${MAILPIT_VERSION}/mailpit-linux-amd64.tar.gz \
-    && tar xzf mailpit-linux-amd64.tar.gz \
-    && mv mailpit /usr/local/bin/ \
-    && chmod +x /usr/local/bin/mailpit \
-    && rm mailpit-linux-amd64.tar.gz \
-    && mailpit version
+# Install Symfony CLI
+RUN curl -1sLf 'https://dl.cloudsmith.io/public/symfony/stable/setup.deb.sh' | bash \
+    && apt-get update \
+    && apt-get install -y symfony-cli \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configure msmtp for mail relay
+RUN echo "account default" > /etc/msmtprc \
+    && echo "host mailpit" >> /etc/msmtprc \
+    && echo "port 1025" >> /etc/msmtprc \
+    && echo "from noreply@devarch.local" >> /etc/msmtprc \
+    && chmod 644 /etc/msmtprc
 
 # Install Oh My Zsh and set Zsh as default shell
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" \
@@ -76,8 +94,8 @@ RUN chown -R www-data:www-data /var/www/html
 # Set the working directory
 WORKDIR /var/www/html
 
-# Expose ports for PHP-FPM and Mailpit
-EXPOSE 8000 5173 9000 8025 1025
+# Expose ports for PHP-FPM and development servers
+EXPOSE 8000 5173 9000
 
 # Default command
 CMD ["php-fpm"]
