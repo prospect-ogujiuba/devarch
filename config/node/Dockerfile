@@ -31,11 +31,10 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install global npm packages
+# Install global npm packages (no yarn here – Node 20 has Corepack/Yarn already)
 RUN npm install -g \
     # Package managers
     pnpm \
-    yarn \
     # Development servers
     nodemon \
     ts-node \
@@ -87,13 +86,10 @@ RUN echo "account default" > /etc/msmtprc \
     && echo "from noreply@devarch.test" >> /etc/msmtprc \
     && chmod 644 /etc/msmtprc
 
-# Install Oh My Zsh
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" && \
-    chsh -s $(which zsh)
-
-# Setup pnpm
-RUN pnpm setup && \
-    pnpm config set store-dir /root/.pnpm-store
+# Install Oh My Zsh non-interactively for root
+RUN RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" && \
+    chsh -s "$(which zsh)"
 
 # Create app directory
 WORKDIR /app
@@ -103,11 +99,15 @@ RUN useradd -m -s /bin/zsh node-user && \
     echo "node-user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     chown -R node-user:node-user /app
 
-# Copy package files if they exist (for caching)
-COPY package*.json pnpm-lock.yaml yarn.lock ./ 2>/dev/null || :
-
 # Switch to non-root user
 USER node-user
+
+# Configure pnpm store for node-user (no pnpm setup needed)
+RUN pnpm config set store-dir /home/node-user/.pnpm-store
+
+# (Optional) if you want a separate Oh My Zsh for node-user, you could do:
+# RUN RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
+#     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
 # Expose common Node.js application ports
 EXPOSE 3000 3001 4000 5173 9229
