@@ -180,6 +180,125 @@ Applications share the same PHP container but have:
 - Isolated file structures
 - Separate domain names (e.g., playground.test, b2bcnc.test)
 
+### Standardized Application Structure (CRITICAL)
+
+**ALL APPLICATIONS** must follow the standardized `public/` directory pattern. This is a fundamental requirement.
+
+#### Core Requirement
+
+The `public/` subdirectory is the **web server document root** for all applications:
+
+```
+apps/{app-name}/public/  ← WEB SERVER SERVES FROM HERE
+```
+
+**Rationale**:
+- Web server (Nginx/Apache) configured to serve from `/var/www/html/{app-name}/public/`
+- Source code outside `public/` not accessible via HTTP (security)
+- Container mounts expect `public/` as document root
+- Consistent behavior across all frameworks
+
+#### Standard Directory Structure
+
+```
+apps/{app-name}/
+├── public/              # MANDATORY - Web server document root
+│   ├── index.html       # Entry point (static/SPA apps)
+│   ├── index.php        # Entry point (PHP apps)
+│   ├── assets/          # Built assets (CSS, JS, images)
+│   ├── api/             # API endpoints (optional)
+│   └── .htaccess        # Server config (optional)
+├── src/                 # Source code (for compiled apps)
+├── config/              # Application configuration
+├── scripts/             # Build and deployment scripts
+├── tests/               # Test files
+├── .env.example         # Environment variables template
+├── .gitignore           # Git ignore patterns
+├── package.json         # Node.js dependencies (if applicable)
+├── composer.json        # PHP dependencies (if applicable)
+├── requirements.txt     # Python dependencies (if applicable)
+├── go.mod               # Go dependencies (if applicable)
+└── README.md            # Application documentation
+```
+
+#### Framework Build Configuration
+
+All build processes **MUST** output to `public/`:
+
+**React + Vite**:
+```javascript
+// vite.config.js
+build: {
+  outDir: 'public',
+  emptyOutDir: false,
+}
+```
+
+**Next.js**:
+```javascript
+// next.config.js
+module.exports = {
+  distDir: 'public/.next',
+  output: 'export',  // or 'standalone'
+}
+```
+
+**Express**:
+```javascript
+// server.js
+app.use(express.static('public'))
+```
+
+**Django**:
+```python
+# settings.py
+STATIC_ROOT = os.path.join(BASE_DIR, 'public/static')
+```
+
+**Flask**:
+```python
+app = Flask(__name__, static_folder='public')
+```
+
+#### Creating New Applications
+
+Use the template system for standardized app creation:
+
+```bash
+# Interactive mode (recommended)
+./scripts/create-app.sh
+
+# Non-interactive mode
+./scripts/create-app.sh --name my-app --template node/react-vite --port 8200
+
+# List available templates
+./scripts/create-app.sh --list
+```
+
+**Available Templates**:
+- **PHP**: laravel, wordpress, vanilla
+- **Node.js**: react-vite, nextjs, express, vue
+- **Python**: django, flask, fastapi
+- **Go**: gin, echo
+- **.NET**: aspnet-core
+
+#### Migrating Existing Apps
+
+For apps not following the `public/` standard:
+
+```bash
+# Automated migration
+./scripts/migrate-app-structure.sh apps/my-app
+
+# Or follow manual steps in MIGRATION_GUIDE.md
+```
+
+#### Documentation
+
+- **App Structure Standard**: `APP_STRUCTURE.md` - Complete structure specification
+- **Templates Guide**: `TEMPLATES.md` - Using and creating templates
+- **Migration Guide**: `MIGRATION_GUIDE.md` - Migrating existing applications
+
 ### PHP Container Configuration
 
 The PHP container (`/home/fhcadmin/projects/devarch/config/php/Dockerfile`) is extensively configured:
