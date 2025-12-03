@@ -25,6 +25,10 @@ else
     exit 1
 fi
 
+# Global variables for WordPress configuration
+WORDPRESS_PRESET=""
+WORDPRESS_TITLE=""
+
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
@@ -72,23 +76,25 @@ prompt_app_name() {
 prompt_runtime() {
     local runtime=""
 
-    echo ""
-    echo "Select runtime:"
-    echo "  1) PHP"
-    echo "  2) Node.js"
-    echo "  3) Python"
-    echo "  4) Go"
-    echo ""
+    echo "" >&2
+    echo "Select runtime:" >&2
+    echo "  1) PHP" >&2
+    echo "  2) Node.js" >&2
+    echo "  3) Python" >&2
+    echo "  4) Go" >&2
+    echo "  5) .NET" >&2
+    echo "" >&2
 
     while true; do
-        read -p "Runtime [1-4]: " choice
+        read -p "Runtime [1-5]: " choice
 
         case "$choice" in
             1) runtime="php"; break ;;
             2) runtime="node"; break ;;
             3) runtime="python"; break ;;
             4) runtime="go"; break ;;
-            *) print_status "error" "Invalid choice. Please enter 1-4." ;;
+            5) runtime="dotnet"; break ;;
+            *) print_status "error" "Invalid choice. Please enter 1-5." ;;
         esac
     done
 
@@ -99,14 +105,14 @@ prompt_framework() {
     local runtime="$1"
     local framework=""
 
-    echo ""
+    echo "" >&2
     case "$runtime" in
         php)
-            echo "Select PHP framework:"
-            echo "  1) Laravel"
-            echo "  2) WordPress"
-            echo "  3) Generic PHP"
-            echo ""
+            echo "Select PHP framework:" >&2
+            echo "  1) Laravel" >&2
+            echo "  2) WordPress" >&2
+            echo "  3) Generic PHP" >&2
+            echo "" >&2
 
             while true; do
                 read -p "Framework [1-3]: " choice
@@ -120,11 +126,11 @@ prompt_framework() {
             ;;
 
         node)
-            echo "Select Node.js framework:"
-            echo "  1) Next.js"
-            echo "  2) React (Vite)"
-            echo "  3) Express"
-            echo ""
+            echo "Select Node.js framework:" >&2
+            echo "  1) Next.js" >&2
+            echo "  2) React (Vite)" >&2
+            echo "  3) Express" >&2
+            echo "" >&2
 
             while true; do
                 read -p "Framework [1-3]: " choice
@@ -138,11 +144,11 @@ prompt_framework() {
             ;;
 
         python)
-            echo "Select Python framework:"
-            echo "  1) Django"
-            echo "  2) FastAPI"
-            echo "  3) Flask"
-            echo ""
+            echo "Select Python framework:" >&2
+            echo "  1) Django" >&2
+            echo "  2) FastAPI" >&2
+            echo "  3) Flask" >&2
+            echo "" >&2
 
             while true; do
                 read -p "Framework [1-3]: " choice
@@ -156,11 +162,11 @@ prompt_framework() {
             ;;
 
         go)
-            echo "Select Go framework:"
-            echo "  1) Standard (net/http)"
-            echo "  2) Gin"
-            echo "  3) Echo"
-            echo ""
+            echo "Select Go framework:" >&2
+            echo "  1) Standard (net/http)" >&2
+            echo "  2) Gin" >&2
+            echo "  3) Echo" >&2
+            echo "" >&2
 
             while true; do
                 read -p "Framework [1-3]: " choice
@@ -172,9 +178,68 @@ prompt_framework() {
                 esac
             done
             ;;
+
+        dotnet)
+            echo "Select .NET framework:" >&2
+            echo "  1) ASP.NET Core Web API" >&2
+            echo "  2) ASP.NET Core MVC" >&2
+            echo "  3) Blazor Server" >&2
+            echo "" >&2
+
+            while true; do
+                read -p "Framework [1-3]: " choice
+                case "$choice" in
+                    1) framework="webapi"; break ;;
+                    2) framework="mvc"; break ;;
+                    3) framework="blazor"; break ;;
+                    *) print_status "error" "Invalid choice. Please enter 1-3." ;;
+                esac
+            done
+            ;;
     esac
 
     echo "$framework"
+}
+
+prompt_wordpress_preset() {
+    local preset=""
+
+    echo "" >&2
+    echo "Select WordPress preset:" >&2
+    echo "  1) bare    - Minimal WordPress with basic plugins" >&2
+    echo "  2) clean   - WordPress with TypeRocket Pro and premium plugins" >&2
+    echo "  3) custom  - WordPress with ACF, Gravity Forms, and custom setup" >&2
+    echo "  4) loaded  - WordPress with all development tools and debugging" >&2
+    echo "  5) starred - WordPress with starred repository plugins only" >&2
+    echo "" >&2
+
+    while true; do
+        read -p "Preset [1-5]: " choice
+        case "$choice" in
+            1) preset="bare"; break ;;
+            2) preset="clean"; break ;;
+            3) preset="custom"; break ;;
+            4) preset="loaded"; break ;;
+            5) preset="starred"; break ;;
+            *) print_status "error" "Invalid choice. Please enter 1-5." ;;
+        esac
+    done
+
+    echo "$preset"
+}
+
+prompt_site_title() {
+    local app_name="$1"
+    local default_title=$(echo "$app_name" | sed 's/[_-]/ /g' | sed 's/\b\w/\U&/g')
+
+    echo "" >&2
+    read -p "Site title (press Enter for '$default_title'): " site_title
+
+    if [[ -z "$site_title" ]]; then
+        echo "$default_title"
+    else
+        echo "$site_title"
+    fi
 }
 
 # =============================================================================
@@ -236,6 +301,7 @@ check_backend_running() {
         node) container_name="node" ;;
         python) container_name="python" ;;
         go) container_name="go" ;;
+        dotnet) container_name="dotnet" ;;
     esac
 
     if $CONTAINER_CMD ps --format '{{.Names}}' 2>/dev/null | grep -q "^${container_name}$"; then
@@ -284,6 +350,9 @@ install_framework() {
         go)
             install_go_framework "$app_name" "$framework"
             ;;
+        dotnet)
+            install_dotnet_framework "$app_name" "$framework"
+            ;;
     esac
 }
 
@@ -309,17 +378,28 @@ install_php_framework() {
             ;;
 
         wordpress)
-            print_status "info" "Downloading WordPress core..."
-            if $CONTAINER_CMD exec -w /var/www/html php wp core download --path="$app_name" --allow-root 2>&1; then
-                print_status "success" "WordPress downloaded successfully"
+            print_status "info" "Installing WordPress with preset: $WORDPRESS_PRESET..."
 
-                # Set permissions
-                $CONTAINER_CMD exec php chown -R www-data:www-data "/var/www/html/${app_name}" 2>/dev/null || true
+            local install_script="${SCRIPT_DIR}/wordpress/install-wordpress.sh"
 
-                print_status "info" "Run 'wp core config' and 'wp core install' inside the container to complete setup"
+            if [[ ! -f "$install_script" ]]; then
+                print_status "error" "WordPress installation script not found: $install_script"
+                return 1
+            fi
+
+            # Build the command with collected options
+            local wp_cmd="\"$install_script\" \"$app_name\" --preset \"$WORDPRESS_PRESET\" --force"
+
+            if [[ -n "$WORDPRESS_TITLE" ]]; then
+                wp_cmd="$wp_cmd --title \"$WORDPRESS_TITLE\""
+            fi
+
+            # Execute the installation script
+            if eval "$wp_cmd"; then
+                print_status "success" "WordPress installed successfully with $WORDPRESS_PRESET preset"
                 return 0
             else
-                print_status "error" "Failed to download WordPress"
+                print_status "error" "WordPress installation failed"
                 return 1
             fi
             ;;
@@ -820,6 +900,51 @@ EOF
     return 0
 }
 
+install_dotnet_framework() {
+    local app_name="$1"
+    local framework="$2"
+    local app_path="${APPS_DIR}/${app_name}"
+
+    mkdir -p "$app_path"
+
+    case "$framework" in
+        webapi)
+            print_status "info" "Creating ASP.NET Core Web API..."
+            if $CONTAINER_CMD exec -w /app dotnet dotnet new webapi -n "$app_name" -o "/app/$app_name" 2>&1; then
+                print_status "success" "ASP.NET Core Web API created"
+                return 0
+            else
+                print_status "error" "Failed to create Web API"
+                return 1
+            fi
+            ;;
+
+        mvc)
+            print_status "info" "Creating ASP.NET Core MVC application..."
+            if $CONTAINER_CMD exec -w /app dotnet dotnet new mvc -n "$app_name" -o "/app/$app_name" 2>&1; then
+                print_status "success" "ASP.NET Core MVC application created"
+                return 0
+            else
+                print_status "error" "Failed to create MVC application"
+                return 1
+            fi
+            ;;
+
+        blazor)
+            print_status "info" "Creating Blazor Server application..."
+            if $CONTAINER_CMD exec -w /app dotnet dotnet new blazorserver -n "$app_name" -o "/app/$app_name" 2>&1; then
+                print_status "success" "Blazor Server application created"
+                return 0
+            else
+                print_status "error" "Failed to create Blazor application"
+                return 1
+            fi
+            ;;
+    esac
+
+    return 0
+}
+
 configure_app() {
     local app_name="$1"
     local runtime="$2"
@@ -847,55 +972,6 @@ configure_app() {
     esac
 
     print_status "success" "Configuration complete"
-}
-
-add_hosts_entry() {
-    local app_name="$1"
-    local domain="${app_name}.test"
-
-    print_status "step" "Adding hosts entry for $domain..."
-
-    if [[ -f "${SCRIPT_DIR}/update-hosts.sh" ]]; then
-        # Use update-hosts.sh to add the entry
-        if sudo "${SCRIPT_DIR}/update-hosts.sh" add "$app_name" 2>/dev/null; then
-            print_status "success" "Hosts entry added"
-        else
-            print_status "warning" "Could not automatically add hosts entry"
-            print_status "info" "Run: sudo ./scripts/update-hosts.sh"
-        fi
-    else
-        print_status "warning" "update-hosts.sh not found"
-        print_status "info" "Manually add to /etc/hosts: 127.0.0.1 $domain"
-    fi
-}
-
-setup_proxy() {
-    local app_name="$1"
-    local runtime="$2"
-
-    print_status "step" "Proxy host setup instructions..."
-
-    if [[ -f "${SCRIPT_DIR}/setup-proxy-host.sh" ]]; then
-        print_status "info" "Run: ./scripts/setup-proxy-host.sh $app_name"
-    else
-        print_status "warning" "setup-proxy-host.sh not found"
-
-        # Show manual instructions
-        local backend_host=""
-        local backend_port=""
-
-        case "$runtime" in
-            php) backend_host="php"; backend_port="8000" ;;
-            node) backend_host="node"; backend_port="3000" ;;
-            python) backend_host="python"; backend_port="8000" ;;
-            go) backend_host="go"; backend_port="8080" ;;
-        esac
-
-        echo ""
-        echo "Configure NPM proxy host:"
-        echo "  Domain: ${app_name}.test"
-        echo "  Forward to: http://${backend_host}:${backend_port}"
-    fi
 }
 
 start_backend() {
@@ -940,16 +1016,14 @@ show_next_steps() {
 
     echo "Next Steps:"
     echo ""
-    echo "  1. Configure Nginx Proxy Manager:"
-    echo "     ./scripts/setup-proxy-host.sh $app_name"
-    echo ""
-    echo "  2. Update /etc/hosts (if not done automatically):"
+    echo "  1. Update /etc/hosts (if not done automatically):"
     echo "     sudo ./scripts/update-hosts.sh"
+    echo "     e.g., sudo ./scripts/generate-context.sh && ./scripts/update-hosts.sh -o windows -f"
     echo ""
-    echo "  3. Access your app:"
+    echo "  2. Access your app:"
     echo "     http://${app_name}.test"
     echo ""
-    echo "  4. View in dashboard:"
+    echo "  3. View in dashboard:"
     echo "     http://dashboard.test"
     echo ""
 
@@ -962,8 +1036,11 @@ show_next_steps() {
             ;;
         php-wordpress)
             echo "WordPress-specific:"
-            echo "  - Complete setup: http://${app_name}.test"
-            echo "  - Or use WP-CLI in container to configure"
+            echo "  - WordPress is fully configured and ready to use"
+            echo "  - Access site: http://${app_name}.test"
+            echo "  - Admin login: http://${app_name}.test/wp-admin"
+            echo "  - Default credentials: admin / admin (change immediately!)"
+            echo "  - Preset: $WORDPRESS_PRESET"
             ;;
         node-nextjs)
             echo "Next.js-specific:"
@@ -1001,6 +1078,24 @@ show_next_steps() {
             echo "  - Run app: cd ${APPS_DIR}/${app_name} && go run main.go"
             echo "  - Build binary: go build -o app main.go"
             ;;
+        dotnet-webapi)
+            echo ".NET Web API-specific:"
+            echo "  - Run app: podman exec -w /app/${app_name} dotnet dotnet run"
+            echo "  - API docs (Swagger): http://${app_name}.test/swagger"
+            echo "  - Watch mode: dotnet watch run"
+            ;;
+        dotnet-mvc)
+            echo ".NET MVC-specific:"
+            echo "  - Run app: podman exec -w /app/${app_name} dotnet dotnet run"
+            echo "  - Watch mode: dotnet watch run"
+            echo "  - Scaffold: dotnet aspnet-codegenerator"
+            ;;
+        dotnet-blazor)
+            echo "Blazor Server-specific:"
+            echo "  - Run app: podman exec -w /app/${app_name} dotnet dotnet run"
+            echo "  - Watch mode: dotnet watch run"
+            echo "  - Hot reload enabled by default"
+            ;;
     esac
 
     echo ""
@@ -1018,6 +1113,12 @@ main() {
     APP_NAME=$(prompt_app_name)
     RUNTIME=$(prompt_runtime)
     FRAMEWORK=$(prompt_framework "$RUNTIME")
+
+    # WordPress-specific prompts
+    if [[ "$RUNTIME" == "php" ]] && [[ "$FRAMEWORK" == "wordpress" ]]; then
+        WORDPRESS_PRESET=$(prompt_wordpress_preset)
+        WORDPRESS_TITLE=$(prompt_site_title "$APP_NAME")
+    fi
 
     echo ""
     print_status "info" "Creating $FRAMEWORK application: $APP_NAME"
@@ -1052,8 +1153,6 @@ main() {
     fi
 
     configure_app "$APP_NAME" "$RUNTIME" "$FRAMEWORK"
-    add_hosts_entry "$APP_NAME"
-    setup_proxy "$APP_NAME" "$RUNTIME"
     start_backend "$RUNTIME"
 
     # Success message
