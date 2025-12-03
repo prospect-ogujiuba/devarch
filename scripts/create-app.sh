@@ -15,6 +15,16 @@ SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
 APPS_DIR="${APPS_DIR:-$PROJECT_ROOT/apps}"
 
+# Source template library functions
+TEMPLATE_LIB="${SCRIPT_DIR}/lib/app-templates.sh"
+TEMPLATES_AVAILABLE=false
+if [[ -f "$TEMPLATE_LIB" ]]; then
+    source "$TEMPLATE_LIB"
+    TEMPLATES_AVAILABLE=true
+else
+    print_status "warning" "Template library not found. Using legacy boilerplate generation."
+fi
+
 # Detect container runtime (don't source zsh config.sh in bash)
 if command -v podman >/dev/null 2>&1; then
     CONTAINER_CMD="podman"
@@ -28,6 +38,10 @@ fi
 # Global variables for WordPress configuration
 WORDPRESS_PRESET=""
 WORDPRESS_TITLE=""
+
+# Global variables for template configuration
+USE_TEMPLATE=false
+SELECTED_TEMPLATE=""
 
 # =============================================================================
 # HELPER FUNCTIONS
@@ -53,6 +67,59 @@ print_header() {
     echo "  $1"
     echo "==============================================="
     echo ""
+}
+
+show_usage() {
+    cat << EOF
+DevArch App Creator
+
+USAGE:
+    ./create-app.sh [OPTIONS]
+
+OPTIONS:
+    --name NAME              Application name (lowercase, no spaces)
+    --template TEMPLATE      Use specific template (e.g., node/react-vite)
+    --list-templates         List all available templates
+    -h, --help              Show this help message
+
+INTERACTIVE MODE:
+    Run without arguments for interactive prompts:
+    ./create-app.sh
+
+TEMPLATE MODE:
+    Create app from template:
+    ./create-app.sh --name my-app --template node/react-vite
+
+LEGACY MODE:
+    Create app without template (uses inline generation):
+    ./create-app.sh --name my-app --template none
+
+EXAMPLES:
+    # Interactive mode
+    ./create-app.sh
+
+    # Create React app from template
+    ./create-app.sh --name dashboard --template node/react-vite
+
+    # Create Express API from template
+    ./create-app.sh --name api-server --template node/express
+
+    # Create Django app from template
+    ./create-app.sh --name admin-panel --template python/django
+
+    # List all templates
+    ./create-app.sh --list-templates
+
+AVAILABLE TEMPLATES:
+    PHP:        php/laravel, php/wordpress, php/vanilla
+    Node.js:    node/react-vite, node/nextjs, node/express, node/vue
+    Python:     python/django, python/flask, python/fastapi
+    Go:         go/gin, go/echo
+    .NET:       dotnet/aspnet-core
+
+For more information, see: templates/README.md
+
+EOF
 }
 
 # =============================================================================
@@ -240,6 +307,129 @@ prompt_site_title() {
     else
         echo "$site_title"
     fi
+}
+
+prompt_template() {
+    local runtime="$1"
+    local framework="$2"
+    local template_name=""
+
+    # Don't offer templates if library is not available
+    if [[ "$TEMPLATES_AVAILABLE" != "true" ]]; then
+        echo ""
+        return 0
+    fi
+
+    echo "" >&2
+    echo "Use template? (Templates provide standardized structure with public/ directory)" >&2
+    echo "" >&2
+
+    # Show available templates for this runtime
+    case "$runtime" in
+        php)
+            echo "Available PHP templates:" >&2
+            echo "  1) php/laravel     - Laravel framework (recommended for Laravel)" >&2
+            echo "  2) php/wordpress   - WordPress CMS (recommended for WordPress)" >&2
+            echo "  3) php/vanilla     - Plain PHP application" >&2
+            echo "  4) none            - Use legacy inline generation" >&2
+            ;;
+        node)
+            echo "Available Node.js templates:" >&2
+            echo "  1) node/react-vite - React + Vite SPA (recommended for React)" >&2
+            echo "  2) node/nextjs     - Next.js with static export (recommended for Next.js)" >&2
+            echo "  3) node/express    - Express.js server (recommended for Express)" >&2
+            echo "  4) node/vue        - Vue.js SPA" >&2
+            echo "  5) none            - Use legacy inline generation" >&2
+            ;;
+        python)
+            echo "Available Python templates:" >&2
+            echo "  1) python/django   - Django framework (recommended for Django)" >&2
+            echo "  2) python/flask    - Flask framework (recommended for Flask)" >&2
+            echo "  3) python/fastapi  - FastAPI framework (recommended for FastAPI)" >&2
+            echo "  4) none            - Use legacy inline generation" >&2
+            ;;
+        go)
+            echo "Available Go templates:" >&2
+            echo "  1) go/gin          - Gin framework (recommended for Gin)" >&2
+            echo "  2) go/echo         - Echo framework (recommended for Echo)" >&2
+            echo "  3) none            - Use legacy inline generation" >&2
+            ;;
+        dotnet)
+            echo "Available .NET templates:" >&2
+            echo "  1) dotnet/aspnet-core - ASP.NET Core" >&2
+            echo "  2) none               - Use legacy inline generation" >&2
+            ;;
+        *)
+            echo "none"
+            return 0
+            ;;
+    esac
+
+    echo "" >&2
+    read -p "Select template (or 'none' to skip): " choice
+
+    case "$runtime" in
+        php)
+            case "$choice" in
+                1) template_name="php/laravel" ;;
+                2) template_name="php/wordpress" ;;
+                3) template_name="php/vanilla" ;;
+                4|none|n|N) template_name="none" ;;
+                *)
+                    print_status "warning" "Invalid choice, using legacy generation"
+                    template_name="none"
+                    ;;
+            esac
+            ;;
+        node)
+            case "$choice" in
+                1) template_name="node/react-vite" ;;
+                2) template_name="node/nextjs" ;;
+                3) template_name="node/express" ;;
+                4) template_name="node/vue" ;;
+                5|none|n|N) template_name="none" ;;
+                *)
+                    print_status "warning" "Invalid choice, using legacy generation"
+                    template_name="none"
+                    ;;
+            esac
+            ;;
+        python)
+            case "$choice" in
+                1) template_name="python/django" ;;
+                2) template_name="python/flask" ;;
+                3) template_name="python/fastapi" ;;
+                4|none|n|N) template_name="none" ;;
+                *)
+                    print_status "warning" "Invalid choice, using legacy generation"
+                    template_name="none"
+                    ;;
+            esac
+            ;;
+        go)
+            case "$choice" in
+                1) template_name="go/gin" ;;
+                2) template_name="go/echo" ;;
+                3|none|n|N) template_name="none" ;;
+                *)
+                    print_status "warning" "Invalid choice, using legacy generation"
+                    template_name="none"
+                    ;;
+            esac
+            ;;
+        dotnet)
+            case "$choice" in
+                1) template_name="dotnet/aspnet-core" ;;
+                2|none|n|N) template_name="none" ;;
+                *)
+                    print_status "warning" "Invalid choice, using legacy generation"
+                    template_name="none"
+                    ;;
+            esac
+            ;;
+    esac
+
+    echo "$template_name"
 }
 
 # =============================================================================
@@ -945,6 +1135,43 @@ install_dotnet_framework() {
     return 0
 }
 
+create_app_from_template() {
+    local app_name="$1"
+    local template="$2"
+    local app_path="${APPS_DIR}/${app_name}"
+
+    print_status "step" "Creating app from template: $template"
+
+    # Validate template exists
+    if ! validate_template "$template" 2>/dev/null; then
+        print_status "error" "Template not found: $template"
+        print_status "info" "Falling back to legacy generation"
+        return 1
+    fi
+
+    # Copy template files
+    if ! copy_template "$template" "$app_name" 2>/dev/null; then
+        print_status "error" "Failed to copy template"
+        return 1
+    fi
+
+    # Customize template with app-specific values
+    print_status "step" "Customizing template for app: $app_name"
+    customize_template "$app_name" 2>/dev/null || true
+
+    # Ensure public directory exists
+    ensure_public_directory "$app_name" 2>/dev/null || true
+
+    # Verify template structure
+    if verify_template_structure "$app_name" 2>/dev/null; then
+        print_status "success" "Template applied successfully"
+        return 0
+    else
+        print_status "warning" "Template structure has issues, but app was created"
+        return 0
+    fi
+}
+
 configure_app() {
     local app_name="$1"
     local runtime="$2"
@@ -1106,22 +1333,104 @@ show_next_steps() {
 # MAIN EXECUTION
 # =============================================================================
 
+parse_args() {
+    # Parse command-line arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --name)
+                APP_NAME="$2"
+                shift 2
+                ;;
+            --template)
+                SELECTED_TEMPLATE="$2"
+                USE_TEMPLATE=true
+                shift 2
+                ;;
+            --list-templates)
+                if [[ "$TEMPLATES_AVAILABLE" == "true" ]]; then
+                    list_templates
+                else
+                    print_status "error" "Template library not available"
+                fi
+                exit 0
+                ;;
+            -h|--help)
+                show_usage
+                exit 0
+                ;;
+            *)
+                print_status "error" "Unknown option: $1"
+                show_usage
+                exit 1
+                ;;
+        esac
+    done
+}
+
 main() {
+    # Parse command-line arguments if provided
+    if [[ $# -gt 0 ]]; then
+        parse_args "$@"
+    fi
+
     print_header "DevArch App Creator"
 
-    # Interactive prompts
-    APP_NAME=$(prompt_app_name)
-    RUNTIME=$(prompt_runtime)
-    FRAMEWORK=$(prompt_framework "$RUNTIME")
+    # Interactive prompts (skip if already provided via CLI)
+    if [[ -z "$APP_NAME" ]]; then
+        APP_NAME=$(prompt_app_name)
+    else
+        print_status "info" "Using app name: $APP_NAME"
+    fi
 
-    # WordPress-specific prompts
+    # If template was specified via CLI, validate it and skip interactive prompts
+    if [[ "$USE_TEMPLATE" == "true" ]] && [[ -n "$SELECTED_TEMPLATE" ]] && [[ "$SELECTED_TEMPLATE" != "none" ]]; then
+        # Extract runtime from template name
+        case "$SELECTED_TEMPLATE" in
+            php/*) RUNTIME="php" ;;
+            node/*) RUNTIME="node" ;;
+            python/*) RUNTIME="python" ;;
+            go/*) RUNTIME="go" ;;
+            dotnet/*) RUNTIME="dotnet" ;;
+            *)
+                print_status "error" "Invalid template format: $SELECTED_TEMPLATE"
+                print_status "info" "Template should be in format: runtime/framework (e.g., node/react-vite)"
+                exit 1
+                ;;
+        esac
+
+        # Extract framework from template
+        FRAMEWORK=$(basename "$SELECTED_TEMPLATE")
+
+        print_status "info" "Using template: $SELECTED_TEMPLATE"
+        print_status "info" "Runtime: $RUNTIME, Framework: $FRAMEWORK"
+    else
+        # Interactive mode - prompt for runtime and framework
+        RUNTIME=$(prompt_runtime)
+        FRAMEWORK=$(prompt_framework "$RUNTIME")
+
+        # Prompt for template selection (if templates available)
+        if [[ "$TEMPLATES_AVAILABLE" == "true" ]]; then
+            SELECTED_TEMPLATE=$(prompt_template "$RUNTIME" "$FRAMEWORK")
+            if [[ -n "$SELECTED_TEMPLATE" ]] && [[ "$SELECTED_TEMPLATE" != "none" ]]; then
+                USE_TEMPLATE=true
+            fi
+        fi
+    fi
+
+    # WordPress-specific prompts (only if not using template or using WordPress template)
     if [[ "$RUNTIME" == "php" ]] && [[ "$FRAMEWORK" == "wordpress" ]]; then
-        WORDPRESS_PRESET=$(prompt_wordpress_preset)
-        WORDPRESS_TITLE=$(prompt_site_title "$APP_NAME")
+        if [[ "$USE_TEMPLATE" != "true" ]] || [[ "$SELECTED_TEMPLATE" == "php/wordpress" ]]; then
+            WORDPRESS_PRESET=$(prompt_wordpress_preset)
+            WORDPRESS_TITLE=$(prompt_site_title "$APP_NAME")
+        fi
     fi
 
     echo ""
-    print_status "info" "Creating $FRAMEWORK application: $APP_NAME"
+    if [[ "$USE_TEMPLATE" == "true" ]] && [[ "$SELECTED_TEMPLATE" != "none" ]]; then
+        print_status "info" "Creating $FRAMEWORK application from template: $APP_NAME"
+    else
+        print_status "info" "Creating $FRAMEWORK application: $APP_NAME"
+    fi
     echo ""
 
     # Validation
@@ -1142,21 +1451,61 @@ main() {
     fi
 
     # Creation steps
-    if ! create_directory "$APP_NAME"; then
-        exit 1
+    # If using template, try template creation first
+    if [[ "$USE_TEMPLATE" == "true" ]] && [[ "$SELECTED_TEMPLATE" != "none" ]]; then
+        print_status "step" "Using template: $SELECTED_TEMPLATE"
+
+        # Create directory first
+        if ! create_directory "$APP_NAME"; then
+            exit 1
+        fi
+
+        # Try to create from template
+        if create_app_from_template "$APP_NAME" "$SELECTED_TEMPLATE"; then
+            print_status "success" "App created from template successfully"
+
+            # Skip legacy framework installation
+            SKIP_FRAMEWORK_INSTALL=true
+        else
+            print_status "warning" "Template creation failed, falling back to legacy generation"
+            USE_TEMPLATE=false
+            SKIP_FRAMEWORK_INSTALL=false
+        fi
+    else
+        # Legacy path - create directory
+        if ! create_directory "$APP_NAME"; then
+            exit 1
+        fi
+        SKIP_FRAMEWORK_INSTALL=false
     fi
 
-    if ! install_framework "$APP_NAME" "$RUNTIME" "$FRAMEWORK"; then
-        print_status "error" "Framework installation failed"
-        print_status "warning" "Directory created but framework not installed"
-        exit 1
+    # Install framework using legacy method (if not already created from template)
+    if [[ "$SKIP_FRAMEWORK_INSTALL" != "true" ]]; then
+        if ! install_framework "$APP_NAME" "$RUNTIME" "$FRAMEWORK"; then
+            print_status "error" "Framework installation failed"
+            print_status "warning" "Directory created but framework not installed"
+            exit 1
+        fi
     fi
 
+    # Configure app (always run this)
     configure_app "$APP_NAME" "$RUNTIME" "$FRAMEWORK"
+
+    # Start backend service
     start_backend "$RUNTIME"
 
     # Success message
-    show_next_steps "$APP_NAME" "$RUNTIME" "$FRAMEWORK"
+    if [[ "$USE_TEMPLATE" == "true" ]] && [[ "$SELECTED_TEMPLATE" != "none" ]]; then
+        # Show template-specific next steps
+        if [[ "$TEMPLATES_AVAILABLE" == "true" ]]; then
+            local template_port=$(get_default_port "$SELECTED_TEMPLATE" 2>/dev/null || echo "8000")
+            show_next_steps "$APP_NAME" "$SELECTED_TEMPLATE" "$template_port" 2>/dev/null || show_next_steps "$APP_NAME" "$RUNTIME" "$FRAMEWORK"
+        else
+            show_next_steps "$APP_NAME" "$RUNTIME" "$FRAMEWORK"
+        fi
+    else
+        show_next_steps "$APP_NAME" "$RUNTIME" "$FRAMEWORK"
+    fi
 }
 
 # Only run main if script is executed directly (not sourced)
