@@ -1,15 +1,17 @@
 # Python 3.12 with comprehensive development tools
 FROM python:3.12-slim-bookworm
 
-# Set Python environment variables
+# Base environment
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     POETRY_VERSION=1.7.1 \
     POETRY_HOME="/opt/poetry" \
-    POETRY_VIRTUALENVS_CREATE=false \
-    PATH="$POETRY_HOME/bin:$PATH"
+    VIRTUAL_ENV="/opt/venv"
+
+# Put Poetry and the venv first on PATH
+ENV PATH="$POETRY_HOME/bin:$VIRTUAL_ENV/bin:$PATH"
 
 # Install system dependencies and development tools
 RUN apt-get update && apt-get install -y \
@@ -19,6 +21,7 @@ RUN apt-get update && apt-get install -y \
     g++ \
     make \
     cmake \
+    pkg-config \
     # Python development
     python3-dev \
     python3-pip \
@@ -40,7 +43,8 @@ RUN apt-get update && apt-get install -y \
     htop \
     # Libraries for Python packages
     libpq-dev \
-    libmysqlclient-dev \
+    libmariadb-dev-compat \
+    libmariadb-dev \
     libssl-dev \
     libffi-dev \
     libxml2-dev \
@@ -54,69 +58,60 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
+# 🔹 Create a virtual environment (this is what makes pip happy)
+RUN python -m venv "$VIRTUAL_ENV"
+
+# Install Poetry into the (system) Python – fine, it drops binaries into /opt/poetry/bin
 RUN curl -sSL https://install.python-poetry.org | python3 -
 
-# Install global Python packages
+# 🔹 All pip installs from here are inside the venv
 RUN pip install --upgrade pip setuptools wheel && \
     pip install \
-    # Web frameworks
-    django \
-    flask \
-    fastapi \
-    uvicorn[standard] \
-    gunicorn \
-    # Async workers
-    celery[redis] \
-    flower \
-    # Database ORMs
-    sqlalchemy \
-    alembic \
-    django-extensions \
-    # API tools
-    djangorestframework \
-    flask-restful \
-    pydantic \
-    # Testing
-    pytest \
-    pytest-django \
-    pytest-asyncio \
-    pytest-cov \
-    # Development tools
-    ipython \
-    jupyter \
-    jupyterlab \
-    black \
-    flake8 \
-    mypy \
-    pylint \
-    bandit \
-    # Debugging
-    debugpy \
-    django-debug-toolbar \
-    # Database drivers
-    psycopg2-binary \
-    pymongo \
-    redis \
-    mysqlclient \
-    # HTTP clients
-    httpx \
-    requests \
-    aiohttp \
-    # Data processing
-    pandas \
-    numpy \
-    # Task queue
-    rq \
-    dramatiq[redis] \
-    # Other utilities
-    python-dotenv \
-    pyyaml \
-    click
+        django \
+        flask \
+        fastapi \
+        uvicorn[standard] \
+        gunicorn \
+        celery[redis] \
+        flower \
+        sqlalchemy \
+        alembic \
+        django-extensions \
+        djangorestframework \
+        flask-restful \
+        pydantic \
+        pytest \
+        pytest-django \
+        pytest-asyncio \
+        pytest-cov \
+        ipython \
+        jupyter \
+        jupyterlab \
+        black \
+        flake8 \
+        mypy \
+        pylint \
+        bandit \
+        debugpy \
+        django-debug-toolbar \
+        psycopg2-binary \
+        pymongo \
+        redis \
+        mysqlclient \
+        httpx \
+        requests \
+        aiohttp \
+        pandas \
+        numpy \
+        rq \
+        dramatiq[redis] \
+        python-dotenv \
+        pyyaml \
+        click
 
-# Install Oh My Zsh
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" && \
-    chsh -s $(which zsh)
+# Install Oh My Zsh and set Zsh as default shell
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" \
+    && chsh -s $(which zsh)
 
 # Create app directory
 WORKDIR /app
@@ -125,9 +120,6 @@ WORKDIR /app
 RUN useradd -m -s /bin/zsh python && \
     echo "python ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     chown -R python:python /app
-
-# Copy supervisor config if needed
-COPY ../../config/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf 2>/dev/null || :
 
 # Switch to non-root user
 USER python

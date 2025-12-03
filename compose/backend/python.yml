@@ -36,14 +36,14 @@ services:
       - "127.0.0.1:8302:8888"  # Jupyter
     volumes:
       - ../../apps:/app
-      - python_venv:/venv
       - ../../scripts:/scripts
       - ../../config/python/requirements.txt:/requirements.txt:ro
+      - ../../config/supervisord/:/etc/supervisor/conf.d
     networks:
       - microservices-net
     command: /bin/sh -c "while true; do sleep 1000; done"
     healthcheck:
-      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      test: [ "CMD", "python", "-c", "import sys; sys.exit(0)" ]
       interval: 30s
       timeout: 10s
       retries: 3
