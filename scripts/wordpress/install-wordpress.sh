@@ -784,8 +784,8 @@ finalize_installation() {
     # Set final permissions if not skipped
     if [[ "${SITE_CONFIG[skip_permissions]}" == "false" ]]; then
         print_status "info" "Setting final file permissions..."
-        exec_php "chown -R www-data:www-data $(get_path container_root)"
-        exec_php "chmod -R 777 $(get_path container_root)"
+        exec_php "chown -R www-data:www-data $(get_path container_site)"
+        exec_php "chmod -R 777 $(get_path container_site)"
     fi
     
     # Send emails if not skipped
