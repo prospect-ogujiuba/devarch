@@ -35,6 +35,7 @@ const RUNTIME_PORTS = [
     'node' => ['external' => 8200, 'internal' => 3000, 'container' => 'node'],
     'python' => ['external' => 8300, 'internal' => 8000, 'container' => 'python'],
     'go' => ['external' => 8400, 'internal' => 8080, 'container' => 'go'],
+    'dotnet' => ['external' => 8600, 'internal' => 8080, 'container' => 'dotnet'],
 ];
 
 // =============================================================================
@@ -101,6 +102,16 @@ function detectRuntime(string $appPath): string
         return 'go';
     }
 
+    // .NET detection
+    $csprojFiles = glob("$appPath/*.csproj");
+    $slnFiles = glob("$appPath/*.sln");
+    $fsprojFiles = glob("$appPath/*.fsproj");
+
+    if (!empty($csprojFiles) || !empty($slnFiles) || !empty($fsprojFiles) ||
+        (file_exists("$appPath/Program.cs") && file_exists("$appPath/appsettings.json"))) {
+        return 'dotnet';
+    }
+
     return 'unknown';
 }
 
@@ -114,6 +125,7 @@ function detectFramework(string $appPath, string $runtime): string
         'node' => detectNodeFramework($appPath),
         'python' => detectPythonFramework($appPath),
         'go' => detectGoFramework($appPath),
+        'dotnet' => detectDotnetFramework($appPath),
         default => 'Unknown'
     };
 }
@@ -242,6 +254,41 @@ function detectGoFramework(string $appPath): string
 }
 
 /**
+ * Detect .NET framework type
+ */
+function detectDotnetFramework(string $appPath): string
+{
+    $csprojFiles = glob("$appPath/*.csproj");
+
+    if (empty($csprojFiles)) {
+        if (file_exists("$appPath/appsettings.json") && file_exists("$appPath/Program.cs")) {
+            return 'ASP.NET Core';
+        }
+        return '.NET';
+    }
+
+    $csproj = file_get_contents($csprojFiles[0]);
+
+    if (stripos($csproj, 'Microsoft.AspNetCore.Components.WebAssembly') !== false) {
+        return 'Blazor WebAssembly';
+    }
+    if (stripos($csproj, 'Microsoft.AspNetCore.Components') !== false) {
+        return 'Blazor Server';
+    }
+    if (stripos($csproj, 'Sdk="Microsoft.NET.Sdk.Web"') !== false) {
+        if (stripos($csproj, 'Swashbuckle.AspNetCore') !== false) {
+            return 'ASP.NET Core Web API';
+        }
+        return 'ASP.NET Core';
+    }
+    if (stripos($csproj, 'Microsoft.Extensions.Hosting') !== false) {
+        return '.NET Worker Service';
+    }
+
+    return '.NET';
+}
+
+/**
  * Get app status (simplified - based on file existence)
  */
 function getAppStatus(string $appPath, string $runtime): string
@@ -292,6 +339,7 @@ function getRuntimeColor(string $runtime): string
         'node' => '#68A063',
         'python' => '#3776AB',
         'go' => '#00ADD8',
+        'dotnet' => '#512BD4',
         default => '#94a3b8'
     };
 }
@@ -327,6 +375,7 @@ $stats = [
     'node' => 0,
     'python' => 0,
     'go' => 0,
+    'dotnet' => 0,
     'unknown' => 0,
 ];
 
@@ -371,6 +420,7 @@ $filteredApps = $filter === 'all'
             --color-node: #68A063;
             --color-python: #3776AB;
             --color-go: #00ADD8;
+            --color-dotnet: #512BD4;
             --color-active: #22c55e;
             --color-ready: #eab308;
             --color-stopped: #94a3b8;
@@ -689,6 +739,11 @@ $filteredApps = $filter === 'all'
                       style="color: var(--color-go)"><?= $stats['go'] ?></span>
                 <span class="stat-label">Go</span>
             </div>
+            <div class="stat-item">
+                <span class="stat-value"
+                      style="color: var(--color-dotnet)"><?= $stats['dotnet'] ?></span>
+                <span class="stat-label">.NET</span>
+            </div>
         </div>
     </div>
 
@@ -703,6 +758,8 @@ $filteredApps = $filter === 'all'
            class="filter-btn <?= $filter === 'python' ? 'active' : '' ?>">Python</a>
         <a href="?filter=go"
            class="filter-btn <?= $filter === 'go' ? 'active' : '' ?>">Go</a>
+        <a href="?filter=dotnet"
+           class="filter-btn <?= $filter === 'dotnet' ? 'active' : '' ?>">.NET</a>
     </div>
 
     <!-- Apps Grid -->

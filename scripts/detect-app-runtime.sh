@@ -42,8 +42,9 @@ Detection Logic:
     Node:    package.json
     Python:  requirements.txt, pyproject.toml, manage.py, main.py
     Go:      go.mod, main.go
+    .NET:    *.csproj, *.sln, *.fsproj, Program.cs + appsettings.json
 
-Priority (if multiple markers found): PHP > Node > Python > Go
+Priority (if multiple markers found): PHP > Node > Python > Go > .NET
 
 Examples:
     $(basename "$0") playground      # Detects runtime for apps/playground
@@ -108,6 +109,15 @@ detect_runtime() {
         return 0
     fi
 
+    # .NET detection
+    if compgen -G "${app_path}/*.csproj" > /dev/null 2>&1 || \
+       compgen -G "${app_path}/*.sln" > /dev/null 2>&1 || \
+       compgen -G "${app_path}/*.fsproj" > /dev/null 2>&1 || \
+       ([[ -f "${app_path}/Program.cs" ]] && [[ -f "${app_path}/appsettings.json" ]]); then
+        echo "dotnet"
+        return 0
+    fi
+
     # No markers found
     echo "unknown"
     return 1
@@ -128,6 +138,9 @@ get_backend_info() {
             ;;
         go)
             echo "port=8400 container=go internal_port=8080"
+            ;;
+        dotnet)
+            echo "port=8600 container=dotnet internal_port=8080"
             ;;
         *)
             echo "port=unknown container=unknown internal_port=unknown"
