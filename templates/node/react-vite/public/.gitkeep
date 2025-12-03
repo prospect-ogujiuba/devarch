@@ -1,0 +1,8 @@
+# This directory is the web server document root
+# Build outputs will be placed here by Vite
+#
+# After running `npm run build`, this directory will contain:
+# - index.html
+# - assets/ (compiled JS, CSS, images)
+#
+# You can also place static API endpoints or other files here
