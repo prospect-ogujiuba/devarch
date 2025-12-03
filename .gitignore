@@ -4,6 +4,7 @@ apps/**
 # But NOT the apps folder itself
 !apps/
 !apps/serverinfo/
+!apps/dashboard/
 context/
 backup/
 # Other ignores
