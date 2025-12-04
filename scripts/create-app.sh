@@ -324,7 +324,7 @@ install_framework() {
         node-nextjs)
             print_status "info" "Creating Next.js application (this may take 30-60 seconds)..."
             $CONTAINER_CMD exec --user root -w /app node npx -y create-next-app@latest "$app_name" \
-                --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --no-git 2>&1
+                --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --use-npm --yes --disable-git 2>&1
             ;;
         node-react)
             print_status "info" "Creating React application with Vite..."
@@ -513,7 +513,7 @@ install_node_framework() {
     case "$framework" in
         nextjs)
             print_status "info" "Creating Next.js application (this may take 30-60 seconds)..."
-            if $CONTAINER_CMD exec -w /var/www/html node npx -y create-next-app@latest "$app_name" --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --no-git 2>&1; then
+            if $CONTAINER_CMD exec -w /var/www/html node npx -y create-next-app@latest "$app_name" --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --use-npm --yes --disable-git 2>&1; then
                 print_status "success" "Next.js application created"
                 return 0
             else
