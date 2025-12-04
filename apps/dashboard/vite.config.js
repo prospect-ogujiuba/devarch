@@ -17,8 +17,6 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: 'public',
     emptyOutDir: false, // Don't delete API folder and existing files
-    sourcemap: true,
   }
 })
