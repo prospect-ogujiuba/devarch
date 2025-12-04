@@ -34,9 +34,8 @@ PATHS=(
     
     # Container paths (inside PHP container)
     [container_root]="/var/www/html"
-    [container_site]=""  # Will be set to /var/www/html/$SITE_NAME  
-    [container_wp]=""    # Will be set to /var/www/html/$SITE_NAME/public
-    [container_content]=""  # Will be set to /var/www/html/$SITE_NAME/public/wp-content
+    [container_site]=""  # Will be set to /var/www/html/$SITE_NAME
+    [container_content]=""  # Will be set to /var/www/html/$SITE_NAME/wp-content
     [container_plugins]="" # Will be set to wp-content/plugins
     [container_mu_plugins]="" # Will be set to wp-content/mu-plugins
     [container_themes]=""  # Will be set to wp-content/themes
@@ -116,8 +115,8 @@ setup_site_paths() {
     # Set site-specific paths
     PATHS[host_site]="${PATHS[host_apps]}/$site_name"
     PATHS[container_site]="${PATHS[container_root]}/$site_name"
-    PATHS[container_wp]="${PATHS[container_site]}/public"
-    PATHS[container_content]="${PATHS[container_wp]}/wp-content"
+    PATHS[container_site]="${PATHS[container_site]}/public"
+    PATHS[container_content]="${PATHS[container_site]}/wp-content"
     PATHS[container_plugins]="${PATHS[container_content]}/plugins"
     PATHS[container_mu_plugins]="${PATHS[container_content]}/mu-plugins"
     PATHS[container_themes]="${PATHS[container_content]}/themes"
@@ -202,13 +201,13 @@ exec_php() {
 
 exec_php_wp() {
     local wp_command="$1"
-    local wp_path=$(get_path "container_wp")
+    local wp_path=$(get_path "container_site")
     exec_php "wp $wp_command --path='$wp_path' --allow-root"
 }
 
 exec_php_wp_quiet() {
     local wp_command="$1"
-    local wp_path=$(get_path "container_wp")
+    local wp_path=$(get_path "container_site")
     exec_php "wp $wp_command --path='$wp_path' --allow-root" 2>/dev/null || true
 }
 
@@ -416,7 +415,7 @@ validate_site_setup() {
 
 install_wordpress_core() {
     local container_site=$(get_path "container_site")
-    local container_wp=$(get_path "container_wp")
+    local container_site=$(get_path "container_site")
     
     print_status "step" "Installing WordPress core..."
     
@@ -427,7 +426,7 @@ install_wordpress_core() {
     
     # Download WordPress
     print_status "info" "Downloading WordPress..."
-    if ! exec_php "wp core download --path='$container_wp' --allow-root"; then
+    if ! exec_php "wp core download --path='$container_site' --allow-root"; then
         handle_error "Failed to download WordPress"
     fi
     
@@ -738,7 +737,7 @@ setup_basic_directories() {
 
 setup_galaxy_files() {
     local galaxy_type="$1"
-    local wp_dir=$(get_path "container_wp")
+    local wp_dir=$(get_path "container_site")
     local site_name="${SITE_CONFIG[name]}"
     
     print_status "info" "Setting up Galaxy files..."
@@ -868,8 +867,8 @@ show_completion_message() {
     echo ""
     
     echo "WordPress Commands:"
-    echo "  WP-CLI: $CONTAINER_CMD exec php wp --path='$(get_path container_wp)'"
-    echo "  Update plugins: $CONTAINER_CMD exec php wp plugin update --all --path='$(get_path container_wp)' --allow-root"
+    echo "  WP-CLI: $CONTAINER_CMD exec php wp --path='$(get_path container_site)'"
+    echo "  Update plugins: $CONTAINER_CMD exec php wp plugin update --all --path='$(get_path container_site)' --allow-root"
     echo "  Backup site: Use All-in-One WP Migration plugin"
     echo ""
 }
