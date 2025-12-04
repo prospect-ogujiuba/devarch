@@ -24,7 +24,7 @@ if ($baseName === 'apps' || $baseName === 'html') {
 }
 
 const SELF_DIR = 'dashboard';
-const EXCLUDE_DIRS = ['.', '..', '.idea', SELF_DIR, 'serverinfo'];
+const EXCLUDE_DIRS = ['.', '..', '.idea'];
 
 // Runtime port mappings (from detect-app-runtime.sh)
 const RUNTIME_PORTS = [
