@@ -6,25 +6,19 @@
 # Testing
 /coverage
 
-# Next.js build outputs - IMPORTANT
-/public/.next/
+# Next.js build outputs
+/.next/
 /out/
-.next
+
+# Production build (public/ contains the deployed static files)
+/public/*
+# Keep the public directory itself and any static assets you commit
+!public/.gitkeep
+!public/favicon.ico
+!public/robots.txt
+
+# Logs
 *.log
-
-# Keep public/ directory structure but ignore built files
-/public/*.html
-/public/_next/
-!public/api/
-
-# Production
-/build
-
-# Misc
-.DS_Store
-*.pem
-
-# Debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -39,3 +33,7 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Misc
+.DS_Store
+*.pem

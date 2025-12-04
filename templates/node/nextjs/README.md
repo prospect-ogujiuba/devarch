@@ -53,10 +53,11 @@ npm start
 
 ```
 nextjs-app/
-├── public/              # WEB ROOT - Build output goes here
-│   ├── .next/          # Next.js build directory
-│   ├── _next/          # Static assets
-│   └── *.html          # Exported HTML pages
+├── .next/              # Next.js build cache (gitignored)
+├── out/                # Static export output (gitignored)
+├── public/             # WEB ROOT - Final production files
+│   ├── _next/         # Static assets (copied from out/)
+│   └── *.html         # Exported HTML pages (copied from out/)
 ├── src/
 │   └── app/            # App Router
 │       ├── layout.jsx  # Root layout
@@ -64,17 +65,20 @@ nextjs-app/
 │       ├── globals.css # Global styles
 │       └── about/
 │           └── page.jsx
-├── next.config.js      # Next.js config (outputs to public/)
+├── next.config.js      # Next.js configuration
 └── package.json
 ```
 
 ## Important: Build Output Configuration
 
-The `next.config.js` is configured to output to `public/`:
+The build process works in two stages:
+
+1. **Next.js builds and exports** to `out/` directory
+2. **Build script copies** `out/` contents to `public/`
 
 ```javascript
+// next.config.js
 const nextConfig = {
-  distDir: 'public/.next',
   output: 'export', // Static export mode
   images: {
     unoptimized: true,
@@ -82,7 +86,16 @@ const nextConfig = {
 }
 ```
 
-**This is critical** for compatibility with DevArch's web server.
+```json
+// package.json
+{
+  "scripts": {
+    "build": "next build && rm -rf public/* && cp -r out/* public/"
+  }
+}
+```
+
+**This ensures** the `public/` directory serves as the web root without causing recursive build issues.
 
 ## Static Export vs Server-Side Rendering
 
@@ -182,11 +195,11 @@ Configure Nginx Proxy Manager:
 npm run build
 ```
 
-1. Builds Next.js application
-2. Pre-renders all pages
-3. Outputs to `public/.next/` and `public/`
-4. Creates static HTML files
-5. Ready to serve via web server
+1. Builds Next.js application to `.next/` directory
+2. Pre-renders all pages to `out/` directory
+3. Cleans `public/` directory
+4. Copies `out/` contents to `public/`
+5. Ready to serve via web server from `public/`
 
 ### Server-Side Rendering
 
@@ -228,12 +241,19 @@ npm test
 
 ### Build Not Appearing in public/
 
-Check `next.config.js` has:
+Check that:
 
-```javascript
-distDir: 'public/.next',
-output: 'export',
-```
+1. `next.config.js` has `output: 'export'`
+2. `package.json` build script includes the copy command:
+   ```json
+   "build": "next build && rm -rf public/* && cp -r out/* public/"
+   ```
+3. The `out/` directory exists after build
+4. No permission issues when copying to `public/`
+
+### Recursive Directory Error (ENAMETOOLONG)
+
+If you encounter this error, ensure you're **NOT** using `distDir: 'public/.next'` in `next.config.js`. The correct configuration uses the default `.next/` directory and copies from `out/` to `public/`.
 
 ### 404 on Navigation
 

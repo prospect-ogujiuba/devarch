@@ -1,13 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // CRITICAL: Build to public/ directory for DevArch compatibility
-  distDir: 'public/.next',
-
   // For static export (SPA mode)
+  // Next.js will build to .next/ directory and export static files to out/
+  // The build script will then copy out/ to public/ for web server
   output: 'export',
-
-  // Alternatively, for server-side rendering:
-  // output: 'standalone',
 
   // Image optimization (disable for static export)
   images: {
