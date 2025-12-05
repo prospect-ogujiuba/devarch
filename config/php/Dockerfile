@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     zsh \
     msmtp \
     msmtp-mta \
+    podman \
     libpng-dev \
     libjpeg-dev \
     libwebp-dev \
@@ -90,6 +91,10 @@ RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master
 
 # Set permissions for the container user
 RUN chown -R www-data:www-data /var/www/html
+
+# Add www-data to sudoers for podman socket access (read-only socket is safe)
+RUN echo "www-data ALL=(ALL) NOPASSWD: /usr/bin/podman" >> /etc/sudoers.d/www-data \
+    && chmod 0440 /etc/sudoers.d/www-data
 
 # Set the working directory
 WORKDIR /var/www/html
