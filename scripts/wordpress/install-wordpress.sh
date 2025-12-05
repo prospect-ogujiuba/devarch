@@ -115,7 +115,6 @@ setup_site_paths() {
     # Set site-specific paths
     PATHS[host_site]="${PATHS[host_apps]}/$site_name"
     PATHS[container_site]="${PATHS[container_root]}/$site_name"
-    PATHS[container_site]="${PATHS[container_site]}/public"
     PATHS[container_content]="${PATHS[container_site]}/wp-content"
     PATHS[container_plugins]="${PATHS[container_content]}/plugins"
     PATHS[container_mu_plugins]="${PATHS[container_content]}/mu-plugins"
