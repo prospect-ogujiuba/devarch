@@ -15,8 +15,6 @@ dist-ssr
 # Built files in public (these are generated)
 public/index.html
 public/assets/
-# But keep API folder
-!public/api/
 
 # Editor directories and files
 .vscode/*

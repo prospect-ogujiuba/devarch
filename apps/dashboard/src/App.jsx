@@ -11,9 +11,13 @@ import { EmptyState } from './components/EmptyState'
 import { useApps } from './hooks/useApps'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { useDebounce } from './hooks/useDebounce'
+import { Containers } from './pages/Containers'
 
 function App() {
   const { apps, stats, loading, error, lastUpdated, fetchApps } = useApps()
+
+  // Tab navigation state
+  const [activeTab, setActiveTab] = useLocalStorage('devarch-activeTab', 'apps')
 
   // UI State
   const [searchQuery, setSearchQuery] = useState('')
@@ -80,57 +84,65 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <Header
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
         lastUpdated={lastUpdated}
         onRefresh={handleRefresh}
         isRefreshing={loading && apps.length > 0}
       />
 
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
-        {/* Statistics */}
-        <StatsGrid stats={stats} />
+        {activeTab === 'apps' ? (
+          <>
+            {/* Statistics */}
+            <StatsGrid stats={stats} />
 
-        {/* Controls */}
-        <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
-          <div className="flex-1 max-w-xl">
-            <SearchBar
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search applications..."
+            {/* Controls */}
+            <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
+              <div className="flex-1 max-w-xl">
+                <SearchBar
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  placeholder="Search applications..."
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
+                <SortControls
+                  sortBy={sortBy}
+                  sortOrder={sortOrder}
+                  onSortChange={handleSortChange}
+                />
+              </div>
+            </div>
+
+            {/* Filters */}
+            <FilterBar
+              activeFilter={activeFilter}
+              onFilterChange={handleFilterChange}
             />
-          </div>
-          <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
-            <SortControls
-              sortBy={sortBy}
-              sortOrder={sortOrder}
-              onSortChange={handleSortChange}
-            />
-          </div>
-        </div>
 
-        {/* Filters */}
-        <FilterBar
-          activeFilter={activeFilter}
-          onFilterChange={handleFilterChange}
-        />
+            {/* Content */}
+            {loading && apps.length === 0 ? (
+              <div className="py-16">
+                <LoadingSpinner size="lg" />
+              </div>
+            ) : error ? (
+              <ErrorMessage error={error} onRetry={handleRefresh} />
+            ) : filteredApps.length === 0 ? (
+              <EmptyState filter={activeFilter} searchQuery={debouncedSearch} />
+            ) : (
+              <AppsGrid apps={filteredApps} />
+            )}
 
-        {/* Content */}
-        {loading && apps.length === 0 ? (
-          <div className="py-16">
-            <LoadingSpinner size="lg" />
-          </div>
-        ) : error ? (
-          <ErrorMessage error={error} onRetry={handleRefresh} />
-        ) : filteredApps.length === 0 ? (
-          <EmptyState filter={activeFilter} searchQuery={debouncedSearch} />
+            {/* Results count */}
+            {filteredApps.length > 0 && (
+              <div className="text-center text-sm text-slate-600 dark:text-slate-400 pt-4">
+                Showing {filteredApps.length} of {stats.total} applications
+              </div>
+            )}
+          </>
         ) : (
-          <AppsGrid apps={filteredApps} />
-        )}
-
-        {/* Results count */}
-        {filteredApps.length > 0 && (
-          <div className="text-center text-sm text-slate-600 dark:text-slate-400 pt-4">
-            Showing {filteredApps.length} of {stats.total} applications
-          </div>
+          <Containers />
         )}
       </main>
     </div>

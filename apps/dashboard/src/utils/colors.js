@@ -21,6 +21,17 @@ export const STATUS_COLORS = {
 }
 
 /**
+ * Container status color mappings
+ */
+export const CONTAINER_STATUS_COLORS = {
+  running: '#22c55e',
+  stopped: '#6b7280',
+  exited: '#ef4444',
+  paused: '#eab308',
+  unknown: '#cbd5e1',
+}
+
+/**
  * Get Tailwind color class for runtime badge
  */
 export function getRuntimeBgClass(runtime) {

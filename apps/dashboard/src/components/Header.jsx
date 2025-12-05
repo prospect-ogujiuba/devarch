@@ -1,17 +1,17 @@
 import { ThemeToggle } from './ThemeToggle'
 import { formatTime } from '../utils/formatters'
 
-export function Header({ lastUpdated, onRefresh, isRefreshing }) {
+export function Header({ activeTab, onTabChange, lastUpdated, onRefresh, isRefreshing }) {
   return (
     <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">
               DevArch Dashboard
             </h1>
             <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-              Application runtime detection and monitoring
+              Application runtime detection and container monitoring
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -44,6 +44,30 @@ export function Header({ lastUpdated, onRefresh, isRefreshing }) {
             <ThemeToggle />
           </div>
         </div>
+
+        {/* Tab navigation */}
+        <nav className="flex gap-2">
+          <button
+            onClick={() => onTabChange('apps')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'apps'
+                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+            }`}
+          >
+            Applications
+          </button>
+          <button
+            onClick={() => onTabChange('containers')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'containers'
+                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+            }`}
+          >
+            Containers
+          </button>
+        </nav>
       </div>
     </header>
   )

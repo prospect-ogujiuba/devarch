@@ -1,6 +1,6 @@
 import { formatRuntime } from '../utils/formatters'
 
-const FILTER_OPTIONS = [
+const DEFAULT_FILTER_OPTIONS = [
   { value: 'all', label: 'All Apps' },
   { value: 'php', label: formatRuntime('php') },
   { value: 'node', label: formatRuntime('node') },
@@ -9,10 +9,12 @@ const FILTER_OPTIONS = [
   { value: 'dotnet', label: formatRuntime('dotnet') },
 ]
 
-export function FilterBar({ activeFilter, onFilterChange }) {
+export function FilterBar({ activeFilter, onFilterChange, filters }) {
+  const filterOptions = filters || DEFAULT_FILTER_OPTIONS
+
   return (
     <div className="flex flex-wrap gap-2">
-      {FILTER_OPTIONS.map((option) => (
+      {filterOptions.map((option) => (
         <button
           key={option.value}
           onClick={() => onFilterChange(option.value)}
@@ -23,6 +25,9 @@ export function FilterBar({ activeFilter, onFilterChange }) {
           }`}
         >
           {option.label}
+          {option.count !== undefined && (
+            <span className="ml-2 opacity-60">({option.count})</span>
+          )}
         </button>
       ))}
     </div>
