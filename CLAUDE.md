@@ -21,36 +21,36 @@ The project uses Podman (with Docker fallback) and organizes services into modul
 
 ### Service Management
 
-The primary tool is `service-manager.sh` which orchestrates all services:
+The primary tool is the `devarch` command, a minimal transparent wrapper around podman-compose:
 
 ```bash
 # Individual service operations
-./scripts/service-manager.sh up <service> [--force]
-./scripts/service-manager.sh down <service> [--remove-volumes]
-./scripts/service-manager.sh restart <service>
-./scripts/service-manager.sh rebuild <service> [--no-cache]
-./scripts/service-manager.sh logs <service> [--follow] [--tail 100]
-./scripts/service-manager.sh status [service]
+devarch start <service>              # Start a service
+devarch stop <service>               # Stop a service
+devarch restart <service>            # Restart a service
+devarch logs <service> [-f]          # Show logs (use -f to follow)
+devarch exec <service> <command>     # Execute command in container
 
-# Bulk operations
-./scripts/service-manager.sh start-all [--parallel] [--wait-healthy]
-./scripts/service-manager.sh stop-all [--cleanup-orphans]
-./scripts/service-manager.sh list  # List all available services
-./scripts/service-manager.sh ps    # List running services
+# Convenience operations
+devarch start-db                     # Start all database services
+devarch start-backend                # Start all backend runtimes
+devarch start-all                    # Start all services in dependency order
+devarch stop-all                     # Stop all services
 
-# Start specific categories (respects dependency order)
-./scripts/service-manager.sh start database backend proxy
+# Utility commands
+devarch ps                           # List running DevArch containers
+devarch status                       # Show status of all services
+devarch list                         # List all available services
+devarch network                      # Show/inspect network
+devarch help                         # Show help
 
-# Start with exclusions
-./scripts/service-manager.sh start-all --exclude analytics,messaging
-
-# Start specific services only
-./scripts/service-manager.sh start --services postgres,redis,nginx-proxy-manager
-
-# Cleanup operations
-./scripts/service-manager.sh stop-all --cleanup-older-than 7d
-./scripts/service-manager.sh stop-all --cleanup-large-volumes --max-volume-size 500
+# Examples
+devarch start postgres               # Start PostgreSQL
+devarch logs nginx-proxy-manager -f  # Follow nginx logs
+devarch exec php bash                # Open bash in PHP container
 ```
+
+**Note:** Each command shows the exact podman operation being executed for transparency. See [docs/SERVICE_MANAGER.md](docs/SERVICE_MANAGER.md) for complete documentation.
 
 ### Database Setup
 
@@ -74,9 +74,9 @@ The primary tool is `service-manager.sh` which orchestrates all services:
 ./scripts/wordpress/install-wordpress.sh
 
 # WP-CLI commands (execute inside PHP container)
-podman exec -it php wp plugin list
-podman exec -it php wp theme list
-podman exec -it php wp db query "SELECT * FROM wp_posts LIMIT 5"
+devarch exec php wp plugin list
+devarch exec php wp theme list
+devarch exec php wp db query "SELECT * FROM wp_posts LIMIT 5"
 ```
 
 ### Host Management
@@ -93,7 +93,9 @@ podman exec -it php wp db query "SELECT * FROM wp_posts LIMIT 5"
 ./scripts/install.sh
 
 # 2. Start essential services
-./scripts/service-manager.sh start database proxy backend
+devarch start-db                     # Start all database services
+devarch start nginx-proxy-manager    # Start proxy
+devarch start-backend                # Start backend runtimes
 
 # 3. Initialize databases
 ./scripts/setup-databases.sh -a
@@ -102,7 +104,7 @@ podman exec -it php wp db query "SELECT * FROM wp_posts LIMIT 5"
 sudo ./scripts/update-hosts.sh
 
 # 5. Check everything is running
-./scripts/service-manager.sh status
+devarch status
 ```
 
 ## Architecture
@@ -262,42 +264,42 @@ app = Flask(__name__, static_folder='public')
 
 #### Creating New Applications
 
-Use the template system for standardized app creation:
+DevArch uses **JetBrains IDEs** for project creation (PHPStorm, WebStorm, PyCharm, GoLand, Rider).
+
+**General Workflow**:
+1. Open appropriate IDE (PHPStorm, WebStorm, PyCharm, GoLand, Rider)
+2. File → New Project → Select framework
+3. Location: `/home/fhcadmin/projects/devarch/apps/{app-name}`
+4. Follow IDE-specific guides in `docs/jetbrains/`
+
+**WordPress (Special Case)**:
+WordPress uses custom installation script for custom repos/templates:
 
 ```bash
-# Interactive mode (recommended)
-./scripts/create-app.sh
+# Interactive mode
+./scripts/wordpress/install-wordpress.sh
 
-# Non-interactive mode
-./scripts/create-app.sh --name my-app --template node/react-vite --port 8200
-
-# List available templates
-./scripts/create-app.sh --list
+# Non-interactive with preset
+./scripts/wordpress/install-wordpress.sh my-wp-site \
+  --preset clean \
+  --title "My WordPress Site"
 ```
 
-**Available Templates**:
-- **PHP**: laravel, wordpress, vanilla
-- **Node.js**: react-vite, nextjs, express, vue
-- **Python**: django, flask, fastapi
-- **Go**: gin, echo
-- **.NET**: aspnet-core
-
-#### Migrating Existing Apps
-
-For apps not following the `public/` standard:
-
-```bash
-# Automated migration
-./scripts/migrate-app-structure.sh apps/my-app
-
-# Or follow manual steps in MIGRATION_GUIDE.md
-```
+**Why JetBrains IDEs?**
+- Superior scaffolding and framework support
+- Auto-updated project templates
+- Full IDE integration (debugging, linting, testing)
+- Better than maintaining custom templates
 
 #### Documentation
 
-- **App Structure Standard**: `APP_STRUCTURE.md` - Complete structure specification
-- **Templates Guide**: `TEMPLATES.md` - Using and creating templates
-- **Migration Guide**: `MIGRATION_GUIDE.md` - Migrating existing applications
+- **App Structure Standard**: `docs/APP_STRUCTURE.md` - public/ directory requirement
+- **JetBrains IDE Guides**: `docs/jetbrains/` - Framework-specific setup
+  - PHPStorm: Laravel, WordPress integration
+  - WebStorm: React, Next.js, Vue
+  - PyCharm: Django, Flask, FastAPI
+  - GoLand: Go applications
+  - Rider: ASP.NET Core
 
 ### PHP Container Configuration
 
@@ -359,17 +361,17 @@ The PHP container (`/home/fhcadmin/projects/devarch/config/php/Dockerfile`) is e
 
 1. **Start database layer** (required first):
    ```bash
-   ./scripts/service-manager.sh start database
+   devarch start-db
    ```
 
 2. **Start proxy** (for routing):
    ```bash
-   ./scripts/service-manager.sh start proxy
+   devarch start nginx-proxy-manager
    ```
 
 3. **Start backend runtimes**:
    ```bash
-   ./scripts/service-manager.sh start backend
+   devarch start-backend
    ```
 
 4. **Initialize databases** (if needed):
@@ -379,7 +381,11 @@ The PHP container (`/home/fhcadmin/projects/devarch/config/php/Dockerfile`) is e
 
 5. **Optional: Start observability stack**:
    ```bash
-   ./scripts/service-manager.sh start exporters analytics
+   devarch start node-exporter
+   devarch start postgres-exporter
+   devarch start redis-exporter
+   devarch start prometheus
+   devarch start grafana
    ```
 
 ### Accessing Services
@@ -425,19 +431,21 @@ This port allocation strategy ensures all backend services can run together with
 
 ```bash
 # Check if service is running
-./scripts/service-manager.sh status <service>
+devarch status
 
 # View logs
-./scripts/service-manager.sh logs <service> --follow
+devarch logs <service> -f
 
 # Restart after config changes
-./scripts/service-manager.sh restart <service>
+devarch restart <service>
 
-# Rebuild after Dockerfile changes
-./scripts/service-manager.sh rebuild <service> --no-cache
+# Rebuild after Dockerfile changes (use podman-compose directly)
+podman-compose -f compose/<category>/<service>.yml down
+podman-compose -f compose/<category>/<service>.yml build --no-cache
+podman-compose -f compose/<category>/<service>.yml up -d
 
 # Access container shell
-podman exec -it <service> bash
+devarch exec <service> bash
 ```
 
 ## Important Considerations
@@ -447,14 +455,15 @@ podman exec -it <service> bash
 - The **database** category must always start before other services that need data persistence
 - **Exporters** require their corresponding services to be running (e.g., mysql-exporter needs mysql)
 - **Analytics** services (Grafana) need exporters and Prometheus to be running for data
-- Use `--wait-healthy` flag with start-all to ensure services are fully initialized before starting dependents
+- `devarch start-all` handles dependency order automatically, but individual commands do not
+- See [docs/SERVICE_MANAGER.md](docs/SERVICE_MANAGER.md) for detailed startup order recommendations
 
 ### Volume Persistence
 
 - All databases use **named volumes** for data persistence (e.g., `mariadb_data`, `postgres_data`)
 - Application code uses **bind mounts** to `/home/fhcadmin/projects/devarch/apps/`
-- Volumes are preserved by default when stopping services
-- Use `--remove-volumes` flag to delete volumes when needed
+- Volumes are preserved when stopping services (use podman commands directly to manage volumes)
+- To remove volumes: `podman volume rm <volume-name>` or `podman volume prune`
 
 ### Container Runtime Detection
 
@@ -464,25 +473,11 @@ The system automatically detects your container runtime setup:
 - Automatically determines if sudo is needed based on user groups
 - You generally don't need to think about this - it just works
 
-### Parallel vs Sequential Startup
-
-```bash
-# Sequential startup (default) - safer, respects dependencies
-./scripts/service-manager.sh start-all
-
-# Parallel startup - faster but may cause issues if dependencies aren't met
-./scripts/service-manager.sh start-all --parallel
-
-# Best practice: parallel within categories
-./scripts/service-manager.sh start database --parallel
-./scripts/service-manager.sh start backend --parallel
-```
-
 ### Troubleshooting
 
 If a service fails to start:
-1. Check logs: `./scripts/service-manager.sh logs <service>`
-2. Verify dependencies are running: `./scripts/service-manager.sh status`
-3. Check if the network exists: `podman network ls | grep microservices-net`
-4. Rebuild the service: `./scripts/service-manager.sh rebuild <service>`
+1. Check logs: `devarch logs <service>`
+2. Verify dependencies are running: `devarch status`
+3. Check if the network exists: `devarch network`
+4. Rebuild the service: Use podman-compose directly (see docs/SERVICE_MANAGER.md)
 5. Check compose file syntax: `podman-compose -f compose/<category>/<service>.yml config`

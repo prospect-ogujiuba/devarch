@@ -1,77 +1,87 @@
-# Quick Start: DevArch Application Templates
+# Quick Start: Creating DevArch Applications
 
-**Quick reference for creating new applications in DevArch**
+**Quick reference for creating new applications in DevArch using JetBrains IDEs**
 
 ## TL;DR
 
+**Use JetBrains IDEs for project creation**:
+- PHPStorm (Laravel, WordPress)
+- WebStorm (React, Next.js, Vue, Express)
+- PyCharm (Django, Flask, FastAPI)
+- GoLand (Go applications)
+- Rider (ASP.NET Core)
+
+**WordPress only**: Use custom script for custom repos/templates
 ```bash
-# Create a new app (interactive)
-./scripts/create-app.sh
-
-# Create a new app (non-interactive)
-./scripts/create-app.sh --name my-app --template node/react-vite --port 8200
-
-# List available templates
-./scripts/create-app.sh --list
+./scripts/wordpress/install-wordpress.sh
 ```
 
-## Available Templates
+## Creating Apps with JetBrains IDEs
 
-### Node.js (Ports 8200-8299)
+### WebStorm (Node.js - Ports 8200-8299)
 
+**React + Vite**:
+1. File → New Project → React
+2. Location: `/home/fhcadmin/projects/devarch/apps/my-spa`
+3. Template: Vite
+4. See: `docs/jetbrains/webstorm-react.md`
+
+**Next.js**:
+1. File → New Project → Next.js
+2. Location: `/home/fhcadmin/projects/devarch/apps/my-nextapp`
+3. See: `docs/jetbrains/webstorm-nextjs.md`
+
+**Express**:
+1. File → New Project → Express App
+2. Location: `/home/fhcadmin/projects/devarch/apps/my-api`
+3. See: `docs/jetbrains/webstorm-express.md`
+
+### PHPStorm (PHP - Ports 8100-8199)
+
+**Laravel**:
+1. File → New Project → Laravel
+2. Location: `/home/fhcadmin/projects/devarch/apps/my-laravel`
+3. See: `docs/jetbrains/phpstorm-laravel.md`
+
+**WordPress** (uses custom script):
 ```bash
-# React + Vite (SPA, hot reload, modern tooling)
-./scripts/create-app.sh --name my-spa --template node/react-vite
-
-# Next.js (SSR, static export, file-based routing)
-./scripts/create-app.sh --name my-nextapp --template node/nextjs
-
-# Express (API server, static file serving)
-./scripts/create-app.sh --name my-api --template node/express
+./scripts/wordpress/install-wordpress.sh my-blog \
+  --preset clean \
+  --title "My Blog"
 ```
+See: `docs/jetbrains/phpstorm-wordpress.md`
 
-### PHP (Ports 8100-8199)
+### PyCharm (Python - Ports 8300-8399)
 
-```bash
-# Laravel (full-stack PHP framework)
-./scripts/create-app.sh --name my-laravel --template php/laravel
+**Django**:
+1. File → New Project → Django
+2. Location: `/home/fhcadmin/projects/devarch/apps/my-django`
+3. See: `docs/jetbrains/pycharm-django.md`
 
-# WordPress (CMS)
-./scripts/create-app.sh --name my-blog --template php/wordpress
+**Flask**:
+1. File → New Project → Flask
+2. Location: `/home/fhcadmin/projects/devarch/apps/my-flask`
+3. See: `docs/jetbrains/pycharm-flask.md`
 
-# Vanilla PHP (plain PHP)
-./scripts/create-app.sh --name my-php --template php/vanilla
-```
+**FastAPI**:
+1. File → New Project → FastAPI
+2. Location: `/home/fhcadmin/projects/devarch/apps/my-fastapi`
+3. See: `docs/jetbrains/pycharm-fastapi.md`
 
-### Python (Ports 8300-8399)
+### GoLand (Go - Ports 8400-8499)
 
-```bash
-# Django (full-stack Python framework)
-./scripts/create-app.sh --name my-django --template python/django
+**Go Application**:
+1. File → New Project → Go
+2. Location: `/home/fhcadmin/projects/devarch/apps/my-goapp`
+3. Add Gin/Echo manually via `go get`
+4. See: `docs/jetbrains/goland-gin.md`
 
-# Flask (lightweight Python web framework)
-./scripts/create-app.sh --name my-flask --template python/flask
+### Rider (.NET - Ports 8600-8699)
 
-# FastAPI (modern Python API framework)
-./scripts/create-app.sh --name my-fastapi --template python/fastapi
-```
-
-### Go (Ports 8400-8499)
-
-```bash
-# Gin (high-performance HTTP framework)
-./scripts/create-app.sh --name my-gin --template go/gin
-
-# Echo (minimalist framework)
-./scripts/create-app.sh --name my-echo --template go/echo
-```
-
-### .NET (Ports 8600-8699)
-
-```bash
-# ASP.NET Core (enterprise framework)
-./scripts/create-app.sh --name my-dotnet --template dotnet/aspnet-core
-```
+**ASP.NET Core**:
+1. File → New Solution → ASP.NET Core Web Application
+2. Location: `/home/fhcadmin/projects/devarch/apps/my-dotnet`
+3. See: `docs/jetbrains/rider-aspnet.md`
 
 ## After Creating an App
 
@@ -197,11 +207,8 @@ sudo ./scripts/update-hosts.sh
 ## Common Commands
 
 ```bash
-# List all templates
-./scripts/create-app.sh --list
-
-# Get help
-./scripts/create-app.sh --help
+# WordPress installation (only framework needing custom script)
+./scripts/wordpress/install-wordpress.sh --help
 
 # Check backend services
 ./scripts/service-manager.sh status backend
@@ -248,48 +255,65 @@ lsof -i :8200
 
 ## Documentation
 
-- **Complete Structure Guide**: `APP_STRUCTURE.md`
-- **Template Details**: `TEMPLATES.md`
-- **Migration Guide**: `MIGRATION_GUIDE.md`
-- **Implementation Summary**: `IMPLEMENTATION_SUMMARY.md`
+- **Complete Structure Guide**: `docs/APP_STRUCTURE.md`
+- **JetBrains IDE Guides**: `docs/jetbrains/`
+- **DevArch Architecture**: `CLAUDE.md`
+- **Service Management**: `docs/SERVICE_MANAGER.md`
 
 ## Need Help?
 
-1. Check template README: `templates/{category}/{framework}/README.md`
-2. Review app structure: `APP_STRUCTURE.md`
+1. Check JetBrains guide: `docs/jetbrains/{ide}-{framework}.md`
+2. Review app structure: `docs/APP_STRUCTURE.md`
 3. Check DevArch docs: `CLAUDE.md`
+4. WordPress: `scripts/wordpress/install-wordpress.sh --help`
 
 ## Examples
 
-### Create React Dashboard
+### Create React Dashboard (WebStorm)
+
+1. WebStorm → File → New Project → React
+2. Location: `/home/fhcadmin/projects/devarch/apps/dashboard`
+3. Template: Vite
+4. Navigate to project:
+   ```bash
+   cd apps/dashboard
+   npm install
+   npm run dev
+   # Access: http://localhost:5173 (dev)
+   ```
+
+### Create Express API (WebStorm)
+
+1. WebStorm → File → New Project → Express App
+2. Location: `/home/fhcadmin/projects/devarch/apps/api`
+3. Navigate to project:
+   ```bash
+   cd apps/api
+   npm install
+   npm start
+   # Access: http://localhost:8201
+   ```
+
+### Create Django App (PyCharm)
+
+1. PyCharm → File → New Project → Django
+2. Location: `/home/fhcadmin/projects/devarch/apps/admin`
+3. Navigate to project:
+   ```bash
+   cd apps/admin
+   pip install -r requirements.txt
+   python manage.py migrate
+   python manage.py runserver 0.0.0.0:8300
+   # Access: http://localhost:8300
+   ```
+
+### Create WordPress (Custom Script)
 
 ```bash
-./scripts/create-app.sh --name dashboard --template node/react-vite --port 8200
-cd apps/dashboard
-npm install
-npm run dev
-# Access: http://localhost:5173 (dev) or http://localhost:8200 (prod)
-```
-
-### Create Express API
-
-```bash
-./scripts/create-app.sh --name api --template node/express --port 8201
-cd apps/api
-npm install
-npm start
-# Access: http://localhost:8201
-```
-
-### Create Django App
-
-```bash
-./scripts/create-app.sh --name admin --template python/django --port 8300
-cd apps/admin
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver 0.0.0.0:8300
-# Access: http://localhost:8300
+./scripts/wordpress/install-wordpress.sh mysite \
+  --preset clean \
+  --title "My WordPress Site"
+# Access: https://mysite.test
 ```
 
 ---

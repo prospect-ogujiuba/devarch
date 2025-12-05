@@ -467,36 +467,47 @@ PORT=8201 npm run dev
 
 ## Creating New Applications
 
-### Using Templates (Recommended)
+### Using JetBrains IDEs (Recommended)
 
-1. **List available templates**:
-   ```bash
-   ./scripts/create-app.sh --list
-   ```
+DevArch leverages JetBrains IDEs for project creation as they provide superior scaffolding, tooling integration, and framework support.
 
-2. **Create app interactively**:
-   ```bash
-   ./scripts/create-app.sh
-   ```
+#### General Workflow
 
-3. **Create app non-interactively**:
-   ```bash
-   ./scripts/create-app.sh --name my-app --template node/react-vite --port 8200
-   ```
+1. **Open appropriate IDE** (PHPStorm, WebStorm, PyCharm, GoLand, Rider)
 
-4. **Navigate and build**:
-   ```bash
-   cd apps/my-app
-   npm install
-   npm run build
-   ```
+2. **Create New Project**:
+   - File → New Project
+   - Select framework (React, Next.js, Laravel, Django, etc.)
+   - **Location**: `/home/fhcadmin/projects/devarch/apps/{app-name}`
+   - Configure framework-specific options
 
-5. **Verify structure**:
-   ```bash
-   ls -la public/  # Should contain built files
-   ```
+3. **Verify public/ structure**:
+   - Most modern frameworks create correct structure
+   - For manual adjustments, see framework-specific guides below
 
-### Manual Creation
+4. **Follow IDE-specific guides**:
+   - See `docs/jetbrains/` for detailed framework setup
+   - PHPStorm: `phpstorm-laravel.md`, `phpstorm-wordpress.md`
+   - WebStorm: `webstorm-react.md`, `webstorm-nextjs.md`
+   - PyCharm: `pycharm-django.md`, `pycharm-flask.md`
+   - GoLand: `goland-gin.md`
+   - Rider: `rider-aspnet.md`
+
+#### WordPress (Special Case)
+
+WordPress uses custom installation script due to custom repos/templates:
+
+```bash
+./scripts/wordpress/install-wordpress.sh my-wp-site \
+  --preset clean \
+  --title "My WordPress Site"
+```
+
+See `docs/jetbrains/phpstorm-wordpress.md` for PHPStorm + WordPress integration.
+
+### Manual Creation (Advanced)
+
+Only use manual creation if JetBrains IDE doesn't support your framework:
 
 1. **Create directory**:
    ```bash
@@ -535,13 +546,7 @@ PORT=8201 npm run dev
 
 ## Migrating Existing Applications
 
-If you have an existing app that doesn't follow the `public/` standard:
-
-### Quick Migration
-
-```bash
-./scripts/migrate-app-structure.sh apps/my-app
-```
+If you have an existing app that doesn't follow the `public/` standard, update build configuration manually:
 
 ### Manual Migration
 
@@ -788,19 +793,20 @@ curl https://my-app.test
 
 ## Additional Resources
 
-- **Templates**: See `templates/README.md` for available templates
-- **Migration Guide**: See `MIGRATION_GUIDE.md` for detailed migration steps
+- **JetBrains IDE Guides**: See `docs/jetbrains/` for framework-specific setup
+- **WordPress Installation**: See `scripts/wordpress/install-wordpress.sh` for custom WordPress setup
 - **DevArch Architecture**: See `CLAUDE.md` for overall system architecture
-- **Troubleshooting**: See specific framework documentation in `templates/{category}/{framework}/`
+- **Service Management**: See `scripts/service-manager.sh` for container operations
 
 ## Version History
 
+- **1.1.0** (2025-12-05): Migrated to JetBrains IDE-first workflow
 - **1.0.0** (2025-12-03): Initial standardization document
 
 ## Support
 
 For issues or questions:
 1. Check this document for framework-specific configuration
-2. Review template README: `templates/{category}/{framework}/README.md`
-3. Check migration guide: `MIGRATION_GUIDE.md`
-4. Review DevArch architecture: `CLAUDE.md`
+2. Review JetBrains guides: `docs/jetbrains/{ide}-{framework}.md`
+3. Review DevArch architecture: `CLAUDE.md`
+4. For WordPress: See `scripts/wordpress/install-wordpress.sh --help`
