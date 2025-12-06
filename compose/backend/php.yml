@@ -18,6 +18,10 @@ services:
       - ../../config/php/php.ini:/usr/local/etc/php/php.ini:ro
       # Mount Podman socket for live container data in dashboard
       - /run/user/1000/podman/podman.sock:/run/podman/podman.sock:ro
+      # Mount nginx config for domain parsing in dashboard
+      - ../../config/nginx/custom/http.conf:/var/www/config/nginx/custom/http.conf:ro
+      # Mount compose files for port parsing in dashboard
+      - ../../compose:/var/www/compose:ro
     environment:
       # Configure Podman to use mounted socket
       - CONTAINER_HOST=unix:///run/podman/podman.sock
