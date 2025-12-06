@@ -4,36 +4,8 @@ networks:
 
 volumes:
   kafka_data:
-  zookeeper_data:
-  zookeeper_logs:
 
 services:
-  zookeeper:
-    container_name: zookeeper
-    image: confluentinc/cp-zookeeper:latest
-    restart: unless-stopped
-    env_file: ../../.env
-    environment:
-      - ZOOKEEPER_CLIENT_PORT=2181
-      - ZOOKEEPER_TICK_TIME=2000
-      - ZOOKEEPER_SYNC_LIMIT=2
-      - ZOOKEEPER_INIT_LIMIT=5
-      - ZOOKEEPER_MAX_CLIENT_CNXNS=60
-      - ZOOKEEPER_AUTOPURGE_SNAP_RETAIN_COUNT=3
-      - ZOOKEEPER_AUTOPURGE_PURGE_INTERVAL=24
-    ports:
-      - "127.0.0.1:2181:2181"
-    volumes:
-      - zookeeper_data:/var/lib/zookeeper/data
-      - zookeeper_logs:/var/lib/zookeeper/log
-    networks:
-      - microservices-net
-    healthcheck:
-      test: ["CMD", "echo", "ruok", "|", "nc", "localhost", "2181"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   kafka:
     container_name: kafka
     image: confluentinc/cp-kafka:latest
@@ -67,32 +39,8 @@ services:
       - ../../config/kafka/server.properties:/etc/kafka/server.properties:ro
     networks:
       - microservices-net
-    depends_on:
-      - zookeeper
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
       interval: 30s
       timeout: 10s
       retries: 3
-
-  kafka-ui:
-    container_name: kafka-ui
-    image: provectuslabs/kafka-ui:latest
-    restart: unless-stopped
-    env_file: ../../.env
-    environment:
-      - KAFKA_CLUSTERS_0_NAME=local
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
-      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
-      - KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL=PLAINTEXT
-      - DYNAMIC_CONFIG_ENABLED=true
-      - AUTH_TYPE=LOGIN_FORM
-      - SPRING_SECURITY_USER_NAME=${ADMIN_USER}
-      - SPRING_SECURITY_USER_PASSWORD=${ADMIN_PASSWORD}
-    ports:
-      - "127.0.0.1:8091:8080"
-    networks:
-      - microservices-net
-    depends_on:
-      - kafka
-      - zookeeper
