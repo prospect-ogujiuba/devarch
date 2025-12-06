@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # DevArch Service Manager - Minimal transparent wrapper for podman-compose
 
 set -e  # Exit on error
