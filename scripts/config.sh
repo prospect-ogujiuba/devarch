@@ -15,6 +15,8 @@
 # Node:   8200-8299 (main: 8200, secondary: 8201, vite: 8202, graphql: 8203, debug: 9229)
 # Python: 8300-8399 (main: 8300, flask: 8301, jupyter: 8302, flower: 8303)
 # Go:     8400-8499 (main: 8400, metrics: 8401, debug: 8402, pprof: 8403)
+# .NET:   8600-8699 (main: 8600, secondary: 8601, debug: 8602, hot-reload: 8603)
+# Rust:   8700-8799 (main: 8700, secondary: 8701, debug: 8702, metrics: 8703)
 #
 # This allocation ensures all backend services can run simultaneously without
 # port conflicts, supporting the microservices architecture effectively.
@@ -49,7 +51,7 @@ export CONTAINER_RUNTIME="podman"  # Change to "docker" if using Docker instead
 typeset -A SERVICE_CATEGORIES
 SERVICE_CATEGORIES=(
     [analytics]="matomo.yml prometheus.yml grafana.yml elasticsearch.yml kibana.yml logstash.yml otel-collector.yml"
-    [backend]="go.yml php.yml node.yml python.yml dotnet.yml"
+    [backend]="go.yml php.yml node.yml python.yml dotnet.yml rust.yml"
     [database]="mariadb.yml mysql.yml postgres.yml mongodb.yml redis.yml mssql.yml memcached.yml"
     [dbms]="adminer.yml phpmyadmin.yml mongo-express.yml metabase.yml nocodb.yml pgadmin.yml redis-commander.yml drawdb.yml cloudbeaver.yml"
     [exporters]="blackbox-exporter.yml mongodb-exporter.yml mysqld-exporter.yml node-exporter.yml postgres-exporter.yml redis-exporter.yml kafka-exporter.yml memcached-exporter.yml rabbitmq-exporter.yml"
