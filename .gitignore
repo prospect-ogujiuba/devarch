@@ -7,6 +7,7 @@ apps/**
 !apps/dashboard/
 context/
 backup/
+prompts/
 # Other ignores
 .env
 .DS_Store
