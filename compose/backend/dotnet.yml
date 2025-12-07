@@ -58,7 +58,7 @@ services:
     networks:
       - microservices-net
 
-    command: /bin/sh -c "while true; do sleep 1000; done"
+    command: /bin/bash /scripts/dotnet-apps-launcher.sh
 
     healthcheck:
       test: ["CMD", "dotnet", "--version"]

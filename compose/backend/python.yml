@@ -38,10 +38,10 @@ services:
       - ../../apps:/app
       - ../../scripts:/scripts
       - ../../config/python/requirements.txt:/requirements.txt:ro
-      - ../../config/supervisord/:/etc/supervisor/conf.d
+      - ../../config/supervisord/supervisord.conf:/etc/supervisor/supervisord.conf:ro
     networks:
       - microservices-net
-    command: /bin/sh -c "while true; do sleep 1000; done"
+    command: /bin/bash /scripts/python-auto-discover.sh
     healthcheck:
       test: [ "CMD", "python", "-c", "import sys; sys.exit(0)" ]
       interval: 30s

@@ -40,7 +40,7 @@ services:
       - ../../scripts:/scripts
     networks:
       - microservices-net
-    command: /bin/sh -c "while true; do sleep 1000; done"
+    command: /bin/bash /scripts/go-apps-launcher.sh
     healthcheck:
       test: ["CMD", "go", "version"]
       interval: 30s
