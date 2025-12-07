@@ -12,6 +12,71 @@ FOLDERS_TO_PROCESS=(
 # Output directory
 CONTEXT_DIR="./context"
 
+# Defaults for optional actions
+APPLY_HOSTS=false
+# Prefer the correct Windows hosts path; fallback will be handled at runtime
+DEFAULT_WINDOWS_HOSTS_TARGET="/mnt/c/Windows/System32/drivers/etc/hosts"
+HOSTS_TARGET="${HOSTS_TARGET:-$DEFAULT_WINDOWS_HOSTS_TARGET}"
+
+print_usage() {
+    cat <<'USAGE'
+Usage: scripts/generate-context.sh [options]
+
+Options:
+  --apply-hosts                After generating context/hosts.txt, apply it to the Windows hosts file (requires sudo).
+  --hosts-target=<path>        Override the target hosts path (default: /mnt/c/Windows/System32/drivers/etc/hosts).
+  -h, --help                   Show this help.
+
+Notes:
+  - On Windows via WSL, the typical hosts file is at /mnt/c/Windows/System32/drivers/etc/hosts
+USAGE
+}
+
+# Apply generated hosts to Windows hosts file (WSL)
+apply_hosts_to_windows() {
+    local source_file="$CONTEXT_DIR/hosts.txt"
+    local target_file="$HOSTS_TARGET"
+
+    # If the default path doesn't exist, try historical/alternate path without etc
+    if [[ ! -e "$target_file" ]] && [[ "$HOSTS_TARGET" == "$DEFAULT_WINDOWS_HOSTS_TARGET" ]]; then
+        local alt="/mnt/c/Windows/System32/drivers/hosts"
+        if [[ -e "$alt" ]]; then
+            target_file="$alt"
+        fi
+    fi
+
+    if [[ ! -f "$source_file" ]]; then
+        echo "Error: $source_file not found."
+        return 1
+    fi
+
+    # Create a backup if target exists
+    if [[ -f "$target_file" ]]; then
+        local backup="${target_file}.bak.$(date +%Y%m%d%H%M%S)"
+        echo "Backing up existing hosts to: $backup"
+        sudo cp "$target_file" "$backup" || {
+            echo "Warning: could not create backup of $target_file";
+        }
+    fi
+
+    echo "Applying $source_file -> $target_file (requires sudo)"
+    # Use tee to handle permissions and preserve content exactly
+    # Using printf to avoid issues with cat and redirection permissions
+    if sudo sh -c "cat '$source_file' > '$target_file'"; then
+        echo "Hosts file updated: $target_file"
+        return 0
+    else
+        echo "Attempt with direct redirection failed, falling back to tee..."
+        if cat "$source_file" | sudo tee "$target_file" >/dev/null; then
+            echo "Hosts file updated: $target_file"
+            return 0
+        else
+            echo "Error: Failed to update hosts file at $target_file"
+            return 1
+        fi
+    fi
+}
+
 # Helper function to check if file is likely text/readable
 is_text_file() {
     local file="$1"
@@ -181,6 +246,24 @@ process_folder() {
 
 # Main function
 main() {
+    # Parse args
+    for arg in "$@"; do
+        case "$arg" in
+            --apply-hosts)
+                APPLY_HOSTS=true
+                shift
+                ;;
+            --hosts-target=*)
+                HOSTS_TARGET="${arg#*=}"
+                shift
+                ;;
+            -h|--help)
+                print_usage
+                return 0
+                ;;
+        esac
+    done
+
     local project_name=$(basename "$(pwd)")
     
     echo "Smart Context Sync for: $project_name"
@@ -197,6 +280,13 @@ main() {
     
     # Generate hosts file entries
     generate_hosts_file
+
+    # Optionally apply to Windows hosts file
+    if [[ "$APPLY_HOSTS" == true ]]; then
+        apply_hosts_to_windows || {
+            echo "Failed to apply hosts file. You may need to run this script with sudo inside WSL."
+        }
+    fi
     
     # Create master index file
     local index_file="$CONTEXT_DIR/index.txt"
