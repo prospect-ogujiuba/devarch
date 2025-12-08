@@ -11,6 +11,9 @@ services:
     build:
       context: ../../config/python
       dockerfile: Dockerfile
+      args:
+        MY_UID: ${MY_UID:-1000}
+        MY_GID: ${MY_GID:-1000}
     restart: unless-stopped
     env_file: ../../.env
     environment:

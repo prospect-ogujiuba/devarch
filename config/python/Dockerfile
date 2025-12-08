@@ -1,6 +1,10 @@
 # Python 3.12 with comprehensive development tools
 FROM python:3.12-slim-bookworm
 
+# Build arguments for user/group ID matching
+ARG MY_UID=1000
+ARG MY_GID=1000
+
 # Base environment
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -64,6 +68,9 @@ RUN python -m venv "$VIRTUAL_ENV"
 # Install Poetry into the (system) Python – fine, it drops binaries into /opt/poetry/bin
 RUN curl -sSL https://install.python-poetry.org | python3 -
 
+# Install UV package manager (10-100x faster than pip)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
 # 🔹 All pip installs from here are inside the venv
 RUN pip install --upgrade pip setuptools wheel && \
     pip install \
@@ -116,8 +123,9 @@ RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master
 # Create app directory
 WORKDIR /app
 
-# Create a non-root user
-RUN useradd -m -s /bin/zsh python && \
+# Create a non-root user with matching UID/GID
+RUN groupadd -g ${MY_GID} python && \
+    useradd -m -u ${MY_UID} -g python -s /bin/zsh python && \
     echo "python ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     chown -R python:python /app
 

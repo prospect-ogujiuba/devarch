@@ -40,6 +40,7 @@ for app_dir in "$APPS_DIR"/*/; do
     has_requirements=false
     has_manage_py=false
     has_pyproject=false
+    has_uv_lock=false
 
     if [ -f "$app_dir/requirements.txt" ]; then
         has_requirements=true
@@ -53,17 +54,24 @@ for app_dir in "$APPS_DIR"/*/; do
         has_pyproject=true
     fi
 
+    if [ -f "$app_dir/uv.lock" ]; then
+        has_uv_lock=true
+    fi
+
     # Must have at least one Python marker
-    if [ "$has_requirements" = false ] && [ "$has_manage_py" = false ] && [ "$has_pyproject" = false ]; then
+    if [ "$has_requirements" = false ] && [ "$has_manage_py" = false ] && [ "$has_pyproject" = false ] && [ "$has_uv_lock" = false ]; then
         continue
     fi
 
     echo "📦 Found Python app: $app_name"
     echo "   Location: $app_dir"
 
-    # Install dependencies if requirements.txt exists
-    if [ "$has_requirements" = true ]; then
-        echo "   📥 Installing dependencies from requirements.txt..."
+    # Install dependencies (prefer UV if available)
+    if [ "$has_uv_lock" = true ]; then
+        echo "   📥 Installing dependencies with UV (from uv.lock)..."
+        cd "$app_dir" && uv pip install --quiet -r requirements.txt 2>&1 | grep -E '(Successfully|already|ERROR|Resolved)' || true
+    elif [ "$has_requirements" = true ]; then
+        echo "   📥 Installing dependencies with pip (from requirements.txt)..."
         pip install --quiet -r "$app_dir/requirements.txt" 2>&1 | grep -E '(Successfully|already|ERROR)' || true
     fi
 
