@@ -1,7 +1,18 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { getContainerStatusBgClass, getCategoryBgClass, formatContainerStatus, formatCategory, getHealthStatusBgClass, formatHealthStatus, getResourceBarColor } from '../utils/containers'
 
 export function ContainerDetailModal({ container, onClose }) {
+  const [copiedText, setCopiedText] = useState(null)
+
+  const handleCopy = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedText(text)
+      setTimeout(() => setCopiedText(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
   // Close modal on escape key
   useEffect(() => {
     const handleEscape = (e) => {
@@ -208,15 +219,31 @@ export function ContainerDetailModal({ container, onClose }) {
               </label>
               <div className="mt-2 space-y-2">
                 {container.testDomains.map((domain, index) => (
-                  <a
-                    key={index}
-                    href={`https://${domain}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block px-4 py-2 bg-slate-100 dark:bg-slate-900 text-blue-600 dark:text-blue-400 hover:underline font-mono text-sm rounded-lg"
-                  >
-                    {domain}
-                  </a>
+                  <div key={index} className="flex items-center gap-2">
+                    <a
+                      href={`https://${domain}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-900 text-blue-600 dark:text-blue-400 hover:underline font-mono text-sm rounded-lg"
+                    >
+                      {domain}
+                    </a>
+                    <button
+                      onClick={() => handleCopy(`https://${domain}`)}
+                      className="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                      title="Copy URL"
+                    >
+                      {copiedText === `https://${domain}` ? (
+                        <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -230,15 +257,31 @@ export function ContainerDetailModal({ container, onClose }) {
               </label>
               <div className="mt-2 space-y-2">
                 {container.localhostUrls.map((url, index) => (
-                  <a
-                    key={index}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block px-4 py-2 bg-slate-100 dark:bg-slate-900 text-blue-600 dark:text-blue-400 hover:underline font-mono text-sm rounded-lg"
-                  >
-                    {url}
-                  </a>
+                  <div key={index} className="flex items-center gap-2">
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-900 text-blue-600 dark:text-blue-400 hover:underline font-mono text-sm rounded-lg"
+                    >
+                      {url}
+                    </a>
+                    <button
+                      onClick={() => handleCopy(url)}
+                      className="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                      title="Copy URL"
+                    >
+                      {copiedText === url ? (
+                        <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>

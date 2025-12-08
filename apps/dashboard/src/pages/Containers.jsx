@@ -1,61 +1,74 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { ContainerStatsGrid } from '../components/StatCard'
 import { SearchBar } from '../components/SearchBar'
 import { FilterBar } from '../components/FilterBar'
 import { SortControls } from '../components/SortControls'
 import { ContainersGrid } from '../components/ContainersGrid'
+import { BulkActionsToolbar } from '../components/BulkActionsToolbar'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { ErrorMessage } from '../components/ErrorMessage'
 import { EmptyState } from '../components/EmptyState'
 import { useContainers } from '../hooks/useContainers'
+import { useBulkControl } from '../hooks/useBulkControl'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useDebounce } from '../hooks/useDebounce'
 
 export function Containers() {
   const { containers, stats, loading, error, fetchContainers } = useContainers()
+  const { bulkAction } = useBulkControl()
 
   // UI State
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeFilter, setActiveFilter] = useLocalStorage('devarch-container-filter', 'all')
-  const [sortBy, setSortBy] = useLocalStorage('devarch-container-sortBy', 'name')
-  const [sortOrder, setSortOrder] = useLocalStorage('devarch-container-sortOrder', 'asc')
+  const [activeFilter, setActiveFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('name')
+  const [sortOrder, setSortOrder] = useState('asc')
+
+  // Bulk selection state
+  const [selectedContainers, setSelectedContainers] = useState(new Set())
+
+  console.log('[RENDER] activeFilter:', activeFilter)
 
   // Debounce search to avoid excessive filtering
   const debouncedSearch = useDebounce(searchQuery, 300)
 
-  // Filter and sort containers locally for instant feedback
-  const filteredContainers = containers
-    .filter((container) => {
-      // Apply status/category filter
-      if (activeFilter !== 'all') {
-        if (activeFilter === 'running' && container.status !== 'running') {
-          return false
-        }
-        if (activeFilter === 'stopped' && container.status === 'running') {
-          return false
-        }
-        if (!['all', 'running', 'stopped'].includes(activeFilter) && container.category !== activeFilter) {
-          return false
-        }
-      }
-      // Apply search filter
+  // Filter and sort containers
+  const filteredContainers = useMemo(() => {
+    console.log('[FILTER] Active filter:', activeFilter, 'Total containers:', containers.length)
+
+    const filtered = containers.filter((container) => {
+      // Search filter
       if (debouncedSearch) {
-        const searchLower = debouncedSearch.toLowerCase()
-        return (
-          container.name.toLowerCase().includes(searchLower) ||
-          container.image.toLowerCase().includes(searchLower) ||
-          container.category.toLowerCase().includes(searchLower)
-        )
+        const search = debouncedSearch.toLowerCase()
+        const matchesSearch =
+          container.name.toLowerCase().includes(search) ||
+          container.image.toLowerCase().includes(search) ||
+          container.category.toLowerCase().includes(search)
+        if (!matchesSearch) return false
       }
-      return true
+
+      // Status/Category filter
+      if (activeFilter === 'all') return true
+      if (activeFilter === 'running') return container.status === 'running'
+      if (activeFilter === 'stopped') return container.status !== 'running' && container.status !== 'not-created'
+      if (activeFilter === 'not-created') return container.status === 'not-created'
+
+      // Category filter
+      const matches = container.category === activeFilter
+      if (matches) {
+        console.log('[FILTER] Match:', container.name, 'category:', container.category)
+      }
+      return matches
     })
-    .sort((a, b) => {
+
+    console.log('[FILTER] Result:', filtered.length, 'containers')
+
+    // Sort
+    const sorted = filtered.sort((a, b) => {
       const aVal = a[sortBy] || ''
       const bVal = b[sortBy] || ''
 
       let result = 0
       if (sortBy === 'cpu') {
-        // Parse CPU percentages
         const aCpu = parseFloat(String(aVal).replace('%', '')) || 0
         const bCpu = parseFloat(String(bVal).replace('%', '')) || 0
         result = aCpu - bCpu
@@ -68,10 +81,13 @@ export function Containers() {
       return sortOrder === 'desc' ? -result : result
     })
 
+    return sorted
+  }, [containers, activeFilter, debouncedSearch, sortBy, sortOrder])
+
   // Initial data fetch
   useEffect(() => {
     fetchContainers()
-  }, [fetchContainers])
+  }, [])
 
   // Handle filter change
   const handleFilterChange = (filter) => {
@@ -84,12 +100,41 @@ export function Containers() {
     setSortOrder(newSortOrder)
   }
 
+  // Bulk selection handlers
+  const toggleSelect = (name) => {
+    setSelectedContainers(prev => {
+      const next = new Set(prev)
+      next.has(name) ? next.delete(name) : next.add(name)
+      return next
+    })
+  }
+
+  const selectAll = () => {
+    if (selectedContainers.size === filteredContainers.length) {
+      // Deselect all
+      setSelectedContainers(new Set())
+    } else {
+      // Select all filtered containers
+      setSelectedContainers(new Set(filteredContainers.map(c => c.name)))
+    }
+  }
+
+  const clearSelection = () => setSelectedContainers(new Set())
+
+  const handleBulkComplete = (result) => {
+    console.log('Bulk operation result:', result)
+    clearSelection()
+    // Refresh containers after bulk operation
+    setTimeout(() => fetchContainers(), 1000)
+  }
+
   // Container filter options with visual separators
   const containerFilters = [
     // Status Group
     { value: 'all', label: 'All', count: stats.total },
     { value: 'running', label: 'Running', count: stats.running },
     { value: 'stopped', label: 'Stopped', count: stats.stopped },
+    { value: 'not-created', label: 'Not Created', count: stats.notCreated },
     { separator: true },
     // Infrastructure Group
     { value: 'database', label: 'Database', count: stats.database },
@@ -146,6 +191,13 @@ export function Containers() {
         filters={containerFilters}
       />
 
+      {/* Bulk Actions Toolbar */}
+      <BulkActionsToolbar
+        selectedContainers={selectedContainers}
+        onClear={clearSelection}
+        onComplete={handleBulkComplete}
+      />
+
       {/* Content */}
       {loading && containers.length === 0 ? (
         <div className="py-16">
@@ -156,7 +208,13 @@ export function Containers() {
       ) : filteredContainers.length === 0 ? (
         <EmptyState filter={activeFilter} searchQuery={debouncedSearch} />
       ) : (
-        <ContainersGrid containers={filteredContainers} />
+        <ContainersGrid
+          containers={filteredContainers}
+          onRefresh={fetchContainers}
+          selectedContainers={selectedContainers}
+          onToggleSelect={toggleSelect}
+          onSelectAll={selectAll}
+        />
       )}
 
       {/* Results count */}

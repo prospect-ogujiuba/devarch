@@ -43,13 +43,16 @@ try {
     // Apply filters if provided
     $filter = $_GET['filter'] ?? null;
     if ($filter && $filter !== 'all') {
-        if (in_array($filter, ['running', 'stopped'])) {
+        if (in_array($filter, ['running', 'stopped', 'not-created'])) {
             // Filter by status
             $containers = array_filter($containers, function($container) use ($filter) {
                 if ($filter === 'running') {
                     return $container['status'] === 'running';
+                } elseif ($filter === 'not-created') {
+                    return $container['status'] === 'not-created';
                 } else {
-                    return $container['status'] !== 'running';
+                    // stopped filter includes exited, stopped, and other non-running states
+                    return $container['status'] !== 'running' && $container['status'] !== 'not-created';
                 }
             });
         } else {
