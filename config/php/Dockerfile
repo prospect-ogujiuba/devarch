@@ -93,7 +93,8 @@ RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master
 RUN chown -R www-data:www-data /var/www/html
 
 # Add www-data to sudoers for podman socket access (read-only socket is safe)
-RUN echo "www-data ALL=(ALL) NOPASSWD: /usr/bin/podman" >> /etc/sudoers.d/www-data \
+RUN echo "Defaults env_keep += \"CONTAINER_HOST HOME XDG_RUNTIME_DIR\"" >> /etc/sudoers.d/www-data \
+    && echo "www-data ALL=(ALL) NOPASSWD: /usr/bin/podman" >> /etc/sudoers.d/www-data \
     && chmod 0440 /etc/sudoers.d/www-data
 
 # Set the working directory
