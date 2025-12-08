@@ -7,6 +7,7 @@ FOLDERS_TO_PROCESS=(
     "compose"
     "config" 
     "scripts"
+
 )
 
 # Output directory
