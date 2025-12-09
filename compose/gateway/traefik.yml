@@ -1,0 +1,16 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    command: ["--configFile=/etc/traefik/traefik.yml"]
+    volumes:
+      - ../../config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ../../config/traefik/dynamic:/etc/traefik/dynamic:ro
+    ports:
+      - "8082:8082"
+    networks:
+      - microservices-net

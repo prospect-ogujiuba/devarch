@@ -60,6 +60,7 @@ SERVICE_CATEGORIES=(
     [messaging]="kafka.yml kafka-ui.yml zookeeper.yml rabbitmq.yml"
     [project]="openproject.yml"
     [proxy]="nginx-proxy-manager.yml"
+    [gateway]="krakend.yml traefik.yml kong.yml envoy.yml"
     [search]="meilisearch.yml typesense.yml"
 )
 
@@ -81,6 +82,7 @@ SERVICE_PATH_OVERRIDES=(
 SERVICE_STARTUP_ORDER=(
     "database"
     "dbms" 
+    "gateway"
     "proxy"
     "management"
     "backend"

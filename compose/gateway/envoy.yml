@@ -1,0 +1,15 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  envoy:
+    image: envoyproxy/envoy:v1.31-latest
+    container_name: envoy
+    command: ["envoy", "-c", "/etc/envoy/envoy.yaml", "-l", "info"]
+    volumes:
+      - ../../config/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+    ports:
+      - "8083:8080"
+    networks:
+      - microservices-net

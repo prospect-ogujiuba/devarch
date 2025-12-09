@@ -1,0 +1,19 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  kong:
+    image: kong:3.7
+    container_name: kong
+    environment:
+      - KONG_DATABASE=off
+      - KONG_DECLARATIVE_CONFIG=/kong/declarative/kong.yml
+      - KONG_LOG_LEVEL=info
+      - KONG_PROXY_LISTEN=0.0.0.0:8000
+    volumes:
+      - ../../config/kong/kong.yml:/kong/declarative/kong.yml:ro
+    ports:
+      - "8000:8000"
+    networks:
+      - microservices-net
