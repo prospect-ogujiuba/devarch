@@ -32,19 +32,3 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-
-  # Optional: Memcached admin interface
-  memcached-admin:
-    container_name: memcached-admin
-    image: bastienm/phpmemcacheadmin:latest
-    restart: unless-stopped
-    env_file: ../../.env
-    environment:
-      - MEMCACHE_HOST=memcached
-      - MEMCACHE_PORT=11211
-    ports:
-      - "127.0.0.1:8092:80"
-    networks:
-      - microservices-net
-    depends_on:
-      - memcached
