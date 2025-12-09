@@ -570,7 +570,7 @@ INSERT INTO proxy_host (
 -- Services: KrakenD, Kong, Traefik, Envoy
 -- ============================================================================
 
--- KrakenD (krakend.test -> krakend:8080)
+-- KrakenD Designer (krakend.test -> krakend-designer:80)
 INSERT INTO proxy_host (
     created_on, modified_on, owner_user_id, is_deleted,
     domain_names, forward_scheme, forward_host, forward_port,
@@ -580,13 +580,13 @@ INSERT INTO proxy_host (
 ) VALUES (
     NOW(), NOW(), 1, 0,
     '["krakend.test"]',
-    'https', 'krakend', 8080,
+    'https', 'krakend-designer', 80,
     0, 1, 1, 0, 1, 0, 1, 1, 0,
     'error_page 502 503 504 = @fallback;\nlocation @fallback {\n    return 503 "KrakenD service is temporarily unavailable";\n    add_header Content-Type text/plain always;\n}',
     '{"devarch_import":true,"category":"gateway","service":"krakend","source_file":"http.conf","log_prefix":"krakend"}'
 );
 
--- Kong (kong.test -> kong:8000)
+-- Kong (kong.test -> kong:8001 Admin API)
 INSERT INTO proxy_host (
     created_on, modified_on, owner_user_id, is_deleted,
     domain_names, forward_scheme, forward_host, forward_port,
@@ -596,7 +596,7 @@ INSERT INTO proxy_host (
 ) VALUES (
     NOW(), NOW(), 1, 0,
     '["kong.test"]',
-    'https', 'kong', 8000,
+    'https', 'kong', 8001,
     0, 1, 1, 0, 1, 0, 1, 1, 0,
     'error_page 502 503 504 = @fallback;\nlocation @fallback {\n    return 503 "Kong service is temporarily unavailable";\n    add_header Content-Type text/plain always;\n}',
     '{"devarch_import":true,"category":"gateway","service":"kong","source_file":"http.conf","log_prefix":"kong"}'
@@ -619,7 +619,7 @@ INSERT INTO proxy_host (
     '{"devarch_import":true,"category":"gateway","service":"traefik","source_file":"http.conf","log_prefix":"traefik","note":"duplicate_resolved"}'
 );
 
--- Envoy (envoy.test -> envoy:8080)
+-- Envoy (envoy.test -> envoy:9901 Admin UI)
 INSERT INTO proxy_host (
     created_on, modified_on, owner_user_id, is_deleted,
     domain_names, forward_scheme, forward_host, forward_port,
@@ -629,7 +629,7 @@ INSERT INTO proxy_host (
 ) VALUES (
     NOW(), NOW(), 1, 0,
     '["envoy.test"]',
-    'https', 'envoy', 8080,
+    'https', 'envoy', 9901,
     0, 1, 1, 0, 1, 0, 1, 1, 0,
     'error_page 502 503 504 = @fallback;\nlocation @fallback {\n    return 503 "Envoy service is temporarily unavailable";\n    add_header Content-Type text/plain always;\n}',
     '{"devarch_import":true,"category":"gateway","service":"envoy","source_file":"http.conf","log_prefix":"envoy"}'

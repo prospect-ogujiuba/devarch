@@ -11,5 +11,6 @@ services:
       - ../../config/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
     ports:
       - "127.0.0.1:4003:8080"
+      - "127.0.0.1:4005:9901"
     networks:
       - microservices-net
