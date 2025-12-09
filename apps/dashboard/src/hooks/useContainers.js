@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 const REFRESH_INTERVAL = import.meta.env.VITE_REFRESH_INTERVAL || 30000
@@ -13,11 +13,13 @@ export function useContainers() {
     total: 0,
     running: 0,
     stopped: 0,
+    notCreated: 0,
     database: 0,
     backend: 0,
     proxy: 0,
     analytics: 0,
     dbms: 0,
+    gateway: 0,
     exporters: 0,
     messaging: 0,
     search: 0,
@@ -30,10 +32,15 @@ export function useContainers() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [initialLoad, setInitialLoad] = useState(true)
+  const hasLoadedRef = useRef(false)
 
   const fetchContainers = useCallback(async (filter = null, search = null, sort = 'name', order = 'asc') => {
     try {
-      setLoading(true)
+      // Only show loading spinner on initial load or when we have no data
+      if (initialLoad || !hasLoadedRef.current) {
+        setLoading(true)
+      }
       setError(null)
 
       // Build query parameters
@@ -58,6 +65,10 @@ export function useContainers() {
         setContainers(result.data.containers)
         setStats(result.data.stats)
         setLastUpdated(new Date())
+        hasLoadedRef.current = true
+        if (initialLoad) {
+          setInitialLoad(false)
+        }
       } else {
         throw new Error(result.message || 'Failed to fetch containers')
       }
@@ -67,7 +78,7 @@ export function useContainers() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [initialLoad])
 
   // Auto-refresh functionality
   useEffect(() => {

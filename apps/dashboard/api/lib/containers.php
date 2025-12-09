@@ -15,17 +15,20 @@
 
 // Detect if running inside container or on host
 $isContainer = file_exists('/.dockerenv') || file_exists('/run/.containerenv');
-$basePathPrefix = $isContainer ? '/var/www' : '/home/fhcadmin/projects/devarch';
+$basePathPrefix = $isContainer ? '/var/www' : '/home/priz/projects/devarch';
 
-define('PODMAN_BINARY', 'podman');
-define('NGINX_CONFIG_PATH', $basePathPrefix . ($isContainer ? '/../config/nginx/custom/http.conf' : '/config/nginx/custom/http.conf'));
-define('COMPOSE_BASE_PATH', $basePathPrefix . ($isContainer ? '/../compose' : '/compose'));
+// Use sudo for podman when running as www-data (PHP-FPM)
+$currentUser = posix_getpwuid(posix_geteuid())['name'] ?? 'unknown';
+define('PODMAN_BINARY', $currentUser === 'www-data' ? 'sudo podman' : 'podman');
+define('NGINX_CONFIG_PATH', $basePathPrefix . '/config/nginx/custom/http.conf');
+define('COMPOSE_BASE_PATH', $basePathPrefix . '/compose');
 const CACHE_DURATION = 300; // 5 minutes
 
 // Category colors (matching service-manager.sh categories)
 const CATEGORY_COLORS = [
     'database' => '#3b82f6',
     'dbms' => '#8b5cf6',
+    'gateway' => '#ffcc33',
     'proxy' => '#10b981',
     'management' => '#f59e0b',
     'backend' => '#ef4444',
@@ -44,30 +47,57 @@ const CATEGORY_COLORS = [
 
 /**
  * Get all containers with stats and metadata
+ * Merges compose file definitions with actual running containers
  */
 function getAllContainers(): array
 {
-    $containers = getContainerList();
+    // Get all service definitions from compose files
+    $allServices = parseComposeServices();
+
+    // Get actual running/stopped containers
+    $runningContainers = getContainerList();
     $stats = getContainerStats();
     $domains = parseNginxDomains();
     $ports = parseComposePorts();
 
-    // Merge stats and inspect data into containers
-    foreach ($containers as &$container) {
-        $name = $container['name'];
+    // Create lookup map of running containers by name
+    $runningMap = [];
+    foreach ($runningContainers as $container) {
+        $runningMap[$container['name']] = $container;
+    }
+
+    // Merge: start with all defined services, enrich with runtime data
+    $containers = [];
+    foreach ($allServices as $serviceName => $serviceData) {
+        if (isset($runningMap[$serviceName])) {
+            // Container exists - use runtime data
+            $container = $runningMap[$serviceName];
+        } else {
+            // Container not created yet - use compose definition
+            $container = [
+                'id' => '',
+                'name' => $serviceName,
+                'status' => 'not-created',
+                'image' => $serviceData['image'],
+                'version' => $serviceData['version'],
+                'uptime' => 'Not created',
+                'ports' => $serviceData['ports'] ?? [],
+                'category' => $serviceData['category'],
+                'color' => CATEGORY_COLORS[$serviceData['category']] ?? '#94a3b8',
+                'statusColor' => '#cbd5e1',
+            ];
+        }
 
         // Add resource stats if running
-        if (isset($stats[$name])) {
-            $container['cpu'] = $stats[$name]['cpu'];
-            $container['memory'] = $stats[$name]['memory'];
-            $container['network'] = $stats[$name]['network'];
+        if (isset($stats[$serviceName])) {
+            $container['cpu'] = $stats[$serviceName]['cpu'];
+            $container['memory'] = $stats[$serviceName]['memory'];
+            $container['network'] = $stats[$serviceName]['network'];
 
-            // Parse CPU for percentage
-            $cpuParsed = parseCpuUsage($stats[$name]['cpu']);
+            $cpuParsed = parseCpuUsage($stats[$serviceName]['cpu']);
             $container['cpuPercentage'] = $cpuParsed['percentage'];
 
-            // Parse memory for MB values and percentage
-            $memParsed = parseMemoryUsage($stats[$name]['memory']);
+            $memParsed = parseMemoryUsage($stats[$serviceName]['memory']);
             $container['memoryUsedMb'] = $memParsed['usedMb'];
             $container['memoryLimitMb'] = $memParsed['limitMb'];
             $container['memoryPercentage'] = $memParsed['percentage'];
@@ -81,18 +111,27 @@ function getAllContainers(): array
             $container['memoryPercentage'] = 0;
         }
 
-        // Get detailed inspect data (health, restarts, uptime)
-        $inspectData = getContainerInspectData($name);
-        $container['restartCount'] = $inspectData['restartCount'];
-        $container['healthStatus'] = $inspectData['healthStatus'];
-        $container['uptimeSeconds'] = $inspectData['uptimeSeconds'];
-        $container['startedAt'] = $inspectData['startedAt'];
+        // Get detailed inspect data if container exists
+        if ($container['status'] !== 'not-created') {
+            $inspectData = getContainerInspectData($serviceName);
+            $container['restartCount'] = $inspectData['restartCount'];
+            $container['healthStatus'] = $inspectData['healthStatus'];
+            $container['uptimeSeconds'] = $inspectData['uptimeSeconds'];
+            $container['startedAt'] = $inspectData['startedAt'];
+        } else {
+            $container['restartCount'] = 0;
+            $container['healthStatus'] = null;
+            $container['uptimeSeconds'] = 0;
+            $container['startedAt'] = null;
+        }
 
         // Add .test domains
-        $container['testDomains'] = $domains[$name] ?? [];
+        $container['testDomains'] = $domains[$serviceName] ?? [];
 
         // Add localhost URLs
-        $container['localhostUrls'] = $ports[$name] ?? [];
+        $container['localhostUrls'] = $ports[$serviceName] ?? [];
+
+        $containers[] = $container;
     }
 
     // Calculate summary stats
@@ -109,13 +148,16 @@ function getAllContainers(): array
  */
 function getContainerList(): array
 {
+    // Set CONTAINER_HOST environment variable for Podman socket access
+    putenv('CONTAINER_HOST=unix:///run/podman/podman.sock');
+
     // Check if podman is available
     $whichCmd = 'which ' . PODMAN_BINARY . ' 2>&1';
     exec($whichCmd, $whichOutput, $whichReturn);
 
     if ($whichReturn !== 0) {
         error_log("Podman binary not found - container monitoring unavailable");
-        return getMockContainers(); // Return mock data for development
+        return [];
     }
 
     $cmd = PODMAN_BINARY . ' ps -a --format json 2>&1';
@@ -123,7 +165,7 @@ function getContainerList(): array
 
     if ($returnCode !== 0) {
         error_log("Failed to execute podman ps: " . implode("\n", $output));
-        return getMockContainers(); // Return mock data on error
+        return [];
     }
 
     $jsonString = implode('', $output);
@@ -131,7 +173,7 @@ function getContainerList(): array
 
     if (!is_array($rawContainers)) {
         error_log("Failed to parse podman ps JSON output");
-        return getMockContainers(); // Return mock data on parse error
+        return [];
     }
 
     $containers = [];
@@ -185,6 +227,9 @@ function getContainerList(): array
  */
 function getContainerStats(): array
 {
+    // Set CONTAINER_HOST environment variable for Podman socket access
+    putenv('CONTAINER_HOST=unix:///run/podman/podman.sock');
+
     $cmd = PODMAN_BINARY . ' stats --no-stream --format json 2>&1';
     exec($cmd, $output, $returnCode);
 
@@ -202,13 +247,13 @@ function getContainerStats(): array
 
     $stats = [];
     foreach ($rawStats as $stat) {
-        $name = $stat['Name'] ?? '';
+        $name = $stat['name'] ?? '';
         if (empty($name)) continue;
 
         $stats[$name] = [
-            'cpu' => $stat['CPU'] ?? '0%',
-            'memory' => ($stat['MemUsage'] ?? 'N/A'),
-            'network' => ($stat['NetIO'] ?? 'N/A'),
+            'cpu' => $stat['cpu_percent'] ?? '0%',
+            'memory' => ($stat['mem_usage'] ?? 'N/A'),
+            'network' => ($stat['net_io'] ?? 'N/A'),
         ];
     }
 
@@ -292,6 +337,9 @@ function parseCpuUsage(string $cpuStr): array
  */
 function getContainerInspectData(string $containerName): array
 {
+    // Set CONTAINER_HOST environment variable for Podman socket access
+    putenv('CONTAINER_HOST=unix:///run/podman/podman.sock');
+
     $default = [
         'restartCount' => 0,
         'startedAt' => null,
@@ -367,32 +415,58 @@ function parseNginxDomains(): array
 
     $content = file_get_contents(NGINX_CONFIG_PATH);
 
-    // Parse server blocks to extract server_name and upstream mappings
-    // Pattern: server_name xyz.test; ... proxy_pass http://container-name:port;
-    preg_match_all(
-        '/server\s*\{[^}]*server_name\s+([^;]+);[^}]*(?:proxy_pass\s+http:\/\/([^:]+):|set\s+\$upstream_\w+\s+([^:]+):)/s',
-        $content,
-        $matches,
-        PREG_SET_ORDER
-    );
+    // Parse line by line to extract server_name and container mappings
+    $lines = explode("\n", $content);
+    $currentServerNames = [];
+    $inServerBlock = false;
 
-    foreach ($matches as $match) {
-        $serverNames = $match[1] ?? '';
-        $containerName = $match[2] ?? $match[3] ?? '';
+    foreach ($lines as $line) {
+        $line = trim($line);
 
-        if (empty($serverNames) || empty($containerName)) {
+        // Detect start of server block
+        if (strpos($line, 'server {') !== false) {
+            $inServerBlock = true;
+            $currentServerNames = [];
             continue;
         }
 
-        // Parse multiple server names
-        $names = preg_split('/\s+/', trim($serverNames));
-        $testDomains = array_filter($names, fn($n) => str_ends_with($n, '.test'));
+        // Reset on next server block (don't exit on nested braces like location {})
+        // Just stay in server block until we find the next one
 
-        if (!isset($domains[$containerName])) {
-            $domains[$containerName] = [];
+        if (!$inServerBlock) {
+            continue;
         }
 
-        $domains[$containerName] = array_merge($domains[$containerName], $testDomains);
+        // Extract server_name
+        if (preg_match('/^server_name\s+([^;]+);/i', $line, $nameMatch)) {
+            $serverNames = $nameMatch[1];
+            $names = preg_split('/[\s,]+/', trim($serverNames));
+            $currentServerNames = array_filter($names, fn($n) => str_ends_with($n, '.test'));
+        }
+
+        // Extract container from proxy_pass
+        if (preg_match('/proxy_pass\s+http:\/\/([^:]+):/i', $line, $containerMatch)) {
+            $containerName = $containerMatch[1];
+
+            if (!empty($containerName) && !empty($currentServerNames)) {
+                if (!isset($domains[$containerName])) {
+                    $domains[$containerName] = [];
+                }
+                $domains[$containerName] = array_merge($domains[$containerName], $currentServerNames);
+            }
+        }
+
+        // Extract container from set $upstream_*
+        if (preg_match('/set\s+\$upstream_\w+\s+([^:;]+):/i', $line, $upstreamMatch)) {
+            $containerName = trim($upstreamMatch[1]);
+
+            if (!empty($containerName) && !empty($currentServerNames)) {
+                if (!isset($domains[$containerName])) {
+                    $domains[$containerName] = [];
+                }
+                $domains[$containerName] = array_merge($domains[$containerName], $currentServerNames);
+            }
+        }
     }
 
     // Deduplicate
@@ -404,6 +478,96 @@ function parseNginxDomains(): array
     $cacheTime = time();
 
     return $domains;
+}
+
+/**
+ * Parse all compose files to get complete service definitions
+ */
+function parseComposeServices(): array
+{
+    static $cache = null;
+    static $cacheTime = 0;
+
+    if ($cache !== null && (time() - $cacheTime) < CACHE_DURATION) {
+        return $cache;
+    }
+
+    $services = [];
+
+    if (!is_dir(COMPOSE_BASE_PATH)) {
+        error_log("Compose directory not found: " . COMPOSE_BASE_PATH);
+        $cache = $services;
+        $cacheTime = time();
+        return $services;
+    }
+
+    // Find all compose files
+    $composeFiles = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(COMPOSE_BASE_PATH, RecursiveDirectoryIterator::SKIP_DOTS)
+    );
+
+    foreach ($iterator as $file) {
+        if ($file->isFile() && preg_match('/\.ya?ml$/i', $file->getFilename())) {
+            $composeFiles[] = $file->getPathname();
+        }
+    }
+
+    foreach ($composeFiles as $file) {
+        $content = file_get_contents($file);
+
+        // Extract service category from path (e.g., /compose/database/mariadb.yml -> database)
+        $pathParts = explode('/', $file);
+        $category = 'other';
+        foreach ($pathParts as $i => $part) {
+            if ($part === 'compose' && isset($pathParts[$i + 1])) {
+                $category = $pathParts[$i + 1];
+                break;
+            }
+        }
+
+        // Parse container_name and image
+        if (preg_match('/container_name:\s*([^\s\n]+)/i', $content, $nameMatch)) {
+            $containerName = trim($nameMatch[1]);
+
+            // Extract image name
+            $imageName = 'unknown';
+            $imageVersion = 'latest';
+            if (preg_match('/image:\s*([^\s\n]+)/i', $content, $imageMatch)) {
+                $imageFullName = trim($imageMatch[1]);
+                $imageParts = explode(':', $imageFullName);
+                $imageName = $imageParts[0] ?? $imageFullName;
+                $imageVersion = $imageParts[1] ?? 'latest';
+
+                // Clean up image name (remove docker.io/library/ prefix)
+                $imageName = preg_replace('#^(docker\.io/library/|docker\.io/)#', '', $imageName);
+            }
+
+            // Extract port mappings
+            $ports = [];
+            if (preg_match('/ports:\s*((?:\s*-\s*["\']?[\d:\.]+["\']?\s*\n?)+)/s', $content, $portsMatch)) {
+                $portsBlock = $portsMatch[1];
+                preg_match_all('/["\']?((?:[\d.]+:)?(\d+):\d+)["\']?/', $portsBlock, $portMatches);
+                $ports = array_map(function($p) {
+                    // Convert "127.0.0.1:8501:3306" to "8501:3306"
+                    return preg_replace('/^[\d.]+:/', '', $p);
+                }, $portMatches[1]);
+            }
+
+            $services[$containerName] = [
+                'name' => $containerName,
+                'image' => $imageName,
+                'version' => $imageVersion,
+                'category' => getCategoryFromName($containerName),
+                'ports' => $ports,
+            ];
+        }
+    }
+
+    $cache = $services;
+    $cacheTime = time();
+
+    return $services;
 }
 
 /**
@@ -484,14 +648,24 @@ function parseComposePorts(): array
  */
 function getCategoryFromName(string $name): string
 {
+    // Exporters - CHECK FIRST before database patterns
+    if (str_contains($name, 'exporter') || $name === 'cadvisor') {
+        return 'exporters';
+    }
+
+    // Gateway services
+    if (preg_match('/^(krakend|kong|traefik|envoy)/', $name)) {
+        return 'gateway';
+    }
+
+    // DBMS tools - CHECK BEFORE database (redis-commander would match redis pattern)
+    if (preg_match('/^(adminer|phpmyadmin|pgadmin|mongo-express|redis-commander|cloudbeaver|metabase|nocodb|drawdb)/', $name)) {
+        return 'dbms';
+    }
+
     // Database services
     if (preg_match('/^(mariadb|mysql|postgres|mongodb|redis|memcached)/', $name)) {
         return 'database';
-    }
-
-    // DBMS tools
-    if (preg_match('/^(adminer|phpmyadmin|pgadmin|mongo-express|redis-commander|cloudbeaver|metabase|nocodb|drawdb)/', $name)) {
-        return 'dbms';
     }
 
     // Proxy
@@ -502,11 +676,6 @@ function getCategoryFromName(string $name): string
     // Backend runtimes
     if (preg_match('/^(php|node|python|go|dotnet)$/', $name)) {
         return 'backend';
-    }
-
-    // Exporters
-    if (str_contains($name, 'exporter') || $name === 'cadvisor') {
-        return 'exporters';
     }
 
     // Analytics
@@ -570,10 +739,12 @@ function calculateStats(array $containers): array
         'total' => count($containers),
         'running' => 0,
         'stopped' => 0,
+        'notCreated' => 0,
         'database' => 0,
         'backend' => 0,
         'proxy' => 0,
         'analytics' => 0,
+        'gateway' => 0,
         'dbms' => 0,
         'exporters' => 0,
         'messaging' => 0,
@@ -613,6 +784,8 @@ function calculateStats(array $containers): array
             if (isset($container['memoryUsedMb'])) {
                 $memSum += $container['memoryUsedMb'];
             }
+        } elseif ($container['status'] === 'not-created') {
+            $stats['notCreated']++;
         } else {
             $stats['stopped']++;
         }
@@ -655,82 +828,53 @@ function calculateStats(array $containers): array
 }
 
 /**
- * Get mock container data for development/demo
+ * Find the compose file that defines a specific container
+ * Used for smart start and rebuild operations
  */
-function getMockContainers(): array
+function findComposeFile(string $containerName): ?string
 {
-    return [
-        [
-            'id' => 'abc123',
-            'name' => 'nginx-proxy-manager',
-            'status' => 'running',
-            'image' => 'jc21/nginx-proxy-manager',
-            'version' => 'latest',
-            'uptime' => 'Up 2 days',
-            'ports' => ['80:80', '443:443', '81:81'],
-            'category' => 'proxy',
-            'color' => CATEGORY_COLORS['proxy'],
-            'statusColor' => '#22c55e',
-        ],
-        [
-            'id' => 'def456',
-            'name' => 'mariadb',
-            'status' => 'running',
-            'image' => 'mariadb',
-            'version' => '10.11',
-            'uptime' => 'Up 3 hours',
-            'ports' => ['3306:3306'],
-            'category' => 'database',
-            'color' => CATEGORY_COLORS['database'],
-            'statusColor' => '#22c55e',
-        ],
-        [
-            'id' => 'ghi789',
-            'name' => 'php',
-            'status' => 'running',
-            'image' => 'custom-php',
-            'version' => '8.3-fpm',
-            'uptime' => 'Up 1 hour',
-            'ports' => ['8100:8000', '8102:5173'],
-            'category' => 'backend',
-            'color' => CATEGORY_COLORS['backend'],
-            'statusColor' => '#22c55e',
-        ],
-        [
-            'id' => 'jkl012',
-            'name' => 'postgres',
-            'status' => 'running',
-            'image' => 'postgres',
-            'version' => '15',
-            'uptime' => 'Up 2 days',
-            'ports' => ['5432:5432'],
-            'category' => 'database',
-            'color' => CATEGORY_COLORS['database'],
-            'statusColor' => '#22c55e',
-        ],
-        [
-            'id' => 'mno345',
-            'name' => 'redis',
-            'status' => 'running',
-            'image' => 'redis',
-            'version' => '7-alpine',
-            'uptime' => 'Up 5 hours',
-            'ports' => ['6379:6379'],
-            'category' => 'database',
-            'color' => CATEGORY_COLORS['database'],
-            'statusColor' => '#22c55e',
-        ],
-        [
-            'id' => 'pqr678',
-            'name' => 'phpmyadmin',
-            'status' => 'exited',
-            'image' => 'phpmyadmin',
-            'version' => 'latest',
-            'uptime' => 'Exited (0) 2 hours ago',
-            'ports' => [],
-            'category' => 'dbms',
-            'color' => CATEGORY_COLORS['dbms'],
-            'statusColor' => '#ef4444',
-        ],
+    $categories = [
+        'database', 'dbms', 'gateway', 'proxy', 'management', 'backend',
+        'project', 'mail', 'exporters', 'analytics', 'messaging', 'search', 'ai'
     ];
+
+    if (!is_dir(COMPOSE_BASE_PATH)) {
+        error_log("Compose directory not found: " . COMPOSE_BASE_PATH);
+        return null;
+    }
+
+    foreach ($categories as $category) {
+        $pattern = COMPOSE_BASE_PATH . "/{$category}/*.yml";
+        $files = glob($pattern);
+
+        if ($files === false) {
+            continue;
+        }
+
+        foreach ($files as $file) {
+            $content = file_get_contents($file);
+            if ($content === false) {
+                continue;
+            }
+
+            // Match container_name with or without quotes
+            if (preg_match("/container_name:\s*['\"]?{$containerName}['\"]?/", $content)) {
+                return $file;
+            }
+        }
+    }
+
+    error_log("Compose file not found for container: {$containerName}");
+    return null;
 }
+
+/**
+ * Detect base path depending on if running in container or on host
+ * Exported for use in other files
+ */
+function detectBasePath(): string
+{
+    global $basePathPrefix;
+    return $basePathPrefix;
+}
+

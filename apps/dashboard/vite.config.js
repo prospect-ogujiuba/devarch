@@ -15,8 +15,5 @@ export default defineConfig({
         changeOrigin: true,
       }
     }
-  },
-  build: {
-    emptyOutDir: false, // Don't delete API folder and existing files
   }
 })

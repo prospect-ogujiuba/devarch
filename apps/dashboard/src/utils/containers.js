@@ -27,6 +27,7 @@ export function getContainerStatusBgClass(status) {
     exited: 'bg-red-500',
     stopped: 'bg-slate-400',
     paused: 'bg-yellow-400',
+    'not-created': 'bg-slate-300 dark:bg-slate-600',
   }
   return classMap[status?.toLowerCase()] || 'bg-slate-300 dark:bg-slate-600'
 }
@@ -38,6 +39,7 @@ export function getCategoryBgClass(category) {
   const classMap = {
     database: 'bg-[#3b82f6]',
     dbms: 'bg-[#8b5cf6]',
+    gateway: 'bg-[#ffcc33]',
     proxy: 'bg-[#10b981]',
     management: 'bg-[#f59e0b]',
     backend: 'bg-[#ef4444]',
@@ -67,13 +69,13 @@ export function formatCategory(category) {
 export function getHealthStatusBgClass(status) {
   switch (status) {
     case 'healthy':
-      return 'bg-green-500'
+      return 'bg-green-200'
     case 'unhealthy':
-      return 'bg-red-500'
+      return 'bg-red-200'
     case 'starting':
-      return 'bg-yellow-500'
+      return 'bg-yellow-200'
     default:
-      return 'bg-gray-400'
+      return 'bg-slate-200'
   }
 }
 
