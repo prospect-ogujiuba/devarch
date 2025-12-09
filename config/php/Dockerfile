@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     msmtp \
     msmtp-mta \
     podman \
+    podman-compose \
     libpng-dev \
     libjpeg-dev \
     libwebp-dev \
@@ -97,7 +98,7 @@ RUN mkdir -p /var/www/.config && chown -R www-data:www-data /var/www/.config
 
 # Add www-data to sudoers for podman socket access (read-only socket is safe)
 RUN echo "Defaults env_keep += \"CONTAINER_HOST HOME XDG_RUNTIME_DIR\"" >> /etc/sudoers.d/www-data \
-    && echo "www-data ALL=(ALL) NOPASSWD: /usr/bin/podman" >> /etc/sudoers.d/www-data \
+    && echo "www-data ALL=(ALL) NOPASSWD: /usr/bin/podman, /usr/bin/podman-compose, /usr/sbin/podman-compose" >> /etc/sudoers.d/www-data \
     && chmod 0440 /etc/sudoers.d/www-data
 
 # Set the working directory
