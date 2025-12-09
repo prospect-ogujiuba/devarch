@@ -11,6 +11,6 @@ services:
       - ../../config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ../../config/traefik/dynamic:/etc/traefik/dynamic:ro
     ports:
-      - "8082:8082"
+      - "127.0.0.1:4001:8082"
     networks:
       - microservices-net

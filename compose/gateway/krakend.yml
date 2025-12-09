@@ -10,6 +10,6 @@ services:
     volumes:
       - ../../config/krakend/krakend.json:/etc/krakend/krakend.json:ro
     ports:
-      - "8080:8080"
+      - "127.0.0.1:4000:8080"
     networks:
       - microservices-net

@@ -14,6 +14,6 @@ services:
     volumes:
       - ../../config/kong/kong.yml:/kong/declarative/kong.yml:ro
     ports:
-      - "8000:8000"
+      - "127.0.0.1:4002:8000"
     networks:
       - microservices-net
