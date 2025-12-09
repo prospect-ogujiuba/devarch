@@ -181,6 +181,7 @@ export function ContainerCard({ container, onRefresh }) {
         )}
 
         {/* Action Buttons */}
+<<<<<<< HEAD
         <div className="mt-auto">
           <div className="flex gap-2">
             <button
@@ -237,6 +238,62 @@ export function ContainerCard({ container, onRefresh }) {
               </button>
             )}
           </div>
+=======
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowDetails(true)}
+            className="flex-1 text-center px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+          >
+            Details
+          </button>
+          <button
+            onClick={() => setShowLogs(true)}
+            className="flex-1 text-center px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+          >
+            Logs
+          </button>
+        </div>
+
+        {/* Container Controls */}
+        <div className="mt-3 flex gap-2">
+          {isRunning ? (
+            <>
+              <button
+                onClick={() => handleControl('stop')}
+                disabled={actionLoading !== null}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {actionLoading === 'stop' ? <SpinnerIcon /> : <StopIcon />}
+                <span>{actionLoading === 'stop' ? 'Stopping' : 'Stop'}</span>
+              </button>
+              <button
+                onClick={() => handleControl('restart')}
+                disabled={actionLoading !== null}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {actionLoading === 'restart' ? <SpinnerIcon /> : <RestartIcon />}
+                <span>{actionLoading === 'restart' ? 'Restarting' : 'Restart'}</span>
+              </button>
+              <button
+                onClick={() => handleControl('rebuild')}
+                disabled={actionLoading !== null}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-slate-500 dark:bg-slate-400 text-white rounded hover:bg-slate-600 dark:hover:bg-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {actionLoading === 'rebuild' ? <SpinnerIcon /> : <WrenchIcon />}
+                <span>{actionLoading === 'rebuild' ? 'Rebuilding' : 'Rebuild'}</span>
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => handleControl('start')}
+              disabled={actionLoading !== null}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {actionLoading === 'start' ? <SpinnerIcon /> : <PlayIcon />}
+              <span>{actionLoading === 'start' ? 'Starting' : 'Start'}</span>
+            </button>
+          )}
+>>>>>>> 87c3061d9b86f460a308436f604a06b22bdd180e
         </div>
       </div>
 

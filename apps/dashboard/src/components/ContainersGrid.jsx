@@ -26,7 +26,11 @@ export function ContainersGrid({ containers, onRefresh, selectedContainers, onTo
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {containers.map((container) => (
+<<<<<<< HEAD
           <div key={container.name} className="relative h-full">
+=======
+          <div key={container.name} className="relative">
+>>>>>>> 87c3061d9b86f460a308436f604a06b22bdd180e
             {hasSelection && (
               <div className="absolute top-3 right-3 z-10">
                 <label className="flex items-center justify-center w-8 h-8 bg-white dark:bg-slate-700 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer border-2 border-slate-200 dark:border-slate-600">

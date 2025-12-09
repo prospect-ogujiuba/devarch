@@ -653,11 +653,14 @@ function getCategoryFromName(string $name): string
         return 'exporters';
     }
 
+<<<<<<< HEAD
     // Gateway services
     if (preg_match('/^(krakend|kong|traefik|envoy)/', $name)) {
         return 'gateway';
     }
 
+=======
+>>>>>>> 87c3061d9b86f460a308436f604a06b22bdd180e
     // DBMS tools - CHECK BEFORE database (redis-commander would match redis pattern)
     if (preg_match('/^(adminer|phpmyadmin|pgadmin|mongo-express|redis-commander|cloudbeaver|metabase|nocodb|drawdb)/', $name)) {
         return 'dbms';
@@ -834,7 +837,11 @@ function calculateStats(array $containers): array
 function findComposeFile(string $containerName): ?string
 {
     $categories = [
+<<<<<<< HEAD
         'database', 'dbms', 'gateway', 'proxy', 'management', 'backend',
+=======
+        'database', 'dbms', 'proxy', 'management', 'backend',
+>>>>>>> 87c3061d9b86f460a308436f604a06b22bdd180e
         'project', 'mail', 'exporters', 'analytics', 'messaging', 'search', 'ai'
     ];
 

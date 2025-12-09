@@ -1,121 +1,214 @@
-# CLAUDE.md
+### CLAUDE: Project Operating Guide
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This document tells Claude how to interact with and assist on this repository effectively. It defines goals, guardrails, conventions, and quick references tailored to this codebase and environment.
 
-## Project Overview
+---
 
-**DevArch** is a containerized microservices development environment designed for local WordPress development and testing. It provides a complete infrastructure stack including:
+### 1) Purpose and Success Criteria
 
-- Multiple WordPress application instances (b2bcnc, playground, flowstate, mediagrowthpartner)
-- Full database stack (MariaDB, MySQL, PostgreSQL, MongoDB, Redis, Memcached)
-- Database management tools (Adminer, phpMyAdmin, Metabase, NocoDB, pgAdmin, etc.)
-- Complete observability stack (Prometheus, Grafana, ELK Stack, OpenTelemetry)
-- Message queuing systems (Kafka, RabbitMQ)
-- Search engines (Meilisearch, Typesense)
-- Reverse proxy with SSL (Nginx Proxy Manager)
-- Multiple backend runtimes (PHP 8.3, Node.js, Python, Go)
+- Primary goal: Help maintain and evolve the DevArch workspace: a containerized developer platform with a React dashboard and many Docker Compose service recipes.
+- Succeed by:
+  - Producing minimal, correct changes aligned with the project’s structure and conventions.
+  - Respecting platform constraints: Windows host, PowerShell shell, WSL paths, and non-destructive defaults.
+  - Explaining reasoning succinctly when asked; otherwise keep outputs concise and actionable.
 
-The project uses Podman (with Docker fallback) and organizes services into modular compose files by category.
+---
 
-## Architecture
+### 2) Environment and Constraints
 
-### Service Organization and Dependencies
+- Host OS: Windows (PowerShell); WSL is available under `\\wsl.localhost\Arch\...` paths.
+- Project root: `//wsl.localhost/Arch/home/fhcadmin/projects/devarch`
+- Path conventions:
+  - When showing terminal commands for the user, prefer PowerShell-compatible syntax.
+  - Use Windows backslashes `\` when referencing local Windows paths; use forward slashes for Docker/Linux/WSL examples.
+- Git hygiene:
+  - `.gitignore` ignores most `apps/**` except `apps/dashboard` and `apps/serverinfo`.
+  - Place repository-wide docs (like this file) at the repo root.
 
-Services are organized into **11 categories** with strict dependency ordering:
+---
 
-1. **database** - Core data stores (MariaDB, PostgreSQL, MongoDB, Redis, etc.) - **must start first**
-2. **dbms** - Database management tools (Adminer, phpMyAdmin, Metabase, etc.)
-3. **proxy** - Nginx Proxy Manager (handles routing and SSL)
-4. **management** - Administrative tools (Portainer)
-5. **backend** - Application runtimes (PHP, Node.js, Python, Go)
-6. **project** - Project management tools
-7. **mail** - Email services (Mailpit)
-8. **exporters** - Prometheus exporters for metrics collection
-9. **analytics** - Monitoring stack (Prometheus, Grafana, ELK)
-10. **messaging** - Message queues (Kafka, RabbitMQ)
-11. **search** - Search engines (Meilisearch, Typesense)
+### 3) Repository Overview (What’s here)
 
-Each service has its own compose file in `/compose/<category>/<service>.yml`. The service-manager.sh script automatically handles dependency ordering when starting services.
+- apps/
+  - dashboard/ — React + Vite dashboard UI
+    - `src/` components, hooks, pages, utils
+    - `api/` simple PHP endpoints for local environment inspection
+    - `vite.config.js`, `tailwind.config.js`
+- compose/ — Modular Docker Compose definitions by category
+  - analytics/ (ELK, Prometheus, Grafana, Matomo, OTEL)
+  - backend/ (node, python, go, rust, dotnet, php, vite, celery)
+  - database/ (mysql, mariadb, postgres, redis, mongodb, mssql, memcached)
+  - dbms/ (pgadmin, phpmyadmin, adminer, metabase, nocodb, mongo-express, cloudbeaver, drawdb)
+  - exporters/ (prometheus exporters for various services)
+  - mail/ (mailpit)
+  - management/ (portainer)
+  - messaging/ (kafka, zookeeper, rabbitmq, kafka-ui)
+  - project/ (gitea, openproject)
+  - proxy/ (nginx-proxy-manager)
+  - search/ (meilisearch, typesense)
+- config/ — Service configs & Dockerfiles used by compose units
+- scripts/ — Utility scripts (auto-discovery; service/runtime management; language app launchers)
 
-### Configuration Management
+Key intent: assemble stacks by combining compose files; operate them with scripts and configs; view/manage via the Dashboard.
 
-**Centralized Configuration**: `/home/{user}/projects/devarch/scripts/config.sh` (898 lines)
-- Service discovery and path resolution with fallback search
-- Container runtime detection (Podman vs Docker, rootless vs rootful)
-- Automatic sudo management based on user groups
-- Service categorization and dependency management
-- Environment variable loading and validation
+---
 
-**Environment Variables**: `.env` file contains all service credentials and configuration
-- Database credentials (usernames, passwords)
-- Admin credentials for management tools
-- Domain configurations
-- Port mappings
-- **Note**: The .env file is tracked in git and contains exposed credentials - this should be addressed for production use
+### 4) How to Run (typical flows)
 
-**Modular Compose Files**: Each service is defined in its own YAML file for maintainability and selective startup
+Note: Tailor commands to the user’s OS/shell. On Windows, use PowerShell. For Docker, commands run inside WSL or PowerShell depending on the user’s setup.
 
-### Container Runtime
+- Dashboard (development):
+  1) Navigate to the dashboard app
+     - PowerShell: `cd "\\wsl.localhost\Arch\home\fhcadmin\projects\devarch\apps\dashboard"`
+     - WSL: `cd /home/fhcadmin/projects/devarch/apps/dashboard`
+  2) Install deps: `npm install`
+  3) Start dev server: `npm run dev`
 
-The project intelligently detects and adapts to the available container runtime:
-- Auto-detects Podman or Docker
-- Supports both rootless and rootful Podman
-- Automatically determines if sudo is needed
-- All services communicate via the `microservices-net` bridge network (created automatically if missing)
+  The dashboard is a Vite React app. If an API proxy is configured in `vite.config.js`, it will forward API calls to local PHP endpoints in `apps/dashboard/api/`.
 
-### Network Architecture
+- Launching services with Compose:
+  This repo uses many single-purpose compose files you can stack together:
+  - Example (PowerShell):
+    ```powershell
+    cd "\\wsl.localhost\Arch\home\fhcadmin\projects\devarch"
+    docker compose -f compose\database\postgres.yml -f compose\dbms\pgadmin.yml up -d
+    ```
+  - Example (WSL):
+    ```bash
+    cd /home/fhcadmin/projects/devarch
+    docker compose -f compose/database/postgres.yml -f compose/dbms/pgadmin.yml up -d
+    ```
 
-- **Shared Network**: All services on `microservices-net` (bridge driver)
-- **Service Discovery**: Services communicate via container names
-- **Port Binding**: Services exposed on 127.0.0.1 (localhost only) for security
-- **Domain Suffix**: `.test` for local development domains
+  You can combine any number of files to assemble a stack. Shut down with `docker compose down` using the same set of `-f` files.
 
-Applications share the same PHP container but have:
-- Dedicated databases
-- Isolated file structures
-- Separate domain names (e.g., playground.test, b2bcnc.test)
+- Service configs:
+  - Service-specific Dockerfiles and configs live under `config/*`. Compose files reference these.
 
-### Observability Strategy
+- Utility scripts (bash):
+  - `scripts/service-manager.sh` — generic service controls
+  - `scripts/runtime-switcher.sh` — runtime selection helper
+  - `scripts/*-apps-launcher.sh` — language-specific app runners
+  - `scripts/*-auto-discover.sh` — find and manage apps by language
 
-**Metrics Collection**:
-- Prometheus (port 9090) scrapes 12+ exporters every 15 seconds
-- Exporters for: Node, MySQL, PostgreSQL, MongoDB, Redis, Kafka, RabbitMQ, Memcached, and more
-- Configuration: `/home/fhcadmin/projects/devarch/config/prometheus/prometheus.yml`
+These scripts are bash-oriented; run them inside WSL. If you need Windows-native equivalents, provide PowerShell alternatives or instructions.
 
-**Logging**:
-- Centralized in ELK Stack (Elasticsearch, Logstash, Kibana)
-- Logstash processes logs from all services
-- Kibana provides visualization and search
+---
 
-**Tracing**:
-- OpenTelemetry Collector for distributed tracing
-- Configuration: `/home/fhcadmin/projects/devarch/config/otel-collector/otel-collector-config.yaml`
+### 5) Code Pointers (Dashboard)
 
-**Visualization**:
-- Grafana dashboards for metrics
-- Pre-configured data sources for Prometheus and Elasticsearch
+- UI entry: `apps/dashboard/src/main.jsx`, `src/App.jsx`
+- UI components: `src/components/*`
+- Hooks: `src/hooks/*` (e.g., `useApps.js`, `useContainers.js`)
+- Utilities: `src/utils/*`
+- API (local PHP):
+  - `apps/dashboard/api/*.php`
+  - `apps/dashboard/api/lib/*.php` (helpers; includes `detection.php`, `containers.php`)
 
-## Key Directories
+When modifying the dashboard, maintain Tailwind and Vite conventions already present.
 
-```
-/home/fhcadmin/projects/devarch/
-├── apps/                 # Application code (WordPress instances)
-├── compose/              # Docker compose files organized by service category
-│   ├── analytics/       # Monitoring services (Prometheus, Grafana, ELK)
-│   ├── backend/         # Runtime environments (PHP, Node, Python, Go)
-│   ├── database/        # Database services
-│   ├── dbms/           # Database management tools
-│   ├── exporters/      # Prometheus exporters
-│   └── [...]           # Other service categories
-├── config/              # Service-specific configurations and Dockerfiles
-│   ├── php/            # PHP Dockerfile, php.ini, extensions
-│   ├── nginx/          # Nginx configs, SSL certs
-│   ├── prometheus/     # Prometheus scrape configs
-│   └── [...]           # Other service configs
-├── scripts/             # Management and automation scripts
-│   ├── config.sh       # Central configuration (service discovery, runtime detection)
-│   ├── service-manager.sh   # Main orchestration tool
-│   ├── setup-databases.sh   # Database initialization
-│   └── wordpress/      # WordPress installation scripts
-└── logs/               # Application and service logs
-```
+---
+
+### 6) Operating Rules for Claude
+
+- Keep changes minimal and safe by default; prefer docs/PR suggestions unless explicit permission to refactor.
+- Respect Windows + PowerShell command syntax in instructions; use `;` to chain commands in PowerShell.
+- When referencing files:
+  - Use repo-root relative paths for clarity.
+  - Be mindful of `.gitignore` — don’t add ignored files unless the user approves.
+- For Docker instructions:
+  - Provide both PowerShell (Windows path separators) and WSL/Linux examples when helpful.
+  - Avoid destructive operations (`docker system prune -a`) unless requested and confirmed.
+- Testing/verification:
+  - If changing code, request or run focused checks (e.g., build dashboard with `npm run build`) when the user asks for verification.
+- Security/secrets:
+  - Do not commit `.env` files or secrets.
+  - Assume local-only dev endpoints in `apps/dashboard/api` are not exposed publicly.
+
+---
+
+### 7) Common Tasks Cheat Sheet
+
+- Start a DB + Admin UI (example):
+  - PowerShell:
+    ```powershell
+    docker compose -f compose\database\mariadb.yml -f compose\dbms\phpmyadmin.yml up -d
+    ```
+  - WSL:
+    ```bash
+    docker compose -f compose/database/mariadb.yml -f compose/dbms/phpmyadmin.yml up -d
+    ```
+
+- Start observability basics (Prometheus + Grafana):
+  ```bash
+  docker compose \
+    -f compose/analytics/prometheus.yml \
+    -f compose/analytics/grafana.yml up -d
+  ```
+
+- Start Kafka with UI:
+  ```bash
+  docker compose \
+    -f compose/messaging/zookeeper.yml \
+    -f compose/messaging/kafka.yml \
+    -f compose/messaging/kafka-ui.yml up -d
+  ```
+
+- Start a search engine (Typesense or Meilisearch):
+  ```bash
+  docker compose -f compose/search/typesense.yml up -d
+  # or
+  docker compose -f compose/search/meilisearch.yml up -d
+  ```
+
+---
+
+### 8) Coding Style & Conventions
+
+- Mirror existing patterns:
+  - React components: functional components, hooks pattern, Tailwind classes
+  - PHP utilities under `apps/dashboard/api/lib`: keep small, procedural helpers consistent with current style
+  - Compose files: keep services modular (one purpose per file) and reference configs from `config/`
+- Documentation: concise, sectioned, with copy-pasteable commands for both Windows PowerShell and WSL/Linux when relevant.
+
+---
+
+### 9) When to Ask for Clarification
+
+Ask the user before proceeding when:
+- Combining many compose files into a large stack (resource-heavy).
+- Introducing new services or changing ports/volumes.
+- Making non-trivial refactors in dashboard or scripts.
+- Handling sensitive data or `.env` values.
+
+---
+
+### 10) Output Formatting (Claude responses)
+
+- Keep answers succinct unless the user asks for detail.
+- Use fenced code blocks for commands/configs:
+  - Use ```powershell for Windows PowerShell commands
+  - Use ```bash for WSL/Linux
+- Use inline code for file names, paths, and identifiers.
+- Provide step-by-step lists for operational tasks.
+
+---
+
+### 11) Quick File Index (high value targets)
+
+- Dashboard UI: `apps/dashboard/src/*`
+- Dashboard API helpers: `apps/dashboard/api/lib/*`
+- Compose recipes: `compose/**.yml`
+- Service configs/Dockerfiles: `config/**/*`
+- Orchestration scripts: `scripts/*.sh`
+
+---
+
+### 12) Maintenance Notes
+
+- Prefer adding new compose files over modifying existing ones when introducing services; it preserves modularity.
+- Keep `config/` and `compose/` in sync: if a compose file references a `config/*` path, ensure it exists and is committed.
+- For the dashboard, confirm dev server proxies (if any) still point at available endpoints.
+
+---
+
+Authored for Claude on 2025-12-08.
