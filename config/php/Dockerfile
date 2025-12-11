@@ -1,27 +1,34 @@
-# Use the official PHP 8.3 FPM base image with Debian bookworm
+# PHP Development Container
+# Purpose: Lean container focused on PHP application development
+# Provides: PHP 8.3-FPM, Composer, framework CLIs, database clients, development tools
+# For container management: Use devarch-manager container instead
+
 FROM php:8.3-fpm
 
-# Arguments for versions (makes it easier to update)
-ARG NODE_VERSION=lts
+# Arguments for versions
 ARG COMPOSER_VERSION=latest
 
-# Install dependencies and PHP extensions in a single layer to reduce image size
+# Install system dependencies and PHP extensions
+# Order: System packages first, then PHP extensions (for better layer caching)
 RUN apt-get update && apt-get install -y \
-    sudo \
+    # Database clients (for migrations, debugging, queries)
     default-mysql-client \
+    postgresql-client \
+    # Development tools
+    git \
     vim \
     nano \
-    git \
     curl \
     wget \
+    unzip \
     zsh \
+    # Mail relay for local development
     msmtp \
     msmtp-mta \
-    podman \
-    podman-compose \
+    # PHP extension dependencies
     libpng-dev \
-    libjpeg-dev \
     libwebp-dev \
+    libjpeg-dev \
     libfreetype6-dev \
     libonig-dev \
     libzip-dev \
@@ -31,7 +38,6 @@ RUN apt-get update && apt-get install -y \
     libicu-dev \
     libxml2-dev \
     libxslt1-dev \
-    unzip \
     ca-certificates \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) \
@@ -50,23 +56,18 @@ RUN apt-get update && apt-get install -y \
         xsl \
     && pecl install redis mongodb imagick xdebug amqp \
     && docker-php-ext-enable redis opcache pdo_mysql pdo_pgsql mongodb imagick xdebug amqp exif intl bcmath soap xsl \
-    # Install Node.js in the same layer
-    && curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
-    && apt-get install -y nodejs \
-    && npm install -g npm@latest \
     # Cleanup
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /tmp/pear
 
-    
 # Install and configure Composer
 COPY --from=composer:${COMPOSER_VERSION} /usr/bin/composer /usr/bin/composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
 ENV COMPOSER_MEMORY_LIMIT=-1
 ENV PATH="/root/.composer/vendor/bin:${PATH}"
 
-# Install development tools
+# Install PHP framework CLIs (Laravel, WordPress, Symfony)
 RUN composer global require laravel/installer && \
     curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
     chmod +x wp-cli.phar && \
@@ -79,33 +80,25 @@ RUN curl -1sLf 'https://dl.cloudsmith.io/public/symfony/stable/setup.deb.sh' | b
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Configure msmtp for mail relay
+# Configure msmtp for mail relay (routes to mailpit in compose)
 RUN echo "account default" > /etc/msmtprc \
     && echo "host mailpit" >> /etc/msmtprc \
     && echo "port 1025" >> /etc/msmtprc \
     && echo "from noreply@devarch.local" >> /etc/msmtprc \
     && chmod 644 /etc/msmtprc
 
-# Install Oh My Zsh and set Zsh as default shell
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" \
+# Install Oh My Zsh and set as default shell
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
     && chsh -s $(which zsh)
 
-# Set permissions for the container user
+# Set permissions for PHP-FPM user
 RUN chown -R www-data:www-data /var/www/html
 
-# Create .config directory for www-data user (podman config)
-RUN mkdir -p /var/www/.config && chown -R www-data:www-data /var/www/.config
-
-# Add www-data to sudoers for podman socket access (read-only socket is safe)
-RUN echo "Defaults env_keep += \"CONTAINER_HOST HOME XDG_RUNTIME_DIR\"" >> /etc/sudoers.d/www-data \
-    && echo "www-data ALL=(ALL) NOPASSWD: /usr/bin/podman, /usr/bin/podman-compose, /usr/sbin/podman-compose" >> /etc/sudoers.d/www-data \
-    && chmod 0440 /etc/sudoers.d/www-data
-
-# Set the working directory
+# Set working directory
 WORKDIR /var/www/html
 
-# Expose ports for PHP-FPM and development servers
-EXPOSE 8000 5173 9000
+# Expose PHP-FPM and development server ports
+EXPOSE 8000 9000
 
 # Default command
 CMD ["php-fpm"]

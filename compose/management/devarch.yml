@@ -1,0 +1,24 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  devarch:
+    container_name: devarch
+    build:
+      context: ../../config/devarch
+      dockerfile: Dockerfile
+    ports:
+      - "8200:8000"
+    volumes:
+      - /run/user/1000/podman/podman.sock:/run/podman/podman.sock:ro
+      - ../../apps:/workspace/apps
+      - ../../scripts:/workspace/scripts
+      - ../../config/nginx/custom/http.conf:/workspace/config/nginx/custom/http.conf:ro
+      - ../../compose:/workspace/compose:ro
+      - ../../.env:/workspace/.env:ro
+    environment:
+      - CONTAINER_HOST=unix:///run/podman/podman.sock
+    networks:
+      - microservices-net
+    restart: unless-stopped
