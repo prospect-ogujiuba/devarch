@@ -51,6 +51,17 @@ function discoverApps() {
       continue;
     }
 
+    // Skip static SPAs - they don't need a dev server
+    // If app has dist/index.html or build/index.html, it's a static build
+    const isStaticSPA = fs.existsSync(path.join(appPath, 'dist/index.html')) ||
+                        fs.existsSync(path.join(appPath, 'build/index.html')) ||
+                        fs.existsSync(path.join(appPath, 'out/index.html'));
+
+    if (isStaticSPA) {
+      console.log(`⏭️  Skipping ${entry.name} - static SPA (has dist/build/out folder)`);
+      continue;
+    }
+
     let packageJson;
     try {
       packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
@@ -65,9 +76,18 @@ function discoverApps() {
     let interpreter = 'node';
     let interpreterArgs = '';
 
+    // Detect Next.js apps early for script selection
+    const isNextJs = packageJson.dependencies?.next || packageJson.devDependencies?.next;
+    const isDevelopment = process.env.NODE_ENV === 'development';
+
     if (packageJson.scripts) {
-      if (packageJson.scripts.start) {
-        // Use npm start
+      // For Next.js in development, prefer 'dev' over 'start'
+      // (start requires build first, dev doesn't)
+      if (isNextJs && isDevelopment && packageJson.scripts.dev) {
+        script = 'npm';
+        args = 'run dev';
+      } else if (packageJson.scripts.start) {
+        // Use npm start for production or non-Next.js apps
         script = 'npm';
         args = 'start';
       } else if (packageJson.scripts.dev) {
@@ -107,6 +127,7 @@ function discoverApps() {
     console.log(`   Script: ${script} ${args}`);
     console.log(`   Port: ${portCounter}`);
     console.log(`   TypeScript: ${hasTypeScript ? 'Yes' : 'No'}`);
+    console.log(`   Framework: ${isNextJs ? 'Next.js' : 'Standard Node.js'}`);
 
     // Create PM2 app configuration
     apps.push({
@@ -118,6 +139,9 @@ function discoverApps() {
         PORT: portCounter,
         NODE_ENV: process.env.NODE_ENV || 'development',
         APP_NAME: entry.name,
+        // Next.js needs to bind to 0.0.0.0 to accept external connections
+        HOST: isNextJs ? '0.0.0.0' : undefined,
+        HOSTNAME: isNextJs ? '0.0.0.0' : undefined,
         // Pass through other environment variables
         ...process.env
       },

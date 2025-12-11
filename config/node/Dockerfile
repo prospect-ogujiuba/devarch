@@ -102,6 +102,21 @@ RUN useradd -m -s /bin/zsh node-user && \
 # Switch to non-root user
 USER node-user
 
+# Create a non-root user
+RUN useradd -m -s /bin/zsh node-user && \
+    echo "node-user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    chown -R node-user:node-user /app
+
+# Set proper HOME for node-user (critical for pm2)
+ENV HOME=/home/node-user
+ENV PM2_HOME=/home/node-user/.pm2
+
+# Switch to non-root user
+USER node-user
+
+# Ensure pm2 home exists
+RUN mkdir -p $PM2_HOME
+
 # Configure pnpm store for node-user (no pnpm setup needed)
 RUN pnpm config set store-dir /home/node-user/.pnpm-store
 
