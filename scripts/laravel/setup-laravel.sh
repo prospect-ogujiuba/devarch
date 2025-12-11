@@ -215,14 +215,14 @@ create_from_repository() {
 
 create_fresh_project() {
     print_status "step" "Creating fresh Laravel project..."
-    
-    # Execute Laravel installer inside PHP container using config.sh variables
-    local create_command="laravel new $PROJECT_NAME"
-    
+
+    # Use composer create-project (more reliable than installer CLI)
+    local create_command="composer create-project laravel/laravel $PROJECT_NAME"
+
     if ! eval "$CONTAINER_CMD exec -w /var/www/html php zsh -c '$create_command'"; then
-        handle_error "Failed to create Laravel project. Ensure Laravel installer is available in PHP container."
+        handle_error "Failed to create Laravel project. Ensure Composer is available in PHP container."
     fi
-    
+
     print_status "success" "Fresh Laravel project created"
 }
 
