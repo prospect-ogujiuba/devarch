@@ -15,5 +15,7 @@ services:
       - ../../scripts:/var/www/scripts
       - ../../.env:/var/www/.env
       - ../../config/php/php.ini:/usr/local/etc/php/php.ini:ro
+      - ../../compose:/var/www/compose:ro
+      - ../../config/nginx/custom/http.conf:/var/www/config/nginx/custom/http.conf:ro
     networks:
       - microservices-net

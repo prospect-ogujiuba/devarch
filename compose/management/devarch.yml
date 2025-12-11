@@ -19,6 +19,11 @@ services:
       - ../../.env:/workspace/.env:ro
     environment:
       - CONTAINER_HOST=unix:///run/podman/podman.sock
+    command: >
+      /bin/bash -c "
+      cd /workspace/apps/dashboard/api/devarch &&
+      php -S 0.0.0.0:8000 /workspace/apps/dashboard/api/devarch/index.php
+      "
     networks:
       - microservices-net
     restart: unless-stopped
