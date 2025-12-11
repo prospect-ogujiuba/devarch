@@ -42,8 +42,3 @@ services:
     networks:
       - microservices-net
     command: pm2-runtime start /app/ecosystem.config.js
-    healthcheck:
-      test: ["CMD", "node", "-e", "process.exit(0)"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
