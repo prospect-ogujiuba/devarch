@@ -56,12 +56,13 @@ SERVICE_CATEGORIES=(
     [dbms]="adminer.yml phpmyadmin.yml mongo-express.yml metabase.yml nocodb.yml pgadmin.yml redis-commander.yml drawdb.yml cloudbeaver.yml"
     [exporters]="blackbox-exporter.yml mongodb-exporter.yml mysqld-exporter.yml node-exporter.yml postgres-exporter.yml redis-exporter.yml kafka-exporter.yml memcached-exporter.yml rabbitmq-exporter.yml"
     [mail]="mailpit.yml"
-    [management]="portainer.yml"
+    [management]="portainer.yml devarch.yml"
     [messaging]="kafka.yml kafka-ui.yml zookeeper.yml rabbitmq.yml"
     [project]="openproject.yml"
     [proxy]="nginx-proxy-manager.yml"
     [gateway]="krakend.yml traefik.yml kong.yml envoy.yml"
     [search]="meilisearch.yml typesense.yml"
+    [ai]=""
 )
 
 # Optional: Override category paths if you need different directory structure
@@ -92,6 +93,7 @@ SERVICE_STARTUP_ORDER=(
     "analytics"
     "messaging"
     "search"
+    "ai"
 )
 
 # =============================================================================
