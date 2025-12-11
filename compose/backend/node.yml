@@ -25,8 +25,10 @@ services:
       - SMTP_HOST=mailpit
       - SMTP_PORT=1025
       - MAIL_FROM=noreply@devarch.test
+      - HOME=/home/node-user
+      - PM2_HOME=/home/node-user/.pm2
     ports:
-      - "127.0.0.1:8200:3000"  # Main app
+      - "127.0.0.1:8205:3000"  # Main app
       - "127.0.0.1:8201:3001"  # Additional services
       - "127.0.0.1:9229:9229"  # Node debugger
       - "127.0.0.1:8203:4000"  # GraphQL
@@ -34,7 +36,7 @@ services:
     volumes:
       - ../../apps:/app
       - node_modules:/app/node_modules
-      - pnpm_store:/root/.pnpm-store
+      - pnpm_store:/home/node-user/.pnpm-store
       - ../../scripts:/scripts
       - ../../config/node/ecosystem.config.js:/app/ecosystem.config.js:ro
     networks:
