@@ -16,13 +16,13 @@ services:
       - ../../scripts:/workspace/scripts
       - ../../config/nginx/custom/http.conf:/workspace/config/nginx/custom/http.conf:ro
       - ../../compose:/workspace/compose:ro
+      - ../../config/devarch/api:/workspace/api:ro
       - ../../.env:/workspace/.env:ro
     environment:
       - CONTAINER_HOST=unix:///run/podman/podman.sock
     command: >
       /bin/bash -c "
-      cd /workspace/apps/dashboard/api/devarch &&
-      php -S 0.0.0.0:8000 /workspace/apps/dashboard/api/devarch/index.php
+      php -S 0.0.0.0:8000 -t /workspace/api/public /workspace/api/public/index.php
       "
     networks:
       - microservices-net
