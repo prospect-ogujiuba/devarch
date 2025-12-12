@@ -14,9 +14,9 @@
 // =============================================================================
 
 // DevArch API runs inside devarch container with /workspace mount
-define('PODMAN_BINARY', 'podman');
-define('NGINX_CONFIG_PATH', '/workspace/config/nginx/custom/http.conf');
-define('COMPOSE_BASE_PATH', '/workspace/compose');
+if (!defined('PODMAN_BINARY')) define('PODMAN_BINARY', 'podman');
+if (!defined('NGINX_CONFIG_PATH')) define('NGINX_CONFIG_PATH', '/workspace/config/nginx/custom/http.conf');
+if (!defined('COMPOSE_BASE_PATH')) define('COMPOSE_BASE_PATH', '/workspace/compose');
 const CACHE_DURATION = 300; // 5 minutes
 
 // Category colors (matching service-manager.sh categories)
