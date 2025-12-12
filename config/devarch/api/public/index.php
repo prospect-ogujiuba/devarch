@@ -42,17 +42,32 @@ try {
             require __DIR__ . '/../endpoints/containers.php';
             break;
 
+        // Container control - both new and simple paths
         case preg_match('#^/api/containers/([^/]+)/control$#', $path, $matches) && $method === 'POST':
             $_POST['container'] = $matches[1];
             require __DIR__ . '/../endpoints/control.php';
             break;
 
+        case $path === '/api/control' && $method === 'POST':
+            require __DIR__ . '/../endpoints/control.php';
+            break;
+
+        // Bulk actions
         case $path === '/api/containers/bulk' && $method === 'POST':
             require __DIR__ . '/../endpoints/bulk.php';
             break;
 
+        case $path === '/api/bulk' && $method === 'POST':
+            require __DIR__ . '/../endpoints/bulk.php';
+            break;
+
+        // Container logs - both new and simple paths
         case preg_match('#^/api/containers/([^/]+)/logs$#', $path, $matches) && $method === 'GET':
             $_GET['container'] = $matches[1];
+            require __DIR__ . '/../endpoints/logs.php';
+            break;
+
+        case $path === '/api/logs' && $method === 'GET':
             require __DIR__ . '/../endpoints/logs.php';
             break;
 
