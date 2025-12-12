@@ -1,0 +1,27 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  apisix_data:
+
+services:
+  apisix:
+    container_name: apisix
+    image: apache/apisix:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:9080:9080"
+      - "127.0.0.1:9091:9091"
+      - "127.0.0.1:9447:9443"
+    volumes:
+      - apisix_data:/usr/local/apisix
+      - ../../config/apisix/config.yaml:/usr/local/apisix/conf/config.yaml:ro
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9080/apisix/admin/routes"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

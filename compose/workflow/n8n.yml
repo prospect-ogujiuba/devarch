@@ -1,0 +1,25 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  n8n_data:
+
+services:
+  n8n:
+    container_name: n8n
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:9910
+      - GENERIC_TIMEZONE=UTC
+    ports:
+      - "127.0.0.1:9910:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - microservices-net

@@ -1,0 +1,24 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  varnish:
+    container_name: varnish
+    image: varnish:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - VARNISH_SIZE=256M
+    ports:
+      - "127.0.0.1:8008:80"
+      - "127.0.0.1:8009:6082"
+    volumes:
+      - ../../config/varnish/default.vcl:/etc/varnish/default.vcl:ro
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "varnishadm", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

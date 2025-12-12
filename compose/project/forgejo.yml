@@ -1,0 +1,35 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  forgejo_data:
+
+services:
+  forgejo:
+    container_name: forgejo
+    image: codeberg.org/forgejo/forgejo:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - FORGEJO__database__DB_TYPE=postgres
+      - FORGEJO__database__HOST=postgres:5432
+      - FORGEJO__database__NAME=forgejo
+      - FORGEJO__database__USER=postgres
+      - FORGEJO__database__PASSWD=admin1234567
+    ports:
+      - "127.0.0.1:9211:3000"
+      - "127.0.0.1:2223:22"
+    volumes:
+      - forgejo_data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

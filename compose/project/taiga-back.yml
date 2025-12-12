@@ -1,0 +1,29 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  taiga_static:
+  taiga_media:
+
+services:
+  taiga-back:
+    container_name: taiga-back
+    image: taigaio/taiga-back:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - POSTGRES_DB=taiga
+      - POSTGRES_USER=taiga
+      - POSTGRES_PASSWORD=admin1234567
+      - POSTGRES_HOST=taiga-db
+      - TAIGA_SECRET_KEY=taiga-back-secret-key
+      - TAIGA_SITES_DOMAIN=localhost:9212
+      - TAIGA_SITES_SCHEME=http
+    volumes:
+      - taiga_static:/taiga-back/static
+      - taiga_media:/taiga-back/media
+    networks:
+      - microservices-net
+    depends_on:
+      - taiga-db
