@@ -1,214 +1,351 @@
-### CLAUDE: Project Operating Guide
+# devarch - Context Index
+Generated: Fri Dec 12 15:09:02 EST 2025
 
-This document tells Claude how to interact with and assist on this repository effectively. It defines goals, guardrails, conventions, and quick references tailored to this codebase and environment.
+## Git Status
+Branch: dev
 
----
+Recent commits:
+- 10320c9: dashboard
+- f0db733: route api to devarch
+- e75c681: mount workspace and start server command
+- 87fe722: move api to config/devarch
+- cf9050d: update scripts config
+- cc57b83: add new container configs
+- 68f0e41: add new containers compose
+- 8612274: dashboard
+- 648cd5a: apps
+- 330e2d3: split krakend and krakend-designer
+- 7c5314b: remove broken health check
+- c17f143: add case for static "node" applications
+- 07f78aa: create non-root user in node
+- 51b8b7a: devarch port 8200 -> 8500
+- d6e6890: rework node main app port and pnpm_store
+- 09bd3a7: dashboard
+- 879766b: dashboard update
+- f6b0b93: update laravel script to use composer
+- 45bfc59: changes to php and devarch containers and nginx config
+- 9feb009: update scripts config
 
-### 1) Purpose and Success Criteria
+Working directory:
+Has uncommitted changes:
+M CLAUDE.md
+M apps/dashboard
 
-- Primary goal: Help maintain and evolve the DevArch workspace: a containerized developer platform with a React dashboard and many Docker Compose service recipes.
-- Succeed by:
-  - Producing minimal, correct changes aligned with the project’s structure and conventions.
-  - Respecting platform constraints: Windows host, PowerShell shell, WSL paths, and non-destructive defaults.
-  - Explaining reasoning succinctly when asked; otherwise keep outputs concise and actionable.
+Remote info:
+Origin: https://github.com/prospect-ogujiuba/devarch.git
+Sync status: Up to date with origin
 
----
+Latest tag: No tags
+Stashes: None
 
-### 2) Environment and Constraints
+## Environment Configuration
+Environment file: .env
 
-- Host OS: Windows (PowerShell); WSL is available under `\\wsl.localhost\Arch\...` paths.
-- Project root: `//wsl.localhost/Arch/home/fhcadmin/projects/devarch`
-- Path conventions:
-  - When showing terminal commands for the user, prefer PowerShell-compatible syntax.
-  - Use Windows backslashes `\` when referencing local Windows paths; use forward slashes for Docker/Linux/WSL examples.
-- Git hygiene:
-  - `.gitignore` ignores most `apps/**` except `apps/dashboard` and `apps/serverinfo`.
-  - Place repository-wide docs (like this file) at the repo root.
+Environment variables:
+```
+# =============================================================================
+# MICROSERVICES ENVIRONMENT CONFIGURATION - HYBRID APPROACH
+# =============================================================================
+# This file contains ONLY sensitive data and truly shared values
+# Service-specific non-sensitive configs are in individual compose files
 
----
+# =============================================================================
+# GLOBAL ADMIN CONFIGURATION
+# =============================================================================
+ADMIN_USER=admin
+ADMIN_PASSWORD=***masked***
+ADMIN_EMAIL=admin@devarch.test
 
-### 3) Repository Overview (What’s here)
+# =============================================================================
+# DOMAIN CONFIGURATION
+# =============================================================================
+DOMAIN_SUFFIX=test
 
-- apps/
-  - dashboard/ — React + Vite dashboard UI
-    - `src/` components, hooks, pages, utils
-    - `api/` simple PHP endpoints for local environment inspection
-    - `vite.config.js`, `tailwind.config.js`
-- compose/ — Modular Docker Compose definitions by category
-  - analytics/ (ELK, Prometheus, Grafana, Matomo, OTEL)
-  - backend/ (node, python, go, rust, dotnet, php, vite, celery)
-  - database/ (mysql, mariadb, postgres, redis, mongodb, mssql, memcached)
-  - dbms/ (pgadmin, phpmyadmin, adminer, metabase, nocodb, mongo-express, cloudbeaver, drawdb)
-  - exporters/ (prometheus exporters for various services)
-  - mail/ (mailpit)
-  - management/ (portainer)
-  - messaging/ (kafka, zookeeper, rabbitmq, kafka-ui)
-  - project/ (gitea, openproject)
-  - proxy/ (nginx-proxy-manager)
-  - search/ (meilisearch, typesense)
-- config/ — Service configs & Dockerfiles used by compose units
-- scripts/ — Utility scripts (auto-discovery; service/runtime management; language app launchers)
+# =============================================================================
+# DEVELOPMENT CREDENTIALS
+# =============================================================================
+GITHUB_USER=prospect-ogujiuba
+GITHUB_TOKEN=***masked***
 
-Key intent: assemble stacks by combining compose files; operate them with scripts and configs; view/manage via the Dashboard.
+# =============================================================================
+# MARIADB CREDENTIALS
+# =============================================================================
 
----
+MARIADB_HOST=mariadb
+MARIADB_PORT=3306
+MYSQL_ROOT_PASSWORD=***masked***
+MYSQL_USER=mariadb_user
+MYSQL_PASSWORD=***masked***
 
-### 4) How to Run (typical flows)
+# =============================================================================
+# NGINX PROXY MANAGER CREDENTIALS
+# =============================================================================
 
-Note: Tailor commands to the user’s OS/shell. On Windows, use PowerShell. For Docker, commands run inside WSL or PowerShell depending on the user’s setup.
+DB_MYSQL_HOST=mariadb
+DB_MYSQL_PORT=3306
+DB_MYSQL_USER=root
+DB_MYSQL_PASSWORD=***masked***
+DB_MYSQL_NAME=npm
+INITIAL_ADMIN_EMAIL=admin@devarch.test
+INITIAL_ADMIN_PASSWORD=***masked***
+```
 
-- Dashboard (development):
-  1) Navigate to the dashboard app
-     - PowerShell: `cd "\\wsl.localhost\Arch\home\fhcadmin\projects\devarch\apps\dashboard"`
-     - WSL: `cd /home/fhcadmin/projects/devarch/apps/dashboard`
-  2) Install deps: `npm install`
-  3) Start dev server: `npm run dev`
+Statistics: 18 total variables, 6 sensitive values masked
 
-  The dashboard is a Vite React app. If an API proxy is configured in `vite.config.js`, it will forward API calls to local PHP endpoints in `apps/dashboard/api/`.
+## Project Structure
+.
+./apps
+./compose
+./config
+./context
+./scripts
+apps/
+├── dashboard
+├── serverinfo
 
-- Launching services with Compose:
-  This repo uses many single-purpose compose files you can stack together:
-  - Example (PowerShell):
-    ```powershell
-    cd "\\wsl.localhost\Arch\home\fhcadmin\projects\devarch"
-    docker compose -f compose\database\postgres.yml -f compose\dbms\pgadmin.yml up -d
-    ```
-  - Example (WSL):
-    ```bash
-    cd /home/fhcadmin/projects/devarch
-    docker compose -f compose/database/postgres.yml -f compose/dbms/pgadmin.yml up -d
-    ```
+## Context Files
+- compose.txt - Contents of compose/ directory
+- config.txt - Contents of config/ directory
+- scripts.txt - Contents of scripts/ directory
 
-  You can combine any number of files to assemble a stack. Shut down with `docker compose down` using the same set of `-f` files.
+## Summary
+- Total files processed: 233
+- Total context size: 413KB
+- Folders processed: compose config scripts
 
-- Service configs:
-  - Service-specific Dockerfiles and configs live under `config/*`. Compose files reference these.
+# devarch - compose
+Generated: Fri Dec 12 15:09:03 EST 2025
+Folder: compose
 
-- Utility scripts (bash):
-  - `scripts/service-manager.sh` — generic service controls
-  - `scripts/runtime-switcher.sh` — runtime selection helper
-  - `scripts/*-apps-launcher.sh` — language-specific app runners
-  - `scripts/*-auto-discover.sh` — find and manage apps by language
+## Folder Structure
+- compose/analytics/elasticsearch.yml
+- compose/analytics/grafana.yml
+- compose/analytics/jaeger.yml
+- compose/analytics/kibana.yml
+- compose/analytics/logstash.yml
+- compose/analytics/loki.yml
+- compose/analytics/matomo.yml
+- compose/analytics/otel-collector.yml
+- compose/analytics/prometheus.yml
+- compose/analytics/tempo.yml
+- compose/analytics/victoriametrics.yml
+- compose/analytics/zipkin.yml
+- compose/backend/bun.yml
+- compose/backend/deno.yml
+- compose/backend/dotnet.yml
+- compose/backend/elixir.yml
+- compose/backend/go.yml
+- compose/backend/java.yml
+- compose/backend/node.yml
+- compose/backend/php.yml
+- compose/backend/python.yml
+- compose/backend/rust.yml
+- compose/backend/vite.yml
+- compose/backend/zig.yml
+- compose/ci/concourse-web.yml
+- compose/ci/concourse-worker.yml
+- compose/ci/drone-runner.yml
+- compose/ci/drone-server.yml
+- compose/ci/gitlab-runner.yml
+- compose/ci/jenkins.yml
+- compose/ci/woodpecker-agent.yml
+- compose/ci/woodpecker-server.yml
+- compose/collaboration/element-web.yml
+- compose/collaboration/matrix-synapse.yml
+- compose/collaboration/mattermost.yml
+- compose/collaboration/nextcloud.yml
+- compose/collaboration/rocketchat.yml
+- compose/collaboration/zulip.yml
+- compose/database/cassandra.yml
+- compose/database/clickhouse.yml
+- compose/database/cockroachdb.yml
+- compose/database/couchdb.yml
+- compose/database/edgedb.yml
+- compose/database/mariadb.yml
+- compose/database/memcached.yml
+- compose/database/mongodb.yml
+- compose/database/mssql.yml
+- compose/database/mysql.yml
+- compose/database/neo4j.yml
+- compose/database/postgres.yml
+- compose/database/redis.yml
+- compose/database/surrealdb.yml
+- compose/dbms/adminer.yml
+- compose/dbms/beekeeper-studio.yml
+- compose/dbms/cloudbeaver.yml
+- compose/dbms/dbeaver.yml
+- compose/dbms/drawdb.yml
+- compose/dbms/memcached-admin.yml
+- compose/dbms/metabase.yml
+- compose/dbms/mongo-express.yml
+- compose/dbms/nocodb.yml
+- compose/dbms/pgadmin.yml
+- compose/dbms/phpmyadmin.yml
+- compose/dbms/redis-commander.yml
+- compose/dbms/sqlpad.yml
+- compose/docs/README.md
+- compose/docs/bookstack.yml
+- compose/docs/docusaurus.yml
+- compose/docs/outline.yml
+- compose/docs/wikijs.yml
+- compose/exporters/blackbox-exporter.yml
+- compose/exporters/kafka-exporter.yml
+- compose/exporters/memcached-exporter.yml
+- compose/exporters/mongodb-exporter.yml
+- compose/exporters/mysqld-exporter.yml
+- compose/exporters/node-exporter.yml
+- compose/exporters/postgres-exporter.yml
+- compose/exporters/rabbitmq-exporter.yml
+- compose/exporters/redis-exporter.yml
+- compose/gateway/apisix.yml
+- compose/gateway/envoy.yml
+- compose/gateway/gravitee.yml
+- compose/gateway/kong.yml
+- compose/gateway/krakend-designer.yml
+- compose/gateway/krakend.yml
+- compose/gateway/traefik.yml
+- compose/gateway/tyk.yml
+- compose/mail/mailhog.yml
+- compose/mail/mailpit.yml
+- compose/mail/postal-mysql.yml
+- compose/mail/postal.yml
+- compose/mail/roundcube.yml
+- compose/management/devarch.yml
+- compose/management/dockge.yml
+- compose/management/portainer.yml
+- compose/management/rancher.yml
+- compose/management/yacht.yml
+- compose/messaging/activemq.yml
+- compose/messaging/celery.yml
+- compose/messaging/kafka-ui.yml
+- compose/messaging/kafka.yml
+- compose/messaging/nats.yml
+- compose/messaging/pulsar.yml
+- compose/messaging/rabbitmq.yml
+- compose/messaging/redpanda.yml
+- compose/messaging/zookeeper.yml
+- compose/project/forgejo.yml
+- compose/project/gitea.yml
+- compose/project/gitlab.yml
+- compose/project/openproject-cron.yml
+- compose/project/openproject-seeder.yml
+- compose/project/openproject-web.yml
+- compose/project/openproject-worker.yml
+- compose/project/taiga-back.yml
+- compose/project/taiga-db.yml
+- compose/project/taiga-front.yml
+- compose/proxy/caddy.yml
+- compose/proxy/haproxy.yml
+- compose/proxy/nginx-proxy-manager.yml
+- compose/proxy/varnish.yml
+- compose/registry/docker-registry.yml
+- compose/registry/harbor-core.yml
+- compose/registry/harbor-jobservice.yml
+- compose/registry/harbor-registry.yml
+- compose/registry/nexus.yml
+- compose/registry/verdaccio.yml
+- compose/search/manticore.yml
+- compose/search/meilisearch.yml
+- compose/search/solr.yml
+- compose/search/sonic.yml
+- compose/search/typesense.yml
+- compose/security/authelia.yml
+- compose/security/authentik-server.yml
+- compose/security/authentik-worker.yml
+- compose/security/keycloak.yml
+- compose/security/trivy.yml
+- compose/security/vault.yml
+- compose/storage/azurite.yml
+- compose/storage/localstack.yml
+- compose/storage/minio.yml
+- compose/storage/seaweedfs-filer.yml
+- compose/storage/seaweedfs-master.yml
+- compose/storage/seaweedfs-s3.yml
+- compose/storage/seaweedfs-volume.yml
+- compose/testing/README.md
+- compose/testing/gatling.yml
+- compose/testing/k6.yml
+- compose/testing/playwright.yml
+- compose/testing/selenium-chrome.yml
+- compose/testing/selenium-firefox.yml
+- compose/testing/selenium-hub.yml
+- compose/workflow/README.md
+- compose/workflow/airflow-init.yml
+- compose/workflow/airflow-scheduler.yml
+- compose/workflow/airflow-webserver.yml
+- compose/workflow/n8n.yml
+- compose/workflow/prefect-agent.yml
+- compose/workflow/prefect.yml
+- compose/workflow/temporal-server.yml
+- compose/workflow/temporal-ui.yml
 
-These scripts are bash-oriented; run them inside WSL. If you need Windows-native equivalents, provide PowerShell alternatives or instructions.
+# devarch - config
+Generated: Fri Dec 12 15:09:04 EST 2025
+Folder: config
 
----
-
-### 5) Code Pointers (Dashboard)
-
-- UI entry: `apps/dashboard/src/main.jsx`, `src/App.jsx`
-- UI components: `src/components/*`
-- Hooks: `src/hooks/*` (e.g., `useApps.js`, `useContainers.js`)
-- Utilities: `src/utils/*`
-- API (local PHP):
-  - `apps/dashboard/api/*.php`
-  - `apps/dashboard/api/lib/*.php` (helpers; includes `detection.php`, `containers.php`)
-
-When modifying the dashboard, maintain Tailwind and Vite conventions already present.
-
----
-
-### 6) Operating Rules for Claude
-
-- Keep changes minimal and safe by default; prefer docs/PR suggestions unless explicit permission to refactor.
-- Respect Windows + PowerShell command syntax in instructions; use `;` to chain commands in PowerShell.
-- When referencing files:
-  - Use repo-root relative paths for clarity.
-  - Be mindful of `.gitignore` — don’t add ignored files unless the user approves.
-- For Docker instructions:
-  - Provide both PowerShell (Windows path separators) and WSL/Linux examples when helpful.
-  - Avoid destructive operations (`docker system prune -a`) unless requested and confirmed.
-- Testing/verification:
-  - If changing code, request or run focused checks (e.g., build dashboard with `npm run build`) when the user asks for verification.
-- Security/secrets:
-  - Do not commit `.env` files or secrets.
-  - Assume local-only dev endpoints in `apps/dashboard/api` are not exposed publicly.
-
----
-
-### 7) Common Tasks Cheat Sheet
-
-- Start a DB + Admin UI (example):
-  - PowerShell:
-    ```powershell
-    docker compose -f compose\database\mariadb.yml -f compose\dbms\phpmyadmin.yml up -d
-    ```
-  - WSL:
-    ```bash
-    docker compose -f compose/database/mariadb.yml -f compose/dbms/phpmyadmin.yml up -d
-    ```
-
-- Start observability basics (Prometheus + Grafana):
-  ```bash
-  docker compose \
-    -f compose/analytics/prometheus.yml \
-    -f compose/analytics/grafana.yml up -d
-  ```
-
-- Start Kafka with UI:
-  ```bash
-  docker compose \
-    -f compose/messaging/zookeeper.yml \
-    -f compose/messaging/kafka.yml \
-    -f compose/messaging/kafka-ui.yml up -d
-  ```
-
-- Start a search engine (Typesense or Meilisearch):
-  ```bash
-  docker compose -f compose/search/typesense.yml up -d
-  # or
-  docker compose -f compose/search/meilisearch.yml up -d
-  ```
-
----
-
-### 8) Coding Style & Conventions
-
-- Mirror existing patterns:
-  - React components: functional components, hooks pattern, Tailwind classes
-  - PHP utilities under `apps/dashboard/api/lib`: keep small, procedural helpers consistent with current style
-  - Compose files: keep services modular (one purpose per file) and reference configs from `config/`
-- Documentation: concise, sectioned, with copy-pasteable commands for both Windows PowerShell and WSL/Linux when relevant.
-
----
-
-### 9) When to Ask for Clarification
-
-Ask the user before proceeding when:
-- Combining many compose files into a large stack (resource-heavy).
-- Introducing new services or changing ports/volumes.
-- Making non-trivial refactors in dashboard or scripts.
-- Handling sensitive data or `.env` values.
-
----
-
-### 10) Output Formatting (Claude responses)
-
-- Keep answers succinct unless the user asks for detail.
-- Use fenced code blocks for commands/configs:
-  - Use ```powershell for Windows PowerShell commands
-  - Use ```bash for WSL/Linux
-- Use inline code for file names, paths, and identifiers.
-- Provide step-by-step lists for operational tasks.
-
----
-
-### 11) Quick File Index (high value targets)
-
-- Dashboard UI: `apps/dashboard/src/*`
-- Dashboard API helpers: `apps/dashboard/api/lib/*`
-- Compose recipes: `compose/**.yml`
-- Service configs/Dockerfiles: `config/**/*`
-- Orchestration scripts: `scripts/*.sh`
-
----
-
-### 12) Maintenance Notes
-
-- Prefer adding new compose files over modifying existing ones when introducing services; it preserves modularity.
-- Keep `config/` and `compose/` in sync: if a compose file references a `config/*` path, ensure it exists and is committed.
-- For the dashboard, confirm dev server proxies (if any) still point at available endpoints.
-
----
-
-Authored for Claude on 2025-12-08.
+## Folder Structure
+- config/airflow/README.md
+- config/airflow/dags/example_dag.py
+- config/apisix/config.yaml
+- config/caddy/Caddyfile
+- config/devarch/Dockerfile
+- config/devarch/api/endpoints/apps.php
+- config/devarch/api/endpoints/bulk.php
+- config/devarch/api/endpoints/categories.php
+- config/devarch/api/endpoints/category-containers.php
+- config/devarch/api/endpoints/category-refresh.php
+- config/devarch/api/endpoints/containers.php
+- config/devarch/api/endpoints/control.php
+- config/devarch/api/endpoints/domains.php
+- config/devarch/api/endpoints/logs.php
+- config/devarch/api/lib/apps.php
+- config/devarch/api/lib/categories.php
+- config/devarch/api/lib/common.php
+- config/devarch/api/lib/containers.php
+- config/devarch/api/public/index.php
+- config/dotnet/Dockerfile
+- config/envoy/envoy.yaml
+- config/go/Dockerfile
+- config/haproxy/haproxy.cfg
+- config/kafka/server.properties
+- config/kong/kong.yml
+- config/krakend/krakend.json
+- config/logstash/logstash.yml
+- config/logstash/pipeline.conf
+- config/loki/loki-config.yml
+- config/nginx/Dockerfile
+- config/nginx/certs/local.crt
+- config/nginx/certs/local.key
+- config/nginx/custom/events.conf
+- config/nginx/custom/http.conf
+- config/nginx/custom/http_top.conf
+- config/nginx/custom/root_top.conf
+- config/nginx/custom/server_proxy.conf
+- config/nginx/npm-import.sql
+- config/node/Dockerfile
+- config/node/ecosystem.config.js
+- config/otel-collector/otel-collector.yml
+- config/php/Dockerfile
+- config/php/php.ini
+- config/php/start.sh
+- config/phpmyadmin/config.inc.php
+- config/prometheus/.my.cnf
+- config/prometheus/blackbox.yml
+- config/prometheus/prometheus.yml
+- config/prometheus/rules/alerts.yml
+- config/python/Dockerfile
+- config/python/requirements.txt
+- config/rabbitmq/enabled_plugins
+- config/rabbitmq/rabbitmq.conf
+- config/rust/Dockerfile
+- config/sonic/config.cfg
+- config/supervisord/supervisord.conf
+- config/synapse/homeserver.yaml
+- config/tempo/tempo-config.yml
+- config/traefik/dynamic/routes.yml
+- config/traefik/traefik.yml
+- config/tyk/tyk.conf
+- config/typesense/typesense-server.ini
+- config/varnish/default.vcl
+- config/vault/config.hcl
+- config/vite/Dockerfile
