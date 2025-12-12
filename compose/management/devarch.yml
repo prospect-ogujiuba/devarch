@@ -16,13 +16,15 @@ services:
       - ../../scripts:/workspace/scripts
       - ../../config/nginx/custom/http.conf:/workspace/config/nginx/custom/http.conf:ro
       - ../../compose:/workspace/compose:ro
-      - ../../config/devarch/api:/workspace/api:ro
+      - ../../config/devarch/api:/workspace/api
+      - ../../config/devarch/nginx.conf:/workspace/config/nginx.conf:ro
       - ../../.env:/workspace/.env:ro
     environment:
       - CONTAINER_HOST=unix:///run/podman/podman.sock
     command: >
       /bin/bash -c "
-      php -S 0.0.0.0:8000 -t /workspace/api/public /workspace/api/public/index.php
+      service php8.3-fpm start &&
+      nginx -c /workspace/config/nginx.conf -g 'daemon off;'
       "
     networks:
       - microservices-net

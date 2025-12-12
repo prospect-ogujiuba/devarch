@@ -56,18 +56,28 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PHP 8.3
+# Install PHP 8.3 with FPM
 RUN curl -sSL https://packages.sury.org/php/README.txt | bash - \
     && apt-get update \
     && apt-get install -y \
         php${PHP_VERSION}-cli \
+        php${PHP_VERSION}-fpm \
         php${PHP_VERSION}-common \
         php${PHP_VERSION}-curl \
         php${PHP_VERSION}-mbstring \
         php${PHP_VERSION}-xml \
         php${PHP_VERSION}-zip \
+        nginx \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Configure PHP-FPM for concurrent requests and run as root for podman access
+RUN sed -i 's/pm.max_children = 5/pm.max_children = 50/' /etc/php/${PHP_VERSION}/fpm/pool.d/www.conf \
+    && sed -i 's/pm.start_servers = 2/pm.start_servers = 10/' /etc/php/${PHP_VERSION}/fpm/pool.d/www.conf \
+    && sed -i 's/pm.min_spare_servers = 1/pm.min_spare_servers = 5/' /etc/php/${PHP_VERSION}/fpm/pool.d/www.conf \
+    && sed -i 's/pm.max_spare_servers = 3/pm.max_spare_servers = 20/' /etc/php/${PHP_VERSION}/fpm/pool.d/www.conf \
+    && sed -i 's/^user = www-data/user = root/' /etc/php/${PHP_VERSION}/fpm/pool.d/www.conf \
+    && sed -i 's/^group = www-data/group = root/' /etc/php/${PHP_VERSION}/fpm/pool.d/www.conf
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
