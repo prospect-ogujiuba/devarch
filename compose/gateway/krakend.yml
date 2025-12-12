@@ -13,13 +13,3 @@ services:
       - "127.0.0.1:4000:8080"
     networks:
       - microservices-net
-
-  krakend-designer:
-    image: devopsfaith/krakendesigner:latest
-    container_name: krakend-designer
-    volumes:
-      - ../../config/krakend:/etc/krakend
-    ports:
-      - "127.0.0.1:4006:80"
-    networks:
-      - microservices-net
