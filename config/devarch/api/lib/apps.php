@@ -15,12 +15,14 @@
 // =============================================================================
 
 // Auto-detect base path (works in container and on host)
-$detectedBasePath = dirname(__DIR__, 3);
-$baseName = basename($detectedBasePath);
-if ($baseName === 'apps' || $baseName === 'html') {
-    define('APPS_BASE_PATH', $detectedBasePath);
-} else {
-    define('APPS_BASE_PATH', '/var/www/html');
+if (!defined('APPS_BASE_PATH')) {
+    $detectedBasePath = dirname(__DIR__, 3);
+    $baseName = basename($detectedBasePath);
+    if ($baseName === 'apps' || $baseName === 'html') {
+        define('APPS_BASE_PATH', $detectedBasePath);
+    } else {
+        define('APPS_BASE_PATH', '/var/www/html');
+    }
 }
 
 const SELF_DIR = 'dashboard';
