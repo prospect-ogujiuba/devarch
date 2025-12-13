@@ -70,6 +70,8 @@ SERVICE_CATEGORIES=(
     [storage]="minio.yml seaweedfs-master.yml seaweedfs-volume.yml seaweedfs-filer.yml seaweedfs-s3.yml localstack.yml azurite.yml"
     [testing]="selenium-hub.yml selenium-chrome.yml selenium-firefox.yml k6.yml playwright.yml gatling.yml"
     [workflow]="airflow-webserver.yml airflow-scheduler.yml airflow-init.yml n8n.yml prefect.yml prefect-agent.yml temporal-server.yml temporal-ui.yml"
+    [erp]="erpnext.yml"
+    [support]="zammad.yml"
     [ai]=""
 )
 
@@ -92,6 +94,7 @@ SERVICE_STARTUP_ORDER=(
     "database"
     "storage"
     "dbms"
+    "erp"
     "security"
     "registry"
     "gateway"
@@ -110,6 +113,7 @@ SERVICE_STARTUP_ORDER=(
     "testing"
     "collaboration"
     "ai"
+    "support"
 )
 
 # =============================================================================
