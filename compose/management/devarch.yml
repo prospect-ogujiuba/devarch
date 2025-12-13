@@ -23,7 +23,7 @@ services:
       - CONTAINER_HOST=unix:///run/podman/podman.sock
     command: >
       /bin/bash -c "
-      service php8.3-fpm start &&
+      php-fpm8.3 -R -D &&
       nginx -c /workspace/config/nginx.conf -g 'daemon off;'
       "
     networks:
