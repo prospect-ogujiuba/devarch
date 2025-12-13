@@ -4,7 +4,6 @@ networks:
 
 volumes:
   erpnext_data:
-  erpnext_mariadb:
 
 services:
   erpnext:
@@ -32,22 +31,3 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-
-  erpnext-db:
-    container_name: erpnext-db
-    image: mariadb:10.6
-    restart: unless-stopped
-    environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=erpnext
-      - MYSQL_USER=erpnext
-      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD}
-    volumes:
-      - erpnext_mariadb:/var/lib/mysql
-    networks:
-      - microservices-net
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5

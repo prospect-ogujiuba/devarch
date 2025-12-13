@@ -4,8 +4,6 @@ networks:
 
 volumes:
   zammad_data:
-  zammad_postgres:
-  zammad_elasticsearch:
 
 services:
   zammad:
@@ -33,42 +31,6 @@ services:
       - zammad-elasticsearch
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  zammad-db:
-    container_name: zammad-db
-    image: postgres:15
-    restart: unless-stopped
-    environment:
-      - POSTGRES_USER=zammad
-      - POSTGRES_PASSWORD=${ZAMMAD_DB_PASSWORD:-zammad123}
-      - POSTGRES_DB=zammad
-    volumes:
-      - zammad_postgres:/var/lib/postgresql/data
-    networks:
-      - microservices-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U zammad"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  zammad-elasticsearch:
-    container_name: zammad-elasticsearch
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.7.1
-    restart: unless-stopped
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    volumes:
-      - zammad_elasticsearch:/usr/share/elasticsearch/data
-    networks:
-      - microservices-net
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
