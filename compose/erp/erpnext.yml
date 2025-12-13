@@ -1,0 +1,53 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  erpnext_data:
+  erpnext_mariadb:
+
+services:
+  erpnext:
+    container_name: erpnext
+    image: frappe/erpnext:v15
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - SITE_NAME=erp.devarch.test
+      - DB_HOST=erpnext-db
+      - DB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - REDIS_CACHE=redis:6379
+      - REDIS_QUEUE=redis:6379
+      - REDIS_SOCKETIO=redis:6379
+    ports:
+      - "127.0.0.1:9800:8000"
+    volumes:
+      - erpnext_data:/home/frappe/frappe-bench/sites
+    networks:
+      - microservices-net
+    depends_on:
+      - erpnext-db
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  erpnext-db:
+    container_name: erpnext-db
+    image: mariadb:10.6
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=erpnext
+      - MYSQL_USER=erpnext
+      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - erpnext_mariadb:/var/lib/mysql
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
