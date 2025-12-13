@@ -72,6 +72,10 @@ INDIVIDUAL SERVICE COMMANDS:
     ps                      List running services
     list                    List all available services
 
+SYSTEM MANAGEMENT COMMANDS:
+    list-components         List all podman/docker components (images, containers, volumes, networks, pods)
+    prune-components        Remove ALL components (WARNING: destructive operation!)
+
 BULK OPERATION COMMANDS:
     start [TARGETS]         Start services/categories in dependency order
     stop [TARGETS]          Stop services/categories in reverse dependency order  
@@ -131,6 +135,12 @@ EXAMPLES:
     $0 down nginx --remove-volumes          # Stop nginx and remove volumes
     $0 rebuild php --no-cache               # Rebuild php without cache
     $0 logs redis --follow                  # Follow redis logs
+    
+    # System management
+    $0 list-components                      # List all components (images, containers, volumes, etc.)
+    $0 prune-components --force             # Remove ALL components without confirmation
+    $0 prune-components --dry-run           # Preview what would be removed
+    $0 prune-components --sudo              # Prune with sudo (for rootful podman/docker)
     
     # Bulk operations
     $0 start database backend               # Start database then backend
@@ -422,7 +432,7 @@ parse_arguments() {
 # =============================================================================
 
 validate_command() {
-    local valid_commands=("up" "down" "restart" "rebuild" "logs" "status" "ps" "list" "start" "stop" "start-all" "stop-all")
+    local valid_commands=("up" "down" "restart" "rebuild" "logs" "status" "ps" "list" "start" "stop" "start-all" "stop-all" "list-components" "prune-components")
     
     if [[ ! " ${valid_commands[*]} " =~ " $COMMAND " ]]; then
         print_status "error" "Invalid command: $COMMAND"
@@ -455,7 +465,7 @@ validate_bulk_targets() {
     
     # Add targets from command line
     if [[ -n "$BULK_TARGETS" ]]; then
-        all_targets+=(${=BULK_TARGETS})
+        all_targets+=($BULK_TARGETS)
     fi
     
     # Add targets from --categories
@@ -751,6 +761,109 @@ cmd_list() {
     done
     
     echo "Total services: $(list_all_service_names | wc -l)"
+}
+
+cmd_list_components() {
+    print_status "info" "Listing all Podman/Docker components:"
+    echo ""
+    
+    print_status "step" "Images:"
+    eval "$CONTAINER_CMD images"
+    echo ""
+    
+    print_status "step" "Containers:"
+    eval "$CONTAINER_CMD ps -a"
+    echo ""
+    
+    print_status "step" "Volumes:"
+    eval "$CONTAINER_CMD volume ls"
+    echo ""
+    
+    print_status "step" "Networks:"
+    eval "$CONTAINER_CMD network ls"
+    echo ""
+    
+    # Only list pods if using podman
+    if [[ "$USE_PODMAN" == "true" ]]; then
+        print_status "step" "Pods:"
+        eval "$CONTAINER_CMD pod ps -a"
+        echo ""
+    fi
+}
+
+cmd_prune_components() {
+    print_status "warning" "⚠️  WARNING: This will remove ALL containers, images, volumes, networks, and pods!"
+    echo ""
+    
+    if [[ "$opt_dry_run" == "true" ]]; then
+        print_status "info" "DRY RUN: Would execute the following:"
+        echo "  - Remove all images"
+        echo "  - Remove all containers"
+        echo "  - Remove all volumes"
+        echo "  - Remove network: $NETWORK_NAME"
+        if [[ "$USE_PODMAN" == "true" ]]; then
+            echo "  - Remove all pods"
+        fi
+        return 0
+    fi
+    
+    # Confirm with user unless force flag is set
+    if [[ "$opt_force_recreate" != "true" && "$opt_force_services" != "true" ]]; then
+        echo -n "Are you sure you want to prune all components? (yes/no): "
+        read confirmation
+        if [[ "$confirmation" != "yes" ]]; then
+            print_status "info" "Prune operation cancelled"
+            return 0
+        fi
+    fi
+    
+    print_status "step" "Pruning all components..."
+    echo ""
+    
+    # Remove all containers first
+    print_status "step" "Removing all containers..."
+    if eval "$CONTAINER_CMD container rm --all -f $ERROR_REDIRECT"; then
+        print_status "success" "All containers removed"
+    else
+        print_status "warning" "Some containers may not have been removed"
+    fi
+    
+    # Remove all images
+    print_status "step" "Removing all images..."
+    if eval "$CONTAINER_CMD image rm --all -f $ERROR_REDIRECT"; then
+        print_status "success" "All images removed"
+    else
+        print_status "warning" "Some images may not have been removed"
+    fi
+    
+    # Remove all volumes
+    print_status "step" "Removing all volumes..."
+    if eval "$CONTAINER_CMD volume rm --all -f $ERROR_REDIRECT"; then
+        print_status "success" "All volumes removed"
+    else
+        print_status "warning" "Some volumes may not have been removed"
+    fi
+    
+    # Remove project network
+    print_status "step" "Removing network: $NETWORK_NAME..."
+    if eval "$CONTAINER_CMD network rm $NETWORK_NAME $ERROR_REDIRECT"; then
+        print_status "success" "Network $NETWORK_NAME removed"
+    else
+        print_status "warning" "Network $NETWORK_NAME may not exist or couldn't be removed"
+    fi
+    
+    # Remove all pods (podman only)
+    if [[ "$USE_PODMAN" == "true" ]]; then
+        print_status "step" "Removing all pods..."
+        if eval "$CONTAINER_CMD pod rm --all -f $ERROR_REDIRECT"; then
+            print_status "success" "All pods removed"
+        else
+            print_status "warning" "Some pods may not have been removed"
+        fi
+    fi
+    
+    echo ""
+    print_status "success" "Prune operation completed!"
 }
 
 # =============================================================================
@@ -1639,6 +1752,12 @@ main() {
             ;;
         "list")
             cmd_list
+            ;;
+        "list-components")
+            cmd_list_components
+            ;;
+        "prune-components")
+            cmd_prune_components
             ;;
         # Bulk operation commands
         "start")
