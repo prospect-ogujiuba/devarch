@@ -25,9 +25,8 @@ services:
       - ../../scripts:/scripts:ro
     networks:
       - microservices-net
-    command: /bin/bash /scripts/vite-auto-discover.sh
     healthcheck:
-      test: ["CMD", "node", "--version"]
+      test: [ "CMD", "node", "--version" ]
       interval: 30s
       timeout: 10s
       retries: 3

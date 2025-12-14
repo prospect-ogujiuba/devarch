@@ -33,11 +33,10 @@ services:
       - python_venv:/opt/venv
     networks:
       - microservices-net
-    command: /bin/bash /scripts/celery-auto-discover.sh
     depends_on:
       - redis
     healthcheck:
-      test: ["CMD", "celery", "--version"]
+      test: [ "CMD", "celery", "--version" ]
       interval: 30s
       timeout: 10s
       retries: 3

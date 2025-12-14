@@ -58,10 +58,8 @@ services:
     networks:
       - microservices-net
 
-    command: /bin/bash /scripts/dotnet-apps-launcher.sh
-
     healthcheck:
-      test: ["CMD", "dotnet", "--version"]
+      test: [ "CMD", "dotnet", "--version" ]
       interval: 30s
       timeout: 10s
       retries: 3

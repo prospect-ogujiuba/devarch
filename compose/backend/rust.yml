@@ -34,9 +34,8 @@ services:
       - ../../scripts:/scripts
     networks:
       - microservices-net
-    command: /bin/bash /scripts/rust-apps-launcher.sh
     healthcheck:
-      test: ["CMD", "rustc", "--version"]
+      test: [ "CMD", "rustc", "--version" ]
       interval: 30s
       timeout: 10s
       retries: 3

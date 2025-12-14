@@ -44,7 +44,6 @@ services:
       - ../../config/supervisord/supervisord.conf:/etc/supervisor/supervisord.conf:ro
     networks:
       - microservices-net
-    command: /bin/bash /scripts/python-auto-discover.sh
     healthcheck:
       test: [ "CMD", "python", "-c", "import sys; sys.exit(0)" ]
       interval: 30s
