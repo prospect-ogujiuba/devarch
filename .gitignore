@@ -1,8 +1,5 @@
 # Ignore everything inside apps/
 apps/**
-
-# But NOT the apps folder itself
-!apps/
 context/
 backup/
 prompts/
