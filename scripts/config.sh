@@ -70,7 +70,7 @@ SERVICE_CATEGORIES=(
     [storage]="minio.yml seaweedfs-master.yml seaweedfs-volume.yml seaweedfs-filer.yml seaweedfs-s3.yml localstack.yml azurite.yml"
     [testing]="selenium-hub.yml selenium-chrome.yml selenium-firefox.yml k6.yml playwright.yml gatling.yml"
     [workflow]="airflow-webserver.yml airflow-scheduler.yml airflow-init.yml n8n.yml prefect.yml prefect-agent.yml temporal-server.yml temporal-ui.yml"
-    [erp]="erpnext.yml"
+    [erp]="erpnext-backend.yml erpnext-create-site.yml erpnext-configurator.yml  erpnext-frontend.yml erpnext-queue-long.yml erpnext-queue-short.yml erpnext-scheduler.yml erpnext-websocket.yml"
     [support]="zammad.yml"
     [ai]=""
 )
