@@ -1,6 +1,7 @@
 # DevArch Project Guidelines
 
 ## Table of Contents
+
 1. [Project Overview](#project-overview)
 2. [Project Structure](#project-structure)
 3. [Service Management](#service-management)
@@ -17,10 +18,14 @@
 
 ## Project Overview
 
-**DevArch** is a comprehensive microservices development environment that provides a unified platform for managing multiple backend runtimes, databases, analytics tools, CI/CD pipelines, and supporting services using Docker Compose or Podman Compose.
+**DevArch** is a comprehensive microservices development environment that provides a
+unified platform for managing multiple backend runtimes, databases, analytics tools, CI/CD
+pipelines, and supporting services using Docker Compose or Podman Compose.
 
 ### Key Features
-- **Multiple Backend Runtimes**: PHP, Node.js, Python, Go, .NET, Rust, Java, Bun, Deno, Elixir, Zig
+
+- **Multiple Backend Runtimes**: PHP, Node.js, Python, Go, .NET, Rust, Java, Bun, Deno,
+  Elixir, Zig
 - **Unified Service Manager**: Single command-line tool for managing all services
 - **Smart Configuration**: Centralized configuration with dependency management
 - **Port Isolation**: Dedicated port ranges for each runtime to prevent conflicts
@@ -87,7 +92,9 @@ devarch/
 
 ### The Unified Service Manager
 
-The `service-manager.sh` script is your primary tool for managing all services. It provides a consistent interface for starting, stopping, and managing services across the entire stack.
+The `service-manager.sh` script is your primary tool for managing all services. It
+provides a consistent interface for starting, stopping, and managing services across the
+entire stack.
 
 #### Basic Commands
 
@@ -247,18 +254,19 @@ The configuration system supports flexible path resolution:
 
 Each runtime has a dedicated 100-port range for clean separation:
 
-| Runtime | Port Range | Primary | Secondary | Vite/Hot Reload | Additional |
-|---------|-----------|---------|-----------|-----------------|------------|
-| **PHP**     | 8100-8199 | 8100 | - | 8102 | - |
-| **Node.js** | 8200-8299 | 8200 | 8201 | 8202 | GraphQL: 8203, Debug: 9229 |
-| **Python**  | 8300-8399 | 8300 | Flask: 8301 | - | Jupyter: 8302, Flower: 8303 |
-| **Go**      | 8400-8499 | 8400 | - | - | Metrics: 8401, Debug: 8402, pprof: 8403 |
-| **.NET**    | 8600-8699 | 8600 | 8601 | 8603 | Debug: 8602 |
-| **Rust**    | 8700-8799 | 8700 | 8701 | - | Debug: 8702, Metrics: 8703 |
+| Runtime     | Port Range | Primary | Secondary   | Vite/Hot Reload | Additional                              |
+|-------------|------------|---------|-------------|-----------------|-----------------------------------------|
+| **PHP**     | 8100-8199  | 8100    | -           | 8102            | -                                       |
+| **Node.js** | 8200-8299  | 8200    | 8201        | 8202            | GraphQL: 8203, Debug: 9229              |
+| **Python**  | 8300-8399  | 8300    | Flask: 8301 | -               | Jupyter: 8302, Flower: 8303             |
+| **Go**      | 8400-8499  | 8400    | -           | -               | Metrics: 8401, Debug: 8402, pprof: 8403 |
+| **.NET**    | 8600-8699  | 8600    | 8601        | 8603            | Debug: 8602                             |
+| **Rust**    | 8700-8799  | 8700    | 8701        | -               | Debug: 8702, Metrics: 8703              |
 
 ### Backend Runtime Features
 
 Each backend service includes:
+
 - **Development tools**: Debuggers, linters, formatters
 - **Package managers**: npm/yarn/pnpm (Node), pip/poetry/uv (Python), etc.
 - **Database clients**: PostgreSQL, MySQL, MongoDB, Redis
@@ -321,6 +329,7 @@ The `vite-auto-discover.sh` script automatically discovers and proxies Vite dev 
 ### Container Runtime Selection
 
 The project supports both Docker and Podman:
+
 - **Podman**: Preferred for rootless operation and security
 - **Docker**: Fully supported alternative
 
@@ -329,12 +338,14 @@ Detection is automatic based on available runtime.
 ### Rootless vs Rootful
 
 **Podman Rootless** (recommended):
+
 - No sudo required
 - Better security isolation
 - User namespace mapping
 - Persistent service via systemd (optional)
 
 **Rootful Mode** (Docker or Podman with sudo):
+
 - Use `--sudo` flag with service-manager.sh
 - Required for some legacy services
 - Better compatibility with Docker-only images
@@ -342,6 +353,7 @@ Detection is automatic based on available runtime.
 ### User ID Mapping
 
 All custom backend images support UID/GID mapping:
+
 ```yaml
 services:
   node:
@@ -357,12 +369,14 @@ This ensures file ownership matches your host user.
 ### Volume Management
 
 **Best Practices**:
+
 - Use named volumes for persistent data
 - Use bind mounts for development code
 - Avoid volumes in read-only paths
 - Regular backups of important volumes
 
 **Volume Cleanup**:
+
 ```bash
 # List volumes
 ./scripts/service-manager.sh list-components
@@ -378,6 +392,7 @@ This ensures file ownership matches your host user.
 ### Container Network
 
 All services connect to a shared bridge network:
+
 - **Network Name**: `microservices-net`
 - **Driver**: bridge
 - **Automatic creation**: On first service start
@@ -386,6 +401,7 @@ All services connect to a shared bridge network:
 ### Inter-Service Communication
 
 Services communicate using service names:
+
 ```yaml
 # In your application configuration
 database_host: postgres
@@ -399,6 +415,7 @@ api_gateway: krakend
 **External**: Selected ports mapped to host for development access
 
 Example:
+
 ```yaml
 services:
   postgres:
@@ -431,6 +448,7 @@ services:
 ### Backup & Restore
 
 **Manual Backup**:
+
 ```bash
 # PostgreSQL
 podman exec postgres pg_dump -U postgres dbname > backup.sql
@@ -443,6 +461,7 @@ podman exec mongodb mongodump --out /backup
 ```
 
 **Restore**:
+
 ```bash
 # PostgreSQL
 podman exec -i postgres psql -U postgres dbname < backup.sql
@@ -479,6 +498,10 @@ podman exec -i mysql mysql -u root -p dbname < backup.sql
 3. **Keep compose files simple** - One service per file
 4. **Environment-specific configs** - Use `.env` for local overrides
 5. **Test in isolation** - Start only required services for testing
+6. **@apps/dashboard is a first class citizen**
+7. The tech stack for the dashboard project should be read form the package.json.
+8. **Always Use existing packages i.e., Tailwind Plus via HeadlessUI for components, and
+   the icon packages unless specified otherwise.**
 
 ### Maintenance
 
@@ -553,6 +576,7 @@ docker rm -f <container>
 ### Debugging Services
 
 #### Check Container Status
+
 ```bash
 podman ps -a
 # or
@@ -560,6 +584,7 @@ docker ps -a
 ```
 
 #### Inspect Container
+
 ```bash
 podman inspect <container>
 # or
@@ -567,6 +592,7 @@ docker inspect <container>
 ```
 
 #### Access Container Shell
+
 ```bash
 podman exec -it <container> zsh
 # or
@@ -574,6 +600,7 @@ docker exec -it <container> zsh
 ```
 
 #### View Resource Usage
+
 ```bash
 podman stats
 # or
