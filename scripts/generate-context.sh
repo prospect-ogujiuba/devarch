@@ -97,6 +97,17 @@ is_text_file() {
     fi
 }
 
+# Utilities
+# Normalize line endings of a file to LF (remove CR characters)
+normalize_line_endings() {
+    local f="$1"
+    [[ -f "$f" ]] || return 0
+    # Use a safe temp file in the same directory
+    local tmp="${f}.tmp.$$"
+    # Remove carriage returns if any
+    tr -d '\r' < "$f" > "$tmp" 2>/dev/null && mv "$tmp" "$f" || rm -f "$tmp"
+}
+
 # Generate hosts file entries dynamically from compose files
 generate_hosts_file() {
     local hosts_file="$CONTEXT_DIR/hosts.txt"
@@ -175,6 +186,9 @@ EOF
     echo "# Infrastructure (.test): ${#compose_domains[@]} domains" >> "$hosts_file"
     echo "# Development (.test): $(( ${#app_domains[@]} + 1 )) domains" >> "$hosts_file"
     
+    # Normalize line endings to LF
+    normalize_line_endings "$hosts_file"
+
     echo "Generated dynamic hosts file: $hosts_file"
 }
 
@@ -201,9 +215,9 @@ process_folder() {
     # Get folder structure
     echo "## Folder Structure" >> "$output_file"
     if command -v tree >/dev/null 2>&1; then
-        tree "$folder" >> "$output_file"
+        tree "$folder" | sed 's/^/- /' >> "$output_file"
     else
-        find "$folder" -type f | sort >> "$output_file"
+        find "$folder" -type f | sort | sed 's/^/- /' >> "$output_file"
     fi
     echo "" >> "$output_file"
     
@@ -241,6 +255,9 @@ process_folder() {
     echo "---" >> "$output_file"
     echo "Files processed: $file_count" >> "$output_file"
     
+    # Normalize line endings to LF
+    normalize_line_endings "$output_file"
+
     local size=$(wc -c < "$output_file")
     echo "Created $output_file ($file_count files, $(( size / 1024 ))KB)"
 }
@@ -302,18 +319,18 @@ main() {
         echo "" >> "$index_file"
         
         echo "Recent commits:" >> "$index_file"
-        git log --oneline -20 2>/dev/null >> "$index_file" || echo "No git history" >> "$index_file"
+        git log --oneline -20 2>/dev/null | sed 's/^/- /' >> "$index_file" || echo "- No git history" >> "$index_file"
         echo "" >> "$index_file"
         
         # Working directory status
         echo "Working directory:" >> "$index_file"
         if git diff --quiet && git diff --cached --quiet; then
-            echo "Clean (no changes)" >> "$index_file"
+            echo "- Clean (no changes)" >> "$index_file"
         else
             echo "Has uncommitted changes:" >> "$index_file"
-            git status --porcelain 2>/dev/null | head -10 >> "$index_file"
+            git status --porcelain 2>/dev/null | head -10 | sed 's/^/- /' >> "$index_file"
             if [[ $(git status --porcelain 2>/dev/null | wc -l) -gt 10 ]]; then
-                echo "... (showing first 10 of $(git status --porcelain 2>/dev/null | wc -l) changes)" >> "$index_file"
+                echo "- ... (showing first 10 of $(git status --porcelain 2>/dev/null | wc -l) changes)" >> "$index_file"
             fi
         fi
         echo "" >> "$index_file"
@@ -321,30 +338,30 @@ main() {
         # Remote information
         echo "Remote info:" >> "$index_file"
         local remote_url=$(git remote get-url origin 2>/dev/null || echo "No remote origin")
-        echo "Origin: $remote_url" >> "$index_file"
+        echo "- Origin: $remote_url" >> "$index_file"
         
         # Ahead/behind status
         local ahead_behind=$(git rev-list --left-right --count origin/$(git branch --show-current)...HEAD 2>/dev/null || echo "0	0")
         local behind=$(echo "$ahead_behind" | cut -f1)
         local ahead=$(echo "$ahead_behind" | cut -f2)
         if [[ "$ahead" != "0" || "$behind" != "0" ]]; then
-            echo "Sync status: $ahead commits ahead, $behind commits behind origin" >> "$index_file"
+            echo "- Sync status: $ahead commits ahead, $behind commits behind origin" >> "$index_file"
         else
-            echo "Sync status: Up to date with origin" >> "$index_file"
+            echo "- Sync status: Up to date with origin" >> "$index_file"
         fi
         echo "" >> "$index_file"
         
         # Recent tags
         local recent_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "No tags")
-        echo "Latest tag: $recent_tag" >> "$index_file"
+        echo "- Latest tag: $recent_tag" >> "$index_file"
         
         # Stash info
         local stash_count=$(git stash list 2>/dev/null | wc -l)
         if [[ "$stash_count" -gt 0 ]]; then
             echo "Stashes: $stash_count stashed changes" >> "$index_file"
-            git stash list --oneline 2>/dev/null | head -3 >> "$index_file"
+            git stash list --oneline 2>/dev/null | head -3 | sed 's/^/- /' >> "$index_file"
         else
-            echo "Stashes: None" >> "$index_file"
+            echo "- Stashes: None" >> "$index_file"
         fi
         echo "" >> "$index_file"
     fi
@@ -400,16 +417,16 @@ main() {
     echo "## Project Structure" >> "$index_file"
     if command -v tree >/dev/null 2>&1; then
         # Use tree but limit depth and exclude deep app contents
-        tree -I 'node_modules|.git|dist|build|venv|__pycache__|target|context' -L 2 >> "$index_file"
+        tree -I 'node_modules|.git|dist|build|venv|__pycache__|target|context' -L 2 | sed 's/^/- /' >> "$index_file"
     else
         # Manual listing - show top level and apps folder contents
-        echo "." >> "$index_file"
-        find . -maxdepth 1 -type d -not -path '*/.*' -not -path '.' | sort >> "$index_file"
+        echo "- ." >> "$index_file"
+        find . -maxdepth 1 -type d -not -path '*/.*' -not -path '.' | sort | sed 's/^/- /' >> "$index_file"
         
         # Show apps folder contents specifically
         if [[ -d "./apps" ]]; then
-            echo "apps/" >> "$index_file"
-            find ./apps -maxdepth 1 -type d -not -path './apps' | sed 's|./apps/|  ├── |' | sort >> "$index_file"
+            echo "- apps/" >> "$index_file"
+            find ./apps -maxdepth 1 -type d -not -path './apps' | sort | sed 's|./apps/|  - |' >> "$index_file"
         fi
     fi
     echo "" >> "$index_file"
@@ -443,6 +460,9 @@ main() {
     echo "- Total files processed: $total_files" >> "$index_file"
     echo "- Total context size: $(( total_size / 1024 ))KB" >> "$index_file"
     echo "- Folders processed: ${FOLDERS_TO_PROCESS[*]}" >> "$index_file"
+
+    # Normalize line endings to LF
+    normalize_line_endings "$index_file"
     
     echo ""
     echo "=================================="
