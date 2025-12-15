@@ -179,7 +179,7 @@ EOF
 
     # Add special development domains (UPDATED)
     echo "# Development Tools" >> "$hosts_file"
-    echo "127.0.0.1 projects.test" >> "$hosts_file"
+    echo "127.0.0.1 devarch.test" >> "$hosts_file"
     echo "" >> "$hosts_file"
 
     echo "# Summary: $(( ${#compose_domains[@]} + ${#app_domains[@]} + 1 )) domains found" >> "$hosts_file"
