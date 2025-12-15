@@ -17,7 +17,8 @@
 if (!defined('PODMAN_BINARY')) define('PODMAN_BINARY', 'podman');
 if (!defined('NGINX_CONFIG_PATH')) define('NGINX_CONFIG_PATH', '/workspace/config/nginx/custom/http.conf');
 if (!defined('COMPOSE_BASE_PATH')) define('COMPOSE_BASE_PATH', '/workspace/compose');
-const CACHE_DURATION = 300; // 5 minutes
+const CACHE_DURATION = 30; // 30 seconds - reduced for better responsiveness
+const INSPECT_CACHE_DURATION = 60; // 60 seconds for inspect data
 
 // Category colors (matching service-manager.sh categories)
 // Updated 2025-12-12: Added storage, ci, security, registry, workflow, docs, testing, collaboration
@@ -48,6 +49,124 @@ const CATEGORY_COLORS = [
 // Remote Podman API helpers removed - direct Podman access in devarch container
 
 // =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Get detailed container inspect data in batch (health, restarts, uptime)
+ * Optimized to inspect multiple containers in a single call
+ */
+function getBatchContainerInspectData(array $containerNames): array
+{
+    static $cache = [];
+    static $cacheTime = [];
+
+    if (empty($containerNames)) {
+        return [];
+    }
+
+    $results = [];
+    $toInspect = [];
+
+    // Check cache first
+    $now = time();
+    foreach ($containerNames as $name) {
+        if (isset($cache[$name]) && isset($cacheTime[$name]) && ($now - $cacheTime[$name]) < INSPECT_CACHE_DURATION) {
+            $results[$name] = $cache[$name];
+        } else {
+            $toInspect[] = $name;
+        }
+    }
+
+    if (empty($toInspect)) {
+        return $results;
+    }
+
+    // Direct Podman access in devarch container
+    putenv('CONTAINER_HOST=unix:///run/podman/podman.sock');
+
+    // Batch inspect all containers in one call
+    $cmd = PODMAN_BINARY . ' inspect ' . implode(' ', array_map('escapeshellarg', $toInspect)) . ' --format \'{{json .}}\' 2>&1';
+    exec($cmd, $output, $returnCode);
+
+    if ($returnCode !== 0) {
+        // Fill with defaults for failed inspects
+        foreach ($toInspect as $name) {
+            $results[$name] = [
+                'restartCount' => 0,
+                'startedAt' => null,
+                'healthStatus' => null,
+                'uptimeSeconds' => 0,
+            ];
+        }
+        return $results;
+    }
+
+    // Parse output - podman inspect returns array of objects
+    $jsonString = implode('', $output);
+    $dataArray = json_decode($jsonString, true);
+
+    if (!is_array($dataArray)) {
+        foreach ($toInspect as $name) {
+            $results[$name] = [
+                'restartCount' => 0,
+                'startedAt' => null,
+                'healthStatus' => null,
+                'uptimeSeconds' => 0,
+            ];
+        }
+        return $results;
+    }
+
+    // Process each container's inspect data
+    foreach ($dataArray as $data) {
+        $containerName = $data['Name'] ?? '';
+        if (empty($containerName)) continue;
+
+        // Remove leading slash from container name
+        $containerName = ltrim($containerName, '/');
+
+        $result = [
+            'restartCount' => 0,
+            'startedAt' => null,
+            'healthStatus' => null,
+            'uptimeSeconds' => 0,
+        ];
+
+        // Extract restart count
+        if (isset($data['RestartCount'])) {
+            $result['restartCount'] = (int)$data['RestartCount'];
+        }
+
+        // Extract started time and calculate uptime
+        if (isset($data['State']['StartedAt'])) {
+            $result['startedAt'] = $data['State']['StartedAt'];
+
+            try {
+                $startTime = new DateTime($data['State']['StartedAt']);
+                $nowDt = new DateTime();
+                $result['uptimeSeconds'] = $nowDt->getTimestamp() - $startTime->getTimestamp();
+            } catch (Exception $e) {
+                // Silently fail
+            }
+        }
+
+        // Extract health status if healthcheck is configured
+        if (isset($data['State']['Health']['Status'])) {
+            $result['healthStatus'] = strtolower($data['State']['Health']['Status']);
+        } elseif (isset($data['State']['Healthcheck']['Status'])) {
+            $result['healthStatus'] = strtolower($data['State']['Healthcheck']['Status']);
+        }
+
+        $results[$containerName] = $result;
+        $cache[$containerName] = $result;
+        $cacheTime[$containerName] = $now;
+    }
+
+    return $results;
+}
+
+// =============================================================================
 // CORE FUNCTIONS
 // =============================================================================
 
@@ -68,9 +187,17 @@ function getAllContainers(): array
 
     // Create lookup map of running containers by name
     $runningMap = [];
+    $runningNames = [];
     foreach ($runningContainers as $container) {
         $runningMap[$container['name']] = $container;
+        // Only inspect running containers
+        if ($container['status'] === 'running') {
+            $runningNames[] = $container['name'];
+        }
     }
+
+    // Batch inspect all running containers in one call
+    $inspectDataBatch = getBatchContainerInspectData($runningNames);
 
     // Merge: start with all defined services, enrich with runtime data
     $containers = [];
@@ -119,13 +246,12 @@ function getAllContainers(): array
             $container['memoryPercentage'] = 0;
         }
 
-        // Get detailed inspect data if container exists
-        if ($container['status'] !== 'not-created') {
-            $inspectData = getContainerInspectData($serviceName);
-            $container['restartCount'] = $inspectData['restartCount'];
-            $container['healthStatus'] = $inspectData['healthStatus'];
-            $container['uptimeSeconds'] = $inspectData['uptimeSeconds'];
-            $container['startedAt'] = $inspectData['startedAt'];
+        // Get detailed inspect data from batch results (only for running containers)
+        if (isset($inspectDataBatch[$serviceName])) {
+            $container['restartCount'] = $inspectDataBatch[$serviceName]['restartCount'];
+            $container['healthStatus'] = $inspectDataBatch[$serviceName]['healthStatus'];
+            $container['uptimeSeconds'] = $inspectDataBatch[$serviceName]['uptimeSeconds'];
+            $container['startedAt'] = $inspectDataBatch[$serviceName]['startedAt'];
         } else {
             $container['restartCount'] = 0;
             $container['healthStatus'] = null;
@@ -163,7 +289,6 @@ function getContainerList(): array
     exec($whichCmd, $whichOutput, $whichReturn);
 
     if ($whichReturn !== 0) {
-        error_log("Podman binary not found - container monitoring unavailable");
         return [];
     }
 
@@ -171,7 +296,6 @@ function getContainerList(): array
     exec($cmd, $output, $returnCode);
 
     if ($returnCode !== 0) {
-        error_log("Failed to execute podman ps: " . implode("\n", $output));
         return [];
     }
 
@@ -179,7 +303,6 @@ function getContainerList(): array
     $rawContainers = json_decode($jsonString, true);
 
     if (!is_array($rawContainers)) {
-        error_log("Failed to parse podman ps JSON output");
         return [];
     }
 
@@ -241,7 +364,6 @@ function getContainerStats(): array
     exec($cmd, $output, $returnCode);
 
     if ($returnCode !== 0) {
-        error_log("Failed to execute podman stats: " . implode("\n", $output));
         return [];
     }
 
@@ -341,61 +463,17 @@ function parseCpuUsage(string $cpuStr): array
 
 /**
  * Get detailed container inspect data (health, restarts, uptime)
+ * @deprecated Use getBatchContainerInspectData for better performance
  */
 function getContainerInspectData(string $containerName): array
 {
-    $default = [
+    $result = getBatchContainerInspectData([$containerName]);
+    return $result[$containerName] ?? [
         'restartCount' => 0,
         'startedAt' => null,
         'healthStatus' => null,
         'uptimeSeconds' => 0,
     ];
-
-    // Direct Podman access in devarch container
-    putenv('CONTAINER_HOST=unix:///run/podman/podman.sock');
-
-    $cmd = PODMAN_BINARY . ' inspect ' . escapeshellarg($containerName) . ' --format \'{{json .}}\' 2>&1';
-    exec($cmd, $output, $returnCode);
-
-    if ($returnCode !== 0) {
-        return $default;
-    }
-
-    $jsonString = implode('', $output);
-    $data = json_decode($jsonString, true);
-
-    if (!is_array($data)) {
-        return $default;
-    }
-
-    $result = $default;
-
-    // Extract restart count
-    if (isset($data['RestartCount'])) {
-        $result['restartCount'] = (int)$data['RestartCount'];
-    }
-
-    // Extract started time and calculate uptime
-    if (isset($data['State']['StartedAt'])) {
-        $result['startedAt'] = $data['State']['StartedAt'];
-
-        try {
-            $startTime = new DateTime($data['State']['StartedAt']);
-            $now = new DateTime();
-            $result['uptimeSeconds'] = $now->getTimestamp() - $startTime->getTimestamp();
-        } catch (Exception $e) {
-            error_log("Failed to parse StartedAt time: " . $e->getMessage());
-        }
-    }
-
-    // Extract health status if healthcheck is configured
-    if (isset($data['State']['Health']['Status'])) {
-        $result['healthStatus'] = strtolower($data['State']['Health']['Status']);
-    } elseif (isset($data['State']['Healthcheck']['Status'])) {
-        $result['healthStatus'] = strtolower($data['State']['Healthcheck']['Status']);
-    }
-
-    return $result;
 }
 
 /**
@@ -414,7 +492,6 @@ function parseNginxDomains(): array
     $domains = [];
 
     if (!file_exists(NGINX_CONFIG_PATH)) {
-        error_log("Nginx config not found: " . NGINX_CONFIG_PATH);
         $cache = $domains;
         $cacheTime = time();
         return $domains;
@@ -502,7 +579,6 @@ function parseComposeServices(): array
     $services = [];
 
     if (!is_dir(COMPOSE_BASE_PATH)) {
-        error_log("Compose directory not found: " . COMPOSE_BASE_PATH);
         $cache = $services;
         $cacheTime = time();
         return $services;
@@ -555,7 +631,7 @@ function parseComposeServices(): array
             if (preg_match('/ports:\s*((?:\s*-\s*["\']?[\d:\.]+["\']?\s*\n?)+)/s', $content, $portsMatch)) {
                 $portsBlock = $portsMatch[1];
                 preg_match_all('/["\']?((?:[\d.]+:)?(\d+):\d+)["\']?/', $portsBlock, $portMatches);
-                $ports = array_map(function($p) {
+                $ports = array_map(function ($p) {
                     // Convert "127.0.0.1:8501:3306" to "8501:3306"
                     return preg_replace('/^[\d.]+:/', '', $p);
                 }, $portMatches[1]);
@@ -593,7 +669,6 @@ function parseComposePorts(): array
     $ports = [];
 
     if (!is_dir(COMPOSE_BASE_PATH)) {
-        error_log("Compose directory not found: " . COMPOSE_BASE_PATH);
         $cache = $ports;
         $cacheTime = time();
         return $ports;
@@ -876,7 +951,6 @@ function calculateStats(array $containers): array
 function findComposeFile(string $containerName): ?string
 {
     if (!is_dir(COMPOSE_BASE_PATH)) {
-        error_log("Compose directory not found: " . COMPOSE_BASE_PATH);
         return null;
     }
 
@@ -909,7 +983,6 @@ function findComposeFile(string $containerName): ?string
         }
     }
 
-    error_log("Compose file not found for container: {$containerName}");
     return null;
 }
 
