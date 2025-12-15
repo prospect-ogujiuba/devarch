@@ -367,51 +367,51 @@ main() {
     fi
 
     # Add environment context if .env file exists
-    if [[ -f ".env" ]]; then
-        echo "## Environment Configuration" >> "$index_file"
-        echo "Environment file: .env" >> "$index_file"
-        echo "" >> "$index_file"
-        
-        # Show .env contents with sensitive data partially masked
-        echo "Environment variables:" >> "$index_file"
-        echo '```' >> "$index_file"
-        
-        # Read .env file and mask sensitive values (passwords, tokens, etc.)
-        while IFS= read -r line; do
-            # Skip empty lines and comments
-            if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
-                echo "$line" >> "$index_file"
-                continue
-            fi
-            
-            # Check if line contains sensitive data patterns
-            if [[ "$line" =~ (PASSWORD|TOKEN|SECRET|KEY|PASS)= ]]; then
-                # Extract variable name and mask the value
-                local var_name="${line%%=*}"
-                local var_value="${line#*=}"
-                if [[ ${#var_value} -gt 0 ]]; then
-                    echo "${var_name}=***masked***" >> "$index_file"
-                else
-                    echo "$line" >> "$index_file"
-                fi
-            else
-                echo "$line" >> "$index_file"
-            fi
-        done < ".env"
-        
-        echo '```' >> "$index_file"
-        echo "" >> "$index_file"
-        
-        # Add environment statistics
-        local total_vars=$(grep -c "^[^#]*=" ".env" 2>/dev/null || echo "0")
-        local masked_vars=$(grep -c -E "(PASSWORD|TOKEN|SECRET|KEY|PASS)=" ".env" 2>/dev/null || echo "0")
-        echo "Statistics: $total_vars total variables, $masked_vars sensitive values masked" >> "$index_file"
-        echo "" >> "$index_file"
-    else
-        echo "## Environment Configuration" >> "$index_file"
-        echo "No .env file found in project root" >> "$index_file"
-        echo "" >> "$index_file"
-    fi
+#    if [[ -f ".env" ]]; then
+#        echo "## Environment Configuration" >> "$index_file"
+#        echo "Environment file: .env" >> "$index_file"
+#        echo "" >> "$index_file"
+#
+#        # Show .env contents with sensitive data partially masked
+#        echo "Environment variables:" >> "$index_file"
+#        echo '```' >> "$index_file"
+#
+#        # Read .env file and mask sensitive values (passwords, tokens, etc.)
+#        while IFS= read -r line; do
+#            # Skip empty lines and comments
+#            if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+#                echo "$line" >> "$index_file"
+#                continue
+#            fi
+#
+#            # Check if line contains sensitive data patterns
+#            if [[ "$line" =~ (PASSWORD|TOKEN|SECRET|KEY|PASS)= ]]; then
+#                # Extract variable name and mask the value
+#                local var_name="${line%%=*}"
+#                local var_value="${line#*=}"
+#                if [[ ${#var_value} -gt 0 ]]; then
+#                    echo "${var_name}=***masked***" >> "$index_file"
+#                else
+#                    echo "$line" >> "$index_file"
+#                fi
+#            else
+#                echo "$line" >> "$index_file"
+#            fi
+#        done < ".env"
+#
+#        echo '```' >> "$index_file"
+#        echo "" >> "$index_file"
+#
+#        # Add environment statistics
+#        local total_vars=$(grep -c "^[^#]*=" ".env" 2>/dev/null || echo "0")
+#        local masked_vars=$(grep -c -E "(PASSWORD|TOKEN|SECRET|KEY|PASS)=" ".env" 2>/dev/null || echo "0")
+#        echo "Statistics: $total_vars total variables, $masked_vars sensitive values masked" >> "$index_file"
+#        echo "" >> "$index_file"
+#    else
+#        echo "## Environment Configuration" >> "$index_file"
+#        echo "No .env file found in project root" >> "$index_file"
+#        echo "" >> "$index_file"
+#    fi
     
     # Add project structure to index
     echo "## Project Structure" >> "$index_file"
