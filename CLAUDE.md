@@ -1,35 +1,36 @@
 # devarch - Context Index
+
 Generated: Fri Dec 12 15:09:02 EST 2025
 
 ## Git Status
+
 Branch: dev
 
 Recent commits:
-- 10320c9: dashboard
-- f0db733: route api to devarch
-- e75c681: mount workspace and start server command
-- 87fe722: move api to config/devarch
-- cf9050d: update scripts config
-- cc57b83: add new container configs
-- 68f0e41: add new containers compose
-- 8612274: dashboard
-- 648cd5a: apps
-- 330e2d3: split krakend and krakend-designer
-- 7c5314b: remove broken health check
-- c17f143: add case for static "node" applications
-- 07f78aa: create non-root user in node
-- 51b8b7a: devarch port 8200 -> 8500
-- d6e6890: rework node main app port and pnpm_store
-- 09bd3a7: dashboard
-- 879766b: dashboard update
-- f6b0b93: update laravel script to use composer
-- 45bfc59: changes to php and devarch containers and nginx config
-- 9feb009: update scripts config
+Recent commits:
+df566d4 remove unused auto discover and launcher scripts
+ef9ec80 update GUIDELINES.md
+b94cc44 dashboard
+91a6e69 update git ignore
+853d8f6 add GUIDELINES.md
+debcd7a change postgres volume mount path
+8abc88a remove original erpnext add breakdown of containers
+b1f796c add breakdown of erpnext containers to config
+5e83a9d add erp next and zammand + their categories
+2306373 remove redundant containers from erpnext and zammand compose
+df4435d list-components and prune-components added to service manager
+4ce8eb1 add erpnext
+c5ba7ef add zammad
+b0febbb correct php-fpm start command in container
+93e3b04 fix reload broken connection + logs breaking api consumption
+71c9870 dashboard
+bac3c6d update timeouts and other params + api/logs block
+3917d9e add dedicated server block for dashboard
+37a8ce0 update claude with context generate files
+a83a477 update paths for controls
 
 Working directory:
-Has uncommitted changes:
-M CLAUDE.md
-M apps/dashboard
+Clean (no changes)
 
 Remote info:
 Origin: https://github.com/prospect-ogujiuba/devarch.git
@@ -39,9 +40,11 @@ Latest tag: No tags
 Stashes: None
 
 ## Environment Configuration
+
 Environment file: .env
 
 Environment variables:
+
 ```
 # =============================================================================
 # MICROSERVICES ENVIRONMENT CONFIGURATION - HYBRID APPROACH
@@ -93,6 +96,7 @@ INITIAL_ADMIN_PASSWORD=***masked***
 Statistics: 18 total variables, 6 sensitive values masked
 
 ## Project Structure
+
 .
 ./apps
 ./compose
@@ -104,20 +108,24 @@ apps/
 ├── serverinfo
 
 ## Context Files
+
 - compose.txt - Contents of compose/ directory
 - config.txt - Contents of config/ directory
 - scripts.txt - Contents of scripts/ directory
 
 ## Summary
+
 - Total files processed: 233
 - Total context size: 413KB
 - Folders processed: compose config scripts
 
 # devarch - compose
+
 Generated: Fri Dec 12 15:09:03 EST 2025
 Folder: compose
 
 ## Folder Structure
+
 - compose/analytics/elasticsearch.yml
 - compose/analytics/grafana.yml
 - compose/analytics/jaeger.yml
@@ -188,6 +196,14 @@ Folder: compose
 - compose/docs/docusaurus.yml
 - compose/docs/outline.yml
 - compose/docs/wikijs.yml
+- compose/erp/erpnext-backend.yml
+- compose/erp/erpnext-configurator.yml
+- compose/erp/erpnext-create-site.yml
+- compose/erp/erpnext-frontend.yml
+- compose/erp/erpnext-queue-long.yml
+- compose/erp/erpnext-queue-short.yml
+- compose/erp/erpnext-scheduler.yml
+- compose/erp/erpnext-websocket.yml
 - compose/exporters/blackbox-exporter.yml
 - compose/exporters/kafka-exporter.yml
 - compose/exporters/memcached-exporter.yml
@@ -262,6 +278,7 @@ Folder: compose
 - compose/storage/seaweedfs-master.yml
 - compose/storage/seaweedfs-s3.yml
 - compose/storage/seaweedfs-volume.yml
+- compose/support/zammad.yml
 - compose/testing/README.md
 - compose/testing/gatling.yml
 - compose/testing/k6.yml
@@ -280,10 +297,12 @@ Folder: compose
 - compose/workflow/temporal-ui.yml
 
 # devarch - config
+
 Generated: Fri Dec 12 15:09:04 EST 2025
 Folder: config
 
 ## Folder Structure
+
 - config/airflow/README.md
 - config/airflow/dags/example_dag.py
 - config/apisix/config.yaml
@@ -303,6 +322,7 @@ Folder: config
 - config/devarch/api/lib/common.php
 - config/devarch/api/lib/containers.php
 - config/devarch/api/public/index.php
+- config/devarch/nginx.conf
 - config/dotnet/Dockerfile
 - config/envoy/envoy.yaml
 - config/go/Dockerfile
