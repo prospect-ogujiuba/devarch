@@ -8,7 +8,7 @@ require_once __DIR__ . '/../lib/common.php';
 require_once __DIR__ . '/../lib/shell.php';
 
 try {
-    // Check Podman
+    // Check Podman - use commands that work from inside container
     $podmanInstalled = false;
     $podmanVersion = null;
     $podmanRunning = false;
@@ -21,11 +21,13 @@ try {
         $podmanInstalled = true;
         $podmanVersion = trim($podmanVersionResult['output']);
 
-        // Check if socket is responsive
-        $activePodmanSocket = getActivePodmanSocket();
-        if ($activePodmanSocket) {
+        // Test if podman is responsive by running info command
+        $podmanInfoCmd = 'podman info 2>&1';
+        $podmanInfoResult = execSecure($podmanInfoCmd);
+
+        if ($podmanInfoResult['success']) {
             $podmanRunning = true;
-            $podmanResponsive = testPodmanSocketConnectivity($activePodmanSocket);
+            $podmanResponsive = true;
         }
     }
 

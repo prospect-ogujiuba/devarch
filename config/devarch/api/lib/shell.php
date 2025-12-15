@@ -12,6 +12,12 @@
  * @return array ['success' => bool, 'output' => string, 'returnCode' => int]
  */
 function execSecure(string $command, bool $background = false): array {
+    // Prepend CONTAINER_HOST if set (needed for podman commands via PHP-FPM)
+    $containerHost = getenv('CONTAINER_HOST');
+    if ($containerHost && (str_contains($command, 'podman') || str_contains($command, 'docker'))) {
+        $command = 'CONTAINER_HOST=' . escapeshellarg($containerHost) . ' ' . $command;
+    }
+
     if ($background) {
         $command .= ' > /dev/null 2>&1 &';
     } else {

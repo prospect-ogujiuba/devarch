@@ -11,25 +11,31 @@ try {
     $uid = getCurrentUid();
     $user = getCurrentUser();
 
-    // Check rootless socket
-    $rootlessSocket = "/run/user/{$uid}/podman/podman.sock";
-    $rootlessExists = fileOrSocketExists($rootlessSocket);
-    $rootlessConnectivity = $rootlessExists ? testPodmanSocketConnectivity($rootlessSocket) : false;
-    $rootlessSystemdStatus = getSystemdServiceStatus('podman.socket', true);
+    // Test podman connectivity (works from inside container)
+    $podmanInfoCmd = 'podman info --format json 2>&1';
+    $podmanInfoResult = execSecure($podmanInfoCmd);
 
-    // Check rootful socket
-    $rootfulSocket = '/run/podman/podman.sock';
-    $rootfulExists = fileOrSocketExists($rootfulSocket);
-    $rootfulConnectivity = $rootfulExists ? testPodmanSocketConnectivity($rootfulSocket) : false;
-    $rootfulSystemdStatus = getSystemdServiceStatus('podman.socket', false);
-
-    // Determine active socket
     $active = 'none';
-    if ($rootlessConnectivity) {
-        $active = 'rootless';
-    } elseif ($rootfulConnectivity) {
-        $active = 'rootful';
+    $rootlessActive = false;
+    $rootfulActive = false;
+
+    if ($podmanInfoResult['success']) {
+        $info = json_decode($podmanInfoResult['output'], true);
+        if ($info && isset($info['host']['security']['rootless'])) {
+            $isRootless = $info['host']['security']['rootless'];
+            $active = $isRootless ? 'rootless' : 'rootful';
+            $rootlessActive = $isRootless;
+            $rootfulActive = !$isRootless;
+        }
     }
+
+    // Socket paths (for reference, may not be accessible from container)
+    $rootlessSocket = "/run/user/{$uid}/podman/podman.sock";
+    $rootfulSocket = '/run/podman/podman.sock';
+
+    // Get systemd status
+    $rootlessSystemdStatus = getSystemdServiceStatus('podman.socket', true);
+    $rootfulSystemdStatus = getSystemdServiceStatus('podman.socket', false);
 
     // Get environment info
     $dockerHost = getenv('DOCKER_HOST') ?: getenv('CONTAINER_HOST') ?: 'not set';
@@ -48,17 +54,17 @@ try {
         'active' => $active,
         'sockets' => [
             'rootless' => [
-                'active' => $active === 'rootless',
+                'active' => $rootlessActive,
                 'socketPath' => $rootlessSocket,
-                'exists' => $rootlessExists,
-                'connectivity' => $rootlessConnectivity ? 'working' : 'unavailable',
+                'exists' => $rootlessActive,  // If podman works, socket exists
+                'connectivity' => $rootlessActive ? 'working' : 'unavailable',
                 'systemdStatus' => $rootlessSystemdStatus
             ],
             'rootful' => [
-                'active' => $active === 'rootful',
+                'active' => $rootfulActive,
                 'socketPath' => $rootfulSocket,
-                'exists' => $rootfulExists,
-                'connectivity' => $rootfulConnectivity ? 'working' : 'unavailable',
+                'exists' => $rootfulActive,  // If podman works, socket exists
+                'connectivity' => $rootfulActive ? 'working' : 'unavailable',
                 'systemdStatus' => $rootfulSystemdStatus
             ]
         ],
