@@ -1,12 +1,12 @@
 # devarch - Context Index
-
-Generated: Fri Dec 12 15:09:02 EST 2025
+Generated: Mon Dec 15 10:52:18 EST 2025
 
 ## Git Status
-
 Branch: dev
 
 Recent commits:
+- 5b96754 update project commits in CLAUDE.md
+- afd96e0 fix generate-context.sh line ending issue
 - 2370049 add gitattributes
 - 00d83e9 various container lib updates
 - cf1a51a update CLAUDE.md
@@ -25,25 +25,22 @@ Recent commits:
 - df4435d list-components and prune-components added to service manager
 - 4ce8eb1 add erpnext
 - c5ba7ef add zammad
-- b0febbb correct php-fpm start command in container
-- 93e3b04 fix reload broken connection + logs breaking api consumption
 
 Working directory:
-Clean (no changes)
+Has uncommitted changes:
+-  M scripts/generate-context.sh
 
 Remote info:
-Origin: https://github.com/prospect-ogujiuba/devarch.git
-Sync status: Up to date with origin
+- Origin: https://github.com/prospect-ogujiuba/devarch.git
+- Sync status: 3 commits ahead, 0 commits behind origin
 
-Latest tag: No tags
-Stashes: None
+- Latest tag: No tags
+- Stashes: None
 
 ## Environment Configuration
-
 Environment file: .env
 
 Environment variables:
-
 ```
 # =============================================================================
 # MICROSERVICES ENVIRONMENT CONFIGURATION - HYBRID APPROACH
@@ -95,36 +92,19 @@ INITIAL_ADMIN_PASSWORD=***masked***
 Statistics: 18 total variables, 6 sensitive values masked
 
 ## Project Structure
+- .
+- ./apps
+- ./compose
+- ./config
+- ./context
+- ./prompts
+- ./scripts
+- apps/
+    - dashboard
+    - new-site
+    - serverinfo
 
-.
-./apps
-./compose
-./config
-./context
-./scripts
-apps/
-├── dashboard
-├── serverinfo
-
-## Context Files
-
-- compose.txt - Contents of compose/ directory
-- config.txt - Contents of config/ directory
-- scripts.txt - Contents of scripts/ directory
-
-## Summary
-
-- Total files processed: 233
-- Total context size: 413KB
-- Folders processed: compose config scripts
-
-# devarch - compose
-
-Generated: Fri Dec 12 15:09:03 EST 2025
-Folder: compose
-
-## Folder Structure
-
+### compose - Folder Structure
 - compose/analytics/elasticsearch.yml
 - compose/analytics/grafana.yml
 - compose/analytics/jaeger.yml
@@ -295,13 +275,7 @@ Folder: compose
 - compose/workflow/temporal-server.yml
 - compose/workflow/temporal-ui.yml
 
-# devarch - config
-
-Generated: Fri Dec 12 15:09:04 EST 2025
-Folder: config
-
-## Folder Structure
-
+### config - Folder Structure
 - config/airflow/README.md
 - config/airflow/dags/example_dag.py
 - config/apisix/config.yaml
@@ -316,10 +290,20 @@ Folder: config
 - config/devarch/api/endpoints/control.php
 - config/devarch/api/endpoints/domains.php
 - config/devarch/api/endpoints/logs.php
+- config/devarch/api/endpoints/runtime-status.php
+- config/devarch/api/endpoints/runtime-switch.php
+- config/devarch/api/endpoints/services-start.php
+- config/devarch/api/endpoints/services-status.php
+- config/devarch/api/endpoints/services-stop.php
+- config/devarch/api/endpoints/socket-start.php
+- config/devarch/api/endpoints/socket-status.php
 - config/devarch/api/lib/apps.php
 - config/devarch/api/lib/categories.php
 - config/devarch/api/lib/common.php
 - config/devarch/api/lib/containers.php
+- config/devarch/api/lib/jobs.php
+- config/devarch/api/lib/services.php
+- config/devarch/api/lib/shell.php
 - config/devarch/api/public/index.php
 - config/devarch/nginx.conf
 - config/dotnet/Dockerfile
@@ -368,3 +352,23 @@ Folder: config
 - config/varnish/default.vcl
 - config/vault/config.hcl
 - config/vite/Dockerfile
+
+### scripts - Folder Structure
+- scripts/config.sh
+- scripts/generate-context.sh
+- scripts/init-databases.sh
+- scripts/laravel/setup-laravel.sh
+- scripts/runtime-switcher.sh
+- scripts/service-manager.sh
+- scripts/socket-manager.sh
+- scripts/wordpress/install-wordpress.sh
+
+## Context Files
+- compose.txt - Contents of compose/ directory
+- config.txt - Contents of config/ directory
+- scripts.txt - Contents of scripts/ directory
+
+## Summary
+- Total files processed: 247
+- Total context size: 437KB
+- Folders processed: compose config scripts
