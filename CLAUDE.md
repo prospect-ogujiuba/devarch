@@ -7,27 +7,26 @@ Generated: Fri Dec 12 15:09:02 EST 2025
 Branch: dev
 
 Recent commits:
-Recent commits:
-df566d4 remove unused auto discover and launcher scripts
-ef9ec80 update GUIDELINES.md
-b94cc44 dashboard
-91a6e69 update git ignore
-853d8f6 add GUIDELINES.md
-debcd7a change postgres volume mount path
-8abc88a remove original erpnext add breakdown of containers
-b1f796c add breakdown of erpnext containers to config
-5e83a9d add erp next and zammand + their categories
-2306373 remove redundant containers from erpnext and zammand compose
-df4435d list-components and prune-components added to service manager
-4ce8eb1 add erpnext
-c5ba7ef add zammad
-b0febbb correct php-fpm start command in container
-93e3b04 fix reload broken connection + logs breaking api consumption
-71c9870 dashboard
-bac3c6d update timeouts and other params + api/logs block
-3917d9e add dedicated server block for dashboard
-37a8ce0 update claude with context generate files
-a83a477 update paths for controls
+- 2370049 add gitattributes
+- 00d83e9 various container lib updates
+- cf1a51a update CLAUDE.md
+- 0991a2e update api
+- 2193130 update api libraries and endpoints
+- df566d4 remove unused auto discover and launcher scripts
+- ef9ec80 update GUIDELINES.md
+- b94cc44 dashboard
+- 91a6e69 update git ignore
+- 853d8f6 add GUIDELINES.md
+- debcd7a change postgres volume mount path
+- 8abc88a remove original erpnext add breakdown of containers
+- b1f796c add breakdown of erpnext containers to config
+- 5e83a9d add erp next and zammand + their categories
+- 2306373 remove redundant containers from erpnext and zammand compose
+- df4435d list-components and prune-components added to service manager
+- 4ce8eb1 add erpnext
+- c5ba7ef add zammad
+- b0febbb correct php-fpm start command in container
+- 93e3b04 fix reload broken connection + logs breaking api consumption
 
 Working directory:
 Clean (no changes)
