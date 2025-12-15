@@ -83,6 +83,37 @@ try {
             require __DIR__ . '/../endpoints/domains.php';
             break;
 
+        // Service management endpoints
+        case $path === '/api/services/start' && $method === 'POST':
+            require __DIR__ . '/../endpoints/services-start.php';
+            break;
+
+        case $path === '/api/services/stop' && $method === 'POST':
+            require __DIR__ . '/../endpoints/services-stop.php';
+            break;
+
+        case $path === '/api/services/status' && $method === 'GET':
+            require __DIR__ . '/../endpoints/services-status.php';
+            break;
+
+        // Socket management endpoints
+        case $path === '/api/socket/status' && $method === 'GET':
+            require __DIR__ . '/../endpoints/socket-status.php';
+            break;
+
+        case $path === '/api/socket/start' && $method === 'POST':
+            require __DIR__ . '/../endpoints/socket-start.php';
+            break;
+
+        // Runtime management endpoints
+        case $path === '/api/runtime/status' && $method === 'GET':
+            require __DIR__ . '/../endpoints/runtime-status.php';
+            break;
+
+        case $path === '/api/runtime/switch' && $method === 'POST':
+            require __DIR__ . '/../endpoints/runtime-switch.php';
+            break;
+
         // Backwards compatibility for old container control endpoint
         case $path === '/api/container-control.php' && $method === 'POST':
             require __DIR__ . '/../endpoints/control.php';
