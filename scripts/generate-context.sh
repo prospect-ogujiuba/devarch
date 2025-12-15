@@ -430,6 +430,20 @@ main() {
         fi
     fi
     echo "" >> "$index_file"
+
+    # Detailed folder structures (full depth) for compose, config, and scripts
+    # Using the same logic as individual context files, with markdown bullets
+    for section_folder in compose config scripts; do
+        if [[ -d "$section_folder" ]]; then
+            echo "### ${section_folder} - Folder Structure" >> "$index_file"
+            if command -v tree >/dev/null 2>&1; then
+                tree "$section_folder" | sed 's/^/- /' >> "$index_file"
+            else
+                find "$section_folder" -type f | sort | sed 's/^/- /' >> "$index_file"
+            fi
+            echo "" >> "$index_file"
+        fi
+    done
     
     # List context files that will be generated
     echo "## Context Files" >> "$index_file"
