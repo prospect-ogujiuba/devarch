@@ -17,6 +17,8 @@ Commands:
     prepare         Prepare migration directories and files
     activate        Activate All In One WP Migration plugin
     remove          Remove existing WordPress site and database
+    backup          Create backup of WordPress site
+    restore         Restore WordPress site from backup
     full            Run complete workflow (install + prepare + activate)
     help            Show this help message
 
@@ -35,11 +37,32 @@ Activate Options:
 Remove Options:
     -n, --name      Site name (default: myapp)
 
+Backup Options:
+    -n, --name      Site name (default: myapp)
+    -d, --dest      Destination directory for backup file (optional)
+    --exclude-spam-comments     Exclude spam comments
+    --exclude-post-revisions    Exclude post revisions
+    --exclude-media             Exclude media library
+    --exclude-themes            Exclude all themes
+    --exclude-inactive-themes   Exclude inactive themes
+    --exclude-muplugins         Exclude must-use plugins
+    --exclude-plugins           Exclude all plugins
+    --exclude-inactive-plugins  Exclude inactive plugins
+    --exclude-cache             Exclude cache files
+    --exclude-database          Exclude database
+
+Restore Options:
+    -n, --name      Site name (default: myapp)
+    -s, --source    Source .wpress backup file (required)
+
 Examples:
     $(basename "$0") install -n myapp -p bare -f
     $(basename "$0") prepare -n b2bcnc -s /path/to/backup.wpress
     $(basename "$0") activate -n myapp
     $(basename "$0") remove -n myapp
+    $(basename "$0") backup -n myapp -d /path/to/backups
+    $(basename "$0") backup -n myapp --exclude-cache --exclude-post-revisions
+    $(basename "$0") restore -n myapp -s /path/to/backup.wpress
     $(basename "$0") full -n myapp -s /path/to/backup.wpress
 
 EOF
@@ -158,7 +181,12 @@ prepare_migration() {
     mkdir -p "$backup_dir"
     
     log_info "Setting permissions on backup directory"
-    sudo chmod -R 777 "$backup_dir"
+
+    podman exec -it php zsh -c "
+        cd $site_name && \
+        chmod -R 777 "$backup_dir"
+    "
+
     
     if [[ -n "$source_file" ]]; then
         if [[ ! -f "$source_file" ]]; then
@@ -200,11 +228,150 @@ activate_plugin() {
     log_info "Plugin activated. Use WordPress Admin UI to restore the migration."
 }
 
+backup_site() {
+    local site_name="myapp"
+    local dest_dir=""
+    local backup_flags=""
+    
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -n|--name)
+                site_name="$2"
+                shift 2
+                ;;
+            -d|--dest)
+                dest_dir="$2"
+                shift 2
+                ;;
+            --exclude-spam-comments)
+                backup_flags="$backup_flags --exclude-spam-comments"
+                shift
+                ;;
+            --exclude-post-revisions)
+                backup_flags="$backup_flags --exclude-post-revisions"
+                shift
+                ;;
+            --exclude-media)
+                backup_flags="$backup_flags --exclude-media"
+                shift
+                ;;
+            --exclude-themes)
+                backup_flags="$backup_flags --exclude-themes"
+                shift
+                ;;
+            --exclude-inactive-themes)
+                backup_flags="$backup_flags --exclude-inactive-themes"
+                shift
+                ;;
+            --exclude-muplugins)
+                backup_flags="$backup_flags --exclude-muplugins"
+                shift
+                ;;
+            --exclude-plugins)
+                backup_flags="$backup_flags --exclude-plugins"
+                shift
+                ;;
+            --exclude-inactive-plugins)
+                backup_flags="$backup_flags --exclude-inactive-plugins"
+                shift
+                ;;
+            --exclude-cache)
+                backup_flags="$backup_flags --exclude-cache"
+                shift
+                ;;
+            --exclude-database)
+                backup_flags="$backup_flags --exclude-database"
+                shift
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                exit 1
+                ;;
+        esac
+    done
+    
+    log_info "Creating backup for site: $site_name"
+    
+    podman exec -it php zsh -c "
+        cd $site_name && \
+        wp ai1wm backup $backup_flags --allow-root
+    "
+    
+    if [[ -n "$dest_dir" ]]; then
+        log_info "Moving backup to destination: $dest_dir"
+        
+        mkdir -p "$dest_dir"
+        
+        local source_backup_dir="$PROJECT_ROOT/apps/$site_name/wp-content/ai1wm-backups"
+        local latest_backup=$(ls -t "$source_backup_dir"/*.wpress 2>/dev/null | head -n 1)
+        
+        if [[ -n "$latest_backup" ]]; then
+            cp "$latest_backup" "$dest_dir/"
+            log_info "Backup copied to: $dest_dir/$(basename "$latest_backup")"
+        else
+            log_error "No backup file found in $source_backup_dir"
+            exit 1
+        fi
+    else
+        log_info "Backup saved to default location: $PROJECT_ROOT/apps/$site_name/wp-content/ai1wm-backups"
+    fi
+}
+
+restore_site() {
+    local site_name="myapp"
+    local source_file=""
+    
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -n|--name)
+                site_name="$2"
+                shift 2
+                ;;
+            -s|--source)
+                source_file="$2"
+                shift 2
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                exit 1
+                ;;
+        esac
+    done
+    
+    if [[ -z "$source_file" ]]; then
+        log_error "Source backup file required. Use -s or --source"
+        exit 1
+    fi
+    
+    if [[ ! -f "$source_file" ]]; then
+        log_error "Source file not found: $source_file"
+        exit 1
+    fi
+    
+    local backup_dir="$PROJECT_ROOT/apps/$site_name/wp-content/ai1wm-backups"
+    local backup_filename=$(basename "$source_file")
+    
+    log_info "Preparing restore for site: $site_name"
+    
+    mkdir -p "$backup_dir"
+    cp "$source_file" "$backup_dir/"
+    
+    log_info "Restoring backup: $backup_filename"
+    
+    podman exec -it php zsh -c "
+        cd $site_name && \
+        wp ai1wm restore $backup_filename --allow-root
+    "
+    
+    log_info "Restore completed successfully"
+}
+
 run_full_workflow() {
     local site_name="myapp"
     local profile="bare"
     local source_file=""
     local force_flag=""
+    local backup_dest=""
     
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -233,16 +400,41 @@ run_full_workflow() {
     
     log_info "Running full workflow for site: $site_name"
     
-    remove_previous_site -n "$site_name"
-    install_wordpress -n "$site_name" -p "$profile" $force_flag
+    local site_exists=$(podman exec php zsh -c "[ -d $site_name ] && echo 'yes' || echo 'no'")
     
-    if [[ -n "$source_file" ]]; then
-        prepare_migration -n "$site_name" -s "$source_file"
-    else
-        prepare_migration -n "$site_name"
+    if [[ "$site_exists" == "yes" ]]; then
+        if [[ -n "$source_file" ]]; then
+            backup_dest="$(dirname "$source_file")"
+        else
+            backup_dest="$PROJECT_ROOT/backups/safety"
+        fi
+        
+        log_info "Creating safety backup before removal to: $backup_dest"
+        backup_site -n "$site_name" -d "$backup_dest" || log_error "Backup failed, but continuing..."
+        
+        if [[ -n "$source_file" ]]; then
+            local source_backup_dir="$PROJECT_ROOT/apps/$site_name/wp-content/ai1wm-backups"
+            local latest_backup=$(ls -t "$source_backup_dir"/*.wpress 2>/dev/null | head -n 1)
+            
+            if [[ -n "$latest_backup" ]]; then
+                local timestamp=$(date +%Y%m%d_%H%M%S)
+                local new_name="${site_name}_pre-restore_${timestamp}.wpress"
+                mv "$backup_dest/$(basename "$latest_backup")" "$backup_dest/$new_name"
+                log_info "Safety backup saved as: $backup_dest/$new_name"
+            fi
+        fi
     fi
     
+    remove_previous_site -n "$site_name"
+    install_wordpress -n "$site_name" -p "$profile" $force_flag
     activate_plugin -n "$site_name"
+    
+    if [[ -n "$source_file" ]]; then
+        log_info "Restoring from source file"
+        restore_site -n "$site_name" -s "$source_file"
+    else
+        log_info "No source file provided. Site ready for manual restore."
+    fi
 }
 
 main() {
@@ -268,6 +460,12 @@ main() {
             ;;
         remove)
             remove_previous_site "$@"
+            ;;
+        backup)
+            backup_site "$@"
+            ;;
+        restore)
+            restore_site "$@"
             ;;
         full)
             run_full_workflow "$@"
