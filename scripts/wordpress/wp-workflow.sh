@@ -80,6 +80,14 @@ log_error() {
     echo "[ERROR] $*" >&2
 }
 
+log_success() {
+    echo "[SUCCESS] $*"
+}
+
+log_progress() {
+    echo -n "[PROGRESS] $*"
+}
+
 check_dependencies() {
     local deps=("podman")
 
@@ -110,7 +118,25 @@ ensure_plugin_available() {
             exit 1
         fi
 
-        log_info "Plugin installed (not activated, matching install-wordpress.sh behavior)"
+        log_success "Plugin installed successfully"
+    fi
+}
+
+ensure_plugin_activated() {
+    local site_name="$1"
+
+    if ! podman exec -it php zsh -c "cd $site_name && wp plugin is-active all-in-one-wp-migration --allow-root" 2>/dev/null; then
+        log_info "Activating All-in-One WP Migration plugin"
+        podman exec -it php zsh -c "
+            cd $site_name && \
+            wp plugin activate all-in-one-wp-migration --allow-root
+        " 2>&1 | grep -v "Warning: Undefined" || true
+
+        if [ $? -ne 0 ]; then
+            log_error "Failed to activate plugin"
+            exit 1
+        fi
+        log_success "Plugin activated successfully"
     fi
 }
 
@@ -140,6 +166,7 @@ ensure_backup_ready() {
     local site_name="$1"
 
     ensure_plugin_available "$site_name"
+    ensure_plugin_activated "$site_name"
     ensure_debug_off "$site_name"
     ensure_backup_permissions "$site_name"
 }
@@ -344,29 +371,35 @@ backup_site() {
     ensure_backup_ready "$site_name"
 
     log_info "Creating backup for site: $site_name"
-    
+    echo "Backup in progress..."
+
     podman exec -it php zsh -c "
         cd $site_name && \
         wp ai1wm backup $backup_flags --allow-root
-    "
-    
+    " 2>&1 | while IFS= read -r line; do
+        if echo "$line" | grep -qE "(Backup (in progress|complete)|Archiving|Preparing|Finalizing)"; then
+            echo "$line"
+        fi
+    done
+
+    local source_backup_dir="$PROJECT_ROOT/apps/$site_name/wp-content/ai1wm-backups"
+    local latest_backup=$(ls -t "$source_backup_dir"/*.wpress 2>/dev/null | head -n 1)
+
+    if [[ -z "$latest_backup" ]]; then
+        log_error "Backup command completed but no .wpress file found"
+        exit 1
+    fi
+
+    local backup_size=$(du -h "$latest_backup" | cut -f1)
+    log_success "Backup complete: $(basename "$latest_backup") ($backup_size)"
+
     if [[ -n "$dest_dir" ]]; then
         log_info "Moving backup to destination: $dest_dir"
-        
         mkdir -p "$dest_dir"
-        
-        local source_backup_dir="$PROJECT_ROOT/apps/$site_name/wp-content/ai1wm-backups"
-        local latest_backup=$(ls -t "$source_backup_dir"/*.wpress 2>/dev/null | head -n 1)
-        
-        if [[ -n "$latest_backup" ]]; then
-            cp "$latest_backup" "$dest_dir/"
-            log_info "Backup copied to: $dest_dir/$(basename "$latest_backup")"
-        else
-            log_error "No backup file found in $source_backup_dir"
-            exit 1
-        fi
+        cp "$latest_backup" "$dest_dir/"
+        log_info "Backup copied to: $dest_dir/$(basename "$latest_backup")"
     else
-        log_info "Backup saved to default location: $PROJECT_ROOT/apps/$site_name/wp-content/ai1wm-backups"
+        log_info "Backup saved to: $PROJECT_ROOT/apps/$site_name/wp-content/ai1wm-backups"
     fi
 }
 
@@ -403,8 +436,16 @@ restore_site() {
 
     ensure_backup_ready "$site_name"
 
-    local backup_dir="$PROJECT_ROOT/apps/$site_name/wp-content/ai1wm-backups"
     local backup_filename=$(basename "$source_file")
+
+    log_info "Validating backup file: $backup_filename"
+    local file_size=$(stat -c%s "$source_file" 2>/dev/null || stat -f%z "$source_file" 2>/dev/null)
+    if [ "$file_size" -lt 1024 ]; then
+        log_error "Backup file appears corrupted (size: $file_size bytes)"
+        exit 1
+    fi
+
+    local backup_dir="$PROJECT_ROOT/apps/$site_name/wp-content/ai1wm-backups"
     
     log_info "Preparing restore for site: $site_name"
     
