@@ -6,6 +6,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$HOME/projects/devarch}"
 SCRIPTS_DIR="$PROJECT_ROOT/scripts"
 
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    export $(grep -E '^(GITHUB_TOKEN|GITHUB_USER)=' "$PROJECT_ROOT/.env" | xargs)
+fi
+
 print_usage() {
     cat << EOF
 WordPress Multi System Workflow Manager
@@ -78,7 +82,7 @@ log_error() {
 
 check_dependencies() {
     local deps=("podman")
-    
+
     for dep in "${deps[@]}"; do
         if ! command -v "$dep" &> /dev/null; then
             log_error "Required dependency not found: $dep"
@@ -87,11 +91,57 @@ check_dependencies() {
     done
 }
 
-start_services() {
-    log_info "Starting services: mariadb, nginx-proxy-manager, php"
-    "$SCRIPTS_DIR/service-manager.sh" start mariadb 
-    "$SCRIPTS_DIR/service-manager.sh" start nginx-proxy-manager 
-    "$SCRIPTS_DIR/service-manager.sh" start php
+ensure_plugin_available() {
+    local site_name="$1"
+
+    if ! podman exec -it php zsh -c "cd $site_name && wp plugin is-installed all-in-one-wp-migration --allow-root" 2>/dev/null; then
+        log_info "Installing All-in-One WP Migration plugin"
+
+        local plugins_dir="wp-content/plugins"
+        local plugin_repo="https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/all-in-one-wp-migration.git"
+
+        podman exec -it php zsh -c "
+            cd $site_name && \
+            git clone '$plugin_repo' '$plugins_dir/all-in-one-wp-migration'
+        "
+
+        if [ $? -ne 0 ]; then
+            log_error "Failed to install All-in-One WP Migration plugin"
+            exit 1
+        fi
+
+        log_info "Plugin installed (not activated, matching install-wordpress.sh behavior)"
+    fi
+}
+
+ensure_debug_off() {
+    local site_name="$1"
+
+    log_info "Setting WP_DEBUG to false"
+    podman exec -it php zsh -c "
+        cd $site_name && \
+        wp config set WP_DEBUG false --raw --allow-root
+    "
+}
+
+ensure_backup_permissions() {
+    local site_name="$1"
+    local backup_dir="wp-content/ai1wm-backups"
+
+    log_info "Ensuring backup directory permissions"
+    podman exec -it php zsh -c "
+        cd $site_name && \
+        mkdir -p '$backup_dir' && \
+        chmod -R 777 '$backup_dir'
+    "
+}
+
+ensure_backup_ready() {
+    local site_name="$1"
+
+    ensure_plugin_available "$site_name"
+    ensure_debug_off "$site_name"
+    ensure_backup_permissions "$site_name"
 }
 
 remove_previous_site() {
@@ -148,9 +198,8 @@ install_wordpress() {
                 ;;
         esac
     done
-    
+
     log_info "Installing WordPress site: $site_name"
-    start_services
     "$SCRIPTS_DIR/wordpress/install-wordpress.sh" "$site_name" -p "$profile" $force_flag
 }
 
@@ -203,7 +252,7 @@ prepare_migration() {
 
 activate_plugin() {
     local site_name="myapp"
-    
+
     while [[ $# -gt 0 ]]; do
         case $1 in
             -n|--name)
@@ -216,7 +265,9 @@ activate_plugin() {
                 ;;
         esac
     done
-    
+
+    ensure_plugin_available "$site_name"
+
     log_info "Configuring WordPress and activating plugin in container"
     
     podman exec -it php zsh -c "
@@ -289,7 +340,9 @@ backup_site() {
                 ;;
         esac
     done
-    
+
+    ensure_backup_ready "$site_name"
+
     log_info "Creating backup for site: $site_name"
     
     podman exec -it php zsh -c "
@@ -347,7 +400,9 @@ restore_site() {
         log_error "Source file not found: $source_file"
         exit 1
     fi
-    
+
+    ensure_backup_ready "$site_name"
+
     local backup_dir="$PROJECT_ROOT/apps/$site_name/wp-content/ai1wm-backups"
     local backup_filename=$(basename "$source_file")
     
