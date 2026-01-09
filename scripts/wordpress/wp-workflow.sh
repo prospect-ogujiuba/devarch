@@ -20,6 +20,7 @@ Commands:
     install         Install WordPress site
     prepare         Prepare migration directories and files
     activate        Activate All In One WP Migration plugin
+    deactivate      Deactivate plugin and restore WP_DEBUG state
     remove          Remove existing WordPress site and database
     backup          Create backup of WordPress site
     restore         Restore WordPress site from backup
@@ -36,6 +37,9 @@ Prepare Options:
     -s, --source    Source .wpress file path
 
 Activate Options:
+    -n, --name      Site name (default: myapp)
+
+Deactivate Options:
     -n, --name      Site name (default: myapp)
 
 Remove Options:
@@ -63,6 +67,7 @@ Examples:
     $(basename "$0") install -n myapp -p bare -f
     $(basename "$0") prepare -n b2bcnc -s /path/to/backup.wpress
     $(basename "$0") activate -n myapp
+    $(basename "$0") deactivate -n myapp
     $(basename "$0") remove -n myapp
     $(basename "$0") backup -n myapp -d /path/to/backups
     $(basename "$0") backup -n myapp --exclude-cache --exclude-post-revisions
@@ -97,6 +102,29 @@ check_dependencies() {
             exit 1
         fi
     done
+}
+
+# Global to store original WP_DEBUG state
+ORIGINAL_WP_DEBUG=""
+
+get_wp_debug_state() {
+    local site_name="$1"
+    ORIGINAL_WP_DEBUG=$(podman exec -it php zsh -c "
+        cd $site_name && \
+        wp config get WP_DEBUG --allow-root 2>/dev/null || echo '0'
+    " | tr -d '\r\n')
+    log_info "Captured WP_DEBUG state: $ORIGINAL_WP_DEBUG"
+}
+
+restore_wp_debug_state() {
+    local site_name="$1"
+    if [[ -n "$ORIGINAL_WP_DEBUG" ]]; then
+        log_info "Restoring WP_DEBUG to: $ORIGINAL_WP_DEBUG"
+        podman exec -it php zsh -c "
+            cd $site_name && \
+            wp config set WP_DEBUG $ORIGINAL_WP_DEBUG --raw --allow-root
+        "
+    fi
 }
 
 ensure_plugin_available() {
@@ -140,6 +168,23 @@ ensure_plugin_activated() {
     fi
 }
 
+deactivate_aiowm_plugin() {
+    local site_name="$1"
+    log_info "Deactivating All-in-One WP Migration plugin"
+    podman exec -it php zsh -c "
+        cd $site_name && \
+        wp plugin deactivate all-in-one-wp-migration --allow-root
+    " 2>&1 | grep -v "Warning: Undefined" || true
+}
+
+cleanup_aiowm() {
+    local site_name="$1"
+    log_info "Running AIOWM cleanup for: $site_name"
+    deactivate_aiowm_plugin "$site_name"
+    restore_wp_debug_state "$site_name"
+    log_success "AIOWM cleanup completed"
+}
+
 ensure_debug_off() {
     local site_name="$1"
 
@@ -165,6 +210,7 @@ ensure_backup_permissions() {
 ensure_backup_ready() {
     local site_name="$1"
 
+    get_wp_debug_state "$site_name"
     ensure_plugin_available "$site_name"
     ensure_plugin_activated "$site_name"
     ensure_debug_off "$site_name"
@@ -296,14 +342,35 @@ activate_plugin() {
     ensure_plugin_available "$site_name"
 
     log_info "Configuring WordPress and activating plugin in container"
-    
+
     podman exec -it php zsh -c "
         cd $site_name && \
         wp config set WP_DEBUG false --raw --allow-root && \
         wp plugin activate all-in-one-wp-migration --allow-root
     "
-    
+
     log_info "Plugin activated. Use WordPress Admin UI to restore the migration."
+    log_info "After restore, run: $(basename "$0") deactivate -n $site_name"
+}
+
+deactivate_and_cleanup() {
+    local site_name="myapp"
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -n|--name)
+                site_name="$2"
+                shift 2
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                exit 1
+                ;;
+        esac
+    done
+
+    get_wp_debug_state "$site_name"
+    cleanup_aiowm "$site_name"
 }
 
 backup_site() {
@@ -393,6 +460,9 @@ backup_site() {
     local backup_size=$(du -h "$latest_backup" | cut -f1)
     log_success "Backup complete: $(basename "$latest_backup") ($backup_size)"
 
+    # Cleanup: deactivate plugin and restore WP_DEBUG
+    cleanup_aiowm "$site_name"
+
     if [[ -n "$dest_dir" ]]; then
         log_info "Moving backup to destination: $dest_dir"
         mkdir -p "$dest_dir"
@@ -458,7 +528,10 @@ restore_site() {
         cd $site_name && \
         wp ai1wm restore $backup_filename --allow-root
     "
-    
+
+    # Cleanup: deactivate plugin and restore WP_DEBUG
+    cleanup_aiowm "$site_name"
+
     log_info "Restore completed successfully"
 }
 
@@ -553,6 +626,9 @@ main() {
             ;;
         activate)
             activate_plugin "$@"
+            ;;
+        deactivate)
+            deactivate_and_cleanup "$@"
             ;;
         remove)
             remove_previous_site "$@"
