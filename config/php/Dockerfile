@@ -22,6 +22,8 @@ RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     zsh \
+    nodejs \
+    npm \
     # Mail relay for local development
     msmtp \
     msmtp-mta \
@@ -79,6 +81,9 @@ RUN curl -1sLf 'https://dl.cloudsmith.io/public/symfony/stable/setup.deb.sh' | b
     && apt-get install -y symfony-cli \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Claude Code and OpenAI Codex CLIs
+RUN npm install -g @anthropic-ai/claude-code @openai/codex
 
 # Configure msmtp for mail relay (routes to mailpit in compose)
 RUN echo "account default" > /etc/msmtprc \
