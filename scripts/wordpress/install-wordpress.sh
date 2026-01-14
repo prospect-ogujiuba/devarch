@@ -738,30 +738,40 @@ setup_galaxy_files() {
     local galaxy_type="$1"
     local wp_dir=$(get_path "container_site")
     local site_name="${SITE_CONFIG[name]}"
-    
+    local host_apps=$(get_path "host_apps")
+
     print_status "info" "Setting up Galaxy files..."
-    
+
     case "$galaxy_type" in
         "makermaker")
-            local galaxy_dir="$wp_dir/wp-content/plugins/makermaker/galaxy"
-            local galaxy_file="$galaxy_dir/galaxy_makermaker"
-            local galaxy_config="$galaxy_dir/galaxy-makermaker-config.php"
-            
-            exec_php "cp '$galaxy_file' '$wp_dir/'" || true
-            
-            # Fixed sed command with proper escaping
-            exec_php "sed -i \"s/\\\$sitename = 'playground'/\\\$sitename = '$site_name'/g\" '$galaxy_config'" || true
-            
-            exec_php "cp '$galaxy_config' '$wp_dir/'" || true
+            # Copy from playground reference installation
+            local source_galaxy="$host_apps/playground/wp-content/plugins/makermaker/galaxy"
+
+            if [[ ! -d "$source_galaxy" ]]; then
+                print_status "warning" "Galaxy source directory not found: $source_galaxy"
+                return 1
+            fi
+
+            # Copy galaxy_makermaker executable
+            if [[ -f "$source_galaxy/galaxy_makermaker" ]]; then
+                exec_php "cp '$host_apps/playground/wp-content/plugins/makermaker/galaxy/galaxy_makermaker' '$wp_dir/'" || true
+                print_status "success" "Copied galaxy_makermaker to $wp_dir"
+            fi
+
+            # Copy galaxy-makermaker-config.php
+            if [[ -f "$source_galaxy/galaxy-makermaker-config.php" ]]; then
+                exec_php "cp '$host_apps/playground/wp-content/plugins/makermaker/galaxy/galaxy-makermaker-config.php' '$wp_dir/'" || true
+                print_status "success" "Copied galaxy-makermaker-config.php"
+            fi
             ;;
         "typerocket-galaxy")
             local typerocket_dir="$wp_dir/wp-content/mu-plugins/typerocket-pro-v6/typerocket"
             local galaxy_file="$typerocket_dir/galaxy"
             local galaxy_config="$wp_dir/wp-content/plugins/makermaker/galaxy/galaxy-config.php"
-            
+
             exec_php "cp '$galaxy_file' '$wp_dir/'" || true
             exec_php "cp '$galaxy_config' '$wp_dir/'" || true
-            
+
             # Also copy Makermaker Galaxy files
             setup_galaxy_files "makermaker"
             ;;
