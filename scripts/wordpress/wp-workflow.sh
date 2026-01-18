@@ -118,11 +118,11 @@ get_wp_debug_state() {
 
 restore_wp_debug_state() {
     local site_name="$1"
-    if [[ -n "$ORIGINAL_WP_DEBUG" ]]; then
+    if [[ -n "$ORIGINAL_WP_DEBUG" && ("$ORIGINAL_WP_DEBUG" == "1" || "$ORIGINAL_WP_DEBUG" == "true") ]]; then
         log_info "Restoring WP_DEBUG to: $ORIGINAL_WP_DEBUG"
         podman exec -it php zsh -c "
             cd $site_name && \
-            wp config set WP_DEBUG $ORIGINAL_WP_DEBUG --raw --allow-root
+            wp config set WP_DEBUG true --raw --allow-root
         "
     fi
 }
@@ -212,8 +212,13 @@ ensure_backup_ready() {
 
     get_wp_debug_state "$site_name"
     ensure_plugin_available "$site_name"
+
+    # Disable WP_DEBUG before activation if it's currently enabled
+    if [[ "$ORIGINAL_WP_DEBUG" == "1" || "$ORIGINAL_WP_DEBUG" == "true" ]]; then
+        ensure_debug_off "$site_name"
+    fi
+
     ensure_plugin_activated "$site_name"
-    ensure_debug_off "$site_name"
     ensure_backup_permissions "$site_name"
 }
 
