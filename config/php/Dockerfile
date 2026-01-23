@@ -27,6 +27,8 @@ RUN apt-get update && apt-get install -y \
     # Mail relay for local development
     msmtp \
     msmtp-mta \
+    # Media processing
+    ffmpeg \
     # PHP extension dependencies
     libpng-dev \
     libwebp-dev \
