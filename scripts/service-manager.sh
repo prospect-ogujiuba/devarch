@@ -72,6 +72,7 @@ INDIVIDUAL SERVICE COMMANDS:
     ps                      List running services
     list                    List all available services
     refresh                 Re-scan compose dirs for new services/categories
+    check                   Verify prerequisites (container runtime, network, env)
 
 SYSTEM MANAGEMENT COMMANDS:
     list-components         List all podman/docker components (images, containers, volumes, networks, pods)
@@ -452,7 +453,7 @@ parse_arguments() {
 # =============================================================================
 
 validate_command() {
-    local valid_commands=("up" "down" "restart" "rebuild" "logs" "status" "ps" "list" "refresh" "start" "stop" "start-all" "stop-all" "list-components" "prune-components")
+    local valid_commands=("up" "down" "restart" "rebuild" "logs" "status" "ps" "list" "refresh" "check" "start" "stop" "start-all" "stop-all" "list-components" "prune-components")
     
     if [[ ! " ${valid_commands[*]} " =~ " $COMMAND " ]]; then
         print_status "error" "Invalid command: $COMMAND"
@@ -750,6 +751,61 @@ cmd_status() {
             echo ""
         done
     fi
+}
+
+cmd_check() {
+    local has_runtime=false
+    local exit_code=0
+
+    echo ""
+    print_status "info" "Checking prerequisites..."
+    echo ""
+
+    # Check container runtimes
+    if command -v podman &>/dev/null; then
+        print_status "success" "podman: $(podman --version 2>/dev/null | head -1)"
+        has_runtime=true
+    else
+        print_status "warning" "podman: not found"
+    fi
+
+    if command -v docker &>/dev/null; then
+        print_status "success" "docker: $(docker --version 2>/dev/null | head -1)"
+        has_runtime=true
+    else
+        print_status "warning" "docker: not found"
+    fi
+
+    if [[ "$has_runtime" == "false" ]]; then
+        echo ""
+        print_status "error" "No container runtime found!"
+        print_status "info" "Install one of the following:"
+        print_status "info" "  Podman: https://podman.io/getting-started/installation"
+        print_status "info" "  Docker: https://docs.docker.com/get-docker/"
+        exit_code=1
+    fi
+
+    # Check network
+    echo ""
+    if eval "$CONTAINER_CMD network exists $NETWORK_NAME" 2>/dev/null; then
+        print_status "success" "Network '$NETWORK_NAME' exists"
+    else
+        print_status "warning" "Network '$NETWORK_NAME' not created yet (will be created on first service start)"
+    fi
+
+    # Check project structure
+    echo ""
+    [[ -d "$COMPOSE_DIR" ]] && print_status "success" "Compose directory: $COMPOSE_DIR" || print_status "error" "Compose directory missing"
+    [[ -f "$PROJECT_ROOT/.env" ]] && print_status "success" "Environment file: .env" || print_status "warning" "Environment file: .env not found (copy from .env-sample)"
+
+    echo ""
+    if [[ $exit_code -eq 0 ]]; then
+        print_status "success" "All prerequisites met"
+    else
+        print_status "error" "Prerequisites check failed"
+    fi
+
+    return $exit_code
 }
 
 cmd_ps() {
@@ -1777,6 +1833,9 @@ main() {
             refresh_service_discovery
             print_status "success" "Service discovery refreshed"
             print_status "info" "Run 'list' to see updated services"
+            ;;
+        "check")
+            cmd_check
             ;;
         "list-components")
             cmd_list_components

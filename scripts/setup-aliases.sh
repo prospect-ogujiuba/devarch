@@ -42,6 +42,13 @@ print_status() {
     esac
 }
 
+check_prerequisites() {
+    # Use service-manager check command for consistent output
+    if ! "$SERVICE_MANAGER" check; then
+        exit 1
+    fi
+}
+
 detect_shells() {
     local detected=()
 
@@ -157,6 +164,10 @@ main() {
     echo ""
     echo "DevArch Alias Setup"
     echo "==================="
+
+    # Check prerequisites first
+    check_prerequisites
+
     echo ""
     print_status info "Project: $PROJECT_ROOT"
     print_status info "Script:  $SERVICE_MANAGER"
