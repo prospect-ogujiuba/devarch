@@ -245,17 +245,8 @@ show_status() {
     
     echo ""
     echo "Available runtimes:"
-    if command -v podman >/dev/null 2>&1; then
-        print_status "success" "✓ Podman installed"
-    else
-        print_status "error" "✗ Podman not installed"
-    fi
-    
-    if command -v docker >/dev/null 2>&1; then
-        print_status "success" "✓ Docker installed"
-    else
-        print_status "error" "✗ Docker not installed"
-    fi
+    command -v podman >/dev/null 2>&1 && print_status "success" "Podman installed" || print_status "error" "Podman not installed"
+    command -v docker >/dev/null 2>&1 && print_status "success" "Docker installed" || print_status "error" "Docker not installed"
     
     echo ""
     show_container_status
@@ -265,24 +256,16 @@ show_status() {
 show_container_status() {
     echo "Container Status:"
     
-    # Show Podman containers using config.sh approach
+    # Show Podman containers
     if command -v podman >/dev/null 2>&1; then
         local podman_count=$(podman ps -q 2>/dev/null | wc -l || echo "0")
-        if [[ "$podman_count" -gt 0 ]]; then
-            print_status "warning" "⚠️  $podman_count containers running in Podman"
-        else
-            print_status "success" "✓ No containers running in Podman"
-        fi
+        [[ "$podman_count" -gt 0 ]] && print_status "warning" "$podman_count containers in Podman" || print_status "success" "Podman: none"
     fi
-    
+
     # Show Docker containers
     if command -v docker >/dev/null 2>&1; then
         local docker_count=$(sudo docker ps -q 2>/dev/null | wc -l || echo "0")
-        if [[ "$docker_count" -gt 0 ]]; then
-            print_status "warning" "⚠️  $docker_count containers running in Docker"
-        else
-            print_status "success" "✓ No containers running in Docker"
-        fi
+        [[ "$docker_count" -gt 0 ]] && print_status "warning" "$docker_count containers in Docker" || print_status "success" "Docker: none"
     fi
     
     echo ""
@@ -291,32 +274,15 @@ show_container_status() {
 show_service_status() {
     echo "Microservice Status:"
     
-    # Use service-manager if available for better service status
     local service_manager="$SCRIPT_DIR/service-manager.sh"
     if [[ -f "$service_manager" ]]; then
         local running_services=$("$service_manager" ps 2>/dev/null | grep -c "Up" || echo "0")
-        if [[ "$running_services" -gt 0 ]]; then
-            print_status "info" "📦 $running_services microservice(s) running"
-            print_status "info" "Run './scripts/service-manager.sh status' for details"
-        else
-            print_status "success" "✓ No microservices currently running"
-        fi
+        [[ "$running_services" -gt 0 ]] && print_status "info" "$running_services services running" || print_status "success" "No services running"
     else
-        # Fallback: check for containers in our network
-        local network_containers
-        if [[ "$current" == "podman" ]]; then
-            network_containers=$(podman ps --filter "network=$NETWORK_NAME" -q 2>/dev/null | wc -l || echo "0")
-        elif [[ "$current" == "docker" ]]; then
-            network_containers=$(sudo docker ps --filter "network=$NETWORK_NAME" -q 2>/dev/null | wc -l || echo "0")
-        else
-            network_containers="0"
-        fi
-        
-        if [[ "$network_containers" -gt 0 ]]; then
-            print_status "info" "📦 $network_containers microservice(s) running"
-        else
-            print_status "success" "✓ No microservices currently running"
-        fi
+        local network_containers="0"
+        [[ "$current" == "podman" ]] && network_containers=$(podman ps --filter "network=$NETWORK_NAME" -q 2>/dev/null | wc -l || echo "0")
+        [[ "$current" == "docker" ]] && network_containers=$(sudo docker ps --filter "network=$NETWORK_NAME" -q 2>/dev/null | wc -l || echo "0")
+        [[ "$network_containers" -gt 0 ]] && print_status "info" "$network_containers services running" || print_status "success" "No services running"
     fi
     
     echo ""
