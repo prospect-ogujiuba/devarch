@@ -64,13 +64,14 @@ DESCRIPTION:
 
 INDIVIDUAL SERVICE COMMANDS:
     up SERVICE              Start a single service
-    down SERVICE            Stop a single service  
+    down SERVICE            Stop a single service
     restart SERVICE         Restart a single service
     rebuild SERVICE         Rebuild and restart a service
     logs SERVICE            Show service logs
     status [SERVICE]        Show service status (or all if no service)
     ps                      List running services
     list                    List all available services
+    refresh                 Re-scan compose dirs for new services/categories
 
 SYSTEM MANAGEMENT COMMANDS:
     list-components         List all podman/docker components (images, containers, volumes, networks, pods)
@@ -127,6 +128,7 @@ GENERAL OPTIONS:
     -e, --errors            Show detailed error messages
     -d, --dry-run           Show what would be executed
     -v, --verbose           Show detailed progress information
+    --refresh               Re-scan compose directories for new services/categories
     -h, --help              Show this help message
 
 EXAMPLES:
@@ -174,6 +176,19 @@ NOTES:
     - Use --remove-volumes with caution (destroys persistent data)
     - Dry run mode shows exact commands that would be executed
     - Health checks prevent cascading failures in bulk operations
+
+SHELL ALIASES:
+    Run from any directory by setting up shell aliases:
+
+    ./scripts/setup-aliases.sh              # Interactive setup
+
+    Or manually add to ~/.bashrc or ~/.zshrc:
+        alias devarch='$PROJECT_ROOT/scripts/service-manager.sh'
+        alias dvrc='$PROJECT_ROOT/scripts/service-manager.sh'
+        alias dv='$PROJECT_ROOT/scripts/service-manager.sh'
+        alias da='$PROJECT_ROOT/scripts/service-manager.sh'
+
+    Then: source ~/.zshrc (or open new terminal)
 EOF
 }
 
@@ -416,6 +431,11 @@ parse_arguments() {
                 opt_verbose=true
                 shift
                 ;;
+            --refresh)
+                refresh_service_discovery
+                print_status "success" "Service discovery refreshed"
+                shift
+                ;;
             -h|--help)
                 show_usage
                 exit 0
@@ -432,7 +452,7 @@ parse_arguments() {
 # =============================================================================
 
 validate_command() {
-    local valid_commands=("up" "down" "restart" "rebuild" "logs" "status" "ps" "list" "start" "stop" "start-all" "stop-all" "list-components" "prune-components")
+    local valid_commands=("up" "down" "restart" "rebuild" "logs" "status" "ps" "list" "refresh" "start" "stop" "start-all" "stop-all" "list-components" "prune-components")
     
     if [[ ! " ${valid_commands[*]} " =~ " $COMMAND " ]]; then
         print_status "error" "Invalid command: $COMMAND"
@@ -1752,6 +1772,11 @@ main() {
             ;;
         "list")
             cmd_list
+            ;;
+        "refresh")
+            refresh_service_discovery
+            print_status "success" "Service discovery refreshed"
+            print_status "info" "Run 'list' to see updated services"
             ;;
         "list-components")
             cmd_list_components
