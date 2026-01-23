@@ -35,10 +35,10 @@ print_status() {
     local type="$1"
     local msg="$2"
     case "$type" in
-        success) echo -e "${GREEN}✓${NC} $msg" ;;
-        error)   echo -e "${RED}✗${NC} $msg" ;;
-        info)    echo -e "${BLUE}ℹ${NC} $msg" ;;
-        warn)    echo -e "${YELLOW}⚠${NC} $msg" ;;
+        success) echo -e "${GREEN}OK${NC} $msg" ;;
+        error)   echo -e "${RED}ERR${NC} $msg" ;;
+        info)    echo -e "${BLUE}--${NC} $msg" ;;
+        warn)    echo -e "${YELLOW}WARN${NC} $msg" ;;
     esac
 }
 
