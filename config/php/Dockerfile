@@ -58,8 +58,9 @@ RUN apt-get update && apt-get install -y \
         bcmath \
         soap \
         xsl \
+        pcntl \
     && pecl install redis mongodb imagick xdebug amqp \
-    && docker-php-ext-enable redis opcache pdo_mysql pdo_pgsql mongodb imagick xdebug amqp exif intl bcmath soap xsl \
+    && docker-php-ext-enable redis opcache pdo_mysql pdo_pgsql mongodb imagick xdebug amqp exif intl bcmath soap xsl pcntl \
     # Cleanup
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
