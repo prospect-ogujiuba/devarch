@@ -44,52 +44,11 @@ export NETWORK_NAME="microservices-net"
 export CONTAINER_RUNTIME="podman"  # Change to "docker" if using Docker instead
 
 # =============================================================================
-# SERVICE CATEGORIES & COMPOSE FILES - SMART CONFIGURATION
+# SERVICE CATEGORIES & COMPOSE FILES - AUTO-DISCOVERY
 # =============================================================================
 
-# Smart service definitions - automatically resolves paths based on category
-typeset -A SERVICE_CATEGORIES
-SERVICE_CATEGORIES=(
-    [analytics]="matomo.yml prometheus.yml grafana.yml elasticsearch.yml kibana.yml logstash.yml otel-collector.yml jaeger.yml victoriametrics.yml loki.yml tempo.yml zipkin.yml"
-    [backend]="go.yml php.yml node.yml python.yml dotnet.yml rust.yml vite.yml celery.yml java.yml bun.yml deno.yml elixir.yml zig.yml"
-    [ci]="jenkins.yml drone-server.yml drone-runner.yml woodpecker-server.yml woodpecker-agent.yml gitlab-runner.yml concourse-web.yml concourse-worker.yml"
-    [collaboration]="mattermost.yml rocketchat.yml nextcloud.yml zulip.yml matrix-synapse.yml element-web.yml"
-    [database]="mariadb.yml mysql.yml postgres.yml mongodb.yml redis.yml mssql.yml memcached.yml couchdb.yml cassandra.yml surrealdb.yml edgedb.yml cockroachdb.yml neo4j.yml clickhouse.yml"
-    [dbms]="adminer.yml phpmyadmin.yml mongo-express.yml metabase.yml nocodb.yml pgadmin.yml redis-commander.yml memcached-admin.yml drawdb.yml cloudbeaver.yml dbeaver.yml beekeeper-studio.yml sqlpad.yml"
-    [docs]="wikijs.yml bookstack.yml outline.yml docusaurus.yml"
-    [exporters]="blackbox-exporter.yml mongodb-exporter.yml mysqld-exporter.yml node-exporter.yml postgres-exporter.yml redis-exporter.yml kafka-exporter.yml memcached-exporter.yml rabbitmq-exporter.yml"
-    [gateway]="krakend.yml krakend-designer.yml traefik.yml kong.yml envoy.yml tyk.yml gravitee.yml apisix.yml"
-    [mail]="mailpit.yml mailhog.yml roundcube.yml postal.yml postal-mysql.yml"
-    [management]="portainer.yml devarch.yml rancher.yml yacht.yml dockge.yml"
-    [messaging]="kafka.yml kafka-ui.yml zookeeper.yml rabbitmq.yml activemq.yml nats.yml redpanda.yml pulsar.yml"
-    [project]="openproject-web.yml openproject-worker.yml openproject-cron.yml openproject-seeder.yml gitea.yml gitlab.yml forgejo.yml taiga-back.yml taiga-front.yml taiga-db.yml"
-    [proxy]="nginx-proxy-manager.yml haproxy.yml caddy.yml varnish.yml"
-    [registry]="harbor-core.yml harbor-registry.yml harbor-jobservice.yml nexus.yml verdaccio.yml docker-registry.yml"
-    [search]="meilisearch.yml typesense.yml solr.yml sonic.yml manticore.yml"
-    [security]="vault.yml keycloak.yml authentik-server.yml authentik-worker.yml authelia.yml trivy.yml"
-    [storage]="minio.yml seaweedfs-master.yml seaweedfs-volume.yml seaweedfs-filer.yml seaweedfs-s3.yml localstack.yml azurite.yml"
-    [testing]="selenium-hub.yml selenium-chrome.yml selenium-firefox.yml k6.yml playwright.yml gatling.yml"
-    [workflow]="airflow-webserver.yml airflow-scheduler.yml airflow-init.yml n8n.yml prefect.yml prefect-agent.yml temporal-server.yml temporal-ui.yml"
-    [erp]="erpnext-backend.yml erpnext-create-site.yml erpnext-configurator.yml  erpnext-frontend.yml erpnext-queue-long.yml erpnext-queue-short.yml erpnext-scheduler.yml erpnext-websocket.yml"
-    [support]="zammad.yml"
-    [ai]=""
-)
-
-# Optional: Override category paths if you need different directory structure
-typeset -A CATEGORY_PATH_OVERRIDES
-CATEGORY_PATH_OVERRIDES=(
-    # [category]="custom/path"
-    # Example: [backend]="apps/backend"
-)
-
-# Optional: Full path overrides for specific services (for maximum flexibility)
-typeset -A SERVICE_PATH_OVERRIDES
-SERVICE_PATH_OVERRIDES=(
-    # [service.yml]="full/custom/path/service.yml"
-    # Example: [special-service.yml]="legacy/docker-compose.yml"
-)
-
-# Service startup order (critical for dependencies) - zsh array
+# Service startup order (defines categories AND their dependency order)
+# New categories are auto-discovered but appended at end (lowest priority)
 SERVICE_STARTUP_ORDER=(
     "database"
     "storage"
@@ -115,6 +74,107 @@ SERVICE_STARTUP_ORDER=(
     "ai"
     "support"
 )
+
+# Optional: Override category paths if you need different directory structure
+typeset -A CATEGORY_PATH_OVERRIDES
+CATEGORY_PATH_OVERRIDES=(
+    # [category]="custom/path"
+    # Example: [backend]="apps/backend"
+)
+
+# Optional: Full path overrides for specific services (for maximum flexibility)
+typeset -A SERVICE_PATH_OVERRIDES
+SERVICE_PATH_OVERRIDES=(
+    # [service.yml]="full/custom/path/service.yml"
+    # Example: [special-service.yml]="legacy/docker-compose.yml"
+)
+
+# Auto-discovered service categories (populated by init_service_categories)
+typeset -gA SERVICE_CATEGORIES
+
+# Flag to track if discovery has run
+_SERVICE_CATEGORIES_INITIALIZED=false
+
+# =============================================================================
+# SERVICE AUTO-DISCOVERY
+# =============================================================================
+
+# Discover services from compose directory structure
+# Usage: init_service_categories [--force]
+init_service_categories() {
+    local force="${1:-}"
+
+    # Skip if already initialized (unless forced)
+    [[ "$_SERVICE_CATEGORIES_INITIALIZED" == "true" && "$force" != "--force" ]] && return 0
+
+    # Reset categories
+    SERVICE_CATEGORIES=()
+    local new_categories=()
+
+    # Discover services for each category in startup order
+    for category in "${SERVICE_STARTUP_ORDER[@]}"; do
+        _discover_category_services "$category"
+    done
+
+    # Auto-discover new categories (directories not in startup order)
+    for dir in "$COMPOSE_DIR"/*(/N); do
+        local category="${dir:t}"
+        # Skip if already in startup order
+        (( ${SERVICE_STARTUP_ORDER[(Ie)$category]} )) && continue
+        # Discover and append to startup order
+        _discover_category_services "$category"
+        SERVICE_STARTUP_ORDER+=("$category")
+        new_categories+=("$category")
+    done
+
+    # Warn about new categories (they start last, may need reordering)
+    if (( ${#new_categories[@]} > 0 )); then
+        print_status "warning" "New categories auto-discovered: ${new_categories[*]}"
+        print_status "info" "These start LAST. Add to SERVICE_STARTUP_ORDER in config.sh for proper dependency order"
+    fi
+
+    _SERVICE_CATEGORIES_INITIALIZED=true
+}
+
+# Internal: Discover services for a single category
+_discover_category_services() {
+    local category="$1"
+    local category_path="$COMPOSE_DIR/$category"
+
+    # Check for path override
+    [[ -n "${CATEGORY_PATH_OVERRIDES[$category]}" ]] && \
+        category_path="$COMPOSE_DIR/${CATEGORY_PATH_OVERRIDES[$category]}"
+
+    # Skip if directory doesn't exist
+    [[ ! -d "$category_path" ]] && return 0
+
+    # Collect all .yml files
+    local services=""
+    for yml_file in "$category_path"/*.yml(N); do
+        [[ -f "$yml_file" ]] && services+="${yml_file:t} "
+    done
+
+    # Store (trim trailing space)
+    SERVICE_CATEGORIES[$category]="${services% }"
+}
+
+# Get list of all known categories
+get_all_categories() {
+    init_service_categories
+    echo "${SERVICE_STARTUP_ORDER[@]}"
+}
+
+# Get services for a category (triggers discovery if needed)
+get_category_services() {
+    local category="$1"
+    init_service_categories
+    echo "${SERVICE_CATEGORIES[$category]}"
+}
+
+# Refresh service discovery (force re-scan)
+refresh_service_discovery() {
+    init_service_categories --force
+}
 
 # =============================================================================
 # HELPER FUNCTIONS
@@ -929,6 +989,9 @@ if [[ ! -f "$PROJECT_ROOT/.env" ]]; then
     print_status "warning" "Environment file not found: $PROJECT_ROOT/.env"
     print_status "info" "Consider copying .env-sample to .env"
 fi
+
+# Initialize service discovery from compose directory structure
+init_service_categories
 
 # Only show this message once when sourced directly
 if [[ "${(%):-%x}" == "${0}" ]]; then
