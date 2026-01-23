@@ -100,38 +100,22 @@ _SERVICE_CATEGORIES_INITIALIZED=false
 # =============================================================================
 
 # Discover services from compose directory structure
-# Usage: init_service_categories [--force]
 init_service_categories() {
     local force="${1:-}"
-
-    # Skip if already initialized (unless forced)
     [[ "$_SERVICE_CATEGORIES_INITIALIZED" == "true" && "$force" != "--force" ]] && return 0
 
-    # Reset categories
     SERVICE_CATEGORIES=()
-    local new_categories=()
-
-    # Discover services for each category in startup order
     for category in "${SERVICE_STARTUP_ORDER[@]}"; do
         _discover_category_services "$category"
     done
 
-    # Auto-discover new categories (directories not in startup order)
+    # Auto-discover new categories
     for dir in "$COMPOSE_DIR"/*(/N); do
         local category="${dir:t}"
-        # Skip if already in startup order
         (( ${SERVICE_STARTUP_ORDER[(Ie)$category]} )) && continue
-        # Discover and append to startup order
         _discover_category_services "$category"
         SERVICE_STARTUP_ORDER+=("$category")
-        new_categories+=("$category")
     done
-
-    # Warn about new categories (they start last, may need reordering)
-    if (( ${#new_categories[@]} > 0 )); then
-        print_status "warning" "New categories auto-discovered: ${new_categories[*]}"
-        print_status "info" "These start LAST. Add to SERVICE_STARTUP_ORDER in config.sh for proper dependency order"
-    fi
 
     _SERVICE_CATEGORIES_INITIALIZED=true
 }
@@ -180,26 +164,30 @@ refresh_service_discovery() {
 # HELPER FUNCTIONS
 # =============================================================================
 
-# Function to print colored output
+# Minimal output functions - ANSI colors, no emojis
+# Respects VERBOSE and QUIET flags
+VERBOSE=${VERBOSE:-0}
+QUIET=${QUIET:-0}
+
 print_status() {
     local level="$1"
     local message="$2"
-    
+
     case "$level" in
         "info")
-            echo "ℹ️  $message"
+            [[ $VERBOSE -eq 1 ]] && printf "\033[36m--\033[0m %s\n" "$message"
             ;;
         "success")
-            echo "✅ $message"
+            [[ $QUIET -eq 0 ]] && printf "\033[32mOK\033[0m %s\n" "$message"
             ;;
         "warning")
-            echo "⚠️  $message"
+            printf "\033[33mWARN\033[0m %s\n" "$message"
             ;;
         "error")
-            echo "❌ $message"
+            printf "\033[31mERR\033[0m %s\n" "$message" >&2
             ;;
         "step")
-            echo "🔄 $message"
+            [[ $VERBOSE -eq 1 ]] && printf "\033[34m..\033[0m %s\n" "$message"
             ;;
         *)
             echo "$message"
@@ -293,45 +281,20 @@ get_service_files() {
     fi
 }
 
-# Function to validate all service files exist
+# Validate all service files exist
 validate_service_files() {
     local category="$1"
-    local -a missing_files valid_files
-    
-    if [[ -z "${SERVICE_CATEGORIES[$category]}" ]]; then
-        print_status "error" "Unknown service category: $category"
-        return 1
-    fi
-    
-    local service_files="${SERVICE_CATEGORIES[$category]}"
-    local -a files
-    files=(${=service_files})
-    
-    print_status "step" "Validating $category service files..."
-    
-    for service_file in "${files[@]}"; do
-        local resolved_path
-        resolved_path=$(resolve_service_path "$service_file" "$category")
-        
-        if [[ -f "$resolved_path" ]]; then
-            valid_files+=("$service_file")
-            if [[ "$VERBOSE_VALIDATION" == "true" ]]; then
-                print_status "info" "✓ Found: $service_file -> $resolved_path"
-            fi
-        else
-            missing_files+=("$service_file")
-            print_status "warning" "❌ Missing: $service_file (expected at $resolved_path)"
-        fi
+    [[ -z "${SERVICE_CATEGORIES[$category]}" ]] && { print_status "error" "Unknown category: $category"; return 1; }
+
+    local -a files=(${=${SERVICE_CATEGORIES[$category]}})
+    local -a missing
+    for sf in "${files[@]}"; do
+        local rp=$(resolve_service_path "$sf" "$category")
+        [[ ! -f "$rp" ]] && missing+=("$sf")
     done
-    
-    if [[ ${#missing_files[@]} -gt 0 ]]; then
-        print_status "warning" "Category '$category' has ${#missing_files[@]} missing file(s): ${missing_files[*]}"
-        print_status "info" "Available files: ${valid_files[*]}"
-        return 1
-    else
-        print_status "success" "All $category service files found (${#valid_files[@]} files)"
-        return 0
-    fi
+
+    [[ ${#missing[@]} -gt 0 ]] && { print_status "warning" "$category missing: ${missing[*]}"; return 1; }
+    return 0
 }
 
 # =============================================================================
@@ -421,11 +384,9 @@ list_all_services() {
             
             for service_file in "${files[@]}"; do
                 local file_path="$(resolve_service_path "$service_file" "$category" 2>/dev/null)"
-                local status_icon="❌ MISSING"
-                
-                [[ -f "$file_path" ]] && status_icon="✅ EXISTS"
-                
-                printf "  %-25s -> %s [%s]\n" "$service_file" "$file_path" "$status_icon"
+                local status_icon="-"
+                [[ -f "$file_path" ]] && status_icon="+"
+                printf "  %s %-20s %s\n" "$status_icon" "${service_file%.yml}" "$file_path"
             done
         else
             echo "  No services defined"
@@ -471,28 +432,22 @@ get_service_status() {
     fi
 }
 
-# Direct service operations (simple implementations to avoid infinite loops)
+# Direct service operations - thin wrappers around compose
 start_single_service() {
     local service_name="$1"
     local force_recreate="${2:-false}"
-    
-    local service_path
-    service_path=$(get_service_path "$service_name")
-    if [[ $? -ne 0 ]]; then
-        print_status "error" "Service '$service_name' not found"
-        return 1
-    fi
-    
-    print_status "step" "Starting service: $service_name"
-    
+    local service_path=$(get_service_path "$service_name")
+    [[ $? -ne 0 ]] && { print_status "error" "$service_name not found"; return 1; }
+
+    print_status "step" "up $service_name"
     local compose_args=("-f" "$service_path" "up" "-d")
     [[ "$force_recreate" == "true" ]] && compose_args+=("--force-recreate")
-    
+
     if eval "$COMPOSE_CMD ${compose_args[*]} $ERROR_REDIRECT"; then
-        print_status "success" "Service $service_name started"
+        print_status "success" "$service_name"
         return 0
     else
-        print_status "error" "Failed to start service: $service_name"
+        print_status "error" "$service_name failed"
         return 1
     fi
 }
@@ -501,69 +456,42 @@ stop_single_service() {
     local service_name="$1"
     local remove_volumes="${2:-false}"
     local timeout="${3:-30}"
-    
-    local service_path
-    service_path=$(get_service_path "$service_name")
-    if [[ $? -ne 0 ]]; then
-        print_status "error" "Service '$service_name' not found"
-        return 1
-    fi
-    
-    print_status "step" "Stopping service: $service_name"
-    
+    local service_path=$(get_service_path "$service_name")
+    [[ $? -ne 0 ]] && { print_status "error" "$service_name not found"; return 1; }
+
+    print_status "step" "down $service_name"
     local compose_args=("-f" "$service_path" "down" "--timeout" "$timeout")
     [[ "$remove_volumes" == "true" ]] && compose_args+=("--volumes")
-    
+
     if eval "$COMPOSE_CMD ${compose_args[*]} $ERROR_REDIRECT"; then
-        print_status "success" "Service $service_name stopped"
+        print_status "success" "$service_name stopped"
         return 0
     else
-        print_status "error" "Failed to stop service: $service_name"
+        print_status "error" "$service_name stop failed"
         return 1
     fi
 }
 
 restart_single_service() {
     local service_name="$1"
-    
-    print_status "step" "Restarting service: $service_name"
-    
-    if stop_single_service "$service_name" && start_single_service "$service_name"; then
-        print_status "success" "Service $service_name restarted"
-        return 0
-    else
-        print_status "error" "Failed to restart service: $service_name"
-        return 1
-    fi
+    stop_single_service "$service_name" && start_single_service "$service_name"
 }
 
 rebuild_single_service() {
     local service_name="$1"
     local no_cache="${2:-false}"
-    
-    local service_path
-    service_path=$(get_service_path "$service_name")
-    if [[ $? -ne 0 ]]; then
-        print_status "error" "Service '$service_name' not found"
-        return 1
-    fi
-    
-    print_status "step" "Rebuilding service: $service_name"
-    
-    # Stop service first
+    local service_path=$(get_service_path "$service_name")
+    [[ $? -ne 0 ]] && { print_status "error" "$service_name not found"; return 1; }
+
     stop_single_service "$service_name"
-    
-    # Build with optional no-cache
     local build_args=("-f" "$service_path" "build")
     [[ "$no_cache" == "true" ]] && build_args+=("--no-cache")
-    
+
     if eval "$COMPOSE_CMD ${build_args[*]} $ERROR_REDIRECT"; then
-        # Start service after build
         start_single_service "$service_name" "true"
-        print_status "success" "Service $service_name rebuilt"
         return 0
     else
-        print_status "error" "Failed to rebuild service: $service_name"
+        print_status "error" "$service_name build failed"
         return 1
     fi
 }
@@ -572,81 +500,33 @@ show_service_logs() {
     local service_name="$1"
     local follow="${2:-false}"
     local tail_lines="${3:-100}"
-    
-    local service_path
-    service_path=$(get_service_path "$service_name")
-    if [[ $? -ne 0 ]]; then
-        print_status "error" "Service '$service_name' not found"
-        return 1
-    fi
-    
+    local service_path=$(get_service_path "$service_name")
+    [[ $? -ne 0 ]] && { print_status "error" "$service_name not found"; return 1; }
+
     local log_args=("-f" "$service_path" "logs" "--tail" "$tail_lines")
     [[ "$follow" == "true" ]] && log_args+=("-f")
-    
     eval "$COMPOSE_CMD ${log_args[*]}"
 }
 
-# Category operations (simple implementations)
+# Category operations
 start_service_category() {
     local category="$1"
-    
-    if [[ -z "${SERVICE_CATEGORIES[$category]}" ]]; then
-        print_status "error" "Unknown service category: $category"
-        return 1
-    fi
-    
-    print_status "step" "Starting $category services..."
-    
-    local service_files="${SERVICE_CATEGORIES[$category]}"
-    local -a files
-    files=(${=service_files})
-    
+    [[ -z "${SERVICE_CATEGORIES[$category]}" ]] && { print_status "error" "Unknown category: $category"; return 1; }
+    local -a files=(${=${SERVICE_CATEGORIES[$category]}})
     local failed=0
-    for service_file in "${files[@]}"; do
-        local service_name="${service_file%.yml}"
-        if ! start_single_service "$service_name"; then
-            ((failed++))
-        fi
-    done
-    
-    if [[ $failed -eq 0 ]]; then
-        print_status "success" "$category services started successfully"
-        return 0
-    else
-        print_status "warning" "$failed service(s) in $category failed to start"
-        return 1
-    fi
+    for sf in "${files[@]}"; do start_single_service "${sf%.yml}" || ((failed++)); done
+    [[ $failed -gt 0 ]] && print_status "warning" "$category: $failed failed"
+    return $([[ $failed -eq 0 ]] && echo 0 || echo 1)
 }
 
 stop_service_category() {
     local category="$1"
-    
-    if [[ -z "${SERVICE_CATEGORIES[$category]}" ]]; then
-        print_status "error" "Unknown service category: $category"
-        return 1
-    fi
-    
-    print_status "step" "Stopping $category services..."
-    
-    local service_files="${SERVICE_CATEGORIES[$category]}"
-    local -a files
-    files=(${=service_files})
-    
+    [[ -z "${SERVICE_CATEGORIES[$category]}" ]] && { print_status "error" "Unknown category: $category"; return 1; }
+    local -a files=(${=${SERVICE_CATEGORIES[$category]}})
     local failed=0
-    for service_file in "${files[@]}"; do
-        local service_name="${service_file%.yml}"
-        if ! stop_single_service "$service_name"; then
-            ((failed++))
-        fi
-    done
-    
-    if [[ $failed -eq 0 ]]; then
-        print_status "success" "$category services stopped successfully"
-        return 0
-    else
-        print_status "warning" "$failed service(s) in $category had issues stopping"
-        return 1
-    fi
+    for sf in "${files[@]}"; do stop_single_service "${sf%.yml}" || ((failed++)); done
+    [[ $failed -gt 0 ]] && print_status "warning" "$category: $failed failed"
+    return $([[ $failed -eq 0 ]] && echo 0 || echo 1)
 }
 
 # =============================================================================
@@ -709,16 +589,9 @@ show_configuration() {
 # DATABASE CREDENTIALS & ENVIRONMENT VARIABLES
 # =============================================================================
 
-# Source .env file if it exists to get all your custom variable names
+# Source .env file if it exists
 if [[ -f "$PROJECT_ROOT/.env" ]]; then
-    # Source the .env file safely
-    set -a
-    source "$PROJECT_ROOT/.env"
-    set +a
-    print_status "info" "Environment variables loaded from .env"
-else
-    print_status "warning" "No .env file found at $PROJECT_ROOT/.env"
-    print_status "info" "Using fallback default values"
+    set -a; source "$PROJECT_ROOT/.env"; set +a
 fi
 
 # Fallback defaults if .env doesn't exist or variables are missing
@@ -852,7 +725,7 @@ setup_command_context() {
 handle_error() {
     local message="$1"
     local exit_code="${2:-1}"
-    echo "❌ Error: $message" >&2
+    printf "\033[31mERR\033[0m %s\n" "$message" >&2
     exit "$exit_code"
 }
 
@@ -865,88 +738,46 @@ check_status() {
     fi
 }
 
-# Function to wait for service health (lightweight version)
+# Wait for service health
 wait_for_service_health() {
     local service_name="$1"
     local timeout="${2:-60}"
     local counter=0
-    
-    print_status "step" "Waiting for $service_name to be healthy..."
-    
+
     while [[ $counter -lt $timeout ]]; do
-        local health_status
-        health_status=$(eval "$CONTAINER_CMD inspect --format='{{.State.Health.Status}}' $service_name 2>/dev/null" || echo "unknown")
-        
-        case "$health_status" in
-            "healthy")
-                print_status "success" "$service_name is healthy!"
-                return 0
-                ;;
-            "unhealthy")
-                print_status "warning" "$service_name is unhealthy"
-                return 1
-                ;;
-            *)
-                print_status "info" "$service_name health status: ${health_status:-starting} ($counter/$timeout)"
-                ;;
+        local hs=$(eval "$CONTAINER_CMD inspect --format='{{.State.Health.Status}}' $service_name" 2>/dev/null || echo "unknown")
+        case "$hs" in
+            "healthy") return 0 ;;
+            "unhealthy") print_status "warning" "$service_name unhealthy"; return 1 ;;
         esac
-        
         sleep 2
         counter=$((counter + 2))
     done
-    
-    print_status "warning" "$service_name health check timeout, but continuing..."
     return 1
 }
 
-# Function to wait for MongoDB specifically (no built-in health check)
+# Wait for MongoDB (no built-in health check)
 wait_for_mongodb() {
     local timeout="${1:-60}"
     local counter=0
-    
-    print_status "step" "Waiting for MongoDB to be ready..."
-    
+
     while [[ $counter -lt $timeout ]]; do
-        # Check if we can ping MongoDB
-        if eval "$CONTAINER_CMD exec mongodb mongosh --quiet --eval 'db.adminCommand(\"ping\")' $ERROR_REDIRECT"; then
-            print_status "success" "MongoDB is ready!"
-            return 0
-        fi
-        
-        # Check if container is still running
-        if ! eval "$CONTAINER_CMD ps --format '{{.Names}}' | grep -q '^mongodb$' $ERROR_REDIRECT"; then
-            print_status "error" "MongoDB container is not running"
-            return 1
-        fi
-        
-        print_status "info" "MongoDB not ready yet... ($counter/$timeout)"
+        eval "$CONTAINER_CMD exec mongodb mongosh --quiet --eval 'db.adminCommand(\"ping\")' $ERROR_REDIRECT" && return 0
+        eval "$CONTAINER_CMD ps --format '{{.Names}}'" 2>/dev/null | grep -q '^mongodb$' || { print_status "error" "mongodb not running"; return 1; }
         sleep 2
         counter=$((counter + 2))
     done
-    
-    print_status "warning" "MongoDB timeout, but continuing..."
     return 1
 }
 
-# Function to create network if it doesn't exist
+# Create network if it doesn't exist
 ensure_network_exists() {
     if [[ "$USE_PODMAN" == "true" ]]; then
-        # Podman has 'network exists' command
-        if ! eval "$CONTAINER_CMD network exists \"$NETWORK_NAME\" $ERROR_REDIRECT"; then
-            print_status "step" "Creating network: $NETWORK_NAME"
-            eval "$CONTAINER_CMD network create --driver bridge \"$NETWORK_NAME\" $ERROR_REDIRECT"
-            check_status "Failed to create network: $NETWORK_NAME"
-            print_status "success" "Network created: $NETWORK_NAME"
-        fi
+        eval "$CONTAINER_CMD network exists \"$NETWORK_NAME\" $ERROR_REDIRECT" && return 0
     else
-        # Docker doesn't have 'network exists' - use 'network ls' instead
-        if ! eval "$CONTAINER_CMD network ls --format '{{.Name}}' | grep -q '^$NETWORK_NAME$' $ERROR_REDIRECT"; then
-            print_status "step" "Creating network: $NETWORK_NAME"
-            eval "$CONTAINER_CMD network create --driver bridge \"$NETWORK_NAME\" $ERROR_REDIRECT"
-            check_status "Failed to create network: $NETWORK_NAME"
-            print_status "success" "Network created: $NETWORK_NAME"
-        fi
+        eval "$CONTAINER_CMD network ls --format '{{.Name}}'" 2>/dev/null | grep -q "^$NETWORK_NAME$" && return 0
     fi
+    eval "$CONTAINER_CMD network create --driver bridge \"$NETWORK_NAME\" $ERROR_REDIRECT" || { print_status "error" "network create failed"; return 1; }
 }
 
 # =============================================================================
@@ -981,21 +812,7 @@ detect_os
 setup_command_context "$DEFAULT_SUDO" "false"
 
 # Validate project structure
-if [[ ! -d "$COMPOSE_DIR" ]]; then
-    handle_error "Compose directory not found: $COMPOSE_DIR"
-fi
+[[ ! -d "$COMPOSE_DIR" ]] && handle_error "Compose directory not found: $COMPOSE_DIR"
 
-if [[ ! -f "$PROJECT_ROOT/.env" ]]; then
-    print_status "warning" "Environment file not found: $PROJECT_ROOT/.env"
-    print_status "info" "Consider copying .env-sample to .env"
-fi
-
-# Initialize service discovery from compose directory structure
+# Initialize service discovery (silent)
 init_service_categories
-
-# Only show this message once when sourced directly
-if [[ "${(%):-%x}" == "${0}" ]]; then
-    print_status "info" "Smart configuration loaded successfully"
-    print_status "info" "Container runtime: $CONTAINER_RUNTIME (sudo: $DEFAULT_SUDO)"
-    print_status "info" "Project root: $PROJECT_ROOT"
-fi
