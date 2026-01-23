@@ -24,6 +24,8 @@ opt_tail_lines=100
 opt_timeout=30
 opt_dry_run=false
 opt_verbose=false
+VERBOSE=0
+QUIET=0
 
 # Bulk operation options
 opt_categories_only=""
@@ -426,10 +428,12 @@ parse_arguments() {
             -d|--dry-run)
                 opt_dry_run=true
                 opt_verbose=true
+                export VERBOSE=1
                 shift
                 ;;
             -v|--verbose)
                 opt_verbose=true
+                export VERBOSE=1
                 shift
                 ;;
             --refresh)
@@ -454,107 +458,45 @@ parse_arguments() {
 
 validate_command() {
     local valid_commands=("up" "down" "restart" "rebuild" "logs" "status" "ps" "list" "refresh" "check" "start" "stop" "start-all" "stop-all" "list-components" "prune-components")
-    
-    if [[ ! " ${valid_commands[*]} " =~ " $COMMAND " ]]; then
-        print_status "error" "Invalid command: $COMMAND"
-        print_status "info" "Valid commands: ${valid_commands[*]}"
-        exit 1
-    fi
+    [[ ! " ${valid_commands[*]} " =~ " $COMMAND " ]] && { print_status "error" "Invalid command: $COMMAND"; exit 1; }
 }
 
 validate_service_required() {
-    local commands_requiring_service=("up" "down" "restart" "rebuild" "logs")
-    
-    if [[ " ${commands_requiring_service[*]} " =~ " $COMMAND " && -z "$SERVICE_NAME" ]]; then
-        print_status "error" "Command '$COMMAND' requires a service name"
-        print_status "info" "Available services: $(list_all_service_names | tr '\n' ' ')"
-        exit 1
-    fi
+    local cmds=("up" "down" "restart" "rebuild" "logs")
+    [[ " ${cmds[*]} " =~ " $COMMAND " && -z "$SERVICE_NAME" ]] && { print_status "error" "$COMMAND requires service name"; exit 1; }
 }
 
 validate_service_exists_if_provided() {
-    if [[ -n "$SERVICE_NAME" ]] && ! validate_service_exists "$SERVICE_NAME"; then
-        print_status "error" "Service '$SERVICE_NAME' not found"
-        print_status "info" "Available services: $(list_all_service_names | tr '\n' ' ')"
-        exit 1
-    fi
+    [[ -n "$SERVICE_NAME" ]] && ! validate_service_exists "$SERVICE_NAME" && { print_status "error" "$SERVICE_NAME not found"; exit 1; }
 }
 
 validate_bulk_targets() {
-    # Parse targets from command line or options
     local -a all_targets
-    
-    # Add targets from command line
-    if [[ -n "$BULK_TARGETS" ]]; then
-        all_targets+=($BULK_TARGETS)
-    fi
-    
-    # Add targets from --categories
-    if [[ -n "$opt_categories_only" ]]; then
-        local -a categories
-        categories=(${(s:,:)opt_categories_only})
-        all_targets+=("${categories[@]}")
-    fi
-    
-    # Add targets from --services  
-    if [[ -n "$opt_services_only" ]]; then
-        local -a services
-        services=(${(s:,:)opt_services_only})
-        all_targets+=("${services[@]}")
-    fi
-    
-    # Validate each target
+    [[ -n "$BULK_TARGETS" ]] && all_targets+=($BULK_TARGETS)
+    [[ -n "$opt_categories_only" ]] && all_targets+=(${(s:,:)opt_categories_only})
+    [[ -n "$opt_services_only" ]] && all_targets+=(${(s:,:)opt_services_only})
+
     for target in "${all_targets[@]}"; do
-        # Check if it's a valid category
-        if [[ -n "${SERVICE_CATEGORIES[$target]}" ]]; then
-            continue
-        fi
-        
-        # Check if it's a valid service
-        if validate_service_exists "$target"; then
-            continue
-        fi
-        
-        # If neither, it's invalid
-        print_status "error" "Invalid target: '$target'"
-        print_status "info" "Valid categories: ${(k)SERVICE_CATEGORIES}"
-        print_status "info" "Valid services: $(list_all_service_names | tr '\n' ' ')"
+        [[ -n "${SERVICE_CATEGORIES[$target]}" ]] && continue
+        validate_service_exists "$target" && continue
+        print_status "error" "Invalid target: $target"
         exit 1
     done
-    
-    # Validate conflicting options
-    if [[ -n "$BULK_TARGETS" && -n "$opt_categories_only" ]]; then
-        print_status "error" "Cannot use both command-line targets and --categories option"
-        exit 1
-    fi
-    
-    if [[ -n "$BULK_TARGETS" && -n "$opt_services_only" ]]; then
-        print_status "error" "Cannot use both command-line targets and --services option"
-        exit 1
-    fi
+
+    [[ -n "$BULK_TARGETS" && -n "$opt_categories_only" ]] && { print_status "error" "Cannot mix targets and --categories"; exit 1; }
+    [[ -n "$BULK_TARGETS" && -n "$opt_services_only" ]] && { print_status "error" "Cannot mix targets and --services"; exit 1; }
 }
 
 validate_destructive_operations() {
-    if [[ "$opt_remove_volumes" == "true" && "$opt_dry_run" == "false" ]]; then
-        print_status "warning" "WARNING: --remove-volumes will destroy ALL data!"
-        echo "This will permanently delete:"
-        echo "  - Database data (PostgreSQL, MySQL, MongoDB)"
-        echo "  - Application files and configurations"
-        echo "  - Log files and user uploads"
-        echo ""
-        
-        if [[ -t 0 ]]; then
-            read "response?Are you absolutely sure? Type 'DELETE ALL DATA' to confirm: "
-            if [[ "$response" != "DELETE ALL DATA" ]]; then
-                print_status "info" "Volume removal cancelled"
-                opt_remove_volumes=false
-                opt_preserve_volumes=true
-                opt_preserve_data=true
-            fi
-        else
-            print_status "error" "Non-interactive mode: volume removal requires explicit confirmation"
-            exit 1
-        fi
+    [[ "$opt_remove_volumes" != "true" || "$opt_dry_run" == "true" ]] && return 0
+
+    if [[ -t 0 ]]; then
+        printf "\033[33mWARN\033[0m --remove-volumes destroys all data. Type 'DELETE ALL DATA' to confirm: "
+        read response
+        [[ "$response" != "DELETE ALL DATA" ]] && { opt_remove_volumes=false; opt_preserve_volumes=true; opt_preserve_data=true; }
+    else
+        print_status "error" "Volume removal requires interactive confirmation"
+        exit 1
     fi
 }
 
@@ -666,13 +608,11 @@ cmd_down() {
         echo "DRY RUN: $COMPOSE_CMD ${compose_args[*]}"
         return 0
     fi
-    
+
     stop_single_service "$SERVICE_NAME" "$opt_remove_volumes" "$opt_timeout"
-    
-    # Run cleanup for this specific service
-    if [[ $? -eq 0 ]]; then
-        cleanup_service_resources "$SERVICE_NAME"
-    fi
+    local rc=$?
+    cleanup_service_resources "$SERVICE_NAME"
+    return $rc
 }
 
 cmd_restart() {
@@ -713,42 +653,28 @@ cmd_logs() {
 
 cmd_status() {
     if [[ -n "$SERVICE_NAME" ]]; then
-        # Show status for specific service
-        local service_status=$(get_service_status "$SERVICE_NAME")
+        local service_status=$(get_service_status "$SERVICE_NAME" | tr -d '\n')
         local category=$(find_service_category "$SERVICE_NAME")
-        
-        print_status "info" "Service: $SERVICE_NAME"
-        echo "  Category: $category"
-        echo "  Status: $service_status"
-        echo "  Path: $(get_service_path "$SERVICE_NAME")"
+        printf "%-20s %-12s %s\n" "$SERVICE_NAME" "$service_status" "$category"
     else
-        # Show status for all services
-        print_status "info" "Service Status Overview:"
-        echo ""
-        
+        printf "\033[1m%-20s %-12s %s\033[0m\n" "SERVICE" "STATUS" "CATEGORY"
         for category in "${SERVICE_STARTUP_ORDER[@]}"; do
-            echo "📂 $category:"
             local service_files="${SERVICE_CATEGORIES[$category]}"
+            [[ -z "$service_files" ]] && continue
             local -a files
             files=(${=service_files})
-            
             for service_file in "${files[@]}"; do
-                local service_name="${service_file%.yml}"
-                local service_status=$(get_service_status "$service_name" 2>/dev/null || echo "")
-                
-                case "$service_status" in
-                    "running")
-                        echo "  ✅ $service_name"
-                        ;;
-                    "STOPPED"|"unknown")
-                        echo "  ❌ $service_name"
-                        ;;
-                    *)
-                        echo "  ⚠️  $service_name ($service_status)"
-                        ;;
+                local sname="${service_file%.yml}"
+                local sstatus=$(get_service_status "$sname" 2>/dev/null | tr -d '\n')
+                [[ -z "$sstatus" ]] && sstatus="stopped"
+                local color=""
+                case "$sstatus" in
+                    running) color="\033[32m" ;;
+                    exited|stopped|STOPPED) color="\033[31m"; sstatus="stopped" ;;
+                    *) color="\033[33m" ;;
                 esac
+                printf "%b%-20s %-12s %s\033[0m\n" "$color" "$sname" "$sstatus" "$category"
             done
-            echo ""
         done
     fi
 }
@@ -757,189 +683,72 @@ cmd_check() {
     local has_runtime=false
     local exit_code=0
 
-    echo ""
-    print_status "info" "Checking prerequisites..."
-    echo ""
+    # Container runtimes
+    command -v podman &>/dev/null && { printf "\033[32m+\033[0m podman %s\n" "$(podman --version 2>/dev/null | cut -d' ' -f3)"; has_runtime=true; }
+    command -v docker &>/dev/null && { printf "\033[32m+\033[0m docker %s\n" "$(docker --version 2>/dev/null | cut -d' ' -f3 | tr -d ',')"; has_runtime=true; }
+    [[ "$has_runtime" == "false" ]] && { print_status "error" "No container runtime"; exit_code=1; }
 
-    # Check container runtimes
-    if command -v podman &>/dev/null; then
-        print_status "success" "podman: $(podman --version 2>/dev/null | head -1)"
-        has_runtime=true
-    else
-        print_status "warning" "podman: not found"
-    fi
+    # Network
+    eval "$CONTAINER_CMD network exists $NETWORK_NAME" 2>/dev/null && \
+        printf "\033[32m+\033[0m network %s\n" "$NETWORK_NAME" || \
+        printf "\033[33m-\033[0m network %s (will create)\n" "$NETWORK_NAME"
 
-    if command -v docker &>/dev/null; then
-        print_status "success" "docker: $(docker --version 2>/dev/null | head -1)"
-        has_runtime=true
-    else
-        print_status "warning" "docker: not found"
-    fi
-
-    if [[ "$has_runtime" == "false" ]]; then
-        echo ""
-        print_status "error" "No container runtime found!"
-        print_status "info" "Install one of the following:"
-        print_status "info" "  Podman: https://podman.io/getting-started/installation"
-        print_status "info" "  Docker: https://docs.docker.com/get-docker/"
-        exit_code=1
-    fi
-
-    # Check network
-    echo ""
-    if eval "$CONTAINER_CMD network exists $NETWORK_NAME" 2>/dev/null; then
-        print_status "success" "Network '$NETWORK_NAME' exists"
-    else
-        print_status "warning" "Network '$NETWORK_NAME' not created yet (will be created on first service start)"
-    fi
-
-    # Check project structure
-    echo ""
-    [[ -d "$COMPOSE_DIR" ]] && print_status "success" "Compose directory: $COMPOSE_DIR" || print_status "error" "Compose directory missing"
-    [[ -f "$PROJECT_ROOT/.env" ]] && print_status "success" "Environment file: .env" || print_status "warning" "Environment file: .env not found (copy from .env-sample)"
-
-    echo ""
-    if [[ $exit_code -eq 0 ]]; then
-        print_status "success" "All prerequisites met"
-    else
-        print_status "error" "Prerequisites check failed"
-    fi
+    # Project structure
+    [[ -d "$COMPOSE_DIR" ]] && printf "\033[32m+\033[0m compose dir\n" || { printf "\033[31m!\033[0m compose dir missing\n"; exit_code=1; }
+    [[ -f "$PROJECT_ROOT/.env" ]] && printf "\033[32m+\033[0m .env\n" || printf "\033[33m-\033[0m .env (optional)\n"
 
     return $exit_code
 }
 
 cmd_ps() {
-    print_status "info" "Running Services:"
-    echo ""
-
-    if output=$(eval "$CONTAINER_CMD ps --filter 'network=$NETWORK_NAME' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'" 2>/dev/null); then
-        echo "$output"
-    else
-        print_status "warning" "Could not list running containers"
-    fi
+    eval "$CONTAINER_CMD ps --filter 'network=$NETWORK_NAME' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'" 2>/dev/null || \
+        print_status "warning" "Could not list containers"
 }
 
 cmd_list() {
-    print_status "info" "Available Services:"
-    echo ""
-    
+    printf "\033[1m%-20s %s\033[0m\n" "SERVICE" "CATEGORY"
     for category in "${SERVICE_STARTUP_ORDER[@]}"; do
-        echo "📂 $category:"
         local service_files="${SERVICE_CATEGORIES[$category]}"
+        [[ -z "$service_files" ]] && continue
         local -a files
         files=(${=service_files})
-        
         for service_file in "${files[@]}"; do
-            local service_name="${service_file%.yml}"
-            echo "  • $service_name"
+            printf "%-20s %s\n" "${service_file%.yml}" "$category"
         done
-        echo ""
     done
-    
-    echo "Total services: $(list_all_service_names | wc -l)"
 }
 
 cmd_list_components() {
-    print_status "info" "Listing all Podman/Docker components:"
-    echo ""
-    
-    print_status "step" "Images:"
+    printf "\033[1m=== IMAGES ===\033[0m\n"
     eval "$CONTAINER_CMD images"
-    echo ""
-    
-    print_status "step" "Containers:"
+    printf "\n\033[1m=== CONTAINERS ===\033[0m\n"
     eval "$CONTAINER_CMD ps -a"
-    echo ""
-    
-    print_status "step" "Volumes:"
+    printf "\n\033[1m=== VOLUMES ===\033[0m\n"
     eval "$CONTAINER_CMD volume ls"
-    echo ""
-    
-    print_status "step" "Networks:"
+    printf "\n\033[1m=== NETWORKS ===\033[0m\n"
     eval "$CONTAINER_CMD network ls"
-    echo ""
-    
-    # Only list pods if using podman
-    if [[ "$USE_PODMAN" == "true" ]]; then
-        print_status "step" "Pods:"
-        eval "$CONTAINER_CMD pod ps -a"
-        echo ""
-    fi
+    [[ "$USE_PODMAN" == "true" ]] && { printf "\n\033[1m=== PODS ===\033[0m\n"; eval "$CONTAINER_CMD pod ps -a"; }
 }
 
 cmd_prune_components() {
-    print_status "warning" "⚠️  WARNING: This will remove ALL containers, images, volumes, networks, and pods!"
-    echo ""
-    
     if [[ "$opt_dry_run" == "true" ]]; then
-        print_status "info" "DRY RUN: Would execute the following:"
-        echo "  - Remove all images"
-        echo "  - Remove all containers"
-        echo "  - Remove all volumes"
-        echo "  - Remove network: $NETWORK_NAME"
-        if [[ "$USE_PODMAN" == "true" ]]; then
-            echo "  - Remove all pods"
-        fi
+        echo "DRY RUN: would remove all containers, images, volumes, networks"
         return 0
     fi
-    
-    # Confirm with user unless force flag is set
+
+    # Confirm unless force
     if [[ "$opt_force_recreate" != "true" && "$opt_force_services" != "true" ]]; then
-        echo -n "Are you sure you want to prune all components? (yes/no): "
+        printf "\033[33mWARN\033[0m This removes ALL containers, images, volumes, networks. Continue? (yes/no): "
         read confirmation
-        if [[ "$confirmation" != "yes" ]]; then
-            print_status "info" "Prune operation cancelled"
-            return 0
-        fi
+        [[ "$confirmation" != "yes" ]] && { echo "Cancelled"; return 0; }
     fi
-    
-    print_status "step" "Pruning all components..."
-    echo ""
-    
-    # Remove all containers first
-    print_status "step" "Removing all containers..."
-    if eval "$CONTAINER_CMD container rm --all -f $ERROR_REDIRECT"; then
-        print_status "success" "All containers removed"
-    else
-        print_status "warning" "Some containers may not have been removed"
-    fi
-    
-    # Remove all images
-    print_status "step" "Removing all images..."
-    if eval "$CONTAINER_CMD image rm --all -f $ERROR_REDIRECT"; then
-        print_status "success" "All images removed"
-    else
-        print_status "warning" "Some images may not have been removed"
-    fi
-    
-    # Remove all volumes
-    print_status "step" "Removing all volumes..."
-    if eval "$CONTAINER_CMD volume rm --all -f $ERROR_REDIRECT"; then
-        print_status "success" "All volumes removed"
-    else
-        print_status "warning" "Some volumes may not have been removed"
-    fi
-    
-    # Remove project network
-    print_status "step" "Removing network: $NETWORK_NAME..."
-    if eval "$CONTAINER_CMD network rm $NETWORK_NAME $ERROR_REDIRECT"; then
-        print_status "success" "Network $NETWORK_NAME removed"
-    else
-        print_status "warning" "Network $NETWORK_NAME may not exist or couldn't be removed"
-    fi
-    
-    # Remove all pods (podman only)
-    if [[ "$USE_PODMAN" == "true" ]]; then
-        print_status "step" "Removing all pods..."
-        if eval "$CONTAINER_CMD pod rm --all -f $ERROR_REDIRECT"; then
-            print_status "success" "All pods removed"
-        else
-            print_status "warning" "Some pods may not have been removed"
-        fi
-    fi
-    
-    echo ""
-    print_status "success" "Prune operation completed!"
+
+    eval "$CONTAINER_CMD container rm --all -f $ERROR_REDIRECT" && print_status "success" "containers"
+    eval "$CONTAINER_CMD image rm --all -f $ERROR_REDIRECT" && print_status "success" "images"
+    eval "$CONTAINER_CMD volume rm --all -f $ERROR_REDIRECT" && print_status "success" "volumes"
+    eval "$CONTAINER_CMD network rm $NETWORK_NAME $ERROR_REDIRECT" && print_status "success" "network"
+    [[ "$USE_PODMAN" == "true" ]] && eval "$CONTAINER_CMD pod rm --all -f $ERROR_REDIRECT" && print_status "success" "pods"
+    print_status "success" "prune complete"
 }
 
 # =============================================================================
@@ -948,64 +757,33 @@ cmd_prune_components() {
 
 cmd_start() {
     resolve_bulk_targets "start"
-    
-    if [[ ${#RESOLVED_CATEGORIES[@]} -eq 0 && ${#RESOLVED_SERVICES[@]} -eq 0 ]]; then
-        print_status "warning" "No targets resolved for startup"
-        return 0
-    fi
-    
-    print_status "step" "Starting services in dependency order..."
-    
-    # Setup environment first
+    [[ ${#RESOLVED_CATEGORIES[@]} -eq 0 && ${#RESOLVED_SERVICES[@]} -eq 0 ]] && { print_status "warning" "No targets"; return 0; }
+
     ensure_network_exists
-    
-    # Start individual services first
+
     for service in "${RESOLVED_SERVICES[@]}"; do
         start_individual_service "$service"
-        sleep 1
     done
-    
-    # Start categories in dependency order
+
     for category in "${RESOLVED_CATEGORIES[@]}"; do
-        if [[ "$opt_parallel_start" == "true" ]]; then
-            start_category_parallel "$category"
-        else
-            start_category_sequential "$category"
-        fi
-        
-        # Wait for health if enabled
-        wait_for_category_health "$category"
-        sleep 2
+        [[ "$opt_parallel_start" == "true" ]] && start_category_parallel "$category" || start_category_sequential "$category"
+        [[ "$opt_wait_healthy" == "true" ]] && wait_for_category_health "$category"
     done
-    
-    print_status "success" "Bulk startup completed!"
 }
 
 cmd_stop() {
     resolve_bulk_targets "stop"
-    
-    if [[ ${#RESOLVED_CATEGORIES[@]} -eq 0 && ${#RESOLVED_SERVICES[@]} -eq 0 ]]; then
-        print_status "warning" "No targets resolved for shutdown"
-        return 0
-    fi
-    
-    print_status "step" "Stopping services in reverse dependency order..."
-    
-    # Stop categories in reverse dependency order
+    [[ ${#RESOLVED_CATEGORIES[@]} -eq 0 && ${#RESOLVED_SERVICES[@]} -eq 0 ]] && { print_status "warning" "No targets"; return 0; }
+
     for category in "${RESOLVED_CATEGORIES[@]}"; do
         stop_category "$category"
-        sleep 1
     done
-    
-    # Stop individual services
+
     for service in "${RESOLVED_SERVICES[@]}"; do
         stop_individual_service "$service"
     done
-    
-    # Run cleanup operations
+
     run_cleanup_operations
-    
-    print_status "success" "Bulk shutdown completed!"
 }
 
 cmd_start_all() {
@@ -1070,9 +848,6 @@ cmd_stop_all() {
 
 start_individual_service() {
     local service_name="$1"
-    
-    print_status "step" "Starting individual service: $service_name"
-    
     if [[ "$opt_rebuild_services" == "true" ]]; then
         rebuild_single_service "$service_name" "$opt_no_cache"
     else
@@ -1084,136 +859,65 @@ start_individual_service() {
 
 stop_individual_service() {
     local service_name="$1"
-    
-    print_status "step" "Stopping individual service: $service_name"
-    
     local remove_volumes="$opt_remove_volumes"
-    if [[ "$opt_preserve_data" == "true" || "$opt_preserve_volumes" == "true" ]]; then
-        remove_volumes="false"
-    fi
-    
-    stop_single_service "$service_name" "$remove_volumes" "$opt_timeout"
-    
-    # Cleanup for this specific service
-    if [[ $? -eq 0 ]]; then
-        cleanup_service_resources "$service_name"
-    fi
+    [[ "$opt_preserve_data" == "true" || "$opt_preserve_volumes" == "true" ]] && remove_volumes="false"
+    stop_single_service "$service_name" "$remove_volumes" "$opt_timeout" && cleanup_service_resources "$service_name"
 }
 
 start_category_sequential() {
     local category="$1"
-    local service_files
-    
-    service_files=$(filter_services_for_category "$category")
-    
-    if [[ -z "$service_files" ]]; then
-        if [[ "$opt_verbose" == "true" ]]; then
-            print_status "info" "No services to start in $category (filtered out)"
-        fi
-        return 0
-    fi
-    
-    print_status "step" "Starting $category services sequentially..."
-    
+    local service_files=$(filter_services_for_category "$category")
+    [[ -z "$service_files" ]] && return 0
+
     local -a files
     files=(${=service_files})
-    
     local failed=0
+
     for service_file in "${files[@]}"; do
-        local service_name="${service_file%.yml}"
-        if ! start_individual_service "$service_name"; then
-            ((failed++))
-        fi
-        
-        if [[ "$opt_dry_run" == "false" ]]; then
-            sleep 1
-        fi
+        start_individual_service "${service_file%.yml}" || ((failed++))
     done
-    
-    if [[ $failed -eq 0 ]]; then
-        print_status "success" "$category services started successfully"
-    else
-        print_status "warning" "$failed service(s) in $category failed to start"
-    fi
+
+    [[ $failed -gt 0 ]] && print_status "warning" "$category: $failed failed"
 }
 
 start_category_parallel() {
     local category="$1"
-    local service_files
-    
-    service_files=$(filter_services_for_category "$category")
-    
-    if [[ -z "$service_files" ]]; then
-        if [[ "$opt_verbose" == "true" ]]; then
-            print_status "info" "No services to start in $category (filtered out)"
-        fi
-        return 0
-    fi
-    
-    print_status "step" "Starting $category services in parallel..."
-    
+    local service_files=$(filter_services_for_category "$category")
+    [[ -z "$service_files" ]] && return 0
+
     local -a files pids
     files=(${=service_files})
-    
-    # Start all services in background
+
     for service_file in "${files[@]}"; do
-        local service_name="${service_file%.yml}"
         if [[ "$opt_dry_run" == "true" ]]; then
-            start_individual_service "$service_name"
+            start_individual_service "${service_file%.yml}"
         else
-            start_individual_service "$service_name" &
+            start_individual_service "${service_file%.yml}" &
             pids+=($!)
         fi
     done
-    
-    if [[ "$opt_dry_run" == "false" ]]; then
-        # Wait for all parallel starts to complete
+
+    [[ "$opt_dry_run" == "false" ]] && {
         local failed=0
-        for pid in "${pids[@]}"; do
-            if ! wait "$pid"; then
-                ((failed++))
-            fi
-        done
-        
-        if [[ $failed -eq 0 ]]; then
-            print_status "success" "$category services started successfully"
-        else
-            print_status "warning" "$failed service(s) in $category failed to start"
-        fi
-    fi
+        for pid in "${pids[@]}"; do wait "$pid" || ((failed++)); done
+        [[ $failed -gt 0 ]] && print_status "warning" "$category: $failed failed"
+    }
 }
 
 stop_category() {
     local category="$1"
-    local service_files
-    
-    service_files=$(filter_services_for_category "$category")
-    
-    if [[ -z "$service_files" ]]; then
-        if [[ "$opt_verbose" == "true" ]]; then
-            print_status "info" "No services to stop in $category (filtered out)"
-        fi
-        return 0
-    fi
-    
-    print_status "step" "Stopping $category services..."
-    
+    local service_files=$(filter_services_for_category "$category")
+    [[ -z "$service_files" ]] && return 0
+
     local -a files
     files=(${=service_files})
-    
     local failed=0
+
     for service_file in "${files[@]}"; do
-        local service_name="${service_file%.yml}"
-        if ! stop_individual_service "$service_name"; then
-            ((failed++))
-        fi
+        stop_individual_service "${service_file%.yml}" || ((failed++))
     done
-    
-    if [[ $failed -eq 0 ]]; then
-        print_status "success" "$category services stopped successfully"
-    else
-        print_status "warning" "$failed service(s) in $category had issues stopping"
-    fi
+
+    [[ $failed -gt 0 ]] && print_status "warning" "$category: $failed failed"
 }
 
 filter_services_for_category() {
@@ -1260,37 +964,17 @@ filter_services_for_category() {
 
 wait_for_category_health() {
     local category="$1"
-    
-    if [[ "$opt_wait_healthy" == "false" || "$opt_dry_run" == "true" ]]; then
-        return 0
-    fi
-    
-    print_status "step" "Waiting for $category services to be healthy..."
-    
-    # Special handling for different categories
+    [[ "$opt_wait_healthy" == "false" || "$opt_dry_run" == "true" ]] && return 0
+
     case "$category" in
         "database")
-            # Wait for MongoDB specifically if it's in this category
-            local service_files
-            service_files=$(get_service_files "$category")
-            if [[ "$service_files" == *"mongodb.yml"* ]]; then
-                wait_for_mongodb "$opt_health_timeout"
-            fi
-            
-            # Brief wait for other databases
-            sleep 5
-            ;;
-        "proxy")
-            # Wait longer for nginx proxy manager
-            sleep 10
-            ;;
-        *)
-            # Standard wait for other services
+            local service_files=$(get_service_files "$category")
+            [[ "$service_files" == *"mongodb.yml"* ]] && wait_for_mongodb "$opt_health_timeout"
             sleep 3
             ;;
+        "proxy") sleep 5 ;;
+        *) sleep 1 ;;
     esac
-    
-    print_status "success" "$category services are ready"
 }
 
 # =============================================================================
@@ -1299,480 +983,162 @@ wait_for_category_health() {
 
 cleanup_service_resources() {
     local service_name="$1"
-    
-    if [[ "$opt_dry_run" == "true" ]]; then
-        if [[ "$opt_cleanup_service_images" == "true" ]]; then
-            echo "DRY RUN: Remove images for service: $service_name"
-        fi
-        if [[ "$opt_cleanup_service_volumes" == "true" ]]; then
-            echo "DRY RUN: Remove volumes for service: $service_name"
-        fi
-        return 0
-    fi
-    
-    # Cleanup service-specific images
-    if [[ "$opt_cleanup_service_images" == "true" ]]; then
-        cleanup_service_images "$service_name"
-    fi
-    
-    # Cleanup service-specific volumes
-    if [[ "$opt_cleanup_service_volumes" == "true" && "$opt_preserve_data" == "false" ]]; then
-        cleanup_service_volumes "$service_name"
-    fi
+    [[ "$opt_dry_run" == "true" ]] && return 0
+    [[ "$opt_cleanup_service_images" == "true" ]] && cleanup_service_images "$service_name"
+    [[ "$opt_cleanup_service_volumes" == "true" && "$opt_preserve_data" == "false" ]] && cleanup_service_volumes "$service_name"
 }
 
 cleanup_service_images() {
     local service_name="$1"
-    
-    if [[ "$opt_verbose" == "true" ]]; then
-        print_status "step" "Cleaning up images for service: $service_name"
-    fi
-    
-    # Get images related to this service
-    local images
-    images=$(eval "$CONTAINER_CMD images --filter 'label=com.docker.compose.service=$service_name' -q" 2>/dev/null || echo "")
-    
-    if [[ -n "$images" ]]; then
-        local image_list
-        image_list=(${(f)images})
-        
-        local removed=0
-        for image in "${image_list[@]}"; do
-            if eval "$CONTAINER_CMD rmi -f $image $ERROR_REDIRECT"; then
-                ((removed++))
-            fi
-        done
-        
-        if [[ "$opt_verbose" == "true" && $removed -gt 0 ]]; then
-            print_status "success" "Removed $removed image(s) for $service_name"
-        fi
-    fi
+    local images=$(eval "$CONTAINER_CMD images --filter 'label=com.docker.compose.service=$service_name' -q" 2>/dev/null)
+    [[ -z "$images" ]] && return 0
+    local removed=0
+    for image in ${(f)images}; do
+        eval "$CONTAINER_CMD rmi -f $image $ERROR_REDIRECT" && ((removed++))
+    done
+    [[ $VERBOSE -eq 1 && $removed -gt 0 ]] && print_status "info" "cleaned $removed images for $service_name"
 }
 
 cleanup_service_volumes() {
     local service_name="$1"
-    
-    if [[ "$opt_verbose" == "true" ]]; then
-        print_status "step" "Cleaning up volumes for service: $service_name"
-    fi
-    
-    # Get volumes related to this service
-    local volumes
-    volumes=$(eval "$CONTAINER_CMD volume ls --filter 'label=com.docker.compose.service=$service_name' -q" 2>/dev/null || echo "")
-    
-    if [[ -n "$volumes" ]]; then
-        local volume_list
-        volume_list=(${(f)volumes})
-        
-        local removed=0
-        for volume in "${volume_list[@]}"; do
-            if eval "$CONTAINER_CMD volume rm -f $volume $ERROR_REDIRECT"; then
-                ((removed++))
-            fi
-        done
-        
-        if [[ "$opt_verbose" == "true" && $removed -gt 0 ]]; then
-            print_status "success" "Removed $removed volume(s) for $service_name"
-        fi
-    fi
+    local volumes=$(eval "$CONTAINER_CMD volume ls --filter 'label=com.docker.compose.service=$service_name' -q" 2>/dev/null)
+    [[ -z "$volumes" ]] && return 0
+    local removed=0
+    for volume in ${(f)volumes}; do
+        eval "$CONTAINER_CMD volume rm -f $volume $ERROR_REDIRECT" && ((removed++))
+    done
+    [[ $VERBOSE -eq 1 && $removed -gt 0 ]] && print_status "info" "cleaned $removed volumes for $service_name"
 }
 
 run_cleanup_operations() {
-    if [[ "$opt_verbose" == "true" ]]; then
-        print_status "step" "Running cleanup operations..."
-    fi
-    
-    # Age-based cleanup
-    if [[ -n "$opt_cleanup_older_than" ]]; then
-        cleanup_old_resources "$opt_cleanup_older_than" "$opt_dry_run"
-    fi
-    
-    # Large volume cleanup
-    if [[ "$opt_cleanup_large_volumes" == "true" ]]; then
-        cleanup_large_volumes "$opt_max_volume_size" "$opt_max_volumes_remove" "$opt_dry_run"
-    fi
-    
-    # Service-specific orphan cleanup
-    if [[ "$opt_cleanup_orphans" == "true" ]]; then
-        local target_services=""
-        if [[ -n "$opt_services_only" ]]; then
-            target_services="$opt_services_only"
-        fi
-        cleanup_service_orphans "$target_services" "$opt_dry_run"
-    fi
-    
-    # Global cleanup operations - NOW PROPERLY CONDITIONAL
-    if [[ "$opt_remove_images" == "true" ]]; then
-        cleanup_images_global
-    fi
-    
-    if [[ "$opt_remove_volumes" == "true" ]]; then
-        cleanup_volumes_global
-    fi
-    
-    if [[ "$opt_remove_networks" == "true" ]]; then
-        cleanup_networks_global
-    fi
-    
-    # System cleanup - should probably have its own flag or be tied to other cleanup options
-    if [[ "$opt_cleanup_orphans" == "true" || "$opt_remove_images" == "true" || "$opt_remove_volumes" == "true" ]]; then
-        cleanup_system_global
-    fi
+    [[ -n "$opt_cleanup_older_than" ]] && cleanup_old_resources "$opt_cleanup_older_than" "$opt_dry_run"
+    [[ "$opt_cleanup_large_volumes" == "true" ]] && cleanup_large_volumes "$opt_max_volume_size" "$opt_max_volumes_remove" "$opt_dry_run"
+    [[ "$opt_cleanup_orphans" == "true" ]] && cleanup_service_orphans "${opt_services_only:-}" "$opt_dry_run"
+    [[ "$opt_remove_images" == "true" ]] && cleanup_images_global
+    [[ "$opt_remove_volumes" == "true" ]] && cleanup_volumes_global
+    [[ "$opt_remove_networks" == "true" ]] && cleanup_networks_global
+    [[ "$opt_cleanup_orphans" == "true" || "$opt_remove_images" == "true" || "$opt_remove_volumes" == "true" ]] && cleanup_system_global
 }
 
 cleanup_images_global() {
-    if [[ "$opt_remove_images" == "false" ]]; then
-        return 0
-    fi
-    
-    print_status "step" "Removing container images..."
-    
-    if [[ "$opt_dry_run" == "true" ]]; then
-        echo "DRY RUN: $CONTAINER_CMD rmi \$($CONTAINER_CMD images -q)"
-        return 0
-    fi
-    
-    local images
-    images=$(eval "$CONTAINER_CMD images -q $ERROR_REDIRECT" || echo "")
-    
-    if [[ -n "$images" ]]; then
-        local image_list
-        image_list=(${(f)images})
-        
-        local removed=0
-        for image in "${image_list[@]}"; do
-            if eval "$CONTAINER_CMD rmi -f $image $ERROR_REDIRECT"; then
-                ((removed++))
-            fi
-        done
-        
-        print_status "success" "Removed $removed container images"
-    else
-        print_status "info" "No images to remove"
-    fi
+    [[ "$opt_remove_images" == "false" ]] && return 0
+    [[ "$opt_dry_run" == "true" ]] && { echo "DRY RUN: remove all images"; return 0; }
+    local images=$(eval "$CONTAINER_CMD images -q $ERROR_REDIRECT")
+    [[ -z "$images" ]] && return 0
+    local removed=0
+    for image in ${(f)images}; do
+        eval "$CONTAINER_CMD rmi -f $image $ERROR_REDIRECT" && ((removed++))
+    done
+    [[ $removed -gt 0 ]] && print_status "success" "removed $removed images"
 }
 
 cleanup_volumes_global() {
-    if [[ "$opt_remove_volumes" == "false" ]]; then
-        return 0
-    fi
-    
-    print_status "step" "Removing data volumes..."
-    
-    if [[ "$opt_dry_run" == "true" ]]; then
-        echo "DRY RUN: $CONTAINER_CMD volume rm \$($CONTAINER_CMD volume ls -q)"
-        return 0
-    fi
-    
-    local volumes
-    volumes=$(eval "$CONTAINER_CMD volume ls -q $ERROR_REDIRECT" || echo "")
-    
-    if [[ -n "$volumes" ]]; then
-        local volume_list
-        volume_list=(${(f)volumes})
-        
-        local removed=0
-        for volume in "${volume_list[@]}"; do
-            if eval "$CONTAINER_CMD volume rm -f $volume $ERROR_REDIRECT"; then
-                ((removed++))
-            fi
-        done
-        
-        print_status "success" "Removed $removed data volumes"
-    else
-        print_status "info" "No volumes to remove"
-    fi
+    [[ "$opt_remove_volumes" == "false" ]] && return 0
+    [[ "$opt_dry_run" == "true" ]] && { echo "DRY RUN: remove all volumes"; return 0; }
+    local volumes=$(eval "$CONTAINER_CMD volume ls -q $ERROR_REDIRECT")
+    [[ -z "$volumes" ]] && return 0
+    local removed=0
+    for volume in ${(f)volumes}; do
+        eval "$CONTAINER_CMD volume rm -f $volume $ERROR_REDIRECT" && ((removed++))
+    done
+    [[ $removed -gt 0 ]] && print_status "success" "removed $removed volumes"
 }
 
 cleanup_networks_global() {
-    if [[ "$opt_remove_networks" == "false" ]]; then
-        return 0
-    fi
-    
-    print_status "step" "Removing networks..."
-    
-    if [[ "$opt_dry_run" == "true" ]]; then
-        echo "DRY RUN: $CONTAINER_CMD network rm $NETWORK_NAME"
-        return 0
-    fi
-    
-    # Remove our specific network
-    if eval "$CONTAINER_CMD network exists $NETWORK_NAME $ERROR_REDIRECT"; then
-        if eval "$CONTAINER_CMD network rm $NETWORK_NAME $ERROR_REDIRECT"; then
-            print_status "success" "Removed network: $NETWORK_NAME"
-        else
-            print_status "warning" "Failed to remove network: $NETWORK_NAME"
-        fi
-    else
-        print_status "info" "Network $NETWORK_NAME does not exist"
-    fi
-    
-    if [[ "$opt_remove_networks" == "false" ]]; then
-        return 0
-    else
-        eval "$CONTAINER_CMD network prune -f $ERROR_REDIRECT" || true
-    fi
-    # Cleanup unused networks
+    [[ "$opt_remove_networks" == "false" ]] && return 0
+    [[ "$opt_dry_run" == "true" ]] && { echo "DRY RUN: remove network $NETWORK_NAME"; return 0; }
+    eval "$CONTAINER_CMD network exists $NETWORK_NAME $ERROR_REDIRECT" && \
+        eval "$CONTAINER_CMD network rm $NETWORK_NAME $ERROR_REDIRECT" && \
+        print_status "success" "removed network $NETWORK_NAME"
+    eval "$CONTAINER_CMD network prune -f $ERROR_REDIRECT" || true
 }
 
 cleanup_system_global() {
-    if [[ "$opt_dry_run" == "true" ]]; then
-        echo "DRY RUN: $CONTAINER_CMD system prune -f"
-        return 0
-    fi
-    
-    if [[ "$opt_verbose" == "true" ]]; then
-        print_status "step" "Cleaning up system resources..."
-    fi
-    
-    # Prune unused containers, networks, and build cache
+    [[ "$opt_dry_run" == "true" ]] && { echo "DRY RUN: system prune"; return 0; }
     eval "$CONTAINER_CMD system prune -f $ERROR_REDIRECT" || true
-    
-    if [[ "$opt_verbose" == "true" ]]; then
-        print_status "success" "System cleanup completed"
-    fi
 }
 
 cleanup_old_resources() {
     local max_age_days="$1"
     local dry_run="${2:-false}"
-    
-    if [[ -z "$max_age_days" || ! "$max_age_days" =~ ^[0-9]+$ ]]; then
-        print_status "error" "Invalid age specified for cleanup: $max_age_days"
-        return 1
-    fi
-    
-    print_status "step" "Cleaning up resources older than $max_age_days days..."
-    
-    if [[ "$dry_run" == "true" ]]; then
-        echo "DRY RUN: Would remove containers, images, and volumes older than $max_age_days days"
-        return 0
-    fi
-    
-    local removed_containers=0 removed_images=0 removed_volumes=0
-    local cutoff_date=$(date -d "$max_age_days days ago" '+%Y-%m-%d')
-    
-    # Clean up old containers (stopped ones only)
-    print_status "info" "Removing containers older than $cutoff_date..."
-    local old_containers
-    old_containers=$(eval "$CONTAINER_CMD ps -a --filter 'status=exited' --format '{{.ID}} {{.CreatedAt}}' 2>/dev/null" || echo "")
-    
-    if [[ -n "$old_containers" ]]; then
-        while IFS= read -r line; do
-            if [[ -n "$line" ]]; then
-                local container_id=$(echo "$line" | awk '{print $1}')
-                local created_date=$(echo "$line" | awk '{print $2}')
-                
-                # Simple date comparison (assumes YYYY-MM-DD format)
-                if [[ "$created_date" < "$cutoff_date" ]]; then
-                    if eval "$CONTAINER_CMD rm -f $container_id $ERROR_REDIRECT"; then
-                        ((removed_containers++))
-                    fi
-                fi
-            fi
-        done <<< "$old_containers"
-    fi
-    
-    # Clean up old images (unused ones only)
-    print_status "info" "Removing unused images older than $cutoff_date..."
-    if eval "$CONTAINER_CMD image prune -a --filter \"until=${max_age_days}h\" -f $ERROR_REDIRECT"; then
-        # Count is approximate since we can't get exact numbers from prune
-        removed_images=1
-    fi
-    
-    # Clean up old volumes (unused ones only)
-    print_status "info" "Removing unused volumes older than $cutoff_date..."
-    if eval "$CONTAINER_CMD volume prune --filter \"until=${max_age_days}h\" -f $ERROR_REDIRECT"; then
-        # Count is approximate since we can't get exact numbers from prune
-        removed_volumes=1
-    fi
-    
-    if [[ $removed_containers -gt 0 || $removed_images -gt 0 || $removed_volumes -gt 0 ]]; then
-        print_status "success" "Cleanup completed: ~$removed_containers containers, $removed_images image groups, $removed_volumes volume groups"
-    else
-        print_status "info" "No old resources found to clean up"
-    fi
+    [[ -z "$max_age_days" || ! "$max_age_days" =~ ^[0-9]+$ ]] && { print_status "error" "Invalid age: $max_age_days"; return 1; }
+    [[ "$dry_run" == "true" ]] && { echo "DRY RUN: remove resources older than ${max_age_days}d"; return 0; }
+
+    local cutoff_date=$(date -d "$max_age_days days ago" '+%Y-%m-%d' 2>/dev/null || date -v-${max_age_days}d '+%Y-%m-%d')
+    local old_containers=$(eval "$CONTAINER_CMD ps -a --filter 'status=exited' --format '{{.ID}} {{.CreatedAt}}'" 2>/dev/null)
+    local removed=0
+
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        local cid=$(echo "$line" | awk '{print $1}')
+        local cdate=$(echo "$line" | awk '{print $2}')
+        [[ "$cdate" < "$cutoff_date" ]] && eval "$CONTAINER_CMD rm -f $cid $ERROR_REDIRECT" && ((removed++))
+    done <<< "$old_containers"
+
+    eval "$CONTAINER_CMD image prune -a --filter \"until=${max_age_days}h\" -f $ERROR_REDIRECT" || true
+    eval "$CONTAINER_CMD volume prune --filter \"until=${max_age_days}h\" -f $ERROR_REDIRECT" || true
+    [[ $removed -gt 0 ]] && print_status "success" "cleaned $removed old containers"
 }
 
 cleanup_large_volumes() {
     local max_size_mb="$1"
     local max_count="${2:-3}"
     local dry_run="${3:-false}"
-    
-    if [[ -z "$max_size_mb" || ! "$max_size_mb" =~ ^[0-9]+$ ]]; then
-        print_status "error" "Invalid size specified for volume cleanup: $max_size_mb"
-        return 1
-    fi
-    
-    print_status "step" "Finding volumes larger than ${max_size_mb}MB..."
-    
-    if [[ "$dry_run" == "true" ]]; then
-        echo "DRY RUN: Would remove up to $max_count volumes larger than ${max_size_mb}MB"
-        return 0
-    fi
-    
-    # Get list of volumes with sizes
-    local volumes_info
-    volumes_info=$(eval "$CONTAINER_CMD volume ls --format '{{.Name}}' 2>/dev/null" || echo "")
-    
-    if [[ -z "$volumes_info" ]]; then
-        print_status "info" "No volumes found"
-        return 0
-    fi
-    
+    [[ -z "$max_size_mb" || ! "$max_size_mb" =~ ^[0-9]+$ ]] && { print_status "error" "Invalid size: $max_size_mb"; return 1; }
+    [[ "$dry_run" == "true" ]] && { echo "DRY RUN: remove up to $max_count volumes > ${max_size_mb}MB"; return 0; }
+
+    local volumes_info=$(eval "$CONTAINER_CMD volume ls --format '{{.Name}}'" 2>/dev/null)
+    [[ -z "$volumes_info" ]] && return 0
+
     local -a large_volumes
-    local removed_count=0
-    
-    # Check each volume size
-    while IFS= read -r volume_name; do
-        if [[ -n "$volume_name" ]]; then
-            # Get volume mount point to check size
-            local volume_path
-            volume_path=$(eval "$CONTAINER_CMD volume inspect $volume_name --format '{{.Mountpoint}}' 2>/dev/null" || echo "")
-            
-            if [[ -n "$volume_path" ]]; then
-                # Check if volume is in use
-                local in_use
-                in_use=$(eval "$CONTAINER_CMD ps -a --filter \"volume=$volume_name\" --format '{{.Names}}' 2>/dev/null" || echo "")
-                
-                if [[ -z "$in_use" ]]; then
-                    # Get size in MB
-                    local size_mb
-                    if [[ "$USE_PODMAN" == "true" ]]; then
-                        # For podman, use du on the volume path
-                        size_mb=$(sudo du -sm "$volume_path" 2>/dev/null | awk '{print $1}' || echo "0")
-                    else
-                        # For docker, also use du but might need different approach
-                        size_mb=$(sudo du -sm "$volume_path" 2>/dev/null | awk '{print $1}' || echo "0")
-                    fi
-                    
-                    if [[ "$size_mb" -gt "$max_size_mb" ]]; then
-                        large_volumes+=("$volume_name:$size_mb")
-                    fi
-                fi
-            fi
-        fi
+    while IFS= read -r vname; do
+        [[ -z "$vname" ]] && continue
+        local vpath=$(eval "$CONTAINER_CMD volume inspect $vname --format '{{.Mountpoint}}'" 2>/dev/null)
+        [[ -z "$vpath" ]] && continue
+        local in_use=$(eval "$CONTAINER_CMD ps -a --filter \"volume=$vname\" --format '{{.Names}}'" 2>/dev/null)
+        [[ -n "$in_use" ]] && continue
+        local size_mb=$(sudo du -sm "$vpath" 2>/dev/null | awk '{print $1}' || echo "0")
+        [[ "$size_mb" -gt "$max_size_mb" ]] && large_volumes+=("$vname:$size_mb")
     done <<< "$volumes_info"
-    
-    if [[ ${#large_volumes[@]} -eq 0 ]]; then
-        print_status "info" "No large unused volumes found"
-        return 0
-    fi
-    
-    # Sort by size (descending) and remove largest ones first
-    local -a sorted_volumes
-    sorted_volumes=($(printf '%s\n' "${large_volumes[@]}" | sort -t: -k2 -rn))
-    
-    print_status "info" "Found ${#sorted_volumes[@]} large volume(s), removing up to $max_count..."
-    
-    for volume_info in "${sorted_volumes[@]}"; do
-        if [[ $removed_count -ge $max_count ]]; then
-            break
-        fi
-        
-        local volume_name="${volume_info%:*}"
-        local volume_size="${volume_info#*:}"
-        
-        print_status "step" "Removing volume: $volume_name (${volume_size}MB)"
-        
-        if eval "$CONTAINER_CMD volume rm -f $volume_name $ERROR_REDIRECT"; then
-            ((removed_count++))
-            print_status "success" "Removed $volume_name (${volume_size}MB)"
-        else
-            print_status "warning" "Failed to remove $volume_name"
-        fi
+
+    [[ ${#large_volumes[@]} -eq 0 ]] && return 0
+    local -a sorted=($(printf '%s\n' "${large_volumes[@]}" | sort -t: -k2 -rn))
+    local removed=0
+
+    for vinfo in "${sorted[@]}"; do
+        [[ $removed -ge $max_count ]] && break
+        local vn="${vinfo%:*}"
+        eval "$CONTAINER_CMD volume rm -f $vn $ERROR_REDIRECT" && ((removed++))
     done
-    
-    if [[ $removed_count -gt 0 ]]; then
-        print_status "success" "Removed $removed_count large volume(s)"
-    fi
+    [[ $removed -gt 0 ]] && print_status "success" "removed $removed large volumes"
 }
 
 cleanup_service_orphans() {
     local target_services="$1"
     local dry_run="${2:-false}"
-    
-    print_status "step" "Cleaning up orphaned containers..."
-    
-    if [[ "$dry_run" == "true" ]]; then
-        echo "DRY RUN: Would remove containers not managed by compose files"
-        return 0
-    fi
-    
-    # Get all running containers
-    local all_containers
-    all_containers=$(eval "$CONTAINER_CMD ps -a --format '{{.Names}}' 2>/dev/null" || echo "")
-    
-    if [[ -z "$all_containers" ]]; then
-        print_status "info" "No containers found"
-        return 0
-    fi
-    
-    # Get list of managed services from our categories
+    [[ "$dry_run" == "true" ]] && { echo "DRY RUN: remove orphaned containers"; return 0; }
+
+    local all_containers=$(eval "$CONTAINER_CMD ps -a --format '{{.Names}}'" 2>/dev/null)
+    [[ -z "$all_containers" ]] && return 0
+
     local -a managed_services
     for category in "${SERVICE_STARTUP_ORDER[@]}"; do
-        local service_files
-        service_files=$(get_service_files "$category")
-        if [[ -n "$service_files" ]]; then
-            local -a files
-            files=(${=service_files})
-            for service_file in "${files[@]}"; do
-                local service_name="${service_file%.yml}"
-                managed_services+=("$service_name")
-            done
-        fi
+        local sfiles=$(get_service_files "$category")
+        [[ -n "$sfiles" ]] && for sf in ${=sfiles}; do managed_services+=("${sf%.yml}"); done
     done
-    
-    # If target_services specified, only check those
-    if [[ -n "$target_services" ]]; then
-        local -a target_list
-        target_list=(${(s:,:)target_services})
-        managed_services=("${target_list[@]}")
-    fi
-    
-    local removed_count=0
-    
-    # Check each container
-    while IFS= read -r container_name; do
-        if [[ -n "$container_name" ]]; then
-            # Skip if it's in our managed services list
-            local is_managed=false
-            for managed_service in "${managed_services[@]}"; do
-                if [[ "$container_name" == "$managed_service" ]]; then
-                    is_managed=true
-                    break
-                fi
-            done
-            
-            # Skip containers in our project network (likely managed)
-            if eval "$CONTAINER_CMD inspect $container_name --format '{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}' 2>/dev/null | grep -q $NETWORK_NAME"; then
-                is_managed=true
-            fi
-            
-            if [[ "$is_managed" == "false" ]]; then
-                # Check if container has compose labels (indicating it's managed by compose)
-                local has_compose_labels
-                has_compose_labels=$(eval "$CONTAINER_CMD inspect $container_name --format '{{index .Config.Labels \"com.docker.compose.project\"}}' 2>/dev/null" || echo "")
-                
-                if [[ -z "$has_compose_labels" ]]; then
-                    print_status "step" "Removing orphaned container: $container_name"
-                    
-                    if eval "$CONTAINER_CMD rm -f $container_name $ERROR_REDIRECT"; then
-                        ((removed_count++))
-                        print_status "info" "Removed orphaned container: $container_name"
-                    else
-                        print_status "warning" "Failed to remove container: $container_name"
-                    fi
-                fi
-            fi
-        fi
+    [[ -n "$target_services" ]] && managed_services=(${(s:,:)target_services})
+
+    local removed=0
+    while IFS= read -r cname; do
+        [[ -z "$cname" ]] && continue
+        local is_managed=false
+        for ms in "${managed_services[@]}"; do [[ "$cname" == "$ms" ]] && { is_managed=true; break; }; done
+        eval "$CONTAINER_CMD inspect $cname --format '{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}'" 2>/dev/null | grep -q "$NETWORK_NAME" && is_managed=true
+        [[ "$is_managed" == "true" ]] && continue
+        local has_labels=$(eval "$CONTAINER_CMD inspect $cname --format '{{index .Config.Labels \"com.docker.compose.project\"}}'" 2>/dev/null)
+        [[ -z "$has_labels" ]] && eval "$CONTAINER_CMD rm -f $cname $ERROR_REDIRECT" && ((removed++))
     done <<< "$all_containers"
-    
-    if [[ $removed_count -gt 0 ]]; then
-        print_status "success" "Removed $removed_count orphaned container(s)"
-    else
-        print_status "info" "No orphaned containers found"
-    fi
+    [[ $removed -gt 0 ]] && print_status "success" "removed $removed orphans"
 }
 
 # =============================================================================
