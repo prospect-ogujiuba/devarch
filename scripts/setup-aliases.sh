@@ -7,7 +7,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SERVICE_MANAGER="$PROJECT_ROOT/scripts/service-manager.sh"
+DEVARCH_CLI="$PROJECT_ROOT/scripts/devarch"
 
 # Alias definitions
 ALIASES=(
@@ -43,8 +43,9 @@ print_status() {
 }
 
 check_prerequisites() {
-    # Use service-manager check command for consistent output
-    if ! "$SERVICE_MANAGER" check; then
+    # Verify devarch CLI exists and is executable
+    if [[ ! -x "$DEVARCH_CLI" ]]; then
+        print_status error "DevArch CLI not found: $DEVARCH_CLI"
         exit 1
     fi
 }
@@ -87,7 +88,7 @@ generate_aliases_bash() {
     local output=""
     output+="\n# DevArch aliases\n"
     for alias_name in "${ALIASES[@]}"; do
-        output+="alias ${alias_name}='${SERVICE_MANAGER}'\n"
+        output+="alias ${alias_name}='${DEVARCH_CLI}'\n"
     done
     echo -e "$output"
 }
@@ -96,7 +97,7 @@ generate_aliases_fish() {
     local output=""
     output+="\n# DevArch aliases\n"
     for alias_name in "${ALIASES[@]}"; do
-        output+="alias ${alias_name}='${SERVICE_MANAGER}'\n"
+        output+="alias ${alias_name}='${DEVARCH_CLI}'\n"
     done
     echo -e "$output"
 }
@@ -170,7 +171,7 @@ main() {
 
     echo ""
     print_status info "Project: $PROJECT_ROOT"
-    print_status info "Script:  $SERVICE_MANAGER"
+    print_status info "CLI:     $DEVARCH_CLI"
     echo ""
     print_status info "Aliases to create: ${ALIASES[*]}"
 
@@ -228,7 +229,7 @@ main() {
         echo ""
         print_status info "New terminals will load aliases automatically"
         echo ""
-        print_status info "Usage: devarch list, dv up postgres, da status"
+        print_status info "Usage: devarch service up postgres, dv wp plugin list, da artisan migrate"
     fi
 }
 
