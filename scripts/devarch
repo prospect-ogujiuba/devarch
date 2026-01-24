@@ -1,0 +1,503 @@
+#!/bin/zsh
+
+# =============================================================================
+# DEVARCH - UNIFIED CLI DISPATCHER
+# =============================================================================
+# Top-level command router for all DevArch operations
+
+set -eo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${(%):-%x}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# =============================================================================
+# CONTAINER RUNTIME DETECTION
+# =============================================================================
+
+detect_container_runtime() {
+    # Check config.sh for explicit setting
+    local config_runtime=$(grep -E '^export CONTAINER_RUNTIME=' "$SCRIPT_DIR/config.sh" 2>/dev/null | cut -d'"' -f2)
+
+    if [[ -n "$config_runtime" ]]; then
+        echo "$config_runtime"
+        return 0
+    fi
+
+    # Auto-detect: prefer podman
+    if command -v podman &>/dev/null; then
+        echo "podman"
+    elif command -v docker &>/dev/null; then
+        echo "docker"
+    else
+        echo "podman"
+    fi
+}
+
+CONTAINER_RUNTIME=$(detect_container_runtime)
+
+get_exec_cmd() {
+    if [[ "$CONTAINER_RUNTIME" == "docker" ]]; then
+        echo "sudo docker"
+    else
+        echo "podman"
+    fi
+}
+
+# =============================================================================
+# SUBSYSTEM HANDLERS
+# =============================================================================
+
+handle_service() {
+    "$SCRIPT_DIR/service-manager.sh" "$@"
+}
+
+handle_wp() {
+    local container_cmd=$(get_exec_cmd)
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: devarch wp <wp-cli-command> [args...]"
+        echo ""
+        echo "Examples:"
+        echo "  devarch wp plugin list"
+        echo "  devarch wp theme activate theme-name"
+        echo "  devarch wp user list"
+        echo "  devarch wp db export backup.sql"
+        return 1
+    fi
+    eval "$container_cmd exec php wp --allow-root $@"
+}
+
+handle_artisan() {
+    local container_cmd=$(get_exec_cmd)
+    local workdir="/var/www/html"
+
+    # Check for -p/--project flag to set working directory
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -p|--project)
+                workdir="/var/www/html/$2"
+                shift 2
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: devarch artisan [-p|--project <name>] <artisan-command> [args...]"
+        echo ""
+        echo "Examples:"
+        echo "  devarch artisan migrate"
+        echo "  devarch artisan -p myapp make:model User"
+        echo "  devarch artisan --project blog tinker"
+        return 1
+    fi
+
+    eval "$container_cmd exec -w $workdir php php artisan $@"
+}
+
+handle_wordpress() {
+    "$SCRIPT_DIR/wordpress/wp-workflow.sh" "$@"
+}
+
+handle_laravel() {
+    "$SCRIPT_DIR/laravel/setup-laravel.sh" "$@"
+}
+
+handle_socket() {
+    "$SCRIPT_DIR/socket-manager.sh" "$@"
+}
+
+handle_runtime() {
+    "$SCRIPT_DIR/runtime-switcher.sh" "$@"
+}
+
+handle_db() {
+    "$SCRIPT_DIR/init-databases.sh" "$@"
+}
+
+handle_container_exec() {
+    local container_cmd=$(get_exec_cmd)
+    local container="${1:-php}"
+    shift 2>/dev/null || true
+
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: devarch run <container> <command> [args...]"
+        echo ""
+        echo "Examples:"
+        echo "  devarch run php bash"
+        echo "  devarch run postgres psql -U postgres"
+        echo "  devarch run redis redis-cli"
+        return 1
+    fi
+
+    eval "$container_cmd exec -it $container $@"
+}
+
+handle_shell() {
+    local container_cmd=$(get_exec_cmd)
+    local container="${1:-php}"
+    eval "$container_cmd exec -it $container zsh 2>/dev/null || $container_cmd exec -it $container bash 2>/dev/null || $container_cmd exec -it $container sh"
+}
+
+# =============================================================================
+# HELP & USAGE
+# =============================================================================
+
+show_brief_usage() {
+    cat << 'EOF'
+devarch <namespace> [command] [args...]
+
+Namespaces: service, wp, artisan, wordpress, laravel, socket, runtime, db, run, shell
+
+Use -h or --help for detailed help, or <namespace> -h for namespace help
+EOF
+}
+
+show_full_usage() {
+    cat << 'EOF'
+DevArch - Unified CLI
+
+USAGE:
+  devarch <namespace> <command> [args...]
+
+NAMESPACES:
+  service     Service management (up, down, logs, status, rebuild, etc.)
+  wp          WP-CLI passthrough (runs in php container)
+  artisan     Laravel Artisan passthrough (runs in php container)
+  wordpress   WordPress workflows (install, backup, restore, etc.)
+  laravel     Laravel project setup
+  socket      Podman socket management
+  runtime     Container runtime switching (docker/podman)
+  db          Database initialization
+  run         Run command in any container
+  shell       Open shell in container (defaults to php)
+
+EXAMPLES:
+  Service Management:
+    devarch service up postgres
+    devarch service down php
+    devarch service logs nginx -f
+    devarch service status
+    devarch service rebuild php --no-cache
+
+  WordPress CLI:
+    devarch wp plugin list
+    devarch wp theme activate theme-name
+    devarch wp user create bob bob@example.com --role=editor
+
+  Laravel Artisan:
+    devarch artisan migrate
+    devarch artisan -p myapp make:controller UserController
+    devarch artisan --project blog queue:work
+
+  WordPress Workflows:
+    devarch wordpress install -n mysite -p bare
+    devarch wordpress backup -n mysite
+    devarch wordpress restore -n mysite -s backup.wpress
+
+  Laravel Setup:
+    devarch laravel new myapp
+
+  Socket Management:
+    devarch socket status
+    devarch socket start-rootless
+    devarch socket fix
+
+  Runtime Switching:
+    devarch runtime status
+    devarch runtime podman
+    devarch runtime docker
+
+  Container Access:
+    devarch run php bash
+    devarch run postgres psql -U postgres
+    devarch shell php
+    devarch shell node
+
+ALIASES:
+  After running setup-aliases.sh, you can use:
+    devarch, dvrc, dv, da
+
+NAMESPACE HELP:
+  devarch <namespace> -h    Show detailed help for a namespace
+EOF
+}
+
+show_namespace_help() {
+    local ns="$1"
+    case "$ns" in
+        service)
+            cat << 'EOF'
+devarch service - Service Management
+
+USAGE:
+  devarch service <command> [service] [options]
+
+COMMANDS:
+  up <service>        Start a service
+  down <service>      Stop a service
+  restart <service>   Restart a service
+  rebuild <service>   Rebuild and restart
+  logs <service>      Show logs (-f to follow)
+  status              Show all service statuses
+  list                List available services
+  start <category>    Start all services in category
+
+OPTIONS:
+  --sudo              Use sudo for Docker/Podman
+  --no-cache          Rebuild without cache
+  --remove-volumes    Remove volumes on stop
+  --force-recreate    Force container recreation
+
+EXAMPLES:
+  devarch service up postgres
+  devarch service logs nginx -f
+  devarch service rebuild php --no-cache
+EOF
+            ;;
+        wp)
+            cat << 'EOF'
+devarch wp - WP-CLI Passthrough
+
+USAGE:
+  devarch wp <wp-cli-command> [args...]
+
+Runs WP-CLI commands inside the php container.
+
+EXAMPLES:
+  devarch wp plugin list
+  devarch wp theme activate theme-name
+  devarch wp user create bob bob@example.com --role=editor
+  devarch wp db export backup.sql
+  devarch wp search-replace 'old.com' 'new.com'
+EOF
+            ;;
+        artisan)
+            cat << 'EOF'
+devarch artisan - Laravel Artisan Passthrough
+
+USAGE:
+  devarch artisan [-p|--project <name>] <command> [args...]
+
+OPTIONS:
+  -p, --project <name>    Run in /var/www/html/<name> directory
+
+EXAMPLES:
+  devarch artisan migrate
+  devarch artisan -p myapp make:model User
+  devarch artisan --project blog tinker
+  devarch artisan queue:work
+EOF
+            ;;
+        wordpress)
+            cat << 'EOF'
+devarch wordpress - WordPress Workflows
+
+USAGE:
+  devarch wordpress <command> [options]
+
+COMMANDS:
+  install     Install new WordPress site
+  backup      Backup existing site
+  restore     Restore from backup
+
+OPTIONS:
+  -n, --name <name>       Site name
+  -p, --preset <preset>   Installation preset (bare, starter, etc.)
+  -s, --source <file>     Backup file for restore
+
+EXAMPLES:
+  devarch wordpress install -n mysite -p bare
+  devarch wordpress backup -n mysite
+  devarch wordpress restore -n mysite -s backup.wpress
+EOF
+            ;;
+        laravel)
+            cat << 'EOF'
+devarch laravel - Laravel Project Setup
+
+USAGE:
+  devarch laravel new <name> [options]
+
+COMMANDS:
+  new <name>    Create new Laravel project
+
+EXAMPLES:
+  devarch laravel new myapp
+  devarch laravel new api --no-interaction
+EOF
+            ;;
+        socket)
+            cat << 'EOF'
+devarch socket - Podman Socket Management
+
+USAGE:
+  devarch socket <command>
+
+COMMANDS:
+  status          Check socket status
+  start-rootless  Start rootless Podman socket
+  fix             Attempt to fix socket issues
+
+EXAMPLES:
+  devarch socket status
+  devarch socket start-rootless
+  devarch socket fix
+EOF
+            ;;
+        runtime)
+            cat << 'EOF'
+devarch runtime - Container Runtime Switching
+
+USAGE:
+  devarch runtime <command>
+
+COMMANDS:
+  status    Show current runtime
+  podman    Switch to Podman
+  docker    Switch to Docker
+
+EXAMPLES:
+  devarch runtime status
+  devarch runtime podman
+  devarch runtime docker
+EOF
+            ;;
+        db)
+            cat << 'EOF'
+devarch db - Database Initialization
+
+USAGE:
+  devarch db [options]
+
+Initializes databases and runs setup scripts.
+
+EXAMPLES:
+  devarch db
+EOF
+            ;;
+        run)
+            cat << 'EOF'
+devarch run - Run Command in Container
+
+USAGE:
+  devarch run <container> <command> [args...]
+
+Executes a command inside the specified container.
+
+EXAMPLES:
+  devarch run php bash
+  devarch run postgres psql -U postgres
+  devarch run redis redis-cli
+  devarch run node npm install
+EOF
+            ;;
+        shell)
+            cat << 'EOF'
+devarch shell - Open Shell in Container
+
+USAGE:
+  devarch shell [container]
+
+Opens interactive shell (zsh/bash/sh) in container.
+Defaults to php container if not specified.
+
+EXAMPLES:
+  devarch shell
+  devarch shell php
+  devarch shell node
+  devarch shell postgres
+EOF
+            ;;
+        *)
+            echo "Unknown namespace: $ns"
+            return 1
+            ;;
+    esac
+}
+
+# =============================================================================
+# MAIN DISPATCHER
+# =============================================================================
+
+resolve_namespace() {
+    case "$1" in
+        service|svc|s) echo "service" ;;
+        wp) echo "wp" ;;
+        artisan|art|a) echo "artisan" ;;
+        wordpress|wf) echo "wordpress" ;;
+        laravel|lara|l) echo "laravel" ;;
+        socket|sock) echo "socket" ;;
+        runtime|rt) echo "runtime" ;;
+        db|database) echo "db" ;;
+        run|r) echo "run" ;;
+        shell|sh) echo "shell" ;;
+        *) echo "" ;;
+    esac
+}
+
+main() {
+    if [[ $# -eq 0 ]]; then
+        show_brief_usage
+        exit 0
+    fi
+
+    local namespace="$1"
+    shift
+
+    # Global help flags
+    if [[ "$namespace" == "-h" || "$namespace" == "--help" || "$namespace" == "help" ]]; then
+        show_full_usage
+        exit 0
+    fi
+
+    # Resolve namespace alias
+    local resolved=$(resolve_namespace "$namespace")
+    if [[ -z "$resolved" ]]; then
+        echo "Unknown namespace: $namespace"
+        echo "Run 'devarch -h' for usage"
+        exit 1
+    fi
+
+    # Namespace-level help
+    if [[ "$1" == "-h" || "$1" == "--help" || "$1" == "help" ]]; then
+        show_namespace_help "$resolved"
+        exit 0
+    fi
+
+    case "$resolved" in
+        service)
+            handle_service "$@"
+            ;;
+        wp)
+            handle_wp "$@"
+            ;;
+        artisan)
+            handle_artisan "$@"
+            ;;
+        wordpress)
+            handle_wordpress "$@"
+            ;;
+        laravel)
+            handle_laravel "$@"
+            ;;
+        socket)
+            handle_socket "$@"
+            ;;
+        runtime)
+            handle_runtime "$@"
+            ;;
+        db)
+            handle_db "$@"
+            ;;
+        run)
+            handle_container_exec "$@"
+            ;;
+        shell)
+            handle_shell "$@"
+            ;;
+    esac
+}
+
+main "$@"
