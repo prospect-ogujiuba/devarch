@@ -116,6 +116,10 @@ handle_db() {
     "$SCRIPT_DIR/init-databases.sh" "$@"
 }
 
+handle_context() {
+    "$SCRIPT_DIR/generate-context.sh" "$@"
+}
+
 handle_container_exec() {
     local container_cmd=$(get_exec_cmd)
     local container="${1:-php}"
@@ -148,7 +152,7 @@ show_brief_usage() {
     cat << 'EOF'
 devarch <namespace> [command] [args...]
 
-Namespaces: service, wp, artisan, wordpress, laravel, socket, runtime, db, run, shell
+Namespaces: service, wp, artisan, wordpress, laravel, socket, runtime, db, context, run, shell
 
 Use -h or --help for detailed help, or <namespace> -h for namespace help
 EOF
@@ -170,6 +174,7 @@ NAMESPACES:
   socket      Podman socket management
   runtime     Container runtime switching (docker/podman)
   db          Database initialization
+  context     Generate project context files
   run         Run command in any container
   shell       Open shell in container (defaults to php)
 
@@ -208,6 +213,10 @@ EXAMPLES:
     devarch runtime status
     devarch runtime podman
     devarch runtime docker
+
+  Context Generation:
+    devarch context
+    devarch context --apply-hosts
 
   Container Access:
     devarch run php bash
@@ -377,6 +386,27 @@ EXAMPLES:
   devarch db
 EOF
             ;;
+        context)
+            cat << 'EOF'
+devarch context - Generate Project Context
+
+USAGE:
+  devarch context [options]
+
+OPTIONS:
+  --apply-hosts          Apply hosts.txt to Windows hosts file (WSL)
+  --hosts-target=<path>  Override target hosts path
+
+OUTPUT:
+  ./context/index.txt    Project overview and git status
+  ./context/*.txt        Contents of compose, config, scripts
+  ./context/hosts.txt    Dynamic hosts from compose files
+
+EXAMPLES:
+  devarch context
+  devarch context --apply-hosts
+EOF
+            ;;
         run)
             cat << 'EOF'
 devarch run - Run Command in Container
@@ -431,6 +461,7 @@ resolve_namespace() {
         socket|sock) echo "socket" ;;
         runtime|rt) echo "runtime" ;;
         db|database) echo "db" ;;
+        context|ctx|c) echo "context" ;;
         run|r) echo "run" ;;
         shell|sh) echo "shell" ;;
         *) echo "" ;;
@@ -490,6 +521,9 @@ main() {
             ;;
         db)
             handle_db "$@"
+            ;;
+        context)
+            handle_context "$@"
             ;;
         run)
             handle_container_exec "$@"
