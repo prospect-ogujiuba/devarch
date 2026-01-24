@@ -9,6 +9,8 @@
 # Source the central configuration
 . "$(dirname "$0")/config.sh"
 
+SCRIPT_NAME="${0##*/}"
+
 # =============================================================================
 # SCRIPT OPTIONS & DEFAULTS
 # =============================================================================
@@ -56,9 +58,19 @@ opt_max_volumes_remove="3"
 # USAGE & HELP
 # =============================================================================
 
+show_brief_usage() {
+    echo "Usage: $SCRIPT_NAME COMMAND [TARGET] [OPTIONS]"
+    echo ""
+    echo "Commands: up, down, restart, rebuild, logs, status, ps, list"
+    echo "          start, stop, start-all, stop-all"
+    echo "          list-components, prune-components"
+    echo ""
+    echo "Run '$SCRIPT_NAME --help' for detailed usage"
+}
+
 show_usage() {
     cat << EOF
-Usage: $0 COMMAND [TARGET] [OPTIONS]
+Usage: $SCRIPT_NAME COMMAND [TARGET] [OPTIONS]
 
 DESCRIPTION:
     Unified service management tool using podman terminology. Handles individual 
@@ -200,10 +212,14 @@ EOF
 # =============================================================================
 
 parse_arguments() {
-    if [[ $# -eq 0 ]]; then
-        print_status "error" "No command specified"
+    if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
         show_usage
-        exit 1
+        exit 0
+    fi
+
+    if [[ $# -eq 0 ]]; then
+        show_brief_usage
+        exit 0
     fi
     
     # First argument is always the command
