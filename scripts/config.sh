@@ -477,6 +477,29 @@ restart_single_service() {
     stop_single_service "$service_name" && start_single_service "$service_name"
 }
 
+start_container() {
+    local service_name="$1"
+    if eval "$CONTAINER_CMD start $service_name $ERROR_REDIRECT"; then
+        print_status "success" "$service_name"
+        return 0
+    else
+        print_status "error" "$service_name start failed"
+        return 1
+    fi
+}
+
+stop_container() {
+    local service_name="$1"
+    local timeout="${2:-30}"
+    if eval "$CONTAINER_CMD stop -t $timeout $service_name $ERROR_REDIRECT"; then
+        print_status "success" "$service_name stopped"
+        return 0
+    else
+        print_status "error" "$service_name stop failed"
+        return 1
+    fi
+}
+
 rebuild_single_service() {
     local service_name="$1"
     local no_cache="${2:-false}"

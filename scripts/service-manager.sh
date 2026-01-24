@@ -488,7 +488,7 @@ validate_service_exists_if_provided() {
 
 validate_bulk_targets() {
     local -a all_targets
-    [[ -n "$BULK_TARGETS" ]] && all_targets+=($BULK_TARGETS)
+    [[ -n "$BULK_TARGETS" ]] && all_targets+=(${=BULK_TARGETS})
     [[ -n "$opt_categories_only" ]] && all_targets+=(${(s:,:)opt_categories_only})
     [[ -n "$opt_services_only" ]] && all_targets+=(${(s:,:)opt_services_only})
 
@@ -864,20 +864,12 @@ cmd_stop_all() {
 
 start_individual_service() {
     local service_name="$1"
-    if [[ "$opt_rebuild_services" == "true" ]]; then
-        rebuild_single_service "$service_name" "$opt_no_cache"
-    else
-        local force_recreate="$opt_force_recreate"
-        [[ "$opt_force_services" == "true" ]] && force_recreate="true"
-        start_single_service "$service_name" "$force_recreate"
-    fi
+    start_container "$service_name"
 }
 
 stop_individual_service() {
     local service_name="$1"
-    local remove_volumes="$opt_remove_volumes"
-    [[ "$opt_preserve_data" == "true" || "$opt_preserve_volumes" == "true" ]] && remove_volumes="false"
-    stop_single_service "$service_name" "$remove_volumes" "$opt_timeout" && cleanup_service_resources "$service_name"
+    stop_container "$service_name" "$opt_timeout"
 }
 
 start_category_sequential() {
