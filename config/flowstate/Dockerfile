@@ -59,6 +59,10 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Supervisor configuration
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 # Create required directories
 RUN mkdir -p /var/run/php /var/log/supervisor /var/log/php /var/www/html
 
@@ -69,4 +73,5 @@ WORKDIR /var/www/html
 
 EXPOSE 80 8080
 
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

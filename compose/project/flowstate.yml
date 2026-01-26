@@ -2,10 +2,6 @@ networks:
   microservices-net:
     external: true
 
-volumes:
-  flowstate-storage:
-    external: true
-
 services:
   flowstate-app:
     container_name: flowstate-app
@@ -16,7 +12,6 @@ services:
       - "8150:80"
     volumes:
       - ../../apps/flowstate:/var/www/html
-      - flowstate-storage:/var/www/html/storage/app
     environment:
       - CONTAINER_ROLE=app
     depends_on:
@@ -39,7 +34,6 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ../../apps/flowstate:/var/www/html
-      - flowstate-storage:/var/www/html/storage/app
     environment:
       - CONTAINER_ROLE=queue
     command: php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600 --memory=512
