@@ -16,7 +16,7 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_USER=postgres
       - POSTGRES_DB=postgres
-      - POSTGRES_MULTIPLE_DATABASES=postgres,metabase,nocodb,openproject
+      - POSTGRES_MULTIPLE_DATABASES=postgres,metabase,nocodb,openproject,devarch
       - POSTGRES_PASSWORD=admin1234567
     ports:
       - "127.0.0.1:8502:5432"
