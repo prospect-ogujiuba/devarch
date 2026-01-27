@@ -1,0 +1,192 @@
+package models
+
+import (
+	"database/sql"
+	"time"
+)
+
+type Category struct {
+	ID           int       `json:"id"`
+	Name         string    `json:"name"`
+	DisplayName  string    `json:"display_name,omitempty"`
+	Color        string    `json:"color,omitempty"`
+	StartupOrder int       `json:"startup_order"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+type Service struct {
+	ID            int            `json:"id"`
+	Name          string         `json:"name"`
+	CategoryID    int            `json:"category_id"`
+	ImageName     string         `json:"image_name"`
+	ImageTag      string         `json:"image_tag"`
+	RestartPolicy string         `json:"restart_policy"`
+	Command       sql.NullString `json:"-"`
+	CommandStr    string         `json:"command,omitempty"`
+	UserSpec      sql.NullString `json:"-"`
+	UserSpecStr   string         `json:"user_spec,omitempty"`
+	Enabled       bool           `json:"enabled"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+
+	Category     *Category         `json:"category,omitempty"`
+	Ports        []ServicePort     `json:"ports,omitempty"`
+	Volumes      []ServiceVolume   `json:"volumes,omitempty"`
+	EnvVars      []ServiceEnvVar   `json:"env_vars,omitempty"`
+	Dependencies []string          `json:"dependencies,omitempty"`
+	Healthcheck  *ServiceHealthcheck `json:"healthcheck,omitempty"`
+	Labels       []ServiceLabel    `json:"labels,omitempty"`
+	Domains      []ServiceDomain   `json:"domains,omitempty"`
+
+	Status  *ContainerState   `json:"status,omitempty"`
+	Metrics *ContainerMetrics `json:"metrics,omitempty"`
+}
+
+type ServicePort struct {
+	ID            int    `json:"id"`
+	ServiceID     int    `json:"service_id"`
+	HostIP        string `json:"host_ip"`
+	HostPort      int    `json:"host_port"`
+	ContainerPort int    `json:"container_port"`
+	Protocol      string `json:"protocol"`
+}
+
+type ServiceVolume struct {
+	ID         int    `json:"id"`
+	ServiceID  int    `json:"service_id"`
+	VolumeType string `json:"volume_type"`
+	Source     string `json:"source"`
+	Target     string `json:"target"`
+	ReadOnly   bool   `json:"read_only"`
+}
+
+type ServiceEnvVar struct {
+	ID        int    `json:"id"`
+	ServiceID int    `json:"service_id"`
+	Key       string `json:"key"`
+	Value     string `json:"value,omitempty"`
+	IsSecret  bool   `json:"is_secret"`
+}
+
+type ServiceDependency struct {
+	ID                 int    `json:"id"`
+	ServiceID          int    `json:"service_id"`
+	DependsOnServiceID int    `json:"depends_on_service_id"`
+	Condition          string `json:"condition"`
+}
+
+type ServiceHealthcheck struct {
+	ID                 int    `json:"id"`
+	ServiceID          int    `json:"service_id"`
+	Test               string `json:"test"`
+	IntervalSeconds    int    `json:"interval_seconds"`
+	TimeoutSeconds     int    `json:"timeout_seconds"`
+	Retries            int    `json:"retries"`
+	StartPeriodSeconds int    `json:"start_period_seconds"`
+}
+
+type ServiceLabel struct {
+	ID        int    `json:"id"`
+	ServiceID int    `json:"service_id"`
+	Key       string `json:"key"`
+	Value     string `json:"value"`
+}
+
+type ServiceDomain struct {
+	ID        int    `json:"id"`
+	ServiceID int    `json:"service_id"`
+	Domain    string `json:"domain"`
+	ProxyPort int    `json:"proxy_port,omitempty"`
+}
+
+type ContainerState struct {
+	ID           int            `json:"id"`
+	ServiceID    int            `json:"service_id"`
+	ContainerID  sql.NullString `json:"-"`
+	ContainerStr string         `json:"container_id,omitempty"`
+	Status       string         `json:"status"`
+	HealthStatus sql.NullString `json:"-"`
+	HealthStr    string         `json:"health_status,omitempty"`
+	RestartCount int            `json:"restart_count"`
+	StartedAt    sql.NullTime   `json:"-"`
+	StartedAtStr *time.Time     `json:"started_at,omitempty"`
+	FinishedAt   sql.NullTime   `json:"-"`
+	FinishedStr  *time.Time     `json:"finished_at,omitempty"`
+	ExitCode     sql.NullInt32  `json:"-"`
+	ExitCodeInt  *int           `json:"exit_code,omitempty"`
+	Error        sql.NullString `json:"-"`
+	ErrorStr     string         `json:"error,omitempty"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+}
+
+type ContainerMetrics struct {
+	ID               int       `json:"id"`
+	ServiceID        int       `json:"service_id"`
+	CPUPercentage    float64   `json:"cpu_percentage"`
+	MemoryUsedMB     float64   `json:"memory_used_mb"`
+	MemoryLimitMB    float64   `json:"memory_limit_mb"`
+	MemoryPercentage float64   `json:"memory_percentage"`
+	NetworkRxBytes   int64     `json:"network_rx_bytes"`
+	NetworkTxBytes   int64     `json:"network_tx_bytes"`
+	RecordedAt       time.Time `json:"recorded_at"`
+}
+
+type Registry struct {
+	ID                 int            `json:"id"`
+	Name               string         `json:"name"`
+	BaseURL            string         `json:"base_url"`
+	APIVersion         sql.NullString `json:"-"`
+	APIVersionStr      string         `json:"api_version,omitempty"`
+	Enabled            bool           `json:"enabled"`
+	RateLimitRemaining sql.NullInt32  `json:"-"`
+	RateLimitInt       *int           `json:"rate_limit_remaining,omitempty"`
+	RateLimitResetAt   sql.NullTime   `json:"-"`
+	RateLimitResetStr  *time.Time     `json:"rate_limit_reset_at,omitempty"`
+	CreatedAt          time.Time      `json:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at"`
+}
+
+type Image struct {
+	ID           int            `json:"id"`
+	RegistryID   int            `json:"registry_id"`
+	Repository   string         `json:"repository"`
+	Description  sql.NullString `json:"-"`
+	DescriptionStr string       `json:"description,omitempty"`
+	StarCount    sql.NullInt32  `json:"-"`
+	StarCountInt *int           `json:"star_count,omitempty"`
+	PullCount    sql.NullInt64  `json:"-"`
+	PullCountInt *int64         `json:"pull_count,omitempty"`
+	IsOfficial   bool           `json:"is_official"`
+	LastSyncedAt sql.NullTime   `json:"-"`
+	LastSynced   *time.Time     `json:"last_synced_at,omitempty"`
+}
+
+type ImageTag struct {
+	ID           int            `json:"id"`
+	ImageID      int            `json:"image_id"`
+	Tag          string         `json:"tag"`
+	Digest       sql.NullString `json:"-"`
+	DigestStr    string         `json:"digest,omitempty"`
+	SizeBytes    sql.NullInt64  `json:"-"`
+	SizeBytesInt *int64         `json:"size_bytes,omitempty"`
+	PushedAt     sql.NullTime   `json:"-"`
+	PushedAtStr  *time.Time     `json:"pushed_at,omitempty"`
+	LastSyncedAt sql.NullTime   `json:"-"`
+	LastSynced   *time.Time     `json:"last_synced_at,omitempty"`
+}
+
+type Vulnerability struct {
+	ID          int            `json:"id"`
+	CVEID       string         `json:"cve_id"`
+	Severity    string         `json:"severity"`
+	Title       sql.NullString `json:"-"`
+	TitleStr    string         `json:"title,omitempty"`
+	Description sql.NullString `json:"-"`
+	DescStr     string         `json:"description,omitempty"`
+	CVSSScore   sql.NullFloat64 `json:"-"`
+	CVSSFloat   *float64       `json:"cvss_score,omitempty"`
+	PublishedAt sql.NullTime   `json:"-"`
+	PublishedStr *time.Time    `json:"published_at,omitempty"`
+	CreatedAt   time.Time      `json:"created_at"`
+}

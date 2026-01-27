@@ -8,3 +8,5 @@ prompts/
 .DS_Store
 .gateway-backup-location
 .idea/
+node_modules/
+dist/
