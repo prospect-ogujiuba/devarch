@@ -40,8 +40,49 @@ type Service struct {
 	Labels       []ServiceLabel    `json:"labels,omitempty"`
 	Domains      []ServiceDomain   `json:"domains,omitempty"`
 
+	ConfigStatus     string          `json:"config_status"`
+	LastValidatedAt  sql.NullTime    `json:"-"`
+	LastValidatedStr *time.Time      `json:"last_validated_at,omitempty"`
+	ValidationErrors NullableJSON    `json:"validation_errors,omitempty"`
+
 	Status  *ContainerState   `json:"status,omitempty"`
 	Metrics *ContainerMetrics `json:"metrics,omitempty"`
+}
+
+type NullableJSON struct {
+	Data  json.RawMessage
+	Valid bool
+}
+
+func (n *NullableJSON) Scan(value interface{}) error {
+	if value == nil {
+		n.Valid = false
+		return nil
+	}
+	n.Valid = true
+	switch v := value.(type) {
+	case []byte:
+		n.Data = json.RawMessage(v)
+	case string:
+		n.Data = json.RawMessage(v)
+	}
+	return nil
+}
+
+func (n NullableJSON) MarshalJSON() ([]byte, error) {
+	if !n.Valid || n.Data == nil {
+		return []byte("null"), nil
+	}
+	return n.Data, nil
+}
+
+type ConfigVersion struct {
+	ID             int             `json:"id"`
+	ServiceID      int             `json:"service_id"`
+	Version        int             `json:"version"`
+	ConfigSnapshot json.RawMessage `json:"config_snapshot"`
+	ChangeSummary  string          `json:"change_summary,omitempty"`
+	CreatedAt      time.Time       `json:"created_at"`
 }
 
 type ServicePort struct {

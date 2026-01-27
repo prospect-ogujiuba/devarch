@@ -17,9 +17,9 @@ var migrationsDir string
 
 func main() {
 	var (
-		dbURL   = flag.String("db", "", "Database URL (or set DATABASE_URL env)")
-		command = flag.String("cmd", "up", "Command: up, down, status")
-		migDir  = flag.String("migrations", "", "Migrations directory")
+		dbURL    = flag.String("db", "", "Database URL (or set DATABASE_URL env)")
+		command  = flag.String("cmd", "up", "Command: up, down, status, create-db")
+		migDir   = flag.String("migrations", "", "Migrations directory")
 	)
 	flag.Parse()
 
@@ -28,6 +28,13 @@ func main() {
 	}
 	if *dbURL == "" {
 		*dbURL = "postgres://devarch:devarch@localhost:5432/devarch?sslmode=disable"
+	}
+
+	if *command == "create-db" {
+		if err := createDatabase(*dbURL); err != nil {
+			log.Fatalf("create-db failed: %v", err)
+		}
+		return
 	}
 
 	if *migDir == "" {
@@ -201,6 +208,43 @@ func migrateDown(db *sql.DB) error {
 	}
 
 	log.Printf("rolled back: %s", lastVersion)
+	return nil
+}
+
+func createDatabase(dbURL string) error {
+	// Parse the target DB name from the URL, then connect to "postgres" DB to create it
+	parts := strings.SplitN(dbURL, "/", 4)
+	if len(parts) < 4 {
+		return fmt.Errorf("invalid database URL")
+	}
+	dbName := strings.SplitN(parts[3], "?", 2)[0]
+	adminURL := strings.Join(parts[:3], "/") + "/postgres"
+	if idx := strings.Index(parts[3], "?"); idx >= 0 {
+		adminURL += parts[3][idx:]
+	}
+
+	db, err := sql.Open("postgres", adminURL)
+	if err != nil {
+		return fmt.Errorf("connect to postgres: %w", err)
+	}
+	defer db.Close()
+
+	var exists bool
+	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = $1)", dbName).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("check database: %w", err)
+	}
+	if exists {
+		log.Printf("database %s already exists", dbName)
+		return nil
+	}
+
+	// dbName is derived from our own URL, not user input — safe to interpolate
+	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
+	if err != nil {
+		return fmt.Errorf("create database: %w", err)
+	}
+	log.Printf("created database: %s", dbName)
 	return nil
 }
 

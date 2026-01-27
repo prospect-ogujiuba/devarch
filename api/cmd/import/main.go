@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -14,6 +15,7 @@ func main() {
 	var (
 		dbURL      = flag.String("db", "", "Database URL (or set DATABASE_URL env)")
 		composeDir = flag.String("compose-dir", "", "Path to compose directory")
+		countOnly  = flag.Bool("count-only", false, "Print service count and exit")
 	)
 	flag.Parse()
 
@@ -24,13 +26,6 @@ func main() {
 		*dbURL = "postgres://devarch:devarch@localhost:5432/devarch?sslmode=disable"
 	}
 
-	if *composeDir == "" {
-		*composeDir = os.Getenv("COMPOSE_DIR")
-	}
-	if *composeDir == "" {
-		log.Fatal("compose-dir is required")
-	}
-
 	db, err := sql.Open("postgres", *dbURL)
 	if err != nil {
 		log.Fatalf("failed to connect: %v", err)
@@ -39,6 +34,20 @@ func main() {
 
 	if err := db.Ping(); err != nil {
 		log.Fatalf("failed to ping: %v", err)
+	}
+
+	if *countOnly {
+		var count int
+		db.QueryRow("SELECT COUNT(*) FROM services").Scan(&count)
+		fmt.Println(count)
+		return
+	}
+
+	if *composeDir == "" {
+		*composeDir = os.Getenv("COMPOSE_DIR")
+	}
+	if *composeDir == "" {
+		log.Fatal("compose-dir is required")
 	}
 
 	importer := compose.NewImporter(db, *composeDir)
