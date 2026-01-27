@@ -31,7 +31,9 @@ function getServiceImage(s: Service): string {
 }
 
 function getServiceStatus(s: Service): string {
-  return s.status?.status ?? 'stopped'
+  const raw = s.status?.status ?? 'stopped'
+  if (raw === 'exited' || raw === 'dead' || raw === 'created') return 'stopped'
+  return raw
 }
 
 interface ServiceTableProps {

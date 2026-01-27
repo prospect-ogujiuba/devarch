@@ -31,7 +31,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	}))
 
 	serviceHandler := handlers.NewServiceHandler(db, containerClient, podmanClient)
-	categoryHandler := handlers.NewCategoryHandler(db, containerClient)
+	categoryHandler := handlers.NewCategoryHandler(db, containerClient, podmanClient)
 	statusHandler := handlers.NewStatusHandler(db, podmanClient, syncManager)
 	registryHandler := handlers.NewRegistryHandler(db)
 	wsHandler := handlers.NewWebSocketHandler(syncManager)

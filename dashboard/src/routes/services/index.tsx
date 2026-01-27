@@ -8,9 +8,11 @@ export const Route = createFileRoute('/services/')({
 })
 
 function ServicesPage() {
-  const { data: services, isLoading } = useServices()
+  const { data, isLoading } = useServices()
 
-  const categories = [...new Set(services?.map((s) => s.category?.name).filter(Boolean) ?? [])] as string[]
+  const services = data?.services ?? []
+  const total = data?.total ?? 0
+  const categories = [...new Set(services.map((s) => s.category?.name).filter(Boolean))] as string[]
 
   if (isLoading) {
     return (
@@ -25,11 +27,11 @@ function ServicesPage() {
       <div>
         <h1 className="text-2xl font-bold">Services</h1>
         <p className="text-muted-foreground">
-          Manage all {services?.length ?? 0} services in your environment
+          Manage all {total} services in your environment
         </p>
       </div>
 
-      <ServiceTable services={services ?? []} categories={categories} />
+      <ServiceTable services={services} categories={categories} />
     </div>
   )
 }

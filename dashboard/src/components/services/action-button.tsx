@@ -4,7 +4,7 @@ import { useStartService, useStopService, useRestartService } from '@/features/s
 
 interface ActionButtonProps {
   name: string
-  status: 'running' | 'stopped' | 'starting' | 'error'
+  status: string
   showRestart?: boolean
   size?: 'default' | 'sm' | 'icon' | 'icon-sm'
 }

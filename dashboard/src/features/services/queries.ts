@@ -3,12 +3,20 @@ import { api } from '@/lib/api'
 import type { Service, ServiceLogsResponse } from '@/types/api'
 import { toast } from 'sonner'
 
+interface ServicesResult {
+  services: Service[]
+  total: number
+}
+
 export function useServices() {
   return useQuery({
     queryKey: ['services'],
-    queryFn: async () => {
-      const response = await api.get<Service[]>('/services?include=status')
-      return response.data
+    queryFn: async (): Promise<ServicesResult> => {
+      const response = await api.get<Service[]>('/services?include=status&limit=500')
+      return {
+        services: response.data,
+        total: parseInt(response.headers['x-total-count'] ?? '0', 10) || response.data.length,
+      }
     },
   })
 }

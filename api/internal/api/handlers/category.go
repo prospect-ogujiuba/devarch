@@ -6,30 +6,45 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/lib/pq"
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/podman"
 	"github.com/priz/devarch-api/pkg/models"
 )
 
 type CategoryHandler struct {
 	db              *sql.DB
 	containerClient *container.Client
+	podmanClient    *podman.Client
 	generator       *compose.Generator
 }
 
-func NewCategoryHandler(db *sql.DB, cc *container.Client) *CategoryHandler {
+func NewCategoryHandler(db *sql.DB, cc *container.Client, pc *podman.Client) *CategoryHandler {
 	return &CategoryHandler{
 		db:              db,
 		containerClient: cc,
+		podmanClient:    pc,
 		generator:       compose.NewGenerator(db, "microservices-net"),
 	}
 }
 
 func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	runningContainers, _ := h.podmanClient.ListContainers(ctx, false)
+	runningByName := make(map[string]bool)
+	for _, c := range runningContainers {
+		if len(c.Names) > 0 {
+			runningByName[c.Names[0]] = true
+		}
+	}
+
 	rows, err := h.db.Query(`
 		SELECT c.id, c.name, c.display_name, c.color, c.startup_order,
 			c.created_at, c.updated_at,
-			COUNT(s.id) as service_count
+			COUNT(s.id) as service_count,
+			ARRAY_AGG(s.name) FILTER (WHERE s.name IS NOT NULL)
 		FROM categories c
 		LEFT JOIN services s ON s.category_id = c.id
 		GROUP BY c.id
@@ -44,15 +59,17 @@ func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 	type categoryWithCount struct {
 		models.Category
 		ServiceCount int `json:"service_count"`
+		RunningCount int `json:"runningCount"`
 	}
 
 	var categories []categoryWithCount
 	for rows.Next() {
 		var c categoryWithCount
 		var displayName, color sql.NullString
+		var serviceNames []string
 		if err := rows.Scan(
 			&c.ID, &c.Name, &displayName, &color, &c.StartupOrder,
-			&c.CreatedAt, &c.UpdatedAt, &c.ServiceCount,
+			&c.CreatedAt, &c.UpdatedAt, &c.ServiceCount, pq.Array(&serviceNames),
 		); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -62,6 +79,11 @@ func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 		if color.Valid {
 			c.Color = color.String
+		}
+		for _, name := range serviceNames {
+			if runningByName[name] {
+				c.RunningCount++
+			}
 		}
 		categories = append(categories, c)
 	}
