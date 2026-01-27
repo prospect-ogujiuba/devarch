@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ServicesIndexRouteImport } from './routes/services/index'
+import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as CategoriesIndexRouteImport } from './routes/categories/index'
 import { Route as ServicesNameRouteImport } from './routes/services/$name'
+import { Route as ProjectsNameRouteImport } from './routes/projects/$name'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -30,6 +32,11 @@ const ServicesIndexRoute = ServicesIndexRouteImport.update({
   path: '/services/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
+  id: '/projects/',
+  path: '/projects/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CategoriesIndexRoute = CategoriesIndexRouteImport.update({
   id: '/categories/',
   path: '/categories/',
@@ -40,26 +47,37 @@ const ServicesNameRoute = ServicesNameRouteImport.update({
   path: '/services/$name',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProjectsNameRoute = ProjectsNameRouteImport.update({
+  id: '/projects/$name',
+  path: '/projects/$name',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/projects/$name': typeof ProjectsNameRoute
   '/services/$name': typeof ServicesNameRoute
   '/categories/': typeof CategoriesIndexRoute
+  '/projects/': typeof ProjectsIndexRoute
   '/services/': typeof ServicesIndexRoute
   '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/projects/$name': typeof ProjectsNameRoute
   '/services/$name': typeof ServicesNameRoute
   '/categories': typeof CategoriesIndexRoute
+  '/projects': typeof ProjectsIndexRoute
   '/services': typeof ServicesIndexRoute
   '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/projects/$name': typeof ProjectsNameRoute
   '/services/$name': typeof ServicesNameRoute
   '/categories/': typeof CategoriesIndexRoute
+  '/projects/': typeof ProjectsIndexRoute
   '/services/': typeof ServicesIndexRoute
   '/settings/': typeof SettingsIndexRoute
 }
@@ -67,25 +85,38 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/projects/$name'
     | '/services/$name'
     | '/categories/'
+    | '/projects/'
     | '/services/'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/services/$name' | '/categories' | '/services' | '/settings'
+  to:
+    | '/'
+    | '/projects/$name'
+    | '/services/$name'
+    | '/categories'
+    | '/projects'
+    | '/services'
+    | '/settings'
   id:
     | '__root__'
     | '/'
+    | '/projects/$name'
     | '/services/$name'
     | '/categories/'
+    | '/projects/'
     | '/services/'
     | '/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ProjectsNameRoute: typeof ProjectsNameRoute
   ServicesNameRoute: typeof ServicesNameRoute
   CategoriesIndexRoute: typeof CategoriesIndexRoute
+  ProjectsIndexRoute: typeof ProjectsIndexRoute
   ServicesIndexRoute: typeof ServicesIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
@@ -113,6 +144,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServicesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/projects/': {
+      id: '/projects/'
+      path: '/projects'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof ProjectsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/categories/': {
       id: '/categories/'
       path: '/categories'
@@ -127,13 +165,22 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServicesNameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/projects/$name': {
+      id: '/projects/$name'
+      path: '/projects/$name'
+      fullPath: '/projects/$name'
+      preLoaderRoute: typeof ProjectsNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ProjectsNameRoute: ProjectsNameRoute,
   ServicesNameRoute: ServicesNameRoute,
   CategoriesIndexRoute: CategoriesIndexRoute,
+  ProjectsIndexRoute: ProjectsIndexRoute,
   ServicesIndexRoute: ServicesIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }

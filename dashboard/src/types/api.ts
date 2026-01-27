@@ -252,3 +252,33 @@ export interface SocketStatus {
     running_services: number
   }
 }
+
+export interface Project {
+  id: number
+  name: string
+  path: string
+  project_type: string
+  framework?: string
+  language?: string
+  package_manager?: string
+  description?: string
+  version?: string
+  license?: string
+  entry_point?: string
+  has_frontend: boolean
+  frontend_framework?: string
+  domain?: string
+  proxy_port?: number
+  dependencies: Record<string, string>
+  scripts: Record<string, string>
+  git_remote?: string
+  git_branch?: string
+  last_scanned_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ProjectScanResponse {
+  scanned: number
+  projects: Project[]
+}
