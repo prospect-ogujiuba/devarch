@@ -2,13 +2,22 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { useServices } from '@/features/services/queries'
 import { ServiceTable } from '@/components/services/service-table'
+import { z } from 'zod'
+
+const servicesSearchSchema = z.object({
+  search: z.string().optional(),
+  category: z.string().optional(),
+  status: z.string().optional(),
+})
 
 export const Route = createFileRoute('/services/')({
   component: ServicesPage,
+  validateSearch: servicesSearchSchema,
 })
 
 function ServicesPage() {
   const { data, isLoading } = useServices()
+  const search = Route.useSearch()
 
   const services = data?.services ?? []
   const total = data?.total ?? 0
@@ -31,7 +40,13 @@ function ServicesPage() {
         </p>
       </div>
 
-      <ServiceTable services={services} categories={categories} />
+      <ServiceTable
+        services={services}
+        categories={categories}
+        searchQuery={search.search}
+        categoryFilter={search.category}
+        statusFilter={search.status}
+      />
     </div>
   )
 }

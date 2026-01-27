@@ -18,6 +18,7 @@ services:
       - "127.0.0.1:8550:8080"
     volumes:
       - /run/user/1000/podman/podman.sock:/run/podman/podman.sock:ro
+      - ../../apps:/workspace/apps:ro
     networks:
       - microservices-net
     healthcheck:

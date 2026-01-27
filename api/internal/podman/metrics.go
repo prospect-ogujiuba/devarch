@@ -55,9 +55,7 @@ func calculateCPUPercent(stats *ContainerStats) float64 {
 func (c *Client) GetServiceState(ctx context.Context, name string) (*models.ContainerState, error) {
 	health, err := c.GetContainerHealth(ctx, name)
 	if err != nil {
-		return &models.ContainerState{
-			Status: "stopped",
-		}, nil
+		return nil, err
 	}
 
 	state := &models.ContainerState{

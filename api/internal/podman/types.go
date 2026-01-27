@@ -187,12 +187,12 @@ type ContainerConfig struct {
 	Hostname     string              `json:"Hostname"`
 	User         string              `json:"User"`
 	Env          []string            `json:"Env"`
-	Cmd          []string            `json:"Cmd"`
+	Cmd          interface{}         `json:"Cmd"`
 	Image        string              `json:"Image"`
 	WorkingDir   string              `json:"WorkingDir"`
-	Entrypoint   []string            `json:"Entrypoint"`
+	Entrypoint   interface{}         `json:"Entrypoint"`
 	Labels       map[string]string   `json:"Labels"`
-	StopSignal   string              `json:"StopSignal"`
+	StopSignal   interface{}         `json:"StopSignal"`
 	StopTimeout  *uint               `json:"StopTimeout,omitempty"`
 	Healthcheck  *HealthConfig       `json:"Healthcheck,omitempty"`
 }

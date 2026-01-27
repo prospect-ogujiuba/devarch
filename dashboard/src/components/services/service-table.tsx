@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { Link } from '@tanstack/react-router'
+import { useMemo } from 'react'
+import { Link, useNavigate } from '@tanstack/react-router'
 import {
   Table,
   TableBody,
@@ -21,6 +21,7 @@ import { StatusBadge } from './status-badge'
 import { ActionButton } from './action-button'
 import type { Service } from '@/types/api'
 import { Search } from 'lucide-react'
+import { titleCase } from '@/lib/utils'
 
 function getServiceCategory(s: Service): string {
   return s.category?.name ?? ''
@@ -39,22 +40,40 @@ function getServiceStatus(s: Service): string {
 interface ServiceTableProps {
   services: Service[]
   categories: string[]
+  searchQuery?: string
+  categoryFilter?: string
+  statusFilter?: string
 }
 
-export function ServiceTable({ services, categories }: ServiceTableProps) {
-  const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+export function ServiceTable({
+  services,
+  categories,
+  searchQuery = '',
+  categoryFilter = 'all',
+  statusFilter = 'all',
+}: ServiceTableProps) {
+  const navigate = useNavigate({ from: '/services' })
+  const search = searchQuery
+
+  const updateFilter = (key: string, value: string) => {
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        [key]: value || undefined,
+      }),
+    })
+  }
 
   const filteredServices = useMemo(() => {
     return services.filter((service) => {
       const image = getServiceImage(service)
       const category = getServiceCategory(service)
       const status = getServiceStatus(service)
-      const matchesSearch = service.name.toLowerCase().includes(search.toLowerCase()) ||
+      const matchesSearch = !search ||
+        service.name.toLowerCase().includes(search.toLowerCase()) ||
         image.toLowerCase().includes(search.toLowerCase())
-      const matchesCategory = categoryFilter === 'all' || category === categoryFilter
-      const matchesStatus = statusFilter === 'all' || status === statusFilter
+      const matchesCategory = !categoryFilter || categoryFilter === 'all' || category === categoryFilter
+      const matchesStatus = !statusFilter || statusFilter === 'all' || status === statusFilter
       return matchesSearch && matchesCategory && matchesStatus
     })
   }, [services, search, categoryFilter, statusFilter])
@@ -67,11 +86,11 @@ export function ServiceTable({ services, categories }: ServiceTableProps) {
           <Input
             placeholder="Search services..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => updateFilter('search', e.target.value)}
             className="pl-9"
           />
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+        <Select value={categoryFilter} onValueChange={(v) => updateFilter('category', v === 'all' ? '' : v)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
@@ -79,12 +98,12 @@ export function ServiceTable({ services, categories }: ServiceTableProps) {
             <SelectItem value="all">All Categories</SelectItem>
             {categories.map((cat) => (
               <SelectItem key={cat} value={cat}>
-                {cat}
+                {titleCase(cat)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(v) => updateFilter('status', v === 'all' ? '' : v)}>
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -126,11 +145,11 @@ export function ServiceTable({ services, categories }: ServiceTableProps) {
                       params={{ name: service.name }}
                       className="font-medium hover:underline"
                     >
-                      {service.name}
+                      {titleCase(service.name)}
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{getServiceCategory(service)}</Badge>
+                    <Badge variant="outline">{titleCase(getServiceCategory(service))}</Badge>
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate text-muted-foreground">
                     {getServiceImage(service)}
