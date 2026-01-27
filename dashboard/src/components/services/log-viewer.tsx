@@ -16,11 +16,11 @@ export function LogViewer({ serviceName }: LogViewerProps) {
     if (containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight
     }
-  }, [data?.logs])
+  }, [data])
 
   const handleDownload = () => {
-    if (!data?.logs) return
-    const blob = new Blob([data.logs], { type: 'text/plain' })
+    if (!data) return
+    const blob = new Blob([data], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -51,7 +51,7 @@ export function LogViewer({ serviceName }: LogViewerProps) {
             variant="outline"
             size="sm"
             onClick={handleDownload}
-            disabled={!data?.logs}
+            disabled={!data}
           >
             <Download className="size-4" />
             Download
@@ -67,8 +67,8 @@ export function LogViewer({ serviceName }: LogViewerProps) {
             <div className="flex items-center justify-center h-full">
               <Loader2 className="size-6 animate-spin text-muted-foreground" />
             </div>
-          ) : data?.logs ? (
-            <pre className="text-xs leading-relaxed">{data.logs}</pre>
+          ) : data ? (
+            <pre className="text-xs leading-relaxed">{data}</pre>
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               No logs available

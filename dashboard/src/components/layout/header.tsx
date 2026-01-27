@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Server, LayoutGrid, FolderKanban, Moon, Sun } from 'lucide-react'
+import { Server, LayoutGrid, FolderKanban, Settings, Moon, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/lib/theme'
 
@@ -31,6 +31,12 @@ export function Header() {
             <Link to="/categories" activeProps={{ className: 'bg-accent' }}>
               <FolderKanban className="size-4" />
               Categories
+            </Link>
+          </Button>
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/settings" activeProps={{ className: 'bg-accent' }}>
+              <Settings className="size-4" />
+              Settings
             </Link>
           </Button>
         </nav>

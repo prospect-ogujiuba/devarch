@@ -212,3 +212,43 @@ export interface LogsResponse {
   }
   error?: string
 }
+
+export interface RuntimeInfo {
+  installed: boolean
+  version: string | null
+  running: boolean
+  responsive: boolean
+}
+
+export interface RuntimeStatus {
+  current: string
+  available: Record<string, RuntimeInfo>
+  containers: Record<string, number>
+  microservices: {
+    running: number
+    network: string
+    network_exists: boolean
+  }
+}
+
+export interface SocketInfo {
+  active: boolean
+  socket_path: string
+  exists: boolean
+  connectivity: string
+}
+
+export interface SocketStatus {
+  active: string
+  sockets: Record<string, SocketInfo>
+  environment: {
+    docker_host: string
+    user: string
+    uid: number
+  }
+  integration: {
+    project_network: string
+    network_exists: boolean
+    running_services: number
+  }
+}

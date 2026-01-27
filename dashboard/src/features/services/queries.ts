@@ -7,7 +7,7 @@ export function useServices() {
   return useQuery({
     queryKey: ['services'],
     queryFn: async () => {
-      const response = await api.get<Service[]>('/services')
+      const response = await api.get<Service[]>('/services?include=status')
       return response.data
     },
   })
@@ -17,7 +17,7 @@ export function useService(name: string) {
   return useQuery({
     queryKey: ['services', name],
     queryFn: async () => {
-      const response = await api.get<Service>(`/services/${name}`)
+      const response = await api.get<Service>(`/services/${name}?include=all`)
       return response.data
     },
     enabled: !!name,
@@ -28,8 +28,10 @@ export function useServiceLogs(name: string, tail: number = 100) {
   return useQuery({
     queryKey: ['services', name, 'logs', tail],
     queryFn: async () => {
-      const response = await api.get<ServiceLogsResponse>(`/services/${name}/logs?tail=${tail}`)
-      return response.data
+      const response = await api.get(`/services/${name}/logs?tail=${tail}`, {
+        responseType: 'text',
+      })
+      return response.data as string
     },
     enabled: !!name,
     refetchInterval: 5000,
@@ -40,8 +42,11 @@ export function useServiceCompose(name: string) {
   return useQuery({
     queryKey: ['services', name, 'compose'],
     queryFn: async () => {
-      const response = await api.get<{ yaml: string }>(`/services/${name}/compose`)
-      return response.data.yaml
+      const response = await api.get(`/services/${name}/compose`, {
+        headers: { Accept: 'text/yaml' },
+        responseType: 'text',
+      })
+      return response.data as string
     },
     enabled: !!name,
   })

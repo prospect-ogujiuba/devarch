@@ -10,7 +10,7 @@ export const Route = createFileRoute('/services/')({
 function ServicesPage() {
   const { data: services, isLoading } = useServices()
 
-  const categories = [...new Set(services?.map((s) => s.category) ?? [])]
+  const categories = [...new Set(services?.map((s) => s.category?.name).filter(Boolean) ?? [])] as string[]
 
   if (isLoading) {
     return (

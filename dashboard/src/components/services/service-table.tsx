@@ -22,6 +22,18 @@ import { ActionButton } from './action-button'
 import type { Service } from '@/types/api'
 import { Search } from 'lucide-react'
 
+function getServiceCategory(s: Service): string {
+  return s.category?.name ?? ''
+}
+
+function getServiceImage(s: Service): string {
+  return `${s.image_name}:${s.image_tag}`
+}
+
+function getServiceStatus(s: Service): string {
+  return s.status?.status ?? 'stopped'
+}
+
 interface ServiceTableProps {
   services: Service[]
   categories: string[]
@@ -34,10 +46,13 @@ export function ServiceTable({ services, categories }: ServiceTableProps) {
 
   const filteredServices = useMemo(() => {
     return services.filter((service) => {
+      const image = getServiceImage(service)
+      const category = getServiceCategory(service)
+      const status = getServiceStatus(service)
       const matchesSearch = service.name.toLowerCase().includes(search.toLowerCase()) ||
-        service.image.toLowerCase().includes(search.toLowerCase())
-      const matchesCategory = categoryFilter === 'all' || service.category === categoryFilter
-      const matchesStatus = statusFilter === 'all' || service.status === statusFilter
+        image.toLowerCase().includes(search.toLowerCase())
+      const matchesCategory = categoryFilter === 'all' || category === categoryFilter
+      const matchesStatus = statusFilter === 'all' || status === statusFilter
       return matchesSearch && matchesCategory && matchesStatus
     })
   }, [services, search, categoryFilter, statusFilter])
@@ -113,25 +128,25 @@ export function ServiceTable({ services, categories }: ServiceTableProps) {
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{service.category}</Badge>
+                    <Badge variant="outline">{getServiceCategory(service)}</Badge>
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                    {service.image}
+                    {getServiceImage(service)}
                   </TableCell>
                   <TableCell>
-                    {service.ports.length > 0 ? (
+                    {service.ports && service.ports.length > 0 ? (
                       <span className="text-sm">
-                        {service.ports.map((p) => `${p.host}:${p.container}`).join(', ')}
+                        {service.ports.map((p) => `${p.host_port}:${p.container_port}`).join(', ')}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={service.status} />
+                    <StatusBadge status={getServiceStatus(service)} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <ActionButton name={service.name} status={service.status} size="icon-sm" />
+                    <ActionButton name={service.name} status={getServiceStatus(service)} size="icon-sm" />
                   </TableCell>
                 </TableRow>
               ))
