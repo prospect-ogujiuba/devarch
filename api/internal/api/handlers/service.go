@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"regexp"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -63,8 +64,10 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 	sortCol := "s.name"
 	if sort := r.URL.Query().Get("sort"); sort != "" {
 		switch sort {
-		case "name", "category", "image_name", "created_at", "updated_at":
+		case "name", "image_name", "created_at", "updated_at":
 			sortCol = "s." + sort
+		case "category":
+			sortCol = "c.name"
 		}
 	}
 	order := "ASC"
@@ -127,7 +130,22 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var total int
+	h.db.QueryRow("SELECT COUNT(*) FROM services s JOIN categories c ON s.category_id = c.id WHERE 1=1").Scan(&total)
+
+	page := 1
+	if p := r.URL.Query().Get("page"); p != "" {
+		if parsed, err := strconv.Atoi(p); err == nil && parsed > 0 {
+			page = parsed
+		}
+	}
+	totalPages := (total + limit - 1) / limit
+
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Total-Count", strconv.Itoa(total))
+	w.Header().Set("X-Page", strconv.Itoa(page))
+	w.Header().Set("X-Per-Page", strconv.Itoa(limit))
+	w.Header().Set("X-Total-Pages", strconv.Itoa(totalPages))
 	json.NewEncoder(w).Encode(services)
 }
 
@@ -149,6 +167,15 @@ func (h *ServiceHandler) loadServiceIncludes(ctx context.Context, s *models.Serv
 			}
 		}
 	}
+}
+
+var serviceNameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$`)
+
+func isValidServiceName(name string) bool {
+	if len(name) < 2 || len(name) > 64 {
+		return false
+	}
+	return serviceNameRe.MatchString(name)
 }
 
 func containsInclude(includes, target string) bool {
@@ -281,6 +308,15 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createServiceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.Name == "" || req.ImageName == "" || req.CategoryID == 0 {
+		http.Error(w, "name, image_name, and category_id are required", http.StatusBadRequest)
+		return
+	}
+	if !isValidServiceName(req.Name) {
+		http.Error(w, "name must be lowercase alphanumeric with hyphens only", http.StatusBadRequest)
 		return
 	}
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/lib/pq"
 	"github.com/priz/devarch-api/internal/podman"
 	"github.com/priz/devarch-api/internal/sync"
 )
@@ -48,8 +49,16 @@ func (h *StatusHandler) Overview(w http.ResponseWriter, r *http.Request) {
 
 	running, stopped, _ := h.podman.GetContainerCounts(ctx)
 
+	runningContainers, _ := h.podman.ListContainers(ctx, false)
+	runningByName := make(map[string]bool)
+	for _, c := range runningContainers {
+		if len(c.Names) > 0 {
+			runningByName[c.Names[0]] = true
+		}
+	}
+
 	rows, err := h.db.Query(`
-		SELECT c.name, COUNT(s.id) as total
+		SELECT c.name, COUNT(s.id) as total, ARRAY_AGG(s.name) FILTER (WHERE s.name IS NOT NULL)
 		FROM categories c
 		LEFT JOIN services s ON s.category_id = c.id AND s.enabled = true
 		GROUP BY c.id, c.name
@@ -61,37 +70,18 @@ func (h *StatusHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	runningContainers, _ := h.podman.ListContainers(ctx, false)
-	runningByName := make(map[string]bool)
-	for _, c := range runningContainers {
-		if len(c.Names) > 0 {
-			runningByName[c.Names[0]] = true
-		}
-	}
-
 	var categories []categoryOverview
 	for rows.Next() {
 		var co categoryOverview
-		if err := rows.Scan(&co.Name, &co.TotalServices); err != nil {
+		var serviceNames []string
+		if err := rows.Scan(&co.Name, &co.TotalServices, pq.Array(&serviceNames)); err != nil {
 			continue
 		}
-
-		serviceRows, _ := h.db.Query(`
-			SELECT s.name FROM services s
-			JOIN categories c ON s.category_id = c.id
-			WHERE c.name = $1 AND s.enabled = true
-		`, co.Name)
-		if serviceRows != nil {
-			for serviceRows.Next() {
-				var name string
-				serviceRows.Scan(&name)
-				if runningByName[name] {
-					co.RunningServices++
-				}
+		for _, name := range serviceNames {
+			if runningByName[name] {
+				co.RunningServices++
 			}
-			serviceRows.Close()
 		}
-
 		categories = append(categories, co)
 	}
 

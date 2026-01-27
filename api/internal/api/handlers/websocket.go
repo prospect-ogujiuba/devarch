@@ -97,6 +97,7 @@ func (h *WebSocketHandler) broadcastStatus() {
 	defer h.mu.RUnlock()
 
 	for conn := range h.clients {
+		conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 		err := conn.WriteJSON(status)
 		if err != nil {
 			log.Printf("websocket write error: %v", err)
@@ -115,6 +116,7 @@ func (h *WebSocketHandler) pingClients() {
 	defer h.mu.RUnlock()
 
 	for conn := range h.clients {
+		conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 		err := conn.WriteMessage(websocket.PingMessage, nil)
 		if err != nil {
 			conn.Close()
@@ -127,6 +129,7 @@ func (h *WebSocketHandler) Broadcast(msg interface{}) {
 	defer h.mu.RUnlock()
 
 	for conn := range h.clients {
+		conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 		err := conn.WriteJSON(msg)
 		if err != nil {
 			conn.Close()

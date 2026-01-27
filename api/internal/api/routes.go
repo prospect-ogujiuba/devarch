@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/priz/devarch-api/internal/api/handlers"
+	mw "github.com/priz/devarch-api/internal/api/middleware"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/podman"
 	"github.com/priz/devarch-api/internal/sync"
@@ -23,19 +24,22 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
-		ExposedHeaders:   []string{"Link"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-API-Key"},
+		ExposedHeaders:   []string{"Link", "X-Total-Count", "X-Page", "X-Per-Page", "X-Total-Pages"},
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
 
 	serviceHandler := handlers.NewServiceHandler(db, containerClient, podmanClient)
-	categoryHandler := handlers.NewCategoryHandler(db)
+	categoryHandler := handlers.NewCategoryHandler(db, containerClient)
 	statusHandler := handlers.NewStatusHandler(db, podmanClient, syncManager)
 	registryHandler := handlers.NewRegistryHandler(db)
 	wsHandler := handlers.NewWebSocketHandler(syncManager)
+	runtimeHandler := handlers.NewRuntimeHandler(containerClient, podmanClient)
 
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Use(mw.APIKeyAuth)
+		r.Use(mw.RateLimit(10, 50))
 		r.Route("/services", func(r chi.Router) {
 			r.Get("/", serviceHandler.List)
 			r.Post("/", serviceHandler.Create)
@@ -75,6 +79,11 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 		r.Get("/sync/jobs", statusHandler.SyncJobs)
 
 		r.Get("/ws/status", wsHandler.Handle)
+
+		r.Get("/runtime/status", runtimeHandler.Status)
+		r.Post("/runtime/switch", runtimeHandler.Switch)
+		r.Get("/socket/status", runtimeHandler.SocketStatus)
+		r.Post("/socket/start", runtimeHandler.SocketStart)
 	})
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {

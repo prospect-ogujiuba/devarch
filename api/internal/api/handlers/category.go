@@ -17,15 +17,12 @@ type CategoryHandler struct {
 	generator       *compose.Generator
 }
 
-func NewCategoryHandler(db *sql.DB) *CategoryHandler {
+func NewCategoryHandler(db *sql.DB, cc *container.Client) *CategoryHandler {
 	return &CategoryHandler{
-		db:        db,
-		generator: compose.NewGenerator(db, "microservices-net"),
+		db:              db,
+		containerClient: cc,
+		generator:       compose.NewGenerator(db, "microservices-net"),
 	}
-}
-
-func (h *CategoryHandler) SetContainerClient(cc *container.Client) {
-	h.containerClient = cc
 }
 
 func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {

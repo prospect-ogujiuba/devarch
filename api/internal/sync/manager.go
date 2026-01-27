@@ -11,12 +11,14 @@ import (
 )
 
 type Manager struct {
-	db          *sql.DB
-	podman      *podman.Client
-	jobs        map[string]*Job
-	jobsMu      sync.RWMutex
-	statusCache *StatusCache
-	eventCancel context.CancelFunc
+	db           *sql.DB
+	podman       *podman.Client
+	jobs         map[string]*Job
+	jobsMu       sync.RWMutex
+	statusCache  *StatusCache
+	eventCancel  context.CancelFunc
+	registrySync *RegistrySync
+	trivyScanner *TrivyScanner
 }
 
 type Job struct {
@@ -43,9 +45,11 @@ type StatusUpdate struct {
 
 func NewManager(db *sql.DB, pc *podman.Client) *Manager {
 	return &Manager{
-		db:     db,
-		podman: pc,
-		jobs:   make(map[string]*Job),
+		db:           db,
+		podman:       pc,
+		jobs:         make(map[string]*Job),
+		registrySync: NewRegistrySync(db),
+		trivyScanner: NewTrivyScanner(db),
 		statusCache: &StatusCache{
 			data:       make(map[string]interface{}),
 			containers: make(map[string]string),
@@ -305,9 +309,17 @@ func (m *Manager) TriggerSync(syncType string) string {
 			m.syncContainerStatus(ctx)
 		case "metrics":
 			m.collectMetrics(ctx)
+		case "registry":
+			err = m.registrySync.SyncAll(ctx)
+		case "trivy":
+			err = m.trivyScanner.ScanAll(ctx)
 		case "all":
 			m.syncContainerStatus(ctx)
 			m.collectMetrics(ctx)
+			if syncErr := m.registrySync.SyncAll(ctx); syncErr != nil {
+				log.Printf("sync: registry sync failed: %v", syncErr)
+			}
+			err = m.trivyScanner.ScanAll(ctx)
 		}
 
 		m.jobsMu.Lock()
