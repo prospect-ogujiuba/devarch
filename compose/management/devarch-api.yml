@@ -6,7 +6,7 @@ services:
   devarch-api:
     container_name: devarch-api
     build:
-      context: ../../apps/devarch-api
+      context: ../../api
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
