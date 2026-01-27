@@ -20,6 +20,7 @@ type ServiceHandler struct {
 	containerClient *container.Client
 	podmanClient    *podman.Client
 	generator       *compose.Generator
+	validator       *compose.Validator
 }
 
 func NewServiceHandler(db *sql.DB, cc *container.Client, pc *podman.Client) *ServiceHandler {
@@ -28,6 +29,7 @@ func NewServiceHandler(db *sql.DB, cc *container.Client, pc *podman.Client) *Ser
 		containerClient: cc,
 		podmanClient:    pc,
 		generator:       compose.NewGenerator(db, "microservices-net"),
+		validator:       compose.NewValidator(db),
 	}
 }
 
@@ -195,7 +197,8 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 	err := h.db.QueryRow(`
 		SELECT s.id, s.name, s.category_id, s.image_name, s.image_tag,
 			s.restart_policy, s.command, s.user_spec, s.enabled,
-			s.created_at, s.updated_at, c.name as category_name
+			s.created_at, s.updated_at, c.name as category_name,
+			s.config_status, s.last_validated_at, s.validation_errors
 		FROM services s
 		JOIN categories c ON s.category_id = c.id
 		WHERE s.name = $1
@@ -203,6 +206,7 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 		&s.ID, &s.Name, &s.CategoryID, &s.ImageName, &s.ImageTag,
 		&s.RestartPolicy, &s.Command, &s.UserSpec, &s.Enabled,
 		&s.CreatedAt, &s.UpdatedAt, &catName,
+		&s.ConfigStatus, &s.LastValidatedAt, &s.ValidationErrors,
 	)
 	if err == sql.ErrNoRows {
 		http.Error(w, "service not found", http.StatusNotFound)
@@ -219,6 +223,9 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	if s.UserSpec.Valid {
 		s.UserSpecStr = s.UserSpec.String
+	}
+	if s.LastValidatedAt.Valid {
+		s.LastValidatedStr = &s.LastValidatedAt.Time
 	}
 
 	h.loadServiceRelations(&s)
@@ -391,8 +398,19 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	var serviceID int
-	err := h.db.QueryRow("SELECT id FROM services WHERE name = $1", name).Scan(&serviceID)
+	var s models.Service
+	var catName string
+	err := h.db.QueryRow(`
+		SELECT s.id, s.name, s.category_id, s.image_name, s.image_tag,
+			s.restart_policy, s.command, s.user_spec, s.enabled,
+			s.created_at, s.updated_at, c.name
+		FROM services s JOIN categories c ON s.category_id = c.id
+		WHERE s.name = $1
+	`, name).Scan(
+		&s.ID, &s.Name, &s.CategoryID, &s.ImageName, &s.ImageTag,
+		&s.RestartPolicy, &s.Command, &s.UserSpec, &s.Enabled,
+		&s.CreatedAt, &s.UpdatedAt, &catName,
+	)
 	if err == sql.ErrNoRows {
 		http.Error(w, "service not found", http.StatusNotFound)
 		return
@@ -401,6 +419,10 @@ func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Snapshot current config before updating
+	h.loadServiceRelations(&s)
+	h.snapshotConfig(&s, "pre-update")
 
 	var req createServiceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -415,9 +437,10 @@ func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 			restart_policy = COALESCE(NULLIF($3, ''), restart_policy),
 			command = NULLIF($4, ''),
 			user_spec = NULLIF($5, ''),
+			config_status = 'modified',
 			updated_at = NOW()
 		WHERE id = $6
-	`, req.ImageName, req.ImageTag, req.RestartPolicy, req.Command, req.UserSpec, serviceID)
+	`, req.ImageName, req.ImageTag, req.RestartPolicy, req.Command, req.UserSpec, s.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -425,6 +448,38 @@ func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func (h *ServiceHandler) snapshotConfig(s *models.Service, summary string) {
+	snapshot := map[string]interface{}{
+		"image_name":     s.ImageName,
+		"image_tag":      s.ImageTag,
+		"restart_policy": s.RestartPolicy,
+		"ports":          s.Ports,
+		"volumes":        s.Volumes,
+		"env_vars":       s.EnvVars,
+		"dependencies":   s.Dependencies,
+		"healthcheck":    s.Healthcheck,
+		"labels":         s.Labels,
+	}
+	if s.Command.Valid {
+		snapshot["command"] = s.Command.String
+	}
+	if s.UserSpec.Valid {
+		snapshot["user_spec"] = s.UserSpec.String
+	}
+
+	snapshotJSON, err := json.Marshal(snapshot)
+	if err != nil {
+		return
+	}
+
+	var nextVersion int
+	h.db.QueryRow(`SELECT COALESCE(MAX(version), 0) + 1 FROM service_config_versions WHERE service_id = $1`, s.ID).Scan(&nextVersion)
+	h.db.Exec(`
+		INSERT INTO service_config_versions (service_id, version, config_snapshot, change_summary)
+		VALUES ($1, $2, $3, $4)
+	`, s.ID, nextVersion, snapshotJSON, summary)
 }
 
 func (h *ServiceHandler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -713,4 +768,145 @@ func (h *ServiceHandler) Bulk(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(results)
+}
+
+func (h *ServiceHandler) Versions(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	var serviceID int
+	if err := h.db.QueryRow("SELECT id FROM services WHERE name = $1", name).Scan(&serviceID); err == sql.ErrNoRows {
+		http.Error(w, "service not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rows, err := h.db.Query(`
+		SELECT id, service_id, version, config_snapshot, COALESCE(change_summary, ''), created_at
+		FROM service_config_versions
+		WHERE service_id = $1
+		ORDER BY version DESC
+	`, serviceID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var versions []models.ConfigVersion
+	for rows.Next() {
+		var v models.ConfigVersion
+		if err := rows.Scan(&v.ID, &v.ServiceID, &v.Version, &v.ConfigSnapshot, &v.ChangeSummary, &v.CreatedAt); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		versions = append(versions, v)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(versions)
+}
+
+func (h *ServiceHandler) GetVersion(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	versionStr := chi.URLParam(r, "version")
+	version, err := strconv.Atoi(versionStr)
+	if err != nil {
+		http.Error(w, "invalid version", http.StatusBadRequest)
+		return
+	}
+
+	var serviceID int
+	if err := h.db.QueryRow("SELECT id FROM services WHERE name = $1", name).Scan(&serviceID); err == sql.ErrNoRows {
+		http.Error(w, "service not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var v models.ConfigVersion
+	err = h.db.QueryRow(`
+		SELECT id, service_id, version, config_snapshot, COALESCE(change_summary, ''), created_at
+		FROM service_config_versions
+		WHERE service_id = $1 AND version = $2
+	`, serviceID, version).Scan(&v.ID, &v.ServiceID, &v.Version, &v.ConfigSnapshot, &v.ChangeSummary, &v.CreatedAt)
+	if err == sql.ErrNoRows {
+		http.Error(w, "version not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(v)
+}
+
+func (h *ServiceHandler) Validate(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	var s models.Service
+	err := h.db.QueryRow(`SELECT id, name, image_name, image_tag, restart_policy, command, user_spec FROM services WHERE name = $1`, name).
+		Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec)
+	if err == sql.ErrNoRows {
+		http.Error(w, "service not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	h.loadServiceRelations(&s)
+	result := h.validator.Validate(&s)
+
+	// Update validation status in DB
+	status := "validated"
+	if !result.Valid {
+		status = "broken"
+	}
+	errorsJSON, _ := json.Marshal(result.Errors)
+	h.db.Exec(`
+		UPDATE services SET config_status = $1, last_validated_at = NOW(), validation_errors = $2
+		WHERE id = $3
+	`, status, errorsJSON, s.ID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func (h *ServiceHandler) Export(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	var s models.Service
+	var catName string
+	err := h.db.QueryRow(`
+		SELECT s.id, s.name, s.image_name, s.image_tag, s.restart_policy, s.command, s.user_spec, c.name
+		FROM services s JOIN categories c ON s.category_id = c.id
+		WHERE s.name = $1
+	`, name).Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec, &catName)
+	if err == sql.ErrNoRows {
+		http.Error(w, "service not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	composeYAML, err := h.generator.Generate(&s)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"service":  name,
+		"category": catName,
+		"yaml":     string(composeYAML),
+	})
 }

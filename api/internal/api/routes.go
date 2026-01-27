@@ -62,6 +62,11 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 				r.Get("/metrics", serviceHandler.Metrics)
 				r.Get("/compose", serviceHandler.Compose)
 
+				r.Get("/versions", serviceHandler.Versions)
+				r.Get("/versions/{version}", serviceHandler.GetVersion)
+				r.Post("/validate", serviceHandler.Validate)
+				r.Post("/export", serviceHandler.Export)
+
 				r.Get("/image", registryHandler.GetImage)
 				r.Get("/tags", registryHandler.GetTags)
 				r.Get("/vulnerabilities", registryHandler.GetVulnerabilities)
