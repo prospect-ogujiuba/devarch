@@ -2,13 +2,29 @@ import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { WebSocketMessage } from '@/types/api'
 
+const BASE_DELAY = 3000
+const MAX_DELAY = 30000
+
 export function useWebSocket() {
   const queryClient = useQueryClient()
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<number | null>(null)
+  const attemptRef = useRef(0)
 
   useEffect(() => {
     let mounted = true
+
+    function getDelay() {
+      const delay = Math.min(BASE_DELAY * 2 ** attemptRef.current, MAX_DELAY)
+      attemptRef.current++
+      return delay
+    }
+
+    function scheduleReconnect() {
+      if (mounted) {
+        reconnectTimeoutRef.current = window.setTimeout(connect, getDelay())
+      }
+    }
 
     function connect() {
       if (!mounted) return
@@ -21,7 +37,7 @@ export function useWebSocket() {
         wsRef.current = ws
 
         ws.onopen = () => {
-          console.log('WebSocket connected')
+          attemptRef.current = 0
         }
 
         ws.onmessage = (event) => {
@@ -32,27 +48,20 @@ export function useWebSocket() {
               queryClient.invalidateQueries({ queryKey: ['status'] })
               queryClient.invalidateQueries({ queryKey: ['categories'] })
             }
-          } catch (e) {
-            console.error('Failed to parse WebSocket message:', e)
+          } catch {
+            // ignore malformed messages
           }
         }
 
         ws.onclose = () => {
-          console.log('WebSocket disconnected, reconnecting...')
-          if (mounted) {
-            reconnectTimeoutRef.current = window.setTimeout(connect, 3000)
-          }
+          scheduleReconnect()
         }
 
-        ws.onerror = (error) => {
-          console.error('WebSocket error:', error)
+        ws.onerror = () => {
           ws.close()
         }
-      } catch (error) {
-        console.error('Failed to create WebSocket:', error)
-        if (mounted) {
-          reconnectTimeoutRef.current = window.setTimeout(connect, 3000)
-        }
+      } catch {
+        scheduleReconnect()
       }
     }
 
