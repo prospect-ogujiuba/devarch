@@ -1,22 +1,9 @@
 import { Link } from '@tanstack/react-router'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import {
-  Code2, Globe, GitBranch, Package, ExternalLink,
-  FileCode, Blocks, Hexagon, Gem, Flame,
-} from 'lucide-react'
+import { Globe, GitBranch, Package, ExternalLink, Puzzle, Palette } from 'lucide-react'
+import { ProjectLogo } from '@/components/projects/project-logo'
 import type { Project } from '@/types/api'
-
-const typeIcons: Record<string, React.ReactNode> = {
-  laravel: <Flame className="size-5 text-red-500" />,
-  wordpress: <Blocks className="size-5 text-blue-500" />,
-  node: <Hexagon className="size-5 text-green-500" />,
-  go: <Code2 className="size-5 text-cyan-500" />,
-  rust: <Gem className="size-5 text-orange-500" />,
-  python: <FileCode className="size-5 text-yellow-500" />,
-  php: <FileCode className="size-5 text-purple-500" />,
-  unknown: <Package className="size-5 text-muted-foreground" />,
-}
 
 const typeColors: Record<string, string> = {
   laravel: 'bg-red-500/10 text-red-500 border-red-500/20',
@@ -28,10 +15,23 @@ const typeColors: Record<string, string> = {
   php: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
 }
 
+function countDeps(deps: Record<string, unknown>): number {
+  let count = 0
+  for (const val of Object.values(deps)) {
+    if (Array.isArray(val)) count += val.length
+    else if (typeof val === 'object' && val !== null) count += Object.keys(val).length
+    else count++
+  }
+  return count
+}
+
 export function ProjectCard({ project }: { project: Project }) {
-  const depCount = Object.keys(project.dependencies ?? {}).length
-  const icon = typeIcons[project.project_type] ?? typeIcons.unknown
+  const deps = project.dependencies ?? {}
+  const depCount = countDeps(deps)
   const colorClass = typeColors[project.project_type] ?? ''
+  const plugins = Array.isArray(deps.plugins) ? deps.plugins : []
+  const themes = Array.isArray(deps.themes) ? deps.themes : []
+  const isWordPress = project.project_type === 'wordpress'
 
   return (
     <Link to="/projects/$name" params={{ name: project.name }}>
@@ -39,12 +39,23 @@ export function ProjectCard({ project }: { project: Project }) {
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {icon}
+              <ProjectLogo
+                projectType={project.project_type}
+                framework={project.framework}
+                language={project.language}
+              />
               <CardTitle className="text-base">{project.name}</CardTitle>
             </div>
-            <Badge variant="outline" className={colorClass}>
-              {project.project_type}
-            </Badge>
+            <div className="flex items-center gap-2">
+              {project.version && (
+                <Badge variant="secondary" className="text-xs font-mono">
+                  v{project.version}
+                </Badge>
+              )}
+              <Badge variant="outline" className={colorClass}>
+                {project.project_type}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -87,6 +98,18 @@ export function ProjectCard({ project }: { project: Project }) {
               <span className="flex items-center gap-1">
                 <Package className="size-3" />
                 {depCount} deps
+              </span>
+            )}
+            {isWordPress && plugins.length > 0 && (
+              <span className="flex items-center gap-1">
+                <Puzzle className="size-3" />
+                {plugins.length} plugins
+              </span>
+            )}
+            {isWordPress && themes.length > 0 && (
+              <span className="flex items-center gap-1">
+                <Palette className="size-3" />
+                {themes.length} themes
               </span>
             )}
             {project.proxy_port && (

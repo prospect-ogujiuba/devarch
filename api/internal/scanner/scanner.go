@@ -1,12 +1,14 @@
 package scanner
 
 import (
+	"bufio"
 	"database/sql"
 	"encoding/json"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -91,13 +93,16 @@ func (s *Scanner) scanProject(name, dir string) ProjectInfo {
 	hasCargo := fileExists(filepath.Join(dir, "Cargo.toml"))
 	hasPyProject := fileExists(filepath.Join(dir, "pyproject.toml"))
 	hasRequirements := fileExists(filepath.Join(dir, "requirements.txt"))
-	hasWpConfig := fileExists(filepath.Join(dir, "wp-config.php")) || fileExists(filepath.Join(dir, "wp-config-sample.php"))
+	hasWpConfig := fileExists(filepath.Join(dir, "wp-config.php")) || fileExists(filepath.Join(dir, "wp-config-sample.php")) ||
+		fileExists(filepath.Join(dir, "wp-includes", "version.php")) || fileExists(filepath.Join(dir, "wp-content"))
 	hasArtisan := fileExists(filepath.Join(dir, "artisan"))
 
 	switch {
 	case hasComposer && hasArtisan:
 		s.scanLaravel(&p, dir)
 	case hasComposer && hasWpConfig:
+		s.scanWordPress(&p, dir)
+	case hasWpConfig:
 		s.scanWordPress(&p, dir)
 	case hasComposer:
 		s.scanComposer(&p, dir)
@@ -148,13 +153,34 @@ func (s *Scanner) scanLaravel(p *ProjectInfo, dir string) {
 		if v, ok := req["laravel/framework"].(string); ok {
 			p.Framework = "Laravel " + v
 		}
+		if phpVer, ok := req["php"].(string); ok {
+			p.Version = "PHP " + phpVer
+		}
+		// Detect sub-frameworks
+		for name := range req {
+			switch {
+			case name == "livewire/livewire":
+				p.Framework = appendFramework(p.Framework, "Livewire")
+			case name == "inertiajs/inertia-laravel":
+				p.Framework = appendFramework(p.Framework, "Inertia")
+			case name == "filament/filament":
+				p.Framework = appendFramework(p.Framework, "Filament")
+			}
+		}
 		deps, _ := json.Marshal(req)
 		p.Dependencies = deps
 	}
 
 	if scripts, ok := data["scripts"].(map[string]interface{}); ok {
-		s, _ := json.Marshal(scripts)
-		p.Scripts = s
+		sc, _ := json.Marshal(scripts)
+		p.Scripts = sc
+	}
+
+	// Fallback description from .env APP_NAME
+	if p.Description == "" {
+		if appName := readEnvValue(filepath.Join(dir, ".env"), "APP_NAME"); appName != "" {
+			p.Description = appName
+		}
 	}
 
 	if fileExists(filepath.Join(dir, "package.json")) {
@@ -165,16 +191,89 @@ func (s *Scanner) scanLaravel(p *ProjectInfo, dir string) {
 func (s *Scanner) scanWordPress(p *ProjectInfo, dir string) {
 	p.ProjectType = "wordpress"
 	p.Language = "php"
-	p.PackageManager = "composer"
 	p.EntryPoint = "index.php"
 	p.Framework = "WordPress"
 
-	data := readJSON(filepath.Join(dir, "composer.json"))
-	if data != nil {
-		if req, ok := data["require"].(map[string]interface{}); ok {
-			deps, _ := json.Marshal(req)
-			p.Dependencies = deps
+	// Parse wp version from wp-includes/version.php
+	versionFile := filepath.Join(dir, "wp-includes", "version.php")
+	if content, err := os.ReadFile(versionFile); err == nil {
+		re := regexp.MustCompile(`\$wp_version\s*=\s*'([^']+)'`)
+		if m := re.FindSubmatch(content); len(m) > 1 {
+			p.Framework = "WordPress " + string(m[1])
+			p.Version = string(m[1])
 		}
+	}
+
+	// Build structured deps
+	depsMap := make(map[string]interface{})
+
+	// Plugins
+	pluginsDir := filepath.Join(dir, "wp-content", "plugins")
+	if entries, err := os.ReadDir(pluginsDir); err == nil {
+		var plugins []string
+		for _, e := range entries {
+			if e.IsDir() && !strings.HasPrefix(e.Name(), ".") {
+				plugins = append(plugins, e.Name())
+			}
+		}
+		if len(plugins) > 0 {
+			depsMap["plugins"] = plugins
+		}
+	}
+
+	// Themes
+	themesDir := filepath.Join(dir, "wp-content", "themes")
+	if entries, err := os.ReadDir(themesDir); err == nil {
+		var themes []string
+		for _, e := range entries {
+			if e.IsDir() && !strings.HasPrefix(e.Name(), ".") {
+				themes = append(themes, e.Name())
+			}
+		}
+		if len(themes) > 0 {
+			depsMap["themes"] = themes
+		}
+	}
+
+	// Detect active theme
+	if themes, ok := depsMap["themes"].([]string); ok {
+		for _, theme := range themes {
+			stylePath := filepath.Join(themesDir, theme, "style.css")
+			if content, err := os.ReadFile(stylePath); err == nil {
+				re := regexp.MustCompile(`(?i)Theme Name:\s*(.+)`)
+				if m := re.FindSubmatch(content); len(m) > 1 {
+					themeName := strings.TrimSpace(string(m[1]))
+					if p.Description == "" {
+						p.Description = "Theme: " + themeName
+					}
+				}
+			}
+		}
+	}
+
+	// Composer deps
+	if data := readJSON(filepath.Join(dir, "composer.json")); data != nil {
+		p.PackageManager = "composer"
+		if req, ok := data["require"].(map[string]interface{}); ok {
+			depsMap["php"] = req
+		}
+	}
+
+	// wp-config.php metadata (safe values only)
+	wpConfig := filepath.Join(dir, "wp-config.php")
+	if content, err := os.ReadFile(wpConfig); err == nil {
+		src := string(content)
+		if m := regexp.MustCompile(`define\(\s*'DB_NAME'\s*,\s*'([^']+)'`).FindStringSubmatch(src); len(m) > 1 {
+			depsMap["db_name"] = m[1]
+		}
+		if m := regexp.MustCompile(`\$table_prefix\s*=\s*'([^']+)'`).FindStringSubmatch(src); len(m) > 1 {
+			depsMap["table_prefix"] = m[1]
+		}
+	}
+
+	if len(depsMap) > 0 {
+		deps, _ := json.Marshal(depsMap)
+		p.Dependencies = deps
 	}
 }
 
@@ -206,12 +305,84 @@ func (s *Scanner) scanGo(p *ProjectInfo, dir string) {
 	if err != nil {
 		return
 	}
+
 	lines := strings.Split(string(content), "\n")
 	if len(lines) > 0 {
 		parts := strings.Fields(lines[0])
 		if len(parts) >= 2 {
 			p.Description = parts[1]
 		}
+	}
+
+	// Parse go version
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "go ") && !strings.HasPrefix(line, "go.") {
+			p.Version = strings.TrimPrefix(line, "go ")
+			break
+		}
+	}
+
+	// Parse require block for deps and framework detection
+	deps := make(map[string]interface{})
+	inRequire := false
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "require (" {
+			inRequire = true
+			continue
+		}
+		if line == ")" {
+			inRequire = false
+			continue
+		}
+		// Single-line require
+		if strings.HasPrefix(line, "require ") && !strings.Contains(line, "(") {
+			parts := strings.Fields(strings.TrimPrefix(line, "require "))
+			if len(parts) >= 2 {
+				deps[parts[0]] = parts[1]
+			}
+			continue
+		}
+		if inRequire {
+			parts := strings.Fields(line)
+			if len(parts) >= 2 && !strings.HasPrefix(parts[0], "//") {
+				deps[parts[0]] = parts[1]
+			}
+		}
+	}
+
+	// Framework detection
+	frameworkMap := map[string]string{
+		"github.com/gin-gonic/gin":   "Gin",
+		"github.com/labstack/echo":   "Echo",
+		"github.com/gofiber/fiber":   "Fiber",
+		"github.com/go-chi/chi":      "Chi",
+		"github.com/gorilla/mux":     "Gorilla Mux",
+	}
+	for dep := range deps {
+		for prefix, fw := range frameworkMap {
+			if strings.HasPrefix(dep, prefix) {
+				p.Framework = fw
+				break
+			}
+		}
+		if p.Framework != "" {
+			break
+		}
+	}
+
+	if len(deps) > 0 {
+		d, _ := json.Marshal(deps)
+		p.Dependencies = d
+	}
+
+	// EntryPoint detection
+	if matches, _ := filepath.Glob(filepath.Join(dir, "cmd", "*", "main.go")); len(matches) > 0 {
+		rel, _ := filepath.Rel(dir, matches[0])
+		p.EntryPoint = rel
+	} else if fileExists(filepath.Join(dir, "main.go")) {
+		p.EntryPoint = "main.go"
 	}
 }
 
@@ -220,16 +391,192 @@ func (s *Scanner) scanRust(p *ProjectInfo, dir string) {
 	p.Language = "rust"
 	p.PackageManager = "cargo"
 	p.EntryPoint = "src/main.rs"
+
+	content, err := os.ReadFile(filepath.Join(dir, "Cargo.toml"))
+	if err != nil {
+		return
+	}
+
+	lines := strings.Split(string(content), "\n")
+	section := ""
+	deps := make(map[string]interface{})
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "[") {
+			section = strings.Trim(trimmed, "[]")
+			continue
+		}
+		if !strings.Contains(trimmed, "=") || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		parts := strings.SplitN(trimmed, "=", 2)
+		key := strings.TrimSpace(parts[0])
+		val := strings.TrimSpace(parts[1])
+		val = strings.Trim(val, "\"")
+
+		switch section {
+		case "package":
+			switch key {
+			case "name":
+				if p.Description == "" {
+					p.Description = val
+				}
+			case "version":
+				p.Version = val
+			case "description":
+				p.Description = val
+			case "edition":
+				// store as metadata in deps
+				deps["edition"] = val
+			}
+		case "dependencies":
+			deps[key] = val
+		}
+	}
+
+	// Framework detection
+	frameworkMap := map[string]string{
+		"actix-web": "Actix Web",
+		"axum":      "Axum",
+		"rocket":    "Rocket",
+		"warp":      "Warp",
+	}
+	for dep := range deps {
+		if fw, ok := frameworkMap[dep]; ok {
+			p.Framework = fw
+			break
+		}
+	}
+
+	if len(deps) > 0 {
+		d, _ := json.Marshal(deps)
+		p.Dependencies = d
+	}
 }
 
 func (s *Scanner) scanPython(p *ProjectInfo, dir string) {
 	p.ProjectType = "python"
 	p.Language = "python"
+	p.PackageManager = "pip"
 
-	if fileExists(filepath.Join(dir, "pyproject.toml")) {
-		p.PackageManager = "pip"
-	} else {
-		p.PackageManager = "pip"
+	deps := make(map[string]interface{})
+
+	// Try pyproject.toml first
+	pyprojectPath := filepath.Join(dir, "pyproject.toml")
+	if content, err := os.ReadFile(pyprojectPath); err == nil {
+		lines := strings.Split(string(content), "\n")
+		section := ""
+		inDeps := false
+
+		for _, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "[") {
+				section = strings.Trim(trimmed, "[]")
+				inDeps = section == "project.dependencies" || section == "tool.poetry.dependencies"
+				continue
+			}
+			if !strings.Contains(trimmed, "=") && !inDeps {
+				continue
+			}
+
+			if section == "project" || section == "tool.poetry" {
+				parts := strings.SplitN(trimmed, "=", 2)
+				if len(parts) != 2 {
+					continue
+				}
+				key := strings.TrimSpace(parts[0])
+				val := strings.TrimSpace(parts[1])
+				val = strings.Trim(val, "\"")
+				switch key {
+				case "name":
+					if p.Description == "" {
+						p.Description = val
+					}
+				case "version":
+					p.Version = val
+				case "description":
+					p.Description = val
+				}
+			}
+
+			// Dependencies as array in [project]
+			if inDeps {
+				dep := strings.Trim(trimmed, " ,\"[]")
+				if dep != "" && !strings.HasPrefix(dep, "#") {
+					// Parse "package>=1.0" style
+					re := regexp.MustCompile(`^([a-zA-Z0-9_-]+)(.*)$`)
+					if m := re.FindStringSubmatch(dep); len(m) > 1 {
+						deps[m[1]] = strings.TrimSpace(m[2])
+					}
+				}
+			}
+
+			// Poetry-style key = "version" deps
+			if section == "tool.poetry.dependencies" {
+				parts := strings.SplitN(trimmed, "=", 2)
+				if len(parts) == 2 {
+					key := strings.TrimSpace(parts[0])
+					val := strings.TrimSpace(parts[1])
+					val = strings.Trim(val, "\"")
+					deps[key] = val
+				}
+			}
+		}
+
+		// Check for poetry
+		if strings.Contains(string(content), "[tool.poetry]") {
+			p.PackageManager = "poetry"
+		}
+	}
+
+	// Fallback: requirements.txt
+	reqPath := filepath.Join(dir, "requirements.txt")
+	if len(deps) == 0 {
+		if content, err := os.ReadFile(reqPath); err == nil {
+			for _, line := range strings.Split(string(content), "\n") {
+				line = strings.TrimSpace(line)
+				if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "-") {
+					continue
+				}
+				re := regexp.MustCompile(`^([a-zA-Z0-9_.-]+)(.*)$`)
+				if m := re.FindStringSubmatch(line); len(m) > 1 {
+					deps[m[1]] = strings.TrimSpace(m[2])
+				}
+			}
+		}
+	}
+
+	// Framework detection
+	frameworkMap := map[string]string{
+		"django":    "Django",
+		"Django":    "Django",
+		"flask":     "Flask",
+		"Flask":     "Flask",
+		"fastapi":   "FastAPI",
+		"FastAPI":   "FastAPI",
+		"starlette": "Starlette",
+		"Starlette": "Starlette",
+	}
+	for dep := range deps {
+		if fw, ok := frameworkMap[dep]; ok {
+			p.Framework = fw
+			break
+		}
+	}
+
+	// EntryPoint detection
+	if fileExists(filepath.Join(dir, "manage.py")) {
+		p.EntryPoint = "manage.py"
+	} else if fileExists(filepath.Join(dir, "app.py")) {
+		p.EntryPoint = "app.py"
+	} else if fileExists(filepath.Join(dir, "main.py")) {
+		p.EntryPoint = "main.py"
+	}
+
+	if len(deps) > 0 {
+		d, _ := json.Marshal(deps)
+		p.Dependencies = d
 	}
 }
 
@@ -264,6 +611,15 @@ func (s *Scanner) scanNode(p *ProjectInfo, dir string) {
 		p.PackageManager = "bun"
 	}
 
+	// Detect monorepo
+	if _, ok := data["workspaces"]; ok {
+		if p.Description == "" {
+			p.Description = "monorepo"
+		} else {
+			p.Description = p.Description + " (monorepo)"
+		}
+	}
+
 	if deps, ok := data["dependencies"].(map[string]interface{}); ok {
 		d, _ := json.Marshal(deps)
 		p.Dependencies = d
@@ -276,24 +632,42 @@ func (s *Scanner) scanNode(p *ProjectInfo, dir string) {
 			case name == "nuxt":
 				p.Framework = "Nuxt"
 			case name == "react":
-				p.Framework = "React"
+				if p.Framework == "" {
+					p.Framework = "React"
+				}
 			case name == "vue":
-				p.Framework = "Vue"
+				if p.Framework == "" {
+					p.Framework = "Vue"
+				}
 			case name == "svelte":
 				p.Framework = "Svelte"
 			case name == "@angular/core":
 				p.Framework = "Angular"
 			case name == "express":
-				p.Framework = "Express"
+				if p.Framework == "" {
+					p.Framework = "Express"
+				}
 			case name == "fastify":
-				p.Framework = "Fastify"
+				if p.Framework == "" {
+					p.Framework = "Fastify"
+				}
+			case name == "remix" || name == "@remix-run/react":
+				p.Framework = "Remix"
+			case name == "astro":
+				p.Framework = "Astro"
+			case name == "gatsby":
+				p.Framework = "Gatsby"
+			case name == "@nestjs/core":
+				p.Framework = "NestJS"
+			case name == "hono":
+				p.Framework = "Hono"
 			}
 		}
 	}
 
 	if scripts, ok := data["scripts"].(map[string]interface{}); ok {
-		s, _ := json.Marshal(scripts)
-		p.Scripts = s
+		sc, _ := json.Marshal(scripts)
+		p.Scripts = sc
 	}
 
 	if fileExists(filepath.Join(dir, "tsconfig.json")) {
@@ -416,4 +790,31 @@ func readJSON(path string) map[string]interface{} {
 		return nil
 	}
 	return result
+}
+
+func readEnvValue(path, key string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	prefix := key + "="
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, prefix) {
+			val := strings.TrimPrefix(line, prefix)
+			val = strings.Trim(val, "\"'")
+			return val
+		}
+	}
+	return ""
+}
+
+func appendFramework(base, addition string) string {
+	if base == "" {
+		return addition
+	}
+	return base + " + " + addition
 }

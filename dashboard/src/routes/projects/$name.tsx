@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Globe, GitBranch, Package, Code2, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Loader2, Globe, GitBranch, Package, Code2, ExternalLink, Puzzle, Palette } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ProjectLogo } from '@/components/projects/project-logo'
 import { useProject } from '@/features/projects/queries'
 
 export const Route = createFileRoute('/projects/$name')({
@@ -37,8 +38,18 @@ function ProjectDetailPage() {
 
   const deps = project.dependencies ?? {}
   const scripts = project.scripts ?? {}
-  const depEntries = Object.entries(deps)
   const scriptEntries = Object.entries(scripts)
+  const isWordPress = project.project_type === 'wordpress'
+  const plugins = Array.isArray(deps.plugins) ? (deps.plugins as string[]) : []
+  const themes = Array.isArray(deps.themes) ? (deps.themes as string[]) : []
+  const phpDeps = (typeof deps.php === 'object' && deps.php !== null && !Array.isArray(deps.php))
+    ? Object.entries(deps.php as Record<string, string>)
+    : []
+
+  // For non-WordPress: flat deps as [name, version] pairs
+  const flatDeps = isWordPress
+    ? phpDeps
+    : Object.entries(deps).filter(([, v]) => typeof v === 'string') as [string, string][]
 
   return (
     <div className="space-y-6">
@@ -46,10 +57,19 @@ function ProjectDetailPage() {
         <Link to="/projects" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-5" />
         </Link>
+        <ProjectLogo
+          projectType={project.project_type}
+          framework={project.framework}
+          language={project.language}
+          className="size-8"
+        />
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">{project.name}</h1>
             <Badge variant="outline" className="capitalize">{project.project_type}</Badge>
+            {project.version && (
+              <Badge variant="secondary" className="font-mono text-xs">v{project.version}</Badge>
+            )}
           </div>
           {project.description && (
             <p className="text-muted-foreground">{project.description}</p>
@@ -126,7 +146,19 @@ function ProjectDetailPage() {
       <Tabs defaultValue="info" className="space-y-4">
         <TabsList>
           <TabsTrigger value="info">Info</TabsTrigger>
-          <TabsTrigger value="deps">Dependencies ({depEntries.length})</TabsTrigger>
+          <TabsTrigger value="deps">Dependencies ({flatDeps.length})</TabsTrigger>
+          {isWordPress && plugins.length > 0 && (
+            <TabsTrigger value="plugins" className="flex items-center gap-1.5">
+              <Puzzle className="size-3.5" />
+              Plugins ({plugins.length})
+            </TabsTrigger>
+          )}
+          {isWordPress && themes.length > 0 && (
+            <TabsTrigger value="themes" className="flex items-center gap-1.5">
+              <Palette className="size-3.5" />
+              Themes ({themes.length})
+            </TabsTrigger>
+          )}
           <TabsTrigger value="scripts">Scripts ({scriptEntries.length})</TabsTrigger>
           <TabsTrigger value="git">Git</TabsTrigger>
         </TabsList>
@@ -149,6 +181,8 @@ function ProjectDetailPage() {
                 {project.frontend_framework && <Row label="Frontend" value={project.frontend_framework} />}
                 {project.domain && <Row label="Domain" value={project.domain} />}
                 {project.proxy_port && <Row label="Proxy Port" value={String(project.proxy_port)} />}
+                {isWordPress && deps.db_name && <Row label="Database" value={String(deps.db_name)} />}
+                {isWordPress && deps.table_prefix && <Row label="Table Prefix" value={String(deps.table_prefix)} mono />}
                 {project.last_scanned_at && (
                   <Row label="Last Scanned" value={new Date(project.last_scanned_at).toLocaleString()} />
                 )}
@@ -163,12 +197,12 @@ function ProjectDetailPage() {
               <CardTitle className="text-base">Dependencies</CardTitle>
             </CardHeader>
             <CardContent>
-              {depEntries.length > 0 ? (
+              {flatDeps.length > 0 ? (
                 <div className="grid gap-1">
-                  {depEntries.map(([name, version]) => (
-                    <div key={name} className="flex items-center justify-between text-sm py-1 border-b border-border/50 last:border-0">
-                      <span className="font-mono">{name}</span>
-                      <Badge variant="secondary" className="font-mono text-xs">{version}</Badge>
+                  {flatDeps.map(([depName, version]) => (
+                    <div key={depName} className="flex items-center justify-between text-sm py-1 border-b border-border/50 last:border-0">
+                      <span className="font-mono">{depName}</span>
+                      <Badge variant="secondary" className="font-mono text-xs">{String(version)}</Badge>
                     </div>
                   ))}
                 </div>
@@ -179,6 +213,50 @@ function ProjectDetailPage() {
           </Card>
         </TabsContent>
 
+        {isWordPress && plugins.length > 0 && (
+          <TabsContent value="plugins">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Puzzle className="size-4" />
+                  Plugins ({plugins.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-1">
+                  {plugins.map((plugin) => (
+                    <div key={plugin} className="flex items-center text-sm py-1.5 border-b border-border/50 last:border-0">
+                      <span className="font-mono">{plugin}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {isWordPress && themes.length > 0 && (
+          <TabsContent value="themes">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Palette className="size-4" />
+                  Themes ({themes.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-1">
+                  {themes.map((theme) => (
+                    <div key={theme} className="flex items-center text-sm py-1.5 border-b border-border/50 last:border-0">
+                      <span className="font-mono">{theme}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
         <TabsContent value="scripts">
           <Card>
             <CardHeader>
@@ -187,9 +265,9 @@ function ProjectDetailPage() {
             <CardContent>
               {scriptEntries.length > 0 ? (
                 <div className="grid gap-2">
-                  {scriptEntries.map(([name, cmd]) => (
-                    <div key={name} className="text-sm py-1 border-b border-border/50 last:border-0">
-                      <span className="font-semibold">{name}</span>
+                  {scriptEntries.map(([scriptName, cmd]) => (
+                    <div key={scriptName} className="text-sm py-1 border-b border-border/50 last:border-0">
+                      <span className="font-semibold">{scriptName}</span>
                       <pre className="text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap">{cmd}</pre>
                     </div>
                   ))}

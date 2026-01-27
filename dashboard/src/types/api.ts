@@ -269,7 +269,7 @@ export interface Project {
   frontend_framework?: string
   domain?: string
   proxy_port?: number
-  dependencies: Record<string, string>
+  dependencies: Record<string, unknown>
   scripts: Record<string, string>
   git_remote?: string
   git_branch?: string
