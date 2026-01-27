@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"encoding/json"
 	"time"
 )
 
@@ -174,6 +175,87 @@ type ImageTag struct {
 	PushedAtStr  *time.Time     `json:"pushed_at,omitempty"`
 	LastSyncedAt sql.NullTime   `json:"-"`
 	LastSynced   *time.Time     `json:"last_synced_at,omitempty"`
+}
+
+type Project struct {
+	ID                int             `json:"id"`
+	Name              string          `json:"name"`
+	Path              string          `json:"path"`
+	ProjectType       string          `json:"project_type"`
+	Framework         sql.NullString  `json:"-"`
+	FrameworkStr      string          `json:"framework,omitempty"`
+	Language          sql.NullString  `json:"-"`
+	LanguageStr       string          `json:"language,omitempty"`
+	PackageManager    sql.NullString  `json:"-"`
+	PackageManagerStr string          `json:"package_manager,omitempty"`
+	Description       sql.NullString  `json:"-"`
+	DescriptionStr    string          `json:"description,omitempty"`
+	Version           sql.NullString  `json:"-"`
+	VersionStr        string          `json:"version,omitempty"`
+	License           sql.NullString  `json:"-"`
+	LicenseStr        string          `json:"license,omitempty"`
+	EntryPoint        sql.NullString  `json:"-"`
+	EntryPointStr     string          `json:"entry_point,omitempty"`
+	HasFrontend       bool            `json:"has_frontend"`
+	FrontendFramework sql.NullString  `json:"-"`
+	FrontendFwStr     string          `json:"frontend_framework,omitempty"`
+	Domain            sql.NullString  `json:"-"`
+	DomainStr         string          `json:"domain,omitempty"`
+	ProxyPort         sql.NullInt32   `json:"-"`
+	ProxyPortInt      *int            `json:"proxy_port,omitempty"`
+	Dependencies      json.RawMessage `json:"dependencies"`
+	Scripts           json.RawMessage `json:"scripts"`
+	GitRemote         sql.NullString  `json:"-"`
+	GitRemoteStr      string          `json:"git_remote,omitempty"`
+	GitBranch         sql.NullString  `json:"-"`
+	GitBranchStr      string          `json:"git_branch,omitempty"`
+	LastScannedAt     sql.NullTime    `json:"-"`
+	LastScannedAtStr  *time.Time      `json:"last_scanned_at,omitempty"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+}
+
+func (p *Project) ResolveNulls() {
+	if p.Framework.Valid {
+		p.FrameworkStr = p.Framework.String
+	}
+	if p.Language.Valid {
+		p.LanguageStr = p.Language.String
+	}
+	if p.PackageManager.Valid {
+		p.PackageManagerStr = p.PackageManager.String
+	}
+	if p.Description.Valid {
+		p.DescriptionStr = p.Description.String
+	}
+	if p.Version.Valid {
+		p.VersionStr = p.Version.String
+	}
+	if p.License.Valid {
+		p.LicenseStr = p.License.String
+	}
+	if p.EntryPoint.Valid {
+		p.EntryPointStr = p.EntryPoint.String
+	}
+	if p.FrontendFramework.Valid {
+		p.FrontendFwStr = p.FrontendFramework.String
+	}
+	if p.Domain.Valid {
+		p.DomainStr = p.Domain.String
+	}
+	if p.ProxyPort.Valid {
+		v := int(p.ProxyPort.Int32)
+		p.ProxyPortInt = &v
+	}
+	if p.GitRemote.Valid {
+		p.GitRemoteStr = p.GitRemote.String
+	}
+	if p.GitBranch.Valid {
+		p.GitBranchStr = p.GitBranch.String
+	}
+	if p.LastScannedAt.Valid {
+		p.LastScannedAtStr = &p.LastScannedAt.Time
+	}
 }
 
 type Vulnerability struct {
