@@ -11,10 +11,11 @@ import (
 	mw "github.com/priz/devarch-api/internal/api/middleware"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/podman"
+	"github.com/priz/devarch-api/internal/scanner"
 	"github.com/priz/devarch-api/internal/sync"
 )
 
-func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podman.Client, syncManager *sync.Manager) http.Handler {
+func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podman.Client, syncManager *sync.Manager, projectScanner *scanner.Scanner) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
@@ -35,6 +36,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	statusHandler := handlers.NewStatusHandler(db, podmanClient, syncManager)
 	registryHandler := handlers.NewRegistryHandler(db)
 	wsHandler := handlers.NewWebSocketHandler(syncManager)
+	projectHandler := handlers.NewProjectHandler(db, projectScanner)
 	runtimeHandler := handlers.NewRuntimeHandler(containerClient, podmanClient)
 
 	r.Route("/api/v1", func(r chi.Router) {
@@ -72,6 +74,12 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 			r.Get("/{name}/services", categoryHandler.Services)
 			r.Post("/{name}/start", categoryHandler.Start)
 			r.Post("/{name}/stop", categoryHandler.Stop)
+		})
+
+		r.Route("/projects", func(r chi.Router) {
+			r.Get("/", projectHandler.List)
+			r.Post("/scan", projectHandler.Scan)
+			r.Get("/{name}", projectHandler.Get)
 		})
 
 		r.Get("/status", statusHandler.Overview)

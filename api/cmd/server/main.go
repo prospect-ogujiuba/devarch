@@ -13,6 +13,7 @@ import (
 	"github.com/priz/devarch-api/internal/api"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/podman"
+	"github.com/priz/devarch-api/internal/scanner"
 	"github.com/priz/devarch-api/internal/sync"
 
 	_ "github.com/lib/pq"
@@ -49,8 +50,20 @@ func main() {
 		log.Printf("warning: container client unavailable (compose operations disabled): %v", err)
 	}
 
+	appsDir := os.Getenv("APPS_DIR")
+	if appsDir == "" {
+		appsDir = "/workspace/apps"
+	}
+	projectScanner := scanner.NewScanner(db, appsDir)
+
+	if _, err := projectScanner.ScanAndPersist(); err != nil {
+		log.Printf("initial project scan failed: %v", err)
+	} else {
+		log.Println("initial project scan complete")
+	}
+
 	syncManager := sync.NewManager(db, podmanClient)
-	router := api.NewRouter(db, containerClient, podmanClient, syncManager)
+	router := api.NewRouter(db, containerClient, podmanClient, syncManager, projectScanner)
 
 	port := os.Getenv("PORT")
 	if port == "" {
