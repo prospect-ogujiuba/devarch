@@ -218,6 +218,32 @@ type ImageTag struct {
 	LastSynced   *time.Time     `json:"last_synced_at,omitempty"`
 }
 
+type ProjectService struct {
+	ID            int             `json:"id"`
+	ProjectID     int             `json:"project_id"`
+	ServiceName   string          `json:"service_name"`
+	ContainerName sql.NullString  `json:"-"`
+	ContainerStr  string          `json:"container_name,omitempty"`
+	Image         sql.NullString  `json:"-"`
+	ImageStr      string          `json:"image,omitempty"`
+	ServiceType   sql.NullString  `json:"-"`
+	ServiceTypeStr string         `json:"service_type,omitempty"`
+	Ports         json.RawMessage `json:"ports"`
+	DependsOn     json.RawMessage `json:"depends_on"`
+}
+
+func (ps *ProjectService) ResolveNulls() {
+	if ps.ContainerName.Valid {
+		ps.ContainerStr = ps.ContainerName.String
+	}
+	if ps.Image.Valid {
+		ps.ImageStr = ps.Image.String
+	}
+	if ps.ServiceType.Valid {
+		ps.ServiceTypeStr = ps.ServiceType.String
+	}
+}
+
 type Project struct {
 	ID                int             `json:"id"`
 	Name              string          `json:"name"`
@@ -246,6 +272,9 @@ type Project struct {
 	ProxyPortInt      *int            `json:"proxy_port,omitempty"`
 	Dependencies      json.RawMessage `json:"dependencies"`
 	Scripts           json.RawMessage `json:"scripts"`
+	ComposePath       sql.NullString  `json:"-"`
+	ComposePathStr    string          `json:"compose_path,omitempty"`
+	ServiceCount      int             `json:"service_count"`
 	GitRemote         sql.NullString  `json:"-"`
 	GitRemoteStr      string          `json:"git_remote,omitempty"`
 	GitBranch         sql.NullString  `json:"-"`
@@ -287,6 +316,9 @@ func (p *Project) ResolveNulls() {
 	if p.ProxyPort.Valid {
 		v := int(p.ProxyPort.Int32)
 		p.ProxyPortInt = &v
+	}
+	if p.ComposePath.Valid {
+		p.ComposePathStr = p.ComposePath.String
 	}
 	if p.GitRemote.Valid {
 		p.GitRemoteStr = p.GitRemote.String
