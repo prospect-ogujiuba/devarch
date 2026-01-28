@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/priz/devarch-api/internal/compose"
@@ -37,7 +38,8 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 	query := `
 		SELECT s.id, s.name, s.category_id, s.image_name, s.image_tag,
 			s.restart_policy, s.command, s.user_spec, s.enabled,
-			s.created_at, s.updated_at, c.name as category_name
+			s.created_at, s.updated_at, c.name as category_name,
+			COALESCE(s.compose_overrides, '{}')
 		FROM services s
 		JOIN categories c ON s.category_id = c.id
 		WHERE 1=1
@@ -111,6 +113,7 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 			&s.ID, &s.Name, &s.CategoryID, &s.ImageName, &s.ImageTag,
 			&s.RestartPolicy, &s.Command, &s.UserSpec, &s.Enabled,
 			&s.CreatedAt, &s.UpdatedAt, &catName,
+			&s.ComposeOverrides,
 		); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -123,6 +126,10 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 			s.UserSpecStr = s.UserSpec.String
 		}
 		services = append(services, s)
+	}
+	if err := rows.Err(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	if r.URL.Query().Get("include") != "" {
@@ -143,12 +150,19 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	totalPages := (total + limit - 1) / limit
 
+	if services == nil {
+		services = []models.Service{}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Total-Count", strconv.Itoa(total))
 	w.Header().Set("X-Page", strconv.Itoa(page))
 	w.Header().Set("X-Per-Page", strconv.Itoa(limit))
 	w.Header().Set("X-Total-Pages", strconv.Itoa(totalPages))
-	json.NewEncoder(w).Encode(services)
+	if err := json.NewEncoder(w).Encode(services); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *ServiceHandler) loadServiceIncludes(ctx context.Context, s *models.Service, includes string) {
@@ -181,8 +195,11 @@ func isValidServiceName(name string) bool {
 }
 
 func containsInclude(includes, target string) bool {
-	for _, inc := range []string{target} {
-		if includes == inc || includes == "all" {
+	if includes == "all" {
+		return true
+	}
+	for _, inc := range strings.Split(includes, ",") {
+		if strings.TrimSpace(inc) == target {
 			return true
 		}
 	}
@@ -198,7 +215,8 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 		SELECT s.id, s.name, s.category_id, s.image_name, s.image_tag,
 			s.restart_policy, s.command, s.user_spec, s.enabled,
 			s.created_at, s.updated_at, c.name as category_name,
-			s.config_status, s.last_validated_at, s.validation_errors
+			s.config_status, s.last_validated_at, s.validation_errors,
+			s.compose_overrides
 		FROM services s
 		JOIN categories c ON s.category_id = c.id
 		WHERE s.name = $1
@@ -207,6 +225,7 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 		&s.RestartPolicy, &s.Command, &s.UserSpec, &s.Enabled,
 		&s.CreatedAt, &s.UpdatedAt, &catName,
 		&s.ConfigStatus, &s.LastValidatedAt, &s.ValidationErrors,
+		&s.ComposeOverrides,
 	)
 	if err == sql.ErrNoRows {
 		http.Error(w, "service not found", http.StatusNotFound)
@@ -233,6 +252,18 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(s)
+}
+
+func (h *ServiceHandler) loadServiceByName(name string) (*models.Service, error) {
+	var s models.Service
+	err := h.db.QueryRow(
+		`SELECT id, name, image_name, image_tag, restart_policy, command, user_spec, compose_overrides FROM services WHERE name = $1`,
+		name,
+	).Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec, &s.ComposeOverrides)
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
 }
 
 func (h *ServiceHandler) loadServiceRelations(s *models.Service) {
@@ -403,13 +434,13 @@ func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	err := h.db.QueryRow(`
 		SELECT s.id, s.name, s.category_id, s.image_name, s.image_tag,
 			s.restart_policy, s.command, s.user_spec, s.enabled,
-			s.created_at, s.updated_at, c.name
+			s.created_at, s.updated_at, c.name, s.compose_overrides
 		FROM services s JOIN categories c ON s.category_id = c.id
 		WHERE s.name = $1
 	`, name).Scan(
 		&s.ID, &s.Name, &s.CategoryID, &s.ImageName, &s.ImageTag,
 		&s.RestartPolicy, &s.Command, &s.UserSpec, &s.Enabled,
-		&s.CreatedAt, &s.UpdatedAt, &catName,
+		&s.CreatedAt, &s.UpdatedAt, &catName, &s.ComposeOverrides,
 	)
 	if err == sql.ErrNoRows {
 		http.Error(w, "service not found", http.StatusNotFound)
@@ -509,9 +540,7 @@ func (h *ServiceHandler) Start(w http.ResponseWriter, r *http.Request) {
 
 	name := chi.URLParam(r, "name")
 
-	var s models.Service
-	err := h.db.QueryRow(`SELECT id, name, image_name, image_tag, restart_policy, command, user_spec FROM services WHERE name = $1`, name).
-		Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec)
+	s, err := h.loadServiceByName(name)
 	if err == sql.ErrNoRows {
 		http.Error(w, "service not found", http.StatusNotFound)
 		return
@@ -521,7 +550,7 @@ func (h *ServiceHandler) Start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	composeYAML, err := h.generator.Generate(&s)
+	composeYAML, err := h.generator.Generate(s)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -544,9 +573,7 @@ func (h *ServiceHandler) Stop(w http.ResponseWriter, r *http.Request) {
 
 	name := chi.URLParam(r, "name")
 
-	var s models.Service
-	err := h.db.QueryRow(`SELECT id, name, image_name, image_tag FROM services WHERE name = $1`, name).
-		Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag)
+	s, err := h.loadServiceByName(name)
 	if err == sql.ErrNoRows {
 		http.Error(w, "service not found", http.StatusNotFound)
 		return
@@ -556,7 +583,7 @@ func (h *ServiceHandler) Stop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	composeYAML, err := h.generator.Generate(&s)
+	composeYAML, err := h.generator.Generate(s)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -579,9 +606,7 @@ func (h *ServiceHandler) Restart(w http.ResponseWriter, r *http.Request) {
 
 	name := chi.URLParam(r, "name")
 
-	var s models.Service
-	err := h.db.QueryRow(`SELECT id, name, image_name, image_tag, restart_policy, command, user_spec FROM services WHERE name = $1`, name).
-		Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec)
+	s, err := h.loadServiceByName(name)
 	if err == sql.ErrNoRows {
 		http.Error(w, "service not found", http.StatusNotFound)
 		return
@@ -591,7 +616,7 @@ func (h *ServiceHandler) Restart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	composeYAML, err := h.generator.Generate(&s)
+	composeYAML, err := h.generator.Generate(s)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -614,9 +639,7 @@ func (h *ServiceHandler) Rebuild(w http.ResponseWriter, r *http.Request) {
 
 	name := chi.URLParam(r, "name")
 
-	var s models.Service
-	err := h.db.QueryRow(`SELECT id, name, image_name, image_tag, restart_policy, command, user_spec FROM services WHERE name = $1`, name).
-		Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec)
+	s, err := h.loadServiceByName(name)
 	if err == sql.ErrNoRows {
 		http.Error(w, "service not found", http.StatusNotFound)
 		return
@@ -626,7 +649,7 @@ func (h *ServiceHandler) Rebuild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	composeYAML, err := h.generator.Generate(&s)
+	composeYAML, err := h.generator.Generate(s)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -691,9 +714,7 @@ func (h *ServiceHandler) Metrics(w http.ResponseWriter, r *http.Request) {
 func (h *ServiceHandler) Compose(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	var s models.Service
-	err := h.db.QueryRow(`SELECT id, name, image_name, image_tag, restart_policy, command, user_spec FROM services WHERE name = $1`, name).
-		Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec)
+	s, err := h.loadServiceByName(name)
 	if err == sql.ErrNoRows {
 		http.Error(w, "service not found", http.StatusNotFound)
 		return
@@ -703,7 +724,7 @@ func (h *ServiceHandler) Compose(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	composeYAML, err := h.generator.Generate(&s)
+	composeYAML, err := h.generator.Generate(s)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -732,15 +753,13 @@ func (h *ServiceHandler) Bulk(w http.ResponseWriter, r *http.Request) {
 
 	results := make(map[string]string)
 	for _, name := range req.Services {
-		var s models.Service
-		err := h.db.QueryRow(`SELECT id, name, image_name, image_tag, restart_policy, command, user_spec FROM services WHERE name = $1`, name).
-			Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec)
+		s, err := h.loadServiceByName(name)
 		if err != nil {
 			results[name] = "not found"
 			continue
 		}
 
-		composeYAML, err := h.generator.Generate(&s)
+		composeYAML, err := h.generator.Generate(s)
 		if err != nil {
 			results[name] = "compose error: " + err.Error()
 			continue
@@ -848,9 +867,7 @@ func (h *ServiceHandler) GetVersion(w http.ResponseWriter, r *http.Request) {
 func (h *ServiceHandler) Validate(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	var s models.Service
-	err := h.db.QueryRow(`SELECT id, name, image_name, image_tag, restart_policy, command, user_spec FROM services WHERE name = $1`, name).
-		Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec)
+	s, err := h.loadServiceByName(name)
 	if err == sql.ErrNoRows {
 		http.Error(w, "service not found", http.StatusNotFound)
 		return
@@ -860,8 +877,8 @@ func (h *ServiceHandler) Validate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.loadServiceRelations(&s)
-	result := h.validator.Validate(&s)
+	h.loadServiceRelations(s)
+	result := h.validator.Validate(s)
 
 	// Update validation status in DB
 	status := "validated"
@@ -881,13 +898,7 @@ func (h *ServiceHandler) Validate(w http.ResponseWriter, r *http.Request) {
 func (h *ServiceHandler) Export(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	var s models.Service
-	var catName string
-	err := h.db.QueryRow(`
-		SELECT s.id, s.name, s.image_name, s.image_tag, s.restart_policy, s.command, s.user_spec, c.name
-		FROM services s JOIN categories c ON s.category_id = c.id
-		WHERE s.name = $1
-	`, name).Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec, &catName)
+	s, err := h.loadServiceByName(name)
 	if err == sql.ErrNoRows {
 		http.Error(w, "service not found", http.StatusNotFound)
 		return
@@ -897,7 +908,10 @@ func (h *ServiceHandler) Export(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	composeYAML, err := h.generator.Generate(&s)
+	var catName string
+	h.db.QueryRow(`SELECT c.name FROM categories c JOIN services s ON s.category_id = c.id WHERE s.id = $1`, s.ID).Scan(&catName)
+
+	composeYAML, err := h.generator.Generate(s)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
