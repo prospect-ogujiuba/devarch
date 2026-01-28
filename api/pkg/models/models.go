@@ -27,9 +27,10 @@ type Service struct {
 	CommandStr    string         `json:"command,omitempty"`
 	UserSpec      sql.NullString `json:"-"`
 	UserSpecStr   string         `json:"user_spec,omitempty"`
-	Enabled       bool           `json:"enabled"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
+	Enabled          bool           `json:"enabled"`
+	ComposeOverrides NullableJSON   `json:"compose_overrides,omitempty"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
 
 	Category     *Category         `json:"category,omitempty"`
 	Ports        []ServicePort     `json:"ports,omitempty"`
@@ -72,6 +73,9 @@ func (n *NullableJSON) Scan(value interface{}) error {
 func (n NullableJSON) MarshalJSON() ([]byte, error) {
 	if !n.Valid || n.Data == nil {
 		return []byte("null"), nil
+	}
+	if !json.Valid(n.Data) {
+		return []byte("{}"), nil
 	}
 	return n.Data, nil
 }

@@ -2,6 +2,7 @@ package compose
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -137,6 +138,28 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 		}
 
 		svc.Healthcheck = hc
+	}
+
+	if service.ComposeOverrides.Valid && len(service.ComposeOverrides.Data) > 2 {
+		var overrides map[string]interface{}
+		if err := json.Unmarshal(service.ComposeOverrides.Data, &overrides); err == nil && len(overrides) > 0 {
+			svcBytes, _ := yaml.Marshal(svc)
+			var svcMap map[string]interface{}
+			yaml.Unmarshal(svcBytes, &svcMap)
+
+			for k, v := range overrides {
+				svcMap[k] = v
+			}
+
+			rawCompose := map[string]interface{}{
+				"networks": compose.Networks,
+				"services": map[string]interface{}{service.Name: svcMap},
+			}
+			if len(compose.Volumes) > 0 {
+				rawCompose["volumes"] = compose.Volumes
+			}
+			return yaml.Marshal(rawCompose)
+		}
 	}
 
 	compose.Services[service.Name] = svc

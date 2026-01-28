@@ -144,10 +144,12 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 	}
 	defer tx.Rollback()
 
+	overridesJSON := OverridesToJSON(parsed.Overrides)
+
 	var serviceID int
 	err = tx.QueryRow(`
-		INSERT INTO services (name, category_id, image_name, image_tag, restart_policy, command, user_spec)
-		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), NULLIF($7, ''))
+		INSERT INTO services (name, category_id, image_name, image_tag, restart_policy, command, user_spec, compose_overrides)
+		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), NULLIF($7, ''), $8)
 		ON CONFLICT (name) DO UPDATE SET
 			category_id = $2,
 			image_name = $3,
@@ -155,10 +157,11 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 			restart_policy = $5,
 			command = NULLIF($6, ''),
 			user_spec = NULLIF($7, ''),
+			compose_overrides = $8,
 			updated_at = NOW()
 		RETURNING id
 	`, parsed.Name, categoryID, parsed.ImageName, parsed.ImageTag,
-		parsed.RestartPolicy, parsed.Command, parsed.UserSpec).Scan(&serviceID)
+		parsed.RestartPolicy, parsed.Command, parsed.UserSpec, overridesJSON).Scan(&serviceID)
 	if err != nil {
 		return fmt.Errorf("insert service: %w", err)
 	}

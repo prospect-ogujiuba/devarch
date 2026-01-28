@@ -1,6 +1,7 @@
 package compose
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,13 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
+
+var knownComposeKeys = map[string]bool{
+	"image": true, "container_name": true, "restart": true,
+	"command": true, "user": true, "ports": true, "volumes": true,
+	"environment": true, "env_file": true, "depends_on": true,
+	"labels": true, "healthcheck": true, "networks": true,
+}
 
 type ComposeFile struct {
 	Services map[string]ComposeService `yaml:"services"`
@@ -55,6 +63,7 @@ type ParsedService struct {
 	Dependencies  []string
 	Labels        []ParsedLabel
 	Healthcheck   *ParsedHealthcheck
+	Overrides     map[string]interface{}
 }
 
 type ParsedPort struct {
@@ -116,6 +125,11 @@ func ParseFileAll(path string) ([]*ParsedService, error) {
 		return nil, fmt.Errorf("no services found in compose file")
 	}
 
+	var rawCompose struct {
+		Services map[string]map[string]interface{} `yaml:"services"`
+	}
+	yaml.Unmarshal(data, &rawCompose)
+
 	category := extractCategory(path)
 	var services []*ParsedService
 
@@ -139,11 +153,39 @@ func ParseFileAll(path string) ([]*ParsedService, error) {
 		parsed.Dependencies = parseDependsOn(svc.DependsOn)
 		parsed.Labels = parseLabels(svc.Labels)
 		parsed.Healthcheck = parseHealthcheck(svc.Healthcheck)
+		parsed.Overrides = extractOverrides(rawCompose.Services[name])
 
 		services = append(services, parsed)
 	}
 
 	return services, nil
+}
+
+func extractOverrides(raw map[string]interface{}) map[string]interface{} {
+	if raw == nil {
+		return nil
+	}
+	overrides := make(map[string]interface{})
+	for key, val := range raw {
+		if !knownComposeKeys[key] {
+			overrides[key] = val
+		}
+	}
+	if len(overrides) == 0 {
+		return nil
+	}
+	return overrides
+}
+
+func OverridesToJSON(overrides map[string]interface{}) []byte {
+	if overrides == nil {
+		return []byte("{}")
+	}
+	data, err := json.Marshal(overrides)
+	if err != nil {
+		return []byte("{}")
+	}
+	return data
 }
 
 func extractCategory(path string) string {
