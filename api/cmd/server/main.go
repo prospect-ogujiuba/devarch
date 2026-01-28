@@ -12,7 +12,9 @@ import (
 
 	"github.com/priz/devarch-api/internal/api"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/nginx"
 	"github.com/priz/devarch-api/internal/podman"
+	"github.com/priz/devarch-api/internal/project"
 	"github.com/priz/devarch-api/internal/scanner"
 	"github.com/priz/devarch-api/internal/sync"
 
@@ -62,8 +64,22 @@ func main() {
 		log.Println("initial project scan complete")
 	}
 
+	nginxOutputDir := os.Getenv("NGINX_GENERATED_DIR")
+	if nginxOutputDir == "" {
+		nginxOutputDir = "/workspace/config/nginx/generated"
+	}
+	nginxGenerator := nginx.NewGenerator(db, nginxOutputDir)
+
+	if err := nginxGenerator.GenerateAll(); err != nil {
+		log.Printf("initial nginx generation failed: %v", err)
+	} else {
+		log.Println("initial nginx config generation complete")
+	}
+
+	projectController := project.NewController(db, podmanClient)
+
 	syncManager := sync.NewManager(db, podmanClient)
-	router := api.NewRouter(db, containerClient, podmanClient, syncManager, projectScanner)
+	router := api.NewRouter(db, containerClient, podmanClient, syncManager, projectScanner, nginxGenerator, projectController)
 
 	port := os.Getenv("PORT")
 	if port == "" {
