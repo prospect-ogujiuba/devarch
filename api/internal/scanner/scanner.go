@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -11,6 +12,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 type ProjectInfo struct {
@@ -30,6 +33,18 @@ type ProjectInfo struct {
 	Scripts           json.RawMessage `json:"scripts"`
 	GitRemote         string          `json:"git_remote,omitempty"`
 	GitBranch         string          `json:"git_branch,omitempty"`
+	ComposePath       string          `json:"compose_path,omitempty"`
+	ServiceCount      int             `json:"service_count"`
+	Services          []ComposeService `json:"services,omitempty"`
+}
+
+type ComposeService struct {
+	Name          string   `json:"name"`
+	ContainerName string   `json:"container_name,omitempty"`
+	Image         string   `json:"image,omitempty"`
+	ServiceType   string   `json:"service_type,omitempty"`
+	Ports         []string `json:"ports,omitempty"`
+	DependsOn     []string `json:"depends_on,omitempty"`
 }
 
 type Scanner struct {
@@ -127,6 +142,7 @@ func (s *Scanner) scanProject(name, dir string) ProjectInfo {
 	}
 
 	s.scanGit(&p, dir)
+	s.scanCompose(&p, dir)
 
 	return p
 }
@@ -742,13 +758,121 @@ func (s *Scanner) scanGit(p *ProjectInfo, dir string) {
 	}
 }
 
+func (s *Scanner) scanCompose(p *ProjectInfo, dir string) {
+	candidates := []string{
+		filepath.Join(dir, "docker-compose.yml"),
+		filepath.Join(dir, "compose.yml"),
+		filepath.Join(dir, "docker-compose.yaml"),
+		filepath.Join(dir, "compose.yaml"),
+		filepath.Join(dir, "deploy", "docker-compose.yml"),
+		filepath.Join(dir, "deploy", "compose.yml"),
+	}
+
+	var composePath string
+	for _, c := range candidates {
+		if fileExists(c) {
+			composePath = c
+			break
+		}
+	}
+	if composePath == "" {
+		return
+	}
+
+	p.ComposePath = composePath
+
+	data, err := os.ReadFile(composePath)
+	if err != nil {
+		return
+	}
+
+	var compose composeFile
+	if err := yaml.Unmarshal(data, &compose); err != nil {
+		log.Printf("failed to parse compose %s: %v", composePath, err)
+		return
+	}
+
+	for svcName, svc := range compose.Services {
+		cs := ComposeService{
+			Name:          svcName,
+			ContainerName: svc.ContainerName,
+			Image:         svc.Image,
+			ServiceType:   detectServiceType(svcName, svc.Image),
+		}
+
+		if ports, ok := svc.Ports.([]interface{}); ok {
+			for _, port := range ports {
+				cs.Ports = append(cs.Ports, fmt.Sprintf("%v", port))
+			}
+		}
+
+		switch d := svc.DependsOn.(type) {
+		case []interface{}:
+			for _, dep := range d {
+				cs.DependsOn = append(cs.DependsOn, fmt.Sprintf("%v", dep))
+			}
+		case map[string]interface{}:
+			for dep := range d {
+				cs.DependsOn = append(cs.DependsOn, dep)
+			}
+		}
+
+		p.Services = append(p.Services, cs)
+	}
+	p.ServiceCount = len(p.Services)
+
+	if p.ComposePath != "" {
+		domain := p.Name + ".test"
+		if envDomain := readEnvValue(filepath.Join(dir, ".env"), "APP_DOMAIN"); envDomain != "" {
+			domain = envDomain
+		}
+		_ = domain
+	}
+}
+
+type composeFile struct {
+	Services map[string]composeServiceDef `yaml:"services"`
+}
+
+type composeServiceDef struct {
+	Image         string      `yaml:"image"`
+	ContainerName string      `yaml:"container_name"`
+	Ports         interface{} `yaml:"ports"`
+	DependsOn     interface{} `yaml:"depends_on"`
+}
+
+func detectServiceType(name, image string) string {
+	combined := strings.ToLower(name + " " + image)
+	switch {
+	case strings.Contains(combined, "postgres") || strings.Contains(combined, "mysql") ||
+		strings.Contains(combined, "mariadb") || strings.Contains(combined, "mongo"):
+		return "database"
+	case strings.Contains(combined, "redis") || strings.Contains(combined, "memcache"):
+		return "cache"
+	case strings.Contains(combined, "meilisearch") || strings.Contains(combined, "elasticsearch") ||
+		strings.Contains(combined, "typesense"):
+		return "search"
+	case strings.Contains(combined, "reverb") || strings.Contains(combined, "websocket") ||
+		strings.Contains(combined, "soketi"):
+		return "websocket"
+	case strings.Contains(combined, "queue") || strings.Contains(combined, "worker") ||
+		strings.Contains(combined, "horizon"):
+		return "queue"
+	default:
+		return "app"
+	}
+}
+
 func (s *Scanner) upsert(p ProjectInfo) error {
 	now := time.Now()
-	_, err := s.db.Exec(`
+
+	var projectID int
+	err := s.db.QueryRow(`
 		INSERT INTO projects (name, path, project_type, framework, language, package_manager,
 			description, version, license, entry_point, has_frontend, frontend_framework,
-			dependencies, scripts, git_remote, git_branch, last_scanned_at, created_at, updated_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+			dependencies, scripts, git_remote, git_branch, compose_path, service_count,
+			last_scanned_at, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
 		ON CONFLICT (name) DO UPDATE SET
 			path=EXCLUDED.path, project_type=EXCLUDED.project_type, framework=EXCLUDED.framework,
 			language=EXCLUDED.language, package_manager=EXCLUDED.package_manager,
@@ -756,16 +880,47 @@ func (s *Scanner) upsert(p ProjectInfo) error {
 			entry_point=EXCLUDED.entry_point, has_frontend=EXCLUDED.has_frontend,
 			frontend_framework=EXCLUDED.frontend_framework, dependencies=EXCLUDED.dependencies,
 			scripts=EXCLUDED.scripts, git_remote=EXCLUDED.git_remote, git_branch=EXCLUDED.git_branch,
-			last_scanned_at=EXCLUDED.last_scanned_at, updated_at=EXCLUDED.updated_at`,
+			compose_path=EXCLUDED.compose_path, service_count=EXCLUDED.service_count,
+			last_scanned_at=EXCLUDED.last_scanned_at, updated_at=EXCLUDED.updated_at
+		RETURNING id`,
 		p.Name, p.Path, p.ProjectType,
 		nullStr(p.Framework), nullStr(p.Language), nullStr(p.PackageManager),
 		nullStr(p.Description), nullStr(p.Version), nullStr(p.License),
 		nullStr(p.EntryPoint), p.HasFrontend, nullStr(p.FrontendFramework),
 		p.Dependencies, p.Scripts,
 		nullStr(p.GitRemote), nullStr(p.GitBranch),
+		nullStr(p.ComposePath), p.ServiceCount,
 		now, now, now,
-	)
-	return err
+	).Scan(&projectID)
+	if err != nil {
+		return err
+	}
+
+	if len(p.Services) > 0 {
+		s.upsertServices(projectID, p.Services)
+	}
+
+	return nil
+}
+
+func (s *Scanner) upsertServices(projectID int, services []ComposeService) {
+	for _, svc := range services {
+		portsJSON, _ := json.Marshal(svc.Ports)
+		depsJSON, _ := json.Marshal(svc.DependsOn)
+
+		_, err := s.db.Exec(`
+			INSERT INTO project_services (project_id, service_name, container_name, image, service_type, ports, depends_on)
+			VALUES ($1,$2,$3,$4,$5,$6,$7)
+			ON CONFLICT (project_id, service_name) DO UPDATE SET
+				container_name=EXCLUDED.container_name, image=EXCLUDED.image,
+				service_type=EXCLUDED.service_type, ports=EXCLUDED.ports, depends_on=EXCLUDED.depends_on`,
+			projectID, svc.Name, nullStr(svc.ContainerName), nullStr(svc.Image),
+			nullStr(svc.ServiceType), portsJSON, depsJSON,
+		)
+		if err != nil {
+			log.Printf("failed to upsert service %s: %v", svc.Name, err)
+		}
+	}
 }
 
 func nullStr(s string) sql.NullString {
