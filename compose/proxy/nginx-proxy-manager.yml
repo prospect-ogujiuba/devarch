@@ -21,6 +21,7 @@ services:
     volumes:
       - ../../apps:/var/www/html
       - ../../config/nginx/custom:/data/nginx/custom
+      - ../../config/nginx/generated:/data/nginx/generated:ro
       - /etc/localtime:/etc/localtime:ro
       - ../../config/nginx/certs/local.crt:/etc/ssl/certs/local.crt:ro
       - ../../config/nginx/certs/local.key:/etc/ssl/private/local.key:ro
