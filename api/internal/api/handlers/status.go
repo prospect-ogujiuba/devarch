@@ -47,13 +47,32 @@ func (h *StatusHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	h.db.QueryRow("SELECT COUNT(*) FROM services").Scan(&total)
 	h.db.QueryRow("SELECT COUNT(*) FROM services WHERE enabled = true").Scan(&enabled)
 
-	running, stopped, _ := h.podman.GetContainerCounts(ctx)
-
-	runningContainers, _ := h.podman.ListContainers(ctx, false)
+	allContainers, _ := h.podman.ListContainers(ctx, true)
 	runningByName := make(map[string]bool)
-	for _, c := range runningContainers {
-		if len(c.Names) > 0 {
+	for _, c := range allContainers {
+		if len(c.Names) > 0 && c.State == "running" {
 			runningByName[c.Names[0]] = true
+		}
+	}
+
+	var allServiceNames []string
+	nameRows, _ := h.db.Query("SELECT name FROM services WHERE enabled = true")
+	if nameRows != nil {
+		for nameRows.Next() {
+			var n string
+			if nameRows.Scan(&n) == nil {
+				allServiceNames = append(allServiceNames, n)
+			}
+		}
+		nameRows.Close()
+	}
+
+	var running, stopped int
+	for _, n := range allServiceNames {
+		if runningByName[n] {
+			running++
+		} else {
+			stopped++
 		}
 	}
 
