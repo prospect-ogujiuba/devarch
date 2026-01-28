@@ -1,12 +1,17 @@
+import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Clock, RefreshCw, Heart, Cpu, MemoryStick } from 'lucide-react'
+import { ArrowLeft, Loader2, Clock, RefreshCw, Cpu, MemoryStick, Network, Eye, EyeOff, ExternalLink } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ResourceBar } from '@/components/ui/resource-bar'
+import { CopyButton } from '@/components/ui/copy-button'
 import { useService, useServiceCompose } from '@/features/services/queries'
 import { StatusBadge } from '@/components/services/status-badge'
 import { ActionButton } from '@/components/services/action-button'
 import { LogViewer } from '@/components/services/log-viewer'
+import { formatUptime, formatBytes, computeUptime } from '@/lib/format'
 
 export const Route = createFileRoute('/services/$name')({
   component: ServiceDetailPage,
@@ -16,6 +21,16 @@ function ServiceDetailPage() {
   const { name } = Route.useParams()
   const { data: service, isLoading } = useService(name)
   const { data: composeYaml, isLoading: composeLoading } = useServiceCompose(name)
+  const [revealedSecrets, setRevealedSecrets] = useState<Set<number>>(new Set())
+
+  const toggleSecret = (index: number) => {
+    setRevealedSecrets((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }
 
   if (isLoading) {
     return (
@@ -41,7 +56,14 @@ function ServiceDetailPage() {
 
   const status = service.status?.status ?? 'stopped'
   const image = `${service.image_name}:${service.image_tag}`
-  const healthStatus = service.status?.health_status ?? service.healthcheck ? 'configured' : 'none'
+  const healthStatus = service.status?.health_status ?? (service.healthcheck ? 'configured' : 'none')
+  const uptime = computeUptime(service.status?.started_at)
+  const cpuPct = service.metrics?.cpu_percentage ?? 0
+  const memUsed = service.metrics?.memory_used_mb ?? 0
+  const memLimit = service.metrics?.memory_limit_mb ?? 0
+  const memPct = memLimit > 0 ? (memUsed / memLimit) * 100 : 0
+  const rxBytes = service.metrics?.network_rx_bytes ?? 0
+  const txBytes = service.metrics?.network_tx_bytes ?? 0
 
   return (
     <div className="space-y-6">
@@ -63,25 +85,40 @@ function ServiceDetailPage() {
         <Card className="py-4">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Heart className="size-4" />
-              Health
+              <Cpu className="size-4" />
+              CPU
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-lg font-semibold capitalize">{healthStatus}</div>
+          <CardContent className="space-y-2">
+            <div className="text-lg font-semibold">{cpuPct.toFixed(1)}%</div>
+            <ResourceBar value={cpuPct} />
           </CardContent>
         </Card>
 
         <Card className="py-4">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Clock className="size-4" />
-              Started
+              <MemoryStick className="size-4" />
+              Memory
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="text-lg font-semibold">{memUsed.toFixed(0)} / {memLimit.toFixed(0)} MB</div>
+            <ResourceBar value={memPct} />
+          </CardContent>
+        </Card>
+
+        <Card className="py-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Network className="size-4" />
+              Network I/O
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-semibold">
-              {service.status?.started_at ? new Date(service.status.started_at).toLocaleString() : '-'}
+            <div className="text-sm space-y-1">
+              <div>RX: {formatBytes(rxBytes)}</div>
+              <div>TX: {formatBytes(txBytes)}</div>
             </div>
           </CardContent>
         </Card>
@@ -89,31 +126,16 @@ function ServiceDetailPage() {
         <Card className="py-4">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <RefreshCw className="size-4" />
-              Restarts
+              <Clock className="size-4" />
+              Uptime
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-semibold">{service.status?.restart_count ?? 0}</div>
+            <div className="text-lg font-semibold">
+              {status === 'running' && uptime > 0 ? formatUptime(uptime) : '-'}
+            </div>
           </CardContent>
         </Card>
-
-        {service.metrics && (
-          <Card className="py-4">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Cpu className="size-4" />
-                Resources
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm space-y-1">
-                <div>CPU: {service.metrics.cpu_percentage.toFixed(1)}%</div>
-                <div>Mem: {service.metrics.memory_used_mb.toFixed(0)}MB / {service.metrics.memory_limit_mb.toFixed(0)}MB</div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       <Tabs defaultValue="info" className="space-y-4">
@@ -137,9 +159,56 @@ function ServiceDetailPage() {
                 {service.command && <div className="flex"><span className="text-muted-foreground w-40">Command:</span> <code>{service.command}</code></div>}
                 {service.user_spec && <div className="flex"><span className="text-muted-foreground w-40">User:</span> {service.user_spec}</div>}
                 <div className="flex"><span className="text-muted-foreground w-40">Enabled:</span> {service.enabled ? 'Yes' : 'No'}</div>
+                <div className="flex items-center">
+                  <span className="text-muted-foreground w-40">Health:</span>
+                  <Badge variant={healthStatus === 'healthy' ? 'success' : healthStatus === 'unhealthy' ? 'destructive' : 'secondary'}>
+                    {healthStatus}
+                  </Badge>
+                </div>
+                {service.status?.container_id && (
+                  <div className="flex items-center">
+                    <span className="text-muted-foreground w-40">Container ID:</span>
+                    <code className="font-mono text-xs">{service.status.container_id.slice(0, 12)}</code>
+                    <CopyButton value={service.status.container_id} className="ml-1" />
+                  </div>
+                )}
+                {service.status?.restart_count !== undefined && (
+                  <div className="flex">
+                    <span className="text-muted-foreground w-40">Restarts:</span>
+                    <span className="flex items-center gap-1">
+                      <RefreshCw className="size-3" /> {service.status.restart_count}
+                    </span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
+
+          {service.domains && service.domains.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Domains</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {service.domains.map((d) => (
+                    <div key={d.domain} className="flex items-center gap-2">
+                      <a
+                        href={`http://${d.domain}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline flex items-center gap-1"
+                      >
+                        {d.domain}
+                        <ExternalLink className="size-3" />
+                      </a>
+                      <CopyButton value={d.domain} />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
@@ -147,12 +216,27 @@ function ServiceDetailPage() {
             </CardHeader>
             <CardContent>
               {service.ports && service.ports.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {service.ports.map((port, i) => (
-                    <Badge key={i} variant="outline">
-                      {port.host_ip ? `${port.host_ip}:` : ''}{port.host_port}:{port.container_port}/{port.protocol}
-                    </Badge>
-                  ))}
+                <div className="space-y-2">
+                  {service.ports.map((port, i) => {
+                    const url = `http://localhost:${port.host_port}`
+                    return (
+                      <div key={i} className="flex items-center gap-2">
+                        <Badge variant="outline">
+                          {port.host_ip ? `${port.host_ip}:` : ''}{port.host_port}:{port.container_port}/{port.protocol}
+                        </Badge>
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          {url}
+                          <ExternalLink className="size-3" />
+                        </a>
+                        <CopyButton value={url} />
+                      </div>
+                    )
+                  })}
                 </div>
               ) : (
                 <p className="text-muted-foreground">No ports exposed</p>
@@ -224,9 +308,19 @@ function ServiceDetailPage() {
               {service.env_vars && service.env_vars.length > 0 ? (
                 <div className="space-y-1">
                   {service.env_vars.map((env, i) => (
-                    <div key={i} className="text-sm font-mono flex">
+                    <div key={i} className="text-sm font-mono flex items-center">
                       <span className="text-muted-foreground min-w-[200px]">{env.key}:</span>
-                      <span>{env.is_secret ? '********' : env.value}</span>
+                      <span>{env.is_secret && !revealedSecrets.has(i) ? '********' : env.value}</span>
+                      {env.is_secret && (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className="size-6 ml-1"
+                          onClick={() => toggleSecret(i)}
+                        >
+                          {revealedSecrets.has(i) ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
