@@ -47,6 +47,10 @@ export function useWebSocket() {
               queryClient.invalidateQueries({ queryKey: ['services'] })
               queryClient.invalidateQueries({ queryKey: ['status'] })
               queryClient.invalidateQueries({ queryKey: ['categories'] })
+              queryClient.invalidateQueries({ predicate: (q) => {
+                const key = q.queryKey
+                return Array.isArray(key) && key.length >= 3 && key[0] === 'services' && key[2] === 'metrics'
+              }})
             }
           } catch {
             // ignore malformed messages

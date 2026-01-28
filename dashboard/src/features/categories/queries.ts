@@ -8,8 +8,9 @@ export function useCategories() {
     queryKey: ['categories'],
     queryFn: async () => {
       const response = await api.get<Category[]>('/categories')
-      return response.data
+      return Array.isArray(response.data) ? response.data : []
     },
+    refetchInterval: 5000,
   })
 }
 

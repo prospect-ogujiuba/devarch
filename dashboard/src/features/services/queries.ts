@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { Service, ServiceLogsResponse } from '@/types/api'
+import type { Service } from '@/types/api'
 import { toast } from 'sonner'
 
 interface ServicesResult {
@@ -12,12 +12,14 @@ export function useServices() {
   return useQuery({
     queryKey: ['services'],
     queryFn: async (): Promise<ServicesResult> => {
-      const response = await api.get<Service[]>('/services?include=status&limit=500')
+      const response = await api.get<Service[]>('/services?include=status,metrics&limit=500')
+      const services = Array.isArray(response.data) ? response.data : []
       return {
-        services: response.data,
-        total: parseInt(response.headers['x-total-count'] ?? '0', 10) || response.data.length,
+        services,
+        total: parseInt(response.headers['x-total-count'] ?? '0', 10) || services.length,
       }
     },
+    refetchInterval: 5000,
   })
 }
 
@@ -29,6 +31,19 @@ export function useService(name: string) {
       return response.data
     },
     enabled: !!name,
+    refetchInterval: 5000,
+  })
+}
+
+export function useServiceMetrics(name: string) {
+  return useQuery({
+    queryKey: ['services', name, 'metrics'],
+    queryFn: async () => {
+      const response = await api.get<Service>(`/services/${name}?include=metrics`)
+      return response.data?.metrics ?? null
+    },
+    enabled: !!name,
+    refetchInterval: 3000,
   })
 }
 
@@ -110,6 +125,31 @@ export function useRestartService() {
     },
     onError: (_error, name) => {
       toast.error(`Failed to restart ${name}`)
+    },
+  })
+}
+
+export function useBulkServiceControl() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ names, action }: { names: string[]; action: 'start' | 'stop' | 'restart' }) => {
+      const results = await Promise.allSettled(
+        names.map((name) => api.post(`/services/${name}/${action}`)),
+      )
+      const failed = results.filter((r) => r.status === 'rejected').length
+      return { total: names.length, failed }
+    },
+    onSuccess: ({ total, failed }, { action }) => {
+      if (failed === 0) {
+        toast.success(`Bulk ${action}: ${total} services`)
+      } else {
+        toast.warning(`Bulk ${action}: ${total - failed}/${total} succeeded`)
+      }
+      queryClient.invalidateQueries({ queryKey: ['services'] })
+      queryClient.invalidateQueries({ queryKey: ['status'] })
+    },
+    onError: (_error, { action }) => {
+      toast.error(`Bulk ${action} failed`)
     },
   })
 }
