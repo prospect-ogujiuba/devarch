@@ -10,13 +10,8 @@ import {
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { ResourceBar } from '@/components/ui/resource-bar'
+import { FilterBar, type FilterOption } from '@/components/ui/filter-bar'
 import { StatusBadge } from './status-badge'
 import { ActionButton } from './action-button'
 import type { Service } from '@/types/api'
@@ -43,6 +38,10 @@ interface ServiceTableProps {
   searchQuery?: string
   categoryFilter?: string
   statusFilter?: string
+  sortBy?: string
+  sortDir?: 'asc' | 'desc'
+  selected: Set<string>
+  onToggleSelect: (name: string) => void
 }
 
 export function ServiceTable({
@@ -51,6 +50,10 @@ export function ServiceTable({
   searchQuery = '',
   categoryFilter = 'all',
   statusFilter = 'all',
+  sortBy = 'name',
+  sortDir = 'asc',
+  selected,
+  onToggleSelect,
 }: ServiceTableProps) {
   const navigate = useNavigate({ from: '/services' })
   const search = searchQuery
@@ -65,7 +68,7 @@ export function ServiceTable({
   }
 
   const filteredServices = useMemo(() => {
-    return services.filter((service) => {
+    const filtered = services.filter((service) => {
       const image = getServiceImage(service)
       const category = getServiceCategory(service)
       const status = getServiceStatus(service)
@@ -76,11 +79,58 @@ export function ServiceTable({
       const matchesStatus = !statusFilter || statusFilter === 'all' || status === statusFilter
       return matchesSearch && matchesCategory && matchesStatus
     })
-  }, [services, search, categoryFilter, statusFilter])
+
+    return [...filtered].sort((a, b) => {
+      let cmp = 0
+      switch (sortBy) {
+        case 'name':
+          cmp = a.name.localeCompare(b.name)
+          break
+        case 'category':
+          cmp = getServiceCategory(a).localeCompare(getServiceCategory(b))
+          break
+        case 'status':
+          cmp = getServiceStatus(a).localeCompare(getServiceStatus(b))
+          break
+        case 'cpu':
+          cmp = (a.metrics?.cpu_percentage ?? 0) - (b.metrics?.cpu_percentage ?? 0)
+          break
+        case 'memory':
+          cmp = (a.metrics?.memory_used_mb ?? 0) - (b.metrics?.memory_used_mb ?? 0)
+          break
+        default:
+          cmp = a.name.localeCompare(b.name)
+      }
+      return sortDir === 'desc' ? -cmp : cmp
+    })
+  }, [services, search, categoryFilter, statusFilter, sortBy, sortDir])
+
+  const statusCounts = useMemo(() => {
+    const counts = { all: services.length, running: 0, stopped: 0, error: 0 }
+    for (const s of services) {
+      const st = getServiceStatus(s)
+      if (st === 'running') counts.running++
+      else if (st === 'error') counts.error++
+      else counts.stopped++
+    }
+    return counts
+  }, [services])
+
+  const statusOptions: FilterOption[] = [
+    { value: 'all', label: 'All', count: statusCounts.all },
+    { value: 'running', label: 'Running', count: statusCounts.running },
+    { value: 'stopped', label: 'Stopped', count: statusCounts.stopped },
+    { value: 'error', label: 'Error', count: statusCounts.error },
+  ]
+
+  const categoryOptions: FilterOption[] = [
+    { value: 'all', label: 'All Categories' },
+    ...categories.map((cat) => ({ value: cat, label: titleCase(cat) })),
+  ]
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
@@ -90,41 +140,44 @@ export function ServiceTable({
             className="pl-9"
           />
         </div>
-        <Select value={categoryFilter} onValueChange={(v) => updateFilter('category', v === 'all' ? '' : v)}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {titleCase(cat)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={(v) => updateFilter('status', v === 'all' ? '' : v)}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="running">Running</SelectItem>
-            <SelectItem value="stopped">Stopped</SelectItem>
-            <SelectItem value="starting">Starting</SelectItem>
-            <SelectItem value="error">Error</SelectItem>
-          </SelectContent>
-        </Select>
+        <FilterBar
+          options={statusOptions}
+          value={statusFilter}
+          onChange={(v) => updateFilter('status', v === 'all' ? '' : v)}
+        />
+        <FilterBar
+          options={categoryOptions}
+          value={categoryFilter}
+          onChange={(v) => updateFilter('category', v === 'all' ? '' : v)}
+          variant="dropdown"
+        />
       </div>
 
       <div className="rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <input
+                  type="checkbox"
+                  checked={filteredServices.length > 0 && filteredServices.every((s) => selected.has(s.name))}
+                  onChange={() => {
+                    const allSelected = filteredServices.every((s) => selected.has(s.name))
+                    for (const s of filteredServices) {
+                      if (allSelected || !selected.has(s.name)) {
+                        onToggleSelect(s.name)
+                      }
+                    }
+                  }}
+                  className="size-4 rounded border-muted-foreground"
+                />
+              </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Image</TableHead>
               <TableHead>Ports</TableHead>
+              <TableHead>CPU</TableHead>
+              <TableHead>Memory</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -132,45 +185,72 @@ export function ServiceTable({
           <TableBody>
             {filteredServices.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                   No services found
                 </TableCell>
               </TableRow>
             ) : (
-              filteredServices.map((service) => (
-                <TableRow key={service.name} className="cursor-pointer">
-                  <TableCell>
-                    <Link
-                      to="/services/$name"
-                      params={{ name: service.name }}
-                      className="font-medium hover:underline"
-                    >
-                      {titleCase(service.name)}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{titleCase(getServiceCategory(service))}</Badge>
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                    {getServiceImage(service)}
-                  </TableCell>
-                  <TableCell>
-                    {service.ports && service.ports.length > 0 ? (
-                      <span className="text-sm">
-                        {service.ports.map((p) => `${p.host_port}:${p.container_port}`).join(', ')}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={getServiceStatus(service)} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <ActionButton name={service.name} status={getServiceStatus(service)} size="icon-sm" />
-                  </TableCell>
-                </TableRow>
-              ))
+              filteredServices.map((service) => {
+                const status = getServiceStatus(service)
+                const cpuPct = service.metrics?.cpu_percentage ?? 0
+                const memPct = service.metrics?.memory_percentage ?? 0
+                return (
+                  <TableRow key={service.name} className="cursor-pointer">
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(service.name)}
+                        onChange={() => onToggleSelect(service.name)}
+                        className="size-4 rounded border-muted-foreground"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        to="/services/$name"
+                        params={{ name: service.name }}
+                        className="font-medium hover:underline"
+                      >
+                        {titleCase(service.name)}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{titleCase(getServiceCategory(service))}</Badge>
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                      {getServiceImage(service)}
+                    </TableCell>
+                    <TableCell>
+                      {service.ports && service.ports.length > 0 ? (
+                        <span className="text-sm">
+                          {service.ports.map((p) => `${p.host_port}:${p.container_port}`).join(', ')}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {status === 'running' && cpuPct > 0 ? (
+                        <ResourceBar value={cpuPct} className="w-20" />
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {status === 'running' && memPct > 0 ? (
+                        <ResourceBar value={memPct} className="w-20" />
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={status} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <ActionButton name={service.name} status={status} size="icon-sm" />
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             )}
           </TableBody>
         </Table>
