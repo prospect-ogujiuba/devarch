@@ -253,6 +253,23 @@ export interface SocketStatus {
   }
 }
 
+export interface ProjectService {
+  id: number
+  project_id: number
+  service_name: string
+  container_name?: string
+  image?: string
+  service_type?: string
+  ports: string[]
+  depends_on: string[]
+}
+
+export interface ProjectServiceStatus {
+  name: string
+  status: string
+  type?: string
+}
+
 export interface Project {
   id: number
   name: string
@@ -269,6 +286,8 @@ export interface Project {
   frontend_framework?: string
   domain?: string
   proxy_port?: number
+  compose_path?: string
+  service_count: number
   dependencies: Record<string, unknown>
   scripts: Record<string, string>
   git_remote?: string

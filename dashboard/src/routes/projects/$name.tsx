@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Globe, GitBranch, Package, Code2, ExternalLink, Puzzle, Palette } from 'lucide-react'
+import { ArrowLeft, Loader2, Globe, GitBranch, Package, Code2, ExternalLink, Puzzle, Palette, Play, Square, RotateCcw, Server } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ProjectLogo } from '@/components/projects/project-logo'
-import { useProject } from '@/features/projects/queries'
+import { useProject, useProjectServices, useProjectStatus, useProjectControl } from '@/features/projects/queries'
 
 export const Route = createFileRoute('/projects/$name')({
   component: ProjectDetailPage,
@@ -13,6 +14,9 @@ export const Route = createFileRoute('/projects/$name')({
 function ProjectDetailPage() {
   const { name } = Route.useParams()
   const { data: project, isLoading } = useProject(name)
+  const { data: services } = useProjectServices(name)
+  const { data: statuses } = useProjectStatus(name, !!project?.compose_path)
+  const { start, stop, restart } = useProjectControl(name)
 
   if (isLoading) {
     return (
@@ -46,10 +50,12 @@ function ProjectDetailPage() {
     ? Object.entries(deps.php as Record<string, string>)
     : []
 
-  // For non-WordPress: flat deps as [name, version] pairs
   const flatDeps = isWordPress
     ? phpDeps
     : Object.entries(deps).filter(([, v]) => typeof v === 'string') as [string, string][]
+
+  const statusMap = new Map(statuses?.map(s => [s.name, s]) ?? [])
+  const hasCompose = !!project.compose_path
 
   return (
     <div className="space-y-6">
@@ -70,22 +76,58 @@ function ProjectDetailPage() {
             {project.version && (
               <Badge variant="secondary" className="font-mono text-xs">v{project.version}</Badge>
             )}
+            {project.service_count > 0 && (
+              <Badge variant="secondary">{project.service_count} services</Badge>
+            )}
           </div>
           {project.description && (
             <p className="text-muted-foreground">{project.description}</p>
           )}
         </div>
-        {project.domain && (
-          <a
-            href={`http://${project.domain}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-          >
-            <ExternalLink className="size-4" />
-            {project.domain}
-          </a>
-        )}
+        <div className="flex items-center gap-2">
+          {hasCompose && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => start.mutate()}
+                disabled={start.isPending}
+              >
+                <Play className="size-3.5 mr-1" />
+                Start
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => stop.mutate()}
+                disabled={stop.isPending}
+              >
+                <Square className="size-3.5 mr-1" />
+                Stop
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => restart.mutate()}
+                disabled={restart.isPending}
+              >
+                <RotateCcw className="size-3.5 mr-1" />
+                Restart
+              </Button>
+            </>
+          )}
+          {project.domain && (
+            <a
+              href={`https://${project.domain}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+            >
+              <ExternalLink className="size-4" />
+              {project.domain}
+            </a>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -143,8 +185,14 @@ function ProjectDetailPage() {
         )}
       </div>
 
-      <Tabs defaultValue="info" className="space-y-4">
+      <Tabs defaultValue={hasCompose ? 'services' : 'info'} className="space-y-4">
         <TabsList>
+          {hasCompose && (
+            <TabsTrigger value="services" className="flex items-center gap-1.5">
+              <Server className="size-3.5" />
+              Services ({services?.length ?? 0})
+            </TabsTrigger>
+          )}
           <TabsTrigger value="info">Info</TabsTrigger>
           <TabsTrigger value="deps">Dependencies ({flatDeps.length})</TabsTrigger>
           {isWordPress && plugins.length > 0 && (
@@ -162,6 +210,49 @@ function ProjectDetailPage() {
           <TabsTrigger value="scripts">Scripts ({scriptEntries.length})</TabsTrigger>
           <TabsTrigger value="git">Git</TabsTrigger>
         </TabsList>
+
+        {hasCompose && (
+          <TabsContent value="services">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Server className="size-4" />
+                  Compose Services
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {services && services.length > 0 ? (
+                  <div className="grid gap-2">
+                    {services.map((svc) => {
+                      const st = statusMap.get(svc.service_name)
+                      return (
+                        <div key={svc.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono font-medium">{svc.service_name}</span>
+                            {svc.service_type && (
+                              <Badge variant="outline" className="text-xs">{svc.service_type}</Badge>
+                            )}
+                            {svc.image && (
+                              <span className="text-xs text-muted-foreground font-mono">{svc.image}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {svc.ports && svc.ports.length > 0 && (
+                              <span className="text-xs text-muted-foreground">{svc.ports.join(', ')}</span>
+                            )}
+                            {st && <ServiceStatusBadge status={st.status} />}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No services found</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         <TabsContent value="info" className="space-y-4">
           <Card>
@@ -181,6 +272,8 @@ function ProjectDetailPage() {
                 {project.frontend_framework && <Row label="Frontend" value={project.frontend_framework} />}
                 {project.domain && <Row label="Domain" value={project.domain} />}
                 {project.proxy_port && <Row label="Proxy Port" value={String(project.proxy_port)} />}
+                {project.compose_path && <Row label="Compose" value={project.compose_path} mono />}
+                {project.service_count > 0 && <Row label="Services" value={String(project.service_count)} />}
                 {isWordPress && deps.db_name && <Row label="Database" value={String(deps.db_name)} />}
                 {isWordPress && deps.table_prefix && <Row label="Table Prefix" value={String(deps.table_prefix)} mono />}
                 {project.last_scanned_at && (
@@ -301,6 +394,18 @@ function ProjectDetailPage() {
       </Tabs>
     </div>
   )
+}
+
+function ServiceStatusBadge({ status }: { status: string }) {
+  const variant = status === 'running' ? 'default'
+    : status === 'exited' || status === 'stopped' ? 'secondary'
+    : 'outline'
+
+  const colors = status === 'running' ? 'bg-green-500/10 text-green-500 border-green-500/20'
+    : status === 'exited' || status === 'stopped' ? 'bg-red-500/10 text-red-500 border-red-500/20'
+    : ''
+
+  return <Badge variant={variant} className={`text-xs ${colors}`}>{status}</Badge>
 }
 
 function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
