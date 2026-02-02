@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 )
 
 var defaultCategoryOrder = []string{
@@ -16,14 +17,23 @@ var defaultCategoryOrder = []string{
 }
 
 type Importer struct {
-	db         *sql.DB
-	composeDir string
+	db          *sql.DB
+	composeDir  string
+	projectRoot string
 }
 
 func NewImporter(db *sql.DB, composeDir string) *Importer {
 	return &Importer{
 		db:         db,
 		composeDir: composeDir,
+	}
+}
+
+func NewImporterWithRoot(db *sql.DB, composeDir, projectRoot string) *Importer {
+	return &Importer{
+		db:          db,
+		composeDir:  composeDir,
+		projectRoot: projectRoot,
 	}
 }
 
@@ -129,11 +139,66 @@ func (i *Importer) importServices(path string, categoryID int) error {
 	}
 
 	for _, parsed := range services {
+		i.resolvePaths(parsed, path)
 		if err := i.importService(parsed, categoryID); err != nil {
 			fmt.Printf("warning: failed to import service %s: %v\n", parsed.Name, err)
 		}
 	}
 	return nil
+}
+
+func (i *Importer) resolvePaths(parsed *ParsedService, composePath string) {
+	if i.projectRoot == "" {
+		return
+	}
+	composeDir := filepath.Dir(composePath)
+
+	// Resolve env_file relative path to absolute
+	if parsed.EnvFile != "" && !filepath.IsAbs(parsed.EnvFile) {
+		parsed.EnvFile = filepath.Clean(filepath.Join(composeDir, parsed.EnvFile))
+	}
+
+	// Resolve bind mount sources
+	for idx := range parsed.Volumes {
+		v := &parsed.Volumes[idx]
+		if v.VolumeType == "bind" && !filepath.IsAbs(v.Source) {
+			v.Source = filepath.Clean(filepath.Join(composeDir, v.Source))
+		}
+	}
+
+	// Resolve build context in overrides
+	if parsed.Overrides != nil {
+		if build, ok := parsed.Overrides["build"]; ok {
+			switch b := build.(type) {
+			case string:
+				if !filepath.IsAbs(b) {
+					parsed.Overrides["build"] = filepath.Clean(filepath.Join(composeDir, b))
+				}
+			case map[string]interface{}:
+				if ctx, ok := b["context"].(string); ok && !filepath.IsAbs(ctx) {
+					b["context"] = filepath.Clean(filepath.Join(composeDir, ctx))
+				}
+			}
+		}
+	}
+}
+
+// stripProjectRoot converts absolute paths back to relative from project root for portability
+func (i *Importer) stripProjectRoot(absPath string) string {
+	if i.projectRoot == "" || absPath == "" {
+		return absPath
+	}
+	abs, err := filepath.Abs(i.projectRoot)
+	if err != nil {
+		return absPath
+	}
+	if strings.HasPrefix(absPath, abs) {
+		rel, err := filepath.Rel(abs, absPath)
+		if err == nil {
+			return rel
+		}
+	}
+	return absPath
 }
 
 func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
@@ -148,8 +213,8 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 
 	var serviceID int
 	err = tx.QueryRow(`
-		INSERT INTO services (name, category_id, image_name, image_tag, restart_policy, command, user_spec, compose_overrides)
-		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), NULLIF($7, ''), $8)
+		INSERT INTO services (name, category_id, image_name, image_tag, restart_policy, command, user_spec, compose_overrides, env_file)
+		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), NULLIF($7, ''), $8, NULLIF($9, ''))
 		ON CONFLICT (name) DO UPDATE SET
 			category_id = $2,
 			image_name = $3,
@@ -158,10 +223,11 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 			command = NULLIF($6, ''),
 			user_spec = NULLIF($7, ''),
 			compose_overrides = $8,
+			env_file = NULLIF($9, ''),
 			updated_at = NOW()
 		RETURNING id
 	`, parsed.Name, categoryID, parsed.ImageName, parsed.ImageTag,
-		parsed.RestartPolicy, parsed.Command, parsed.UserSpec, overridesJSON).Scan(&serviceID)
+		parsed.RestartPolicy, parsed.Command, parsed.UserSpec, overridesJSON, parsed.EnvFile).Scan(&serviceID)
 	if err != nil {
 		return fmt.Errorf("insert service: %w", err)
 	}
@@ -185,9 +251,9 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 	}
 	for _, vol := range parsed.Volumes {
 		_, err := tx.Exec(`
-			INSERT INTO service_volumes (service_id, volume_type, source, target, read_only)
-			VALUES ($1, $2, $3, $4, $5)
-		`, serviceID, vol.VolumeType, vol.Source, vol.Target, vol.ReadOnly)
+			INSERT INTO service_volumes (service_id, volume_type, source, target, read_only, is_external)
+			VALUES ($1, $2, $3, $4, $5, $6)
+		`, serviceID, vol.VolumeType, vol.Source, vol.Target, vol.ReadOnly, vol.IsExternal)
 		if err != nil {
 			return fmt.Errorf("insert volume: %w", err)
 		}

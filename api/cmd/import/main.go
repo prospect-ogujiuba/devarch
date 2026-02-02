@@ -13,9 +13,10 @@ import (
 
 func main() {
 	var (
-		dbURL      = flag.String("db", "", "Database URL (or set DATABASE_URL env)")
-		composeDir = flag.String("compose-dir", "", "Path to compose directory")
-		countOnly  = flag.Bool("count-only", false, "Print service count and exit")
+		dbURL       = flag.String("db", "", "Database URL (or set DATABASE_URL env)")
+		composeDir  = flag.String("compose-dir", "", "Path to compose directory")
+		projectRoot = flag.String("project-root", "", "Project root for resolving relative paths")
+		countOnly   = flag.Bool("count-only", false, "Print service count and exit")
 	)
 	flag.Parse()
 
@@ -50,7 +51,12 @@ func main() {
 		log.Fatal("compose-dir is required")
 	}
 
-	importer := compose.NewImporter(db, *composeDir)
+	var importer *compose.Importer
+	if *projectRoot != "" {
+		importer = compose.NewImporterWithRoot(db, *composeDir, *projectRoot)
+	} else {
+		importer = compose.NewImporter(db, *composeDir)
+	}
 
 	log.Println("importing compose files...")
 	if err := importer.ImportAll(); err != nil {

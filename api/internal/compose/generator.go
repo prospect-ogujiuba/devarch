@@ -33,11 +33,12 @@ type networkConfig struct {
 }
 
 type serviceConfig struct {
-	Image         string                 `yaml:"image"`
+	Image         string                 `yaml:"image,omitempty"`
 	ContainerName string                 `yaml:"container_name"`
 	Restart       string                 `yaml:"restart,omitempty"`
 	Command       interface{}            `yaml:"command,omitempty"`
 	User          string                 `yaml:"user,omitempty"`
+	EnvFile       string                 `yaml:"env_file,omitempty"`
 	Ports         []string               `yaml:"ports,omitempty"`
 	Volumes       []string               `yaml:"volumes,omitempty"`
 	Environment   map[string]string      `yaml:"environment,omitempty"`
@@ -68,10 +69,13 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 	}
 
 	svc := serviceConfig{
-		Image:         fmt.Sprintf("%s:%s", service.ImageName, service.ImageTag),
 		ContainerName: service.Name,
 		Restart:       service.RestartPolicy,
 		Networks:      []string{g.networkName},
+	}
+
+	if service.ImageName != "" {
+		svc.Image = fmt.Sprintf("%s:%s", service.ImageName, service.ImageTag)
 	}
 
 	if service.Command.Valid && service.Command.String != "" {
@@ -79,6 +83,9 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 	}
 	if service.UserSpec.Valid && service.UserSpec.String != "" {
 		svc.User = service.UserSpec.String
+	}
+	if service.EnvFile.Valid && service.EnvFile.String != "" {
+		svc.EnvFile = service.EnvFile.String
 	}
 
 	namedVolumes := make(map[string]interface{})
@@ -98,7 +105,11 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 		svc.Volumes = append(svc.Volumes, volStr)
 
 		if vol.VolumeType == "named" {
-			namedVolumes[vol.Source] = nil
+			if vol.IsExternal {
+				namedVolumes[vol.Source] = map[string]interface{}{"external": true}
+			} else {
+				namedVolumes[vol.Source] = nil
+			}
 		}
 	}
 
@@ -168,6 +179,12 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 }
 
 func (g *Generator) loadServiceRelations(service *models.Service) error {
+	// Load env_file
+	g.db.QueryRow(`SELECT env_file FROM services WHERE id = $1`, service.ID).Scan(&service.EnvFile)
+	if service.EnvFile.Valid {
+		service.EnvFileStr = service.EnvFile.String
+	}
+
 	rows, err := g.db.Query(`
 		SELECT host_ip, host_port, container_port, protocol
 		FROM service_ports WHERE service_id = $1
@@ -186,7 +203,7 @@ func (g *Generator) loadServiceRelations(service *models.Service) error {
 	}
 
 	rows, err = g.db.Query(`
-		SELECT volume_type, source, target, read_only
+		SELECT volume_type, source, target, read_only, is_external
 		FROM service_volumes WHERE service_id = $1
 	`, service.ID)
 	if err != nil {
@@ -196,7 +213,7 @@ func (g *Generator) loadServiceRelations(service *models.Service) error {
 
 	for rows.Next() {
 		var v models.ServiceVolume
-		if err := rows.Scan(&v.VolumeType, &v.Source, &v.Target, &v.ReadOnly); err != nil {
+		if err := rows.Scan(&v.VolumeType, &v.Source, &v.Target, &v.ReadOnly, &v.IsExternal); err != nil {
 			return err
 		}
 		service.Volumes = append(service.Volumes, v)

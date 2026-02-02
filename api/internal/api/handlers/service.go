@@ -39,7 +39,7 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 		SELECT s.id, s.name, s.category_id, s.image_name, s.image_tag,
 			s.restart_policy, s.command, s.user_spec, s.enabled,
 			s.created_at, s.updated_at, c.name as category_name,
-			COALESCE(s.compose_overrides, '{}')
+			COALESCE(s.compose_overrides, '{}'), s.env_file
 		FROM services s
 		JOIN categories c ON s.category_id = c.id
 		WHERE 1=1
@@ -113,7 +113,7 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 			&s.ID, &s.Name, &s.CategoryID, &s.ImageName, &s.ImageTag,
 			&s.RestartPolicy, &s.Command, &s.UserSpec, &s.Enabled,
 			&s.CreatedAt, &s.UpdatedAt, &catName,
-			&s.ComposeOverrides,
+			&s.ComposeOverrides, &s.EnvFile,
 		); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -124,6 +124,9 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 		if s.UserSpec.Valid {
 			s.UserSpecStr = s.UserSpec.String
+		}
+		if s.EnvFile.Valid {
+			s.EnvFileStr = s.EnvFile.String
 		}
 		services = append(services, s)
 	}
@@ -216,7 +219,7 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 			s.restart_policy, s.command, s.user_spec, s.enabled,
 			s.created_at, s.updated_at, c.name as category_name,
 			s.config_status, s.last_validated_at, s.validation_errors,
-			s.compose_overrides
+			s.compose_overrides, s.env_file
 		FROM services s
 		JOIN categories c ON s.category_id = c.id
 		WHERE s.name = $1
@@ -225,7 +228,7 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 		&s.RestartPolicy, &s.Command, &s.UserSpec, &s.Enabled,
 		&s.CreatedAt, &s.UpdatedAt, &catName,
 		&s.ConfigStatus, &s.LastValidatedAt, &s.ValidationErrors,
-		&s.ComposeOverrides,
+		&s.ComposeOverrides, &s.EnvFile,
 	)
 	if err == sql.ErrNoRows {
 		http.Error(w, "service not found", http.StatusNotFound)
@@ -243,6 +246,9 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if s.UserSpec.Valid {
 		s.UserSpecStr = s.UserSpec.String
 	}
+	if s.EnvFile.Valid {
+		s.EnvFileStr = s.EnvFile.String
+	}
 	if s.LastValidatedAt.Valid {
 		s.LastValidatedStr = &s.LastValidatedAt.Time
 	}
@@ -257,9 +263,9 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *ServiceHandler) loadServiceByName(name string) (*models.Service, error) {
 	var s models.Service
 	err := h.db.QueryRow(
-		`SELECT id, name, image_name, image_tag, restart_policy, command, user_spec, compose_overrides FROM services WHERE name = $1`,
+		`SELECT id, name, image_name, image_tag, restart_policy, command, user_spec, compose_overrides, env_file FROM services WHERE name = $1`,
 		name,
-	).Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec, &s.ComposeOverrides)
+	).Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec, &s.ComposeOverrides, &s.EnvFile)
 	if err != nil {
 		return nil, err
 	}
@@ -277,12 +283,12 @@ func (h *ServiceHandler) loadServiceRelations(s *models.Service) {
 		}
 	}
 
-	rows, _ = h.db.Query(`SELECT volume_type, source, target, read_only FROM service_volumes WHERE service_id = $1`, s.ID)
+	rows, _ = h.db.Query(`SELECT volume_type, source, target, read_only, is_external FROM service_volumes WHERE service_id = $1`, s.ID)
 	if rows != nil {
 		defer rows.Close()
 		for rows.Next() {
 			var v models.ServiceVolume
-			rows.Scan(&v.VolumeType, &v.Source, &v.Target, &v.ReadOnly)
+			rows.Scan(&v.VolumeType, &v.Source, &v.Target, &v.ReadOnly, &v.IsExternal)
 			s.Volumes = append(s.Volumes, v)
 		}
 	}
@@ -336,6 +342,7 @@ type createServiceRequest struct {
 	RestartPolicy string                 `json:"restart_policy"`
 	Command       string                 `json:"command"`
 	UserSpec      string                 `json:"user_spec"`
+	EnvFile       string                 `json:"env_file"`
 	Ports         []models.ServicePort   `json:"ports"`
 	Volumes       []models.ServiceVolume `json:"volumes"`
 	EnvVars       []models.ServiceEnvVar `json:"env_vars"`
@@ -349,8 +356,8 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" || req.ImageName == "" || req.CategoryID == 0 {
-		http.Error(w, "name, image_name, and category_id are required", http.StatusBadRequest)
+	if req.Name == "" || req.CategoryID == 0 {
+		http.Error(w, "name and category_id are required", http.StatusBadRequest)
 		return
 	}
 	if !isValidServiceName(req.Name) {
@@ -374,10 +381,10 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	var serviceID int
 	err = tx.QueryRow(`
-		INSERT INTO services (name, category_id, image_name, image_tag, restart_policy, command, user_spec)
-		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), NULLIF($7, ''))
+		INSERT INTO services (name, category_id, image_name, image_tag, restart_policy, command, user_spec, env_file)
+		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''))
 		RETURNING id
-	`, req.Name, req.CategoryID, req.ImageName, req.ImageTag, req.RestartPolicy, req.Command, req.UserSpec).Scan(&serviceID)
+	`, req.Name, req.CategoryID, req.ImageName, req.ImageTag, req.RestartPolicy, req.Command, req.UserSpec, req.EnvFile).Scan(&serviceID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -396,9 +403,9 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	for _, vol := range req.Volumes {
 		_, err = tx.Exec(`
-			INSERT INTO service_volumes (service_id, volume_type, source, target, read_only)
-			VALUES ($1, $2, $3, $4, $5)
-		`, serviceID, vol.VolumeType, vol.Source, vol.Target, vol.ReadOnly)
+			INSERT INTO service_volumes (service_id, volume_type, source, target, read_only, is_external)
+			VALUES ($1, $2, $3, $4, $5, $6)
+		`, serviceID, vol.VolumeType, vol.Source, vol.Target, vol.ReadOnly, vol.IsExternal)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

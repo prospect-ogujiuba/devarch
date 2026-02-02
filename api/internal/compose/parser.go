@@ -57,6 +57,7 @@ type ParsedService struct {
 	RestartPolicy string
 	Command       string
 	UserSpec      string
+	EnvFile       string
 	Ports         []ParsedPort
 	Volumes       []ParsedVolume
 	EnvVars       []ParsedEnvVar
@@ -78,6 +79,7 @@ type ParsedVolume struct {
 	Source     string
 	Target     string
 	ReadOnly   bool
+	IsExternal bool
 }
 
 type ParsedEnvVar struct {
@@ -147,6 +149,7 @@ func ParseFileAll(path string) ([]*ParsedService, error) {
 
 		parseImage(svc.Image, parsed)
 		parsed.Command = parseCommand(svc.Command)
+		parsed.EnvFile = parseEnvFile(svc.EnvFile)
 		parsed.Ports = parsePorts(svc.Ports)
 		parsed.Volumes = parseVolumes(svc.Volumes, compose.Volumes)
 		parsed.EnvVars = parseEnvironment(svc.Environment)
@@ -272,6 +275,7 @@ func parseVolumes(volumes []string, namedVolumes map[string]interface{}) []Parse
 
 		if _, isNamed := namedVolumes[parts[0]]; isNamed {
 			pv.VolumeType = "named"
+			pv.IsExternal = isExternalVolume(namedVolumes[parts[0]])
 		} else if strings.HasPrefix(parts[0], "/") || strings.HasPrefix(parts[0], ".") {
 			pv.VolumeType = "bind"
 		} else {
@@ -285,6 +289,37 @@ func parseVolumes(volumes []string, namedVolumes map[string]interface{}) []Parse
 		result = append(result, pv)
 	}
 	return result
+}
+
+func isExternalVolume(volDef interface{}) bool {
+	if volDef == nil {
+		return false
+	}
+	m, ok := volDef.(map[string]interface{})
+	if !ok {
+		return false
+	}
+	ext, ok := m["external"]
+	if !ok {
+		return false
+	}
+	b, ok := ext.(bool)
+	return ok && b
+}
+
+func parseEnvFile(ef interface{}) string {
+	if ef == nil {
+		return ""
+	}
+	switch v := ef.(type) {
+	case string:
+		return v
+	case []interface{}:
+		if len(v) > 0 {
+			return fmt.Sprintf("%v", v[0])
+		}
+	}
+	return ""
 }
 
 var secretPatterns = []string{

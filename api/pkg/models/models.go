@@ -27,6 +27,8 @@ type Service struct {
 	CommandStr    string         `json:"command,omitempty"`
 	UserSpec      sql.NullString `json:"-"`
 	UserSpecStr   string         `json:"user_spec,omitempty"`
+	EnvFile       sql.NullString `json:"-"`
+	EnvFileStr    string         `json:"env_file,omitempty"`
 	Enabled          bool           `json:"enabled"`
 	ComposeOverrides NullableJSON   `json:"compose_overrides,omitempty"`
 	CreatedAt        time.Time      `json:"created_at"`
@@ -105,6 +107,7 @@ type ServiceVolume struct {
 	Source     string `json:"source"`
 	Target     string `json:"target"`
 	ReadOnly   bool   `json:"read_only"`
+	IsExternal bool   `json:"is_external"`
 }
 
 type ServiceEnvVar struct {
