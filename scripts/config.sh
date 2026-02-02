@@ -23,7 +23,7 @@
 SCRIPT_SOURCE="${(%):-%x}"
 export PROJECT_ROOT=$(cd "$(dirname "$SCRIPT_SOURCE")/../" && pwd)
 export SCRIPT_DIR="${PROJECT_ROOT}/scripts"
-export CONFIG_DIR="${PROJECT_ROOT}/config"
+export COMPOSE_DIR="${PROJECT_ROOT}/compose"
 export APPS_DIR="${PROJECT_ROOT}/apps"
 export LOGS_DIR="${PROJECT_ROOT}/logs"
 

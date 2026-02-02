@@ -16,6 +16,7 @@ func main() {
 		dbURL       = flag.String("db", "", "Database URL (or set DATABASE_URL env)")
 		composeDir  = flag.String("compose-dir", "", "Path to compose directory")
 		projectRoot = flag.String("project-root", "", "Project root for resolving relative paths")
+		configDir   = flag.String("config-dir", "", "Path to config directory for service config files")
 		countOnly   = flag.Bool("count-only", false, "Print service count and exit")
 	)
 	flag.Parse()
@@ -66,4 +67,22 @@ func main() {
 	var count int
 	db.QueryRow("SELECT COUNT(*) FROM services").Scan(&count)
 	log.Printf("import complete: %d services", count)
+
+	// Import config files if config-dir specified
+	if *configDir == "" && *projectRoot != "" {
+		// Default to ../config relative to project root
+		candidate := *projectRoot + "/config"
+		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+			*configDir = candidate
+		}
+	}
+	if *configDir != "" {
+		importer.SetConfigDir(*configDir)
+		fileCount, err := importer.ImportAllConfigFiles()
+		if err != nil {
+			log.Printf("warning: config file import: %v", err)
+		} else {
+			log.Printf("config files imported: %d files", fileCount)
+		}
+	}
 }
