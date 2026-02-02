@@ -3,6 +3,7 @@ package compose
 import (
 	"database/sql"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -20,6 +21,7 @@ type Importer struct {
 	db          *sql.DB
 	composeDir  string
 	projectRoot string
+	configDir   string
 }
 
 func NewImporter(db *sql.DB, composeDir string) *Importer {
@@ -35,6 +37,10 @@ func NewImporterWithRoot(db *sql.DB, composeDir, projectRoot string) *Importer {
 		composeDir:  composeDir,
 		projectRoot: projectRoot,
 	}
+}
+
+func (i *Importer) SetConfigDir(dir string) {
+	i.configDir = dir
 }
 
 func (i *Importer) ImportAll() error {
@@ -302,6 +308,114 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 	}
 
 	return tx.Commit()
+}
+
+// ImportAllConfigFiles scans the config directory and imports config files for all services found in DB.
+func (i *Importer) ImportAllConfigFiles() (int, error) {
+	if i.configDir == "" {
+		return 0, fmt.Errorf("config dir not set")
+	}
+
+	entries, err := os.ReadDir(i.configDir)
+	if err != nil {
+		return 0, fmt.Errorf("read config dir: %w", err)
+	}
+
+	total := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		serviceName := entry.Name()
+
+		var serviceID int
+		err := i.db.QueryRow("SELECT id FROM services WHERE name = $1", serviceName).Scan(&serviceID)
+		if err != nil {
+			continue // no matching service in DB
+		}
+
+		count, err := i.importServiceConfigFiles(serviceID, filepath.Join(i.configDir, serviceName))
+		if err != nil {
+			fmt.Printf("warning: config import for %s: %v\n", serviceName, err)
+			continue
+		}
+		total += count
+	}
+
+	return total, nil
+}
+
+func (i *Importer) importServiceConfigFiles(serviceID int, configPath string) (int, error) {
+	count := 0
+	err := filepath.Walk(configPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+
+		relPath, err := filepath.Rel(configPath, path)
+		if err != nil {
+			return err
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("read %s: %w", relPath, err)
+		}
+
+		// Skip binary files
+		if isBinaryContent(content) {
+			return nil
+		}
+
+		fileMode := "0644"
+		if info.Mode()&0111 != 0 {
+			fileMode = "0755"
+		}
+
+		_, err = i.db.Exec(`
+			INSERT INTO service_config_files (service_id, file_path, content, file_mode)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (service_id, file_path) DO UPDATE SET
+				content = $3, file_mode = $4, updated_at = NOW()
+		`, serviceID, relPath, string(content), fileMode)
+		if err != nil {
+			return fmt.Errorf("insert config file %s: %w", relPath, err)
+		}
+
+		count++
+		return nil
+	})
+	return count, err
+}
+
+func isBinaryContent(data []byte) bool {
+	if len(data) == 0 {
+		return false
+	}
+	// Use net/http content type detection
+	contentType := http.DetectContentType(data)
+	if strings.HasPrefix(contentType, "text/") || strings.HasPrefix(contentType, "application/json") ||
+		strings.HasPrefix(contentType, "application/xml") || strings.HasPrefix(contentType, "application/javascript") {
+		return false
+	}
+	// Also check for common config file patterns that might be detected as octet-stream
+	if contentType == "application/octet-stream" {
+		// Check first 512 bytes for null bytes
+		check := data
+		if len(check) > 512 {
+			check = check[:512]
+		}
+		for _, b := range check {
+			if b == 0 {
+				return true
+			}
+		}
+		return false
+	}
+	return true
 }
 
 func (i *Importer) resolveDependencies() error {

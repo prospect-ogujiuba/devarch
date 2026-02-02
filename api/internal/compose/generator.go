@@ -4,6 +4,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/priz/devarch-api/pkg/models"
@@ -13,6 +16,7 @@ import (
 type Generator struct {
 	db          *sql.DB
 	networkName string
+	projectRoot string
 }
 
 func NewGenerator(db *sql.DB, networkName string) *Generator {
@@ -20,6 +24,10 @@ func NewGenerator(db *sql.DB, networkName string) *Generator {
 		db:          db,
 		networkName: networkName,
 	}
+}
+
+func (g *Generator) SetProjectRoot(root string) {
+	g.projectRoot = root
 }
 
 type generatedCompose struct {
@@ -97,8 +105,13 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 		svc.Ports = append(svc.Ports, portStr)
 	}
 
+	// Get category name for path rewriting
+	var categoryName string
+	g.db.QueryRow(`SELECT c.name FROM categories c JOIN services s ON s.category_id = c.id WHERE s.id = $1`, service.ID).Scan(&categoryName)
+
 	for _, vol := range service.Volumes {
-		volStr := fmt.Sprintf("%s:%s", vol.Source, vol.Target)
+		source := g.rewriteConfigPath(vol.Source, categoryName, service.Name)
+		volStr := fmt.Sprintf("%s:%s", source, vol.Target)
 		if vol.ReadOnly {
 			volStr += ":ro"
 		}
@@ -280,4 +293,94 @@ func (g *Generator) loadServiceRelations(service *models.Service) error {
 	}
 
 	return nil
+}
+
+// rewriteConfigPath rewrites volume source paths from config/{service}/ to compose/{category}/{service}/
+func (g *Generator) rewriteConfigPath(source, categoryName, serviceName string) string {
+	if g.projectRoot == "" || categoryName == "" {
+		return source
+	}
+
+	configPrefix := filepath.Join(g.projectRoot, "config", serviceName)
+	if strings.HasPrefix(source, configPrefix) {
+		relPart := strings.TrimPrefix(source, configPrefix)
+		return filepath.Join(g.projectRoot, "compose", categoryName, serviceName, relPart)
+	}
+
+	// Also handle relative config/ paths
+	if strings.HasPrefix(source, "config/"+serviceName) {
+		relPart := strings.TrimPrefix(source, "config/"+serviceName)
+		return filepath.Join("compose", categoryName, serviceName, relPart)
+	}
+
+	return source
+}
+
+// MaterializeConfigFiles writes all config files from DB to compose/{category}/{service}/
+func (g *Generator) MaterializeConfigFiles(service *models.Service, baseDir string) error {
+	var categoryName string
+	err := g.db.QueryRow(`SELECT c.name FROM categories c JOIN services s ON s.category_id = c.id WHERE s.id = $1`, service.ID).Scan(&categoryName)
+	if err != nil {
+		return fmt.Errorf("get category: %w", err)
+	}
+
+	rows, err := g.db.Query(`
+		SELECT file_path, content, file_mode
+		FROM service_config_files WHERE service_id = $1
+	`, service.ID)
+	if err != nil {
+		return fmt.Errorf("query config files: %w", err)
+	}
+	defer rows.Close()
+
+	serviceDir := filepath.Join(baseDir, "compose", categoryName, service.Name)
+
+	for rows.Next() {
+		var filePath, content, fileMode string
+		if err := rows.Scan(&filePath, &content, &fileMode); err != nil {
+			return err
+		}
+
+		fullPath := filepath.Join(serviceDir, filePath)
+		dir := filepath.Dir(fullPath)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("mkdir %s: %w", dir, err)
+		}
+
+		mode := parseFileMode(fileMode)
+		if err := os.WriteFile(fullPath, []byte(content), mode); err != nil {
+			return fmt.Errorf("write %s: %w", fullPath, err)
+		}
+	}
+
+	return rows.Err()
+}
+
+// LoadConfigFiles loads config files for a service from DB into the model
+func (g *Generator) LoadConfigFiles(service *models.Service) error {
+	rows, err := g.db.Query(`
+		SELECT id, service_id, file_path, content, file_mode, is_template, created_at, updated_at
+		FROM service_config_files WHERE service_id = $1 ORDER BY file_path
+	`, service.ID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var f models.ServiceConfigFile
+		if err := rows.Scan(&f.ID, &f.ServiceID, &f.FilePath, &f.Content, &f.FileMode, &f.IsTemplate, &f.CreatedAt, &f.UpdatedAt); err != nil {
+			return err
+		}
+		service.ConfigFiles = append(service.ConfigFiles, f)
+	}
+	return rows.Err()
+}
+
+func parseFileMode(mode string) os.FileMode {
+	m, err := strconv.ParseUint(mode, 8, 32)
+	if err != nil {
+		return 0644
+	}
+	return os.FileMode(m)
 }

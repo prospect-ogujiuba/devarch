@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"io"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -22,15 +24,22 @@ type ServiceHandler struct {
 	podmanClient    *podman.Client
 	generator       *compose.Generator
 	validator       *compose.Validator
+	projectRoot     string
 }
 
 func NewServiceHandler(db *sql.DB, cc *container.Client, pc *podman.Client) *ServiceHandler {
+	projectRoot := os.Getenv("PROJECT_ROOT")
+	gen := compose.NewGenerator(db, "microservices-net")
+	if projectRoot != "" {
+		gen.SetProjectRoot(projectRoot)
+	}
 	return &ServiceHandler{
 		db:              db,
 		containerClient: cc,
 		podmanClient:    pc,
-		generator:       compose.NewGenerator(db, "microservices-net"),
+		generator:       gen,
 		validator:       compose.NewValidator(db),
+		projectRoot:     projectRoot,
 	}
 }
 
@@ -557,6 +566,14 @@ func (h *ServiceHandler) Start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Materialize config files before starting
+	if h.projectRoot != "" {
+		if err := h.generator.MaterializeConfigFiles(s, h.projectRoot); err != nil {
+			http.Error(w, "materialize config: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
 	composeYAML, err := h.generator.Generate(s)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -654,6 +671,14 @@ func (h *ServiceHandler) Rebuild(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Materialize config files before rebuilding
+	if h.projectRoot != "" {
+		if err := h.generator.MaterializeConfigFiles(s, h.projectRoot); err != nil {
+			http.Error(w, "materialize config: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	composeYAML, err := h.generator.Generate(s)
@@ -930,4 +955,179 @@ func (h *ServiceHandler) Export(w http.ResponseWriter, r *http.Request) {
 		"category": catName,
 		"yaml":     string(composeYAML),
 	})
+}
+
+// Materialize writes config files to disk without starting the service
+func (h *ServiceHandler) Materialize(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	if h.projectRoot == "" {
+		http.Error(w, "PROJECT_ROOT not set", http.StatusInternalServerError)
+		return
+	}
+
+	s, err := h.loadServiceByName(name)
+	if err == sql.ErrNoRows {
+		http.Error(w, "service not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.generator.MaterializeConfigFiles(s, h.projectRoot); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "materialized"})
+}
+
+// ListConfigFiles returns config files for a service
+func (h *ServiceHandler) ListConfigFiles(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	var serviceID int
+	if err := h.db.QueryRow("SELECT id FROM services WHERE name = $1", name).Scan(&serviceID); err == sql.ErrNoRows {
+		http.Error(w, "service not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rows, err := h.db.Query(`
+		SELECT id, service_id, file_path, file_mode, is_template, created_at, updated_at
+		FROM service_config_files WHERE service_id = $1 ORDER BY file_path
+	`, serviceID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var files []models.ServiceConfigFile
+	for rows.Next() {
+		var f models.ServiceConfigFile
+		if err := rows.Scan(&f.ID, &f.ServiceID, &f.FilePath, &f.FileMode, &f.IsTemplate, &f.CreatedAt, &f.UpdatedAt); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		files = append(files, f)
+	}
+
+	if files == nil {
+		files = []models.ServiceConfigFile{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(files)
+}
+
+// GetConfigFile returns a single config file's content
+func (h *ServiceHandler) GetConfigFile(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	filePath := chi.URLParam(r, "*")
+
+	var serviceID int
+	if err := h.db.QueryRow("SELECT id FROM services WHERE name = $1", name).Scan(&serviceID); err == sql.ErrNoRows {
+		http.Error(w, "service not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var f models.ServiceConfigFile
+	err := h.db.QueryRow(`
+		SELECT id, service_id, file_path, content, file_mode, is_template, created_at, updated_at
+		FROM service_config_files WHERE service_id = $1 AND file_path = $2
+	`, serviceID, filePath).Scan(&f.ID, &f.ServiceID, &f.FilePath, &f.Content, &f.FileMode, &f.IsTemplate, &f.CreatedAt, &f.UpdatedAt)
+	if err == sql.ErrNoRows {
+		http.Error(w, "file not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(f)
+}
+
+// PutConfigFile creates or updates a config file
+func (h *ServiceHandler) PutConfigFile(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	filePath := chi.URLParam(r, "*")
+
+	var serviceID int
+	if err := h.db.QueryRow("SELECT id FROM services WHERE name = $1", name).Scan(&serviceID); err == sql.ErrNoRows {
+		http.Error(w, "service not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var req struct {
+		Content  string `json:"content"`
+		FileMode string `json:"file_mode"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		// Fall back to reading raw body as content
+		r.Body = io.NopCloser(strings.NewReader(""))
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.FileMode == "" {
+		req.FileMode = "0644"
+	}
+
+	_, err := h.db.Exec(`
+		INSERT INTO service_config_files (service_id, file_path, content, file_mode)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (service_id, file_path) DO UPDATE SET
+			content = $3, file_mode = $4, updated_at = NOW()
+	`, serviceID, filePath, req.Content, req.FileMode)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "saved"})
+}
+
+// DeleteConfigFile removes a config file
+func (h *ServiceHandler) DeleteConfigFile(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	filePath := chi.URLParam(r, "*")
+
+	var serviceID int
+	if err := h.db.QueryRow("SELECT id FROM services WHERE name = $1", name).Scan(&serviceID); err == sql.ErrNoRows {
+		http.Error(w, "service not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	result, err := h.db.Exec("DELETE FROM service_config_files WHERE service_id = $1 AND file_path = $2", serviceID, filePath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		http.Error(w, "file not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
 }

@@ -41,7 +41,8 @@ type Service struct {
 	Dependencies []string          `json:"dependencies,omitempty"`
 	Healthcheck  *ServiceHealthcheck `json:"healthcheck,omitempty"`
 	Labels       []ServiceLabel    `json:"labels,omitempty"`
-	Domains      []ServiceDomain   `json:"domains,omitempty"`
+	Domains      []ServiceDomain      `json:"domains,omitempty"`
+	ConfigFiles  []ServiceConfigFile  `json:"config_files,omitempty"`
 
 	ConfigStatus     string          `json:"config_status"`
 	LastValidatedAt  sql.NullTime    `json:"-"`
@@ -80,6 +81,17 @@ func (n NullableJSON) MarshalJSON() ([]byte, error) {
 		return []byte("{}"), nil
 	}
 	return n.Data, nil
+}
+
+type ServiceConfigFile struct {
+	ID         int       `json:"id"`
+	ServiceID  int       `json:"service_id"`
+	FilePath   string    `json:"file_path"`
+	Content    string    `json:"content"`
+	FileMode   string    `json:"file_mode"`
+	IsTemplate bool      `json:"is_template"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 type ConfigVersion struct {
