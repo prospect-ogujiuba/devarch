@@ -10,10 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StacksIndexRouteImport } from './routes/stacks/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ServicesIndexRouteImport } from './routes/services/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as CategoriesIndexRouteImport } from './routes/categories/index'
+import { Route as StacksNameRouteImport } from './routes/stacks/$name'
 import { Route as ServicesNewRouteImport } from './routes/services/new'
 import { Route as ServicesNameRouteImport } from './routes/services/$name'
 import { Route as ProjectsNameRouteImport } from './routes/projects/$name'
@@ -21,6 +23,11 @@ import { Route as ProjectsNameRouteImport } from './routes/projects/$name'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StacksIndexRoute = StacksIndexRouteImport.update({
+  id: '/stacks/',
+  path: '/stacks/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
@@ -41,6 +48,11 @@ const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
 const CategoriesIndexRoute = CategoriesIndexRouteImport.update({
   id: '/categories/',
   path: '/categories/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StacksNameRoute = StacksNameRouteImport.update({
+  id: '/stacks/$name',
+  path: '/stacks/$name',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ServicesNewRoute = ServicesNewRouteImport.update({
@@ -64,20 +76,24 @@ export interface FileRoutesByFullPath {
   '/projects/$name': typeof ProjectsNameRoute
   '/services/$name': typeof ServicesNameRoute
   '/services/new': typeof ServicesNewRoute
+  '/stacks/$name': typeof StacksNameRoute
   '/categories/': typeof CategoriesIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/services/': typeof ServicesIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/stacks/': typeof StacksIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/projects/$name': typeof ProjectsNameRoute
   '/services/$name': typeof ServicesNameRoute
   '/services/new': typeof ServicesNewRoute
+  '/stacks/$name': typeof StacksNameRoute
   '/categories': typeof CategoriesIndexRoute
   '/projects': typeof ProjectsIndexRoute
   '/services': typeof ServicesIndexRoute
   '/settings': typeof SettingsIndexRoute
+  '/stacks': typeof StacksIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -85,10 +101,12 @@ export interface FileRoutesById {
   '/projects/$name': typeof ProjectsNameRoute
   '/services/$name': typeof ServicesNameRoute
   '/services/new': typeof ServicesNewRoute
+  '/stacks/$name': typeof StacksNameRoute
   '/categories/': typeof CategoriesIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/services/': typeof ServicesIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/stacks/': typeof StacksIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -97,30 +115,36 @@ export interface FileRouteTypes {
     | '/projects/$name'
     | '/services/$name'
     | '/services/new'
+    | '/stacks/$name'
     | '/categories/'
     | '/projects/'
     | '/services/'
     | '/settings/'
+    | '/stacks/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/projects/$name'
     | '/services/$name'
     | '/services/new'
+    | '/stacks/$name'
     | '/categories'
     | '/projects'
     | '/services'
     | '/settings'
+    | '/stacks'
   id:
     | '__root__'
     | '/'
     | '/projects/$name'
     | '/services/$name'
     | '/services/new'
+    | '/stacks/$name'
     | '/categories/'
     | '/projects/'
     | '/services/'
     | '/settings/'
+    | '/stacks/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -128,10 +152,12 @@ export interface RootRouteChildren {
   ProjectsNameRoute: typeof ProjectsNameRoute
   ServicesNameRoute: typeof ServicesNameRoute
   ServicesNewRoute: typeof ServicesNewRoute
+  StacksNameRoute: typeof StacksNameRoute
   CategoriesIndexRoute: typeof CategoriesIndexRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
   ServicesIndexRoute: typeof ServicesIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
+  StacksIndexRoute: typeof StacksIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -141,6 +167,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stacks/': {
+      id: '/stacks/'
+      path: '/stacks'
+      fullPath: '/stacks/'
+      preLoaderRoute: typeof StacksIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/': {
@@ -169,6 +202,13 @@ declare module '@tanstack/react-router' {
       path: '/categories'
       fullPath: '/categories/'
       preLoaderRoute: typeof CategoriesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stacks/$name': {
+      id: '/stacks/$name'
+      path: '/stacks/$name'
+      fullPath: '/stacks/$name'
+      preLoaderRoute: typeof StacksNameRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/services/new': {
@@ -200,10 +240,12 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectsNameRoute: ProjectsNameRoute,
   ServicesNameRoute: ServicesNameRoute,
   ServicesNewRoute: ServicesNewRoute,
+  StacksNameRoute: StacksNameRoute,
   CategoriesIndexRoute: CategoriesIndexRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
   ServicesIndexRoute: ServicesIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
+  StacksIndexRoute: StacksIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
