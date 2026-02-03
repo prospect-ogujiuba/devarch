@@ -2,7 +2,30 @@ networks:
   microservices-net:
     external: true
 
+volumes:
+  devarch_pgdata:
+
 services:
+  devarch-db:
+    container_name: devarch-db
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=devarch
+      - POSTGRES_PASSWORD=devarch
+      - POSTGRES_DB=devarch
+    volumes:
+      - devarch_pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devarch"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   devarch-api:
     container_name: devarch-api
     build:
@@ -10,8 +33,11 @@ services:
       dockerfile: Dockerfile
       target: dev
     restart: unless-stopped
+    depends_on:
+      devarch-db:
+        condition: service_healthy
     environment:
-      - DATABASE_URL=postgres://postgres:admin1234567@postgres:5432/devarch?sslmode=disable
+      - DATABASE_URL=postgres://devarch:devarch@devarch-db:5432/devarch?sslmode=disable
       - PORT=8080
       - DEVARCH_USE_SUDO=false
       - CONTAINER_HOST=unix:///run/podman/podman.sock
