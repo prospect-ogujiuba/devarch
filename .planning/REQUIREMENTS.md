@@ -151,61 +151,61 @@
 | STCK-06 | Phase 2 | Pending |
 | STCK-07 | Phase 2 | Pending |
 | STCK-08 | Phase 2 | Pending |
-| INST-01 | Phase 2 | Pending |
-| INST-02 | Phase 2 | Pending |
-| INST-03 | Phase 2 | Pending |
-| INST-04 | Phase 2 | Pending |
-| INST-05 | Phase 2 | Pending |
-| INST-06 | Phase 2 | Pending |
-| INST-07 | Phase 2 | Pending |
-| INST-08 | Phase 2 | Pending |
-| INST-09 | Phase 2 | Pending |
-| INST-10 | Phase 2 | Pending |
-| INST-11 | Phase 2 | Pending |
-| INST-12 | Phase 2 | Pending |
-| NETW-01 | Phase 3 | Pending |
-| NETW-02 | Phase 3 | Pending |
-| NETW-03 | Phase 3 | Pending |
-| NETW-04 | Phase 3 | Pending |
-| COMP-01 | Phase 4 | Pending |
-| COMP-02 | Phase 4 | Pending |
-| COMP-03 | Phase 4 | Pending |
-| PLAN-01 | Phase 4 | Pending |
-| PLAN-02 | Phase 4 | Pending |
-| PLAN-03 | Phase 4 | Pending |
-| PLAN-04 | Phase 4 | Pending |
-| PLAN-05 | Phase 4 | Pending |
-| WIRE-01 | Phase 5 | Pending |
-| WIRE-02 | Phase 5 | Pending |
-| WIRE-03 | Phase 5 | Pending |
-| WIRE-04 | Phase 5 | Pending |
-| WIRE-05 | Phase 5 | Pending |
-| WIRE-06 | Phase 5 | Pending |
-| WIRE-07 | Phase 5 | Pending |
-| WIRE-08 | Phase 5 | Pending |
-| EXIM-01 | Phase 6 | Pending |
-| EXIM-02 | Phase 6 | Pending |
-| EXIM-03 | Phase 6 | Pending |
-| EXIM-04 | Phase 6 | Pending |
-| EXIM-05 | Phase 6 | Pending |
-| SECR-01 | Phase 7 | Pending |
-| SECR-02 | Phase 7 | Pending |
-| SECR-03 | Phase 7 | Pending |
-| SECR-04 | Phase 7 | Pending |
-| RESC-01 | Phase 7 | Pending |
-| RESC-02 | Phase 7 | Pending |
-| RESC-03 | Phase 7 | Pending |
 | MIGR-01 | Phase 2 | Pending |
-| MIGR-02 | Phase 2 | Pending |
-| MIGR-03 | Phase 5 | Pending |
-| MIGR-04 | Phase 7 | Pending |
-| MIGR-05 | Phase 7 | Pending |
+| INST-01 | Phase 3 | Pending |
+| INST-02 | Phase 3 | Pending |
+| INST-03 | Phase 3 | Pending |
+| INST-04 | Phase 3 | Pending |
+| INST-05 | Phase 3 | Pending |
+| INST-06 | Phase 3 | Pending |
+| INST-07 | Phase 3 | Pending |
+| INST-08 | Phase 3 | Pending |
+| INST-09 | Phase 3 | Pending |
+| INST-10 | Phase 3 | Pending |
+| INST-11 | Phase 3 | Pending |
+| INST-12 | Phase 3 | Pending |
+| MIGR-02 | Phase 3 | Pending |
+| NETW-01 | Phase 4 | Pending |
+| NETW-02 | Phase 4 | Pending |
+| NETW-03 | Phase 4 | Pending |
+| NETW-04 | Phase 4 | Pending |
+| COMP-01 | Phase 5 | Pending |
+| COMP-02 | Phase 5 | Pending |
+| COMP-03 | Phase 5 | Pending |
+| PLAN-01 | Phase 6 | Pending |
+| PLAN-02 | Phase 6 | Pending |
+| PLAN-03 | Phase 6 | Pending |
+| PLAN-04 | Phase 6 | Pending |
+| PLAN-05 | Phase 6 | Pending |
+| WIRE-01 | Phase 7 | Pending |
+| WIRE-02 | Phase 7 | Pending |
+| WIRE-03 | Phase 7 | Pending |
+| WIRE-04 | Phase 7 | Pending |
+| WIRE-05 | Phase 7 | Pending |
+| WIRE-06 | Phase 7 | Pending |
+| WIRE-07 | Phase 7 | Pending |
+| WIRE-08 | Phase 7 | Pending |
+| MIGR-03 | Phase 7 | Pending |
+| EXIM-01 | Phase 8 | Pending |
+| EXIM-02 | Phase 8 | Pending |
+| EXIM-03 | Phase 8 | Pending |
+| EXIM-04 | Phase 8 | Pending |
+| EXIM-05 | Phase 8 | Pending |
+| SECR-01 | Phase 9 | Pending |
+| SECR-02 | Phase 9 | Pending |
+| SECR-03 | Phase 9 | Pending |
+| SECR-04 | Phase 9 | Pending |
+| RESC-01 | Phase 9 | Pending |
+| RESC-02 | Phase 9 | Pending |
+| RESC-03 | Phase 9 | Pending |
+| MIGR-04 | Phase 9 | Pending |
+| MIGR-05 | Phase 9 | Pending |
 
 **Coverage:**
-- v1 requirements: 48 total
-- Mapped to phases: 48
+- v1 requirements: 60 total
+- Mapped to phases: 60
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-03*
-*Last updated: 2026-02-03 after initial definition*
+*Last updated: 2026-02-03 after roadmap creation*
