@@ -18,7 +18,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { formatDate } from '@/lib/format'
 import type { Stack } from '@/types/api'
 
 interface StackTableProps {
@@ -90,7 +89,7 @@ export function StackTable({ stacks, onEnable, onDisable, onClone, onRename, onD
                       {runningRatio}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(stack.created_at)}
+                      {new Date(stack.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
