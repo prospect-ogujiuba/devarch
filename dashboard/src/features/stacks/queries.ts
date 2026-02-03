@@ -1,0 +1,223 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+import type { Stack, DeletePreview } from '@/types/api'
+import { toast } from 'sonner'
+
+// Queries
+export function useStacks() {
+  return useQuery({
+    queryKey: ['stacks'],
+    queryFn: async () => {
+      const response = await api.get<Stack[]>('/stacks')
+      return Array.isArray(response.data) ? response.data : []
+    },
+    refetchInterval: 5000,
+  })
+}
+
+export function useStack(name: string) {
+  return useQuery({
+    queryKey: ['stacks', name],
+    queryFn: async () => {
+      const response = await api.get<Stack>(`/stacks/${name}`)
+      return response.data
+    },
+    enabled: !!name,
+    refetchInterval: 5000,
+  })
+}
+
+export function useTrashStacks() {
+  return useQuery({
+    queryKey: ['stacks', 'trash'],
+    queryFn: async () => {
+      const response = await api.get<Stack[]>('/stacks/trash')
+      return Array.isArray(response.data) ? response.data : []
+    },
+  })
+}
+
+export function useDeletePreview(name: string) {
+  return useQuery({
+    queryKey: ['stacks', name, 'delete-preview'],
+    queryFn: async () => {
+      const response = await api.get<DeletePreview>(`/stacks/${name}/delete-preview`)
+      return response.data
+    },
+    enabled: !!name,
+  })
+}
+
+// Mutations
+interface CreateStackRequest {
+  name: string
+  description: string
+}
+
+export function useCreateStack() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (data: CreateStackRequest) => {
+      const response = await api.post('/stacks', data)
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Stack created')
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data || 'Failed to create stack')
+    },
+  })
+}
+
+interface UpdateStackRequest {
+  description: string
+}
+
+export function useUpdateStack() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ name, data }: { name: string; data: UpdateStackRequest }) => {
+      const response = await api.put(`/stacks/${name}`, data)
+      return response.data
+    },
+    onSuccess: (_data, { name }) => {
+      toast.success('Stack updated')
+      queryClient.invalidateQueries({ queryKey: ['stacks', name] })
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data || 'Failed to update stack')
+    },
+  })
+}
+
+export function useDeleteStack() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const response = await api.delete(`/stacks/${name}`)
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Stack deleted')
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data || 'Failed to delete stack')
+    },
+  })
+}
+
+export function useEnableStack() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const response = await api.post(`/stacks/${name}/enable`)
+      return response.data
+    },
+    onSuccess: (_data, name) => {
+      toast.success(`Enabled ${name}`)
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+    },
+    onError: (error: any, name) => {
+      toast.error(error.response?.data || `Failed to enable ${name}`)
+    },
+  })
+}
+
+export function useDisableStack() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const response = await api.post(`/stacks/${name}/disable`)
+      return response.data
+    },
+    onSuccess: (_data, name) => {
+      toast.success(`Disabled ${name}`)
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+    },
+    onError: (error: any, name) => {
+      toast.error(error.response?.data || `Failed to disable ${name}`)
+    },
+  })
+}
+
+interface CloneStackRequest {
+  name: string
+}
+
+export function useCloneStack() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ name, newName }: { name: string; newName: string }) => {
+      const response = await api.post(`/stacks/${name}/clone`, { name: newName })
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Stack cloned')
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data || 'Failed to clone stack')
+    },
+  })
+}
+
+interface RenameStackRequest {
+  name: string
+}
+
+export function useRenameStack() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ name, newName }: { name: string; newName: string }) => {
+      const response = await api.post(`/stacks/${name}/rename`, { name: newName })
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Stack renamed')
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data || 'Failed to rename stack')
+    },
+  })
+}
+
+export function useRestoreStack() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const response = await api.post(`/stacks/trash/${name}/restore`)
+      return response.data
+    },
+    onSuccess: (_data, name) => {
+      toast.success(`Restored ${name}`)
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', 'trash'] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data || 'Failed to restore stack')
+    },
+  })
+}
+
+export function usePermanentDeleteStack() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const response = await api.delete(`/stacks/trash/${name}`)
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Stack permanently deleted')
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', 'trash'] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data || 'Failed to permanently delete stack')
+    },
+  })
+}
