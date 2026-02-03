@@ -13,8 +13,12 @@ import (
 	"github.com/priz/devarch-api/pkg/models"
 )
 
+var _ Runtime = (*Client)(nil)
+
+var ErrNotImplemented = fmt.Errorf("not implemented: will be available in Phase 4")
+
 type Client struct {
-	runtime     string
+	runtime     RuntimeType
 	composeCmd  string
 	useSudo     bool
 	networkName string
@@ -25,18 +29,43 @@ func NewClient() (*Client, error) {
 		networkName: "microservices-net",
 	}
 
-	if _, err := exec.LookPath("podman"); err == nil {
-		c.runtime = "podman"
-		if c.checkComposeAvailable("podman", "compose") {
+	// Check DEVARCH_RUNTIME env var first
+	if envRuntime := os.Getenv("DEVARCH_RUNTIME"); envRuntime != "" {
+		switch envRuntime {
+		case "podman":
+			if _, err := exec.LookPath("podman"); err != nil {
+				return nil, fmt.Errorf("DEVARCH_RUNTIME=podman but podman not found — install podman or unset DEVARCH_RUNTIME for auto-detection")
+			}
+			c.runtime = RuntimePodman
+			if c.checkComposeAvailable("podman", "compose") {
+				c.composeCmd = "compose"
+			} else {
+				c.composeCmd = "podman-compose"
+			}
+		case "docker":
+			if _, err := exec.LookPath("docker"); err != nil {
+				return nil, fmt.Errorf("DEVARCH_RUNTIME=docker but docker not found — install docker or unset DEVARCH_RUNTIME for auto-detection")
+			}
+			c.runtime = RuntimeDocker
+			c.composeCmd = "compose"
+		default:
+			return nil, fmt.Errorf("DEVARCH_RUNTIME=%s invalid — must be 'podman' or 'docker'", envRuntime)
+		}
+	} else {
+		// Auto-detect: prefer Podman
+		if _, err := exec.LookPath("podman"); err == nil {
+			c.runtime = RuntimePodman
+			if c.checkComposeAvailable("podman", "compose") {
+				c.composeCmd = "compose"
+			} else {
+				c.composeCmd = "podman-compose"
+			}
+		} else if _, err := exec.LookPath("docker"); err == nil {
+			c.runtime = RuntimeDocker
 			c.composeCmd = "compose"
 		} else {
-			c.composeCmd = "podman-compose"
+			return nil, fmt.Errorf("no container runtime found")
 		}
-	} else if _, err := exec.LookPath("docker"); err == nil {
-		c.runtime = "docker"
-		c.composeCmd = "compose"
-	} else {
-		return nil, fmt.Errorf("no container runtime found")
 	}
 
 	c.useSudo = os.Getenv("DEVARCH_USE_SUDO") == "true"
@@ -49,17 +78,17 @@ func (c *Client) checkComposeAvailable(runtime, subcmd string) bool {
 	return cmd.Run() == nil
 }
 
-func (c *Client) RuntimeName() string {
+func (c *Client) RuntimeName() RuntimeType {
 	return c.runtime
 }
 
 func (c *Client) execCommand(args ...string) (string, error) {
 	var cmd *exec.Cmd
 	if c.useSudo {
-		sudoArgs := append([]string{c.runtime}, args...)
+		sudoArgs := append([]string{string(c.runtime)}, args...)
 		cmd = exec.Command("sudo", sudoArgs...)
 	} else {
-		cmd = exec.Command(c.runtime, args...)
+		cmd = exec.Command(string(c.runtime), args...)
 	}
 
 	var stdout, stderr bytes.Buffer
@@ -98,10 +127,10 @@ func (c *Client) execComposeCommand(composeYAML []byte, args ...string) error {
 	var cmd *exec.Cmd
 	if c.composeCmd == "compose" {
 		if c.useSudo {
-			sudoArgs := append([]string{c.runtime}, cmdArgs...)
+			sudoArgs := append([]string{string(c.runtime)}, cmdArgs...)
 			cmd = exec.Command("sudo", sudoArgs...)
 		} else {
-			cmd = exec.Command(c.runtime, cmdArgs...)
+			cmd = exec.Command(string(c.runtime), cmdArgs...)
 		}
 	} else {
 		if c.useSudo {
@@ -323,7 +352,10 @@ func (c *Client) ListContainers() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	return c.parseNamesList(output)
+}
 
+func (c *Client) parseNamesList(output string) ([]string, error) {
 	var names []string
 	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
 		if line != "" {
@@ -331,4 +363,111 @@ func (c *Client) ListContainers() ([]string, error) {
 		}
 	}
 	return names, nil
+}
+
+func (c *Client) ListContainersWithLabels(labels map[string]string) ([]string, error) {
+	args := []string{"ps", "-a", "--format", "{{.Names}}"}
+	for k, v := range labels {
+		args = append(args, "--filter", fmt.Sprintf("label=%s=%s", k, v))
+	}
+	output, err := c.execCommand(args...)
+	if err != nil {
+		return nil, err
+	}
+	return c.parseNamesList(output)
+}
+
+func (c *Client) Exec(containerName string, command []string) (string, error) {
+	args := append([]string{"exec", containerName}, command...)
+	return c.execCommand(args...)
+}
+
+func (c *Client) GetContainerStatus(name string) (*ContainerStatus, error) {
+	state, err := c.GetStatus(name)
+	if err != nil {
+		return nil, err
+	}
+
+	cs := &ContainerStatus{
+		Status:       state.Status,
+		Health:       state.HealthStr,
+		Error:        state.ErrorStr,
+		RestartCount: state.RestartCount,
+	}
+
+	if state.StartedAtStr != nil {
+		cs.StartedAt = state.StartedAtStr
+	}
+
+	if state.FinishedStr != nil {
+		cs.FinishedAt = state.FinishedStr
+	}
+
+	if state.ExitCodeInt != nil {
+		cs.ExitCode = state.ExitCodeInt
+	}
+
+	return cs, nil
+}
+
+func (c *Client) GetContainerMetrics(name string) (*ContainerMetrics, error) {
+	m, err := c.GetMetrics(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ContainerMetrics{
+		CPUPercentage:    m.CPUPercentage,
+		MemoryUsedMB:     m.MemoryUsedMB,
+		MemoryLimitMB:    m.MemoryLimitMB,
+		MemoryPercentage: m.MemoryPercentage,
+		NetworkRxBytes:   m.NetworkRxBytes,
+		NetworkTxBytes:   m.NetworkTxBytes,
+		RecordedAt:       m.RecordedAt,
+	}, nil
+}
+
+func (c *Client) RunCompose(composePath string, args ...string) (string, error) {
+	var cmdArgs []string
+	if c.composeCmd == "compose" {
+		cmdArgs = []string{c.composeCmd, "-f", composePath}
+	} else {
+		cmdArgs = []string{"-f", composePath}
+	}
+	cmdArgs = append(cmdArgs, args...)
+
+	var cmd *exec.Cmd
+	if c.composeCmd == "compose" {
+		if c.useSudo {
+			sudoArgs := append([]string{string(c.runtime)}, cmdArgs...)
+			cmd = exec.Command("sudo", sudoArgs...)
+		} else {
+			cmd = exec.Command(string(c.runtime), cmdArgs...)
+		}
+	} else {
+		if c.useSudo {
+			sudoArgs := append([]string{c.composeCmd}, cmdArgs...)
+			cmd = exec.Command("sudo", sudoArgs...)
+		} else {
+			cmd = exec.Command(c.composeCmd, cmdArgs...)
+		}
+	}
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return string(out), fmt.Errorf("compose error: %s: %w", string(out), err)
+	}
+	return string(out), nil
+}
+
+func (c *Client) CreateNetwork(name string, labels map[string]string) error {
+	return ErrNotImplemented
+}
+
+func (c *Client) RemoveNetwork(name string) error {
+	return ErrNotImplemented
+}
+
+func (c *Client) ListNetworks() ([]string, error) {
+	return nil, ErrNotImplemented
 }
