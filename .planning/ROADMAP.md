@@ -2,7 +2,7 @@
 
 ## Overview
 
-Transform DevArch from single-service orchestration to multi-stack isolation, enabling developers to run multiple independent environments (Laravel+MySQL, Django+Postgres) without collision. Phases progress from foundation (naming, networking) through instances and config resolution, to sophisticated features (plan/apply safety, service wiring, export/import portability). Core primitive throughout: two stacks using the same service template must never collide.
+Transform DevArch from single-service orchestration to multi-stack isolation, enabling developers to run multiple independent environments (Laravel+MySQL, Django+Postgres) without collision. Phases progress from foundation (naming, networking) through instances and config resolution, to export/import portability (validated early to prove the "hand it to a teammate" loop), then wiring and secrets. Core primitive: two stacks using the same service template must never collide. Portability promise: devarch.yml + devarch.lock + `devarch init` = reproducible environment on any machine.
 
 ## Phases
 
@@ -12,14 +12,14 @@ Transform DevArch from single-service orchestration to multi-stack isolation, en
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation & Guardrails** - Identity system, validation, runtime abstraction
+- [x] **Phase 1: Foundation & Guardrails** - Identity system, validation, runtime abstraction
 - [ ] **Phase 2: Stack CRUD** - Stack management API + dashboard UI
 - [ ] **Phase 3: Service Instances** - Instance overrides + config resolution
 - [ ] **Phase 4: Network Isolation** - Per-stack networks, deterministic naming
 - [ ] **Phase 5: Compose Generation** - Stack-scoped YAML generation
 - [ ] **Phase 6: Plan/Apply Workflow** - Safety mechanism with advisory locking
-- [ ] **Phase 7: Service Wiring** - Contract-based auto-wiring + explicit wiring
-- [ ] **Phase 8: Export/Import** - Declarative stack definitions
+- [ ] **Phase 7: Export/Import & Bootstrap** - Shareable devarch.yml, lockfile, init/doctor
+- [ ] **Phase 8: Service Wiring** - Contract-based auto-wiring + explicit wiring
 - [ ] **Phase 9: Secrets & Resources** - Encryption + resource limits
 
 ## Phase Details
@@ -33,11 +33,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Stack and instance names are validated before creation (charset, length, uniqueness)
   3. All container operations route through container.Client (no hardcoded podman exec.Command)
   4. Runtime abstraction works for both Docker and Podman
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md: TBD
-- [ ] 01-02-PLAN.md: TBD
+- [x] 01-01-PLAN.md — Labels, validation, types, and DB migration (COMPLETE 2026-02-03)
+- [x] 01-02-PLAN.md — Runtime abstraction refactor and hardcoded call elimination (COMPLETE 2026-02-03)
 
 ### Phase 2: Stack CRUD
 **Goal**: Users can create and manage stacks via API and dashboard
@@ -47,10 +47,11 @@ Plans:
   1. User can create stack with name and description via API and dashboard
   2. User can list all stacks with status summary (instance count, running count)
   3. User can view stack detail page showing instances and network info
-  4. User can edit stack metadata (name, description)
-  5. User can delete stack and all resources cascade (containers, instances, network)
-  6. User can enable/disable stack without deleting it
-  7. User can clone stack with new name (copies instances + overrides)
+  4. User can edit stack metadata (description only; stack name is immutable ID)
+  5. User can "rename" via clone: clone stack to new name, then optionally delete old stack
+  6. User can delete stack and all resources cascade (containers, instances, network)
+  7. User can enable/disable stack without deleting it
+  8. User can clone stack with new name (copies instances + overrides)
 **Plans**: TBD
 
 Plans:
@@ -78,7 +79,7 @@ Plans:
 - [ ] 03-04-PLAN.md: TBD
 
 ### Phase 4: Network Isolation
-**Goal**: Each stack runs on isolated network with deterministic container naming (no cross-stack contamination)
+**Goal**: Each stack runs on isolated network with deterministic container naming (no cross-stack contamination). Implementation must be runtime-agnostic: Docker and Podman both get per-stack isolated networks and the same DNS/service-discovery semantics.
 **Depends on**: Phase 3
 **Requirements**: NETW-01, NETW-02, NETW-03, NETW-04
 **Success Criteria** (what must be TRUE):
@@ -125,9 +126,31 @@ Plans:
 - [ ] 06-02-PLAN.md: TBD
 - [ ] 06-03-PLAN.md: TBD
 
-### Phase 7: Service Wiring
-**Goal**: Services automatically discover dependencies via contracts (auto-wiring for simple cases, explicit wiring for ambiguous)
+### Phase 7: Export/Import & Bootstrap
+**Goal**: Users export stacks to devarch.yml (with resolved specifics) for sharing, import with reconciliation, lockfile for deterministic reproduction, and one-command bootstrap + diagnostics
 **Depends on**: Phase 6
+**Requirements**: EXIM-01, EXIM-02, EXIM-03, EXIM-04, EXIM-05, EXIM-06, BOOT-01, BOOT-02, LOCK-01, LOCK-02, LOCK-03
+**Success Criteria** (what must be TRUE):
+  1. Export produces devarch.yml with stack, instances, overrides (no wires yet — Phase 8)
+  2. Export includes resolved specifics: host ports, image digests/pinned versions, template versions
+  3. Import creates or updates stack from devarch.yml (create-update mode)
+  4. devarch.yml includes version field for format evolution
+  5. Secrets are redacted in exports (placeholders, not plaintext)
+  6. Export → import → export round-trip is stable (excluding ids/timestamps)
+  7. `devarch init` bootstraps from devarch.yml (pull images, create networks, apply config)
+  8. `devarch doctor` checks runtime, permissions, port conflicts, disk, required tools
+  9. devarch.lock generated from resolved state (ports, digests, template versions)
+  10. Apply warns when runtime diverges from lockfile
+**Plans**: TBD
+
+Plans:
+- [ ] 07-01-PLAN.md: TBD
+- [ ] 07-02-PLAN.md: TBD
+- [ ] 07-03-PLAN.md: TBD
+
+### Phase 8: Service Wiring
+**Goal**: Services automatically discover dependencies via contracts (auto-wiring for simple cases, explicit wiring for ambiguous)
+**Depends on**: Phase 7
 **Requirements**: WIRE-01, WIRE-02, WIRE-03, WIRE-04, WIRE-05, WIRE-06, WIRE-07, WIRE-08, MIGR-03
 **Success Criteria** (what must be TRUE):
   1. Template services declare exports (name, type, port, protocol)
@@ -137,30 +160,14 @@ Plans:
   5. Plan output shows missing or ambiguous required contracts
   6. Consumer instances receive env vars from wires (DB_HOST, DB_PORT using internal DNS)
   7. Consumer instance env overrides win over injected wire values
-**Plans**: TBD
-
-Plans:
-- [ ] 07-01-PLAN.md: TBD
-- [ ] 07-02-PLAN.md: TBD
-- [ ] 07-03-PLAN.md: TBD
-- [ ] 07-04-PLAN.md: TBD
-
-### Phase 8: Export/Import
-**Goal**: Users export stacks to devarch.yml for sharing and backup, import with reconciliation
-**Depends on**: Phase 7
-**Requirements**: EXIM-01, EXIM-02, EXIM-03, EXIM-04, EXIM-05
-**Success Criteria** (what must be TRUE):
-  1. Export produces devarch.yml with stack, instances, overrides, wires
-  2. Import creates or updates stack from devarch.yml (create-update mode)
-  3. devarch.yml includes version field for format evolution
-  4. Secrets are redacted in exports (placeholders, not plaintext)
-  5. Export → import → export round-trip is stable (excluding ids/timestamps)
-  6. User can share devarch.yml with team for reproducible environments
+  8. Wires included in devarch.yml export (re-export after wiring)
 **Plans**: TBD
 
 Plans:
 - [ ] 08-01-PLAN.md: TBD
 - [ ] 08-02-PLAN.md: TBD
+- [ ] 08-03-PLAN.md: TBD
+- [ ] 08-04-PLAN.md: TBD
 
 ### Phase 9: Secrets & Resources
 **Goal**: Secrets encrypted at rest, resource limits per instance, all sensitive data redacted in outputs
@@ -184,20 +191,20 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Guardrails | 0/TBD | Not started | - |
+| 1. Foundation & Guardrails | 2/2 | Complete | 2026-02-03 |
 | 2. Stack CRUD | 0/TBD | Not started | - |
 | 3. Service Instances | 0/TBD | Not started | - |
 | 4. Network Isolation | 0/TBD | Not started | - |
 | 5. Compose Generation | 0/TBD | Not started | - |
 | 6. Plan/Apply Workflow | 0/TBD | Not started | - |
-| 7. Service Wiring | 0/TBD | Not started | - |
-| 8. Export/Import | 0/TBD | Not started | - |
+| 7. Export/Import & Bootstrap | 0/TBD | Not started | - |
+| 8. Service Wiring | 0/TBD | Not started | - |
 | 9. Secrets & Resources | 0/TBD | Not started | - |
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-03 after roadmap creation*
+*Last updated: 2026-02-03 after phase 1 execution*

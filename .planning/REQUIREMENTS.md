@@ -7,19 +7,19 @@
 
 ### Baseline & Guardrails
 
-- [ ] **BASE-01**: DevArch identity label constants defined (devarch.stack_id, devarch.instance_id, devarch.template_service_id)
-- [ ] **BASE-02**: Stack/instance name validation helpers (charset, length, uniqueness)
-- [ ] **BASE-03**: Runtime abstraction fix — all container operations route through container.Client, no hardcoded podman exec.Command
+- [x] **BASE-01**: DevArch identity label constants defined (devarch.stack_id, devarch.instance_id, devarch.template_service_id)
+- [x] **BASE-02**: Stack/instance name validation helpers (charset, length, uniqueness)
+- [x] **BASE-03**: Runtime abstraction fix — all container operations route through container.Client, no hardcoded podman exec.Command
 
 ### Stack Management
 
 - [ ] **STCK-01**: Create stack with name, description, optional network name
 - [ ] **STCK-02**: List stacks with status summary (instance count, running count)
 - [ ] **STCK-03**: Get stack detail (instances, network, last applied)
-- [ ] **STCK-04**: Update stack metadata (name, description)
+- [ ] **STCK-04**: Update stack metadata (description only; stack name immutable)
 - [ ] **STCK-05**: Delete stack (with cascade: stop containers, remove instances, remove network)
 - [ ] **STCK-06**: Enable/disable stack without deleting
-- [ ] **STCK-07**: Clone stack with new name (copies instances + overrides)
+- [ ] **STCK-07**: Clone stack with new name (primary rename mechanism; copies instances + overrides)
 - [ ] **STCK-08**: Dashboard UI for stack CRUD (list, create, detail, edit, delete, clone)
 
 ### Service Instances
@@ -71,11 +71,12 @@
 
 ### Export/Import
 
-- [ ] **EXIM-01**: Export stack to devarch.yml (stack + instances + overrides + wires)
+- [ ] **EXIM-01**: Export stack to devarch.yml (stack + instances + overrides; wires added in Phase 8)
 - [ ] **EXIM-02**: Import devarch.yml with create-update reconciliation
 - [ ] **EXIM-03**: Version field in devarch.yml format
 - [ ] **EXIM-04**: Secret redaction in exports (placeholders, not plaintext)
 - [ ] **EXIM-05**: Export → import → export round-trip stable (excluding ids/timestamps)
+- [ ] **EXIM-06**: Export includes resolved specifics: chosen host ports, image digests/pinned versions, template versions
 
 ### Secrets
 
@@ -92,11 +93,22 @@
 
 ### Database Migrations
 
-- [ ] **MIGR-01**: Migration 013: service_exports, service_import_contracts
-- [ ] **MIGR-02**: Migration 014: stacks, service_instances, all instance override tables
-- [ ] **MIGR-03**: Migration 015: service_instance_wires
-- [ ] **MIGR-04**: Migration 016: secrets encryption fields
-- [ ] **MIGR-05**: Migration 017: service_instance_resources
+- [ ] **MIGR-01**: Migration 013: stacks table (Phase 2)
+- [ ] **MIGR-02**: Migration 014: service_instances + all instance override tables (Phase 3)
+- [ ] **MIGR-03**: Migration 015: service_exports, service_import_contracts, service_instance_wires (Phase 8)
+- [ ] **MIGR-04**: Migration 016: secrets encryption fields (Phase 9)
+- [ ] **MIGR-05**: Migration 017: service_instance_resources (Phase 9)
+
+### Bootstrap & Diagnostics
+
+- [ ] **BOOT-01**: `devarch init` — one-command project bootstrap from devarch.yml (pull images, create networks, apply config)
+- [ ] **BOOT-02**: `devarch doctor` — environment diagnostics (runtime running, permissions/SELinux, port conflicts, disk space, required tools)
+
+### Lockfile
+
+- [ ] **LOCK-01**: Generate devarch.lock from resolved state (host ports, image digests, pinned versions, template versions)
+- [ ] **LOCK-02**: Lock validation on apply — warn/reject when runtime state diverges from lockfile
+- [ ] **LOCK-03**: Lock refresh command to update lockfile from current resolved state
 
 ## v2 Requirements
 
@@ -140,9 +152,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BASE-01 | Phase 1 | Pending |
-| BASE-02 | Phase 1 | Pending |
-| BASE-03 | Phase 1 | Pending |
+| BASE-01 | Phase 1 | Complete |
+| BASE-02 | Phase 1 | Complete |
+| BASE-03 | Phase 1 | Complete |
 | STCK-01 | Phase 2 | Pending |
 | STCK-02 | Phase 2 | Pending |
 | STCK-03 | Phase 2 | Pending |
@@ -177,20 +189,26 @@
 | PLAN-03 | Phase 6 | Pending |
 | PLAN-04 | Phase 6 | Pending |
 | PLAN-05 | Phase 6 | Pending |
-| WIRE-01 | Phase 7 | Pending |
-| WIRE-02 | Phase 7 | Pending |
-| WIRE-03 | Phase 7 | Pending |
-| WIRE-04 | Phase 7 | Pending |
-| WIRE-05 | Phase 7 | Pending |
-| WIRE-06 | Phase 7 | Pending |
-| WIRE-07 | Phase 7 | Pending |
-| WIRE-08 | Phase 7 | Pending |
-| MIGR-03 | Phase 7 | Pending |
-| EXIM-01 | Phase 8 | Pending |
-| EXIM-02 | Phase 8 | Pending |
-| EXIM-03 | Phase 8 | Pending |
-| EXIM-04 | Phase 8 | Pending |
-| EXIM-05 | Phase 8 | Pending |
+| EXIM-01 | Phase 7 | Pending |
+| EXIM-02 | Phase 7 | Pending |
+| EXIM-03 | Phase 7 | Pending |
+| EXIM-04 | Phase 7 | Pending |
+| EXIM-05 | Phase 7 | Pending |
+| EXIM-06 | Phase 7 | Pending |
+| BOOT-01 | Phase 7 | Pending |
+| BOOT-02 | Phase 7 | Pending |
+| LOCK-01 | Phase 7 | Pending |
+| LOCK-02 | Phase 7 | Pending |
+| LOCK-03 | Phase 7 | Pending |
+| WIRE-01 | Phase 8 | Pending |
+| WIRE-02 | Phase 8 | Pending |
+| WIRE-03 | Phase 8 | Pending |
+| WIRE-04 | Phase 8 | Pending |
+| WIRE-05 | Phase 8 | Pending |
+| WIRE-06 | Phase 8 | Pending |
+| WIRE-07 | Phase 8 | Pending |
+| WIRE-08 | Phase 8 | Pending |
+| MIGR-03 | Phase 8 | Pending |
 | SECR-01 | Phase 9 | Pending |
 | SECR-02 | Phase 9 | Pending |
 | SECR-03 | Phase 9 | Pending |
@@ -202,8 +220,8 @@
 | MIGR-05 | Phase 9 | Pending |
 
 **Coverage:**
-- v1 requirements: 60 total
-- Mapped to phases: 60
+- v1 requirements: 66 total
+- Mapped to phases: 66
 - Unmapped: 0 ✓
 
 ---

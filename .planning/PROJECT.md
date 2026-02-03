@@ -4,6 +4,8 @@
 
 DevArch is a local microservices development environment where the only prerequisite is Podman. It manages containerized services via a Go API (DB as source of truth, compose YAML generated on-the-fly) with a React dashboard and CLI. This milestone adds **stacks** — composable groups of service instances with automatic wiring, isolation, and declarative export/import — turning DevArch from "manage individual services" into "compose full development environments."
 
+Portability promise: a repo-checked `devarch.yml` (intent) + generated `devarch.lock` (resolved ports/digests/template versions) + `devarch init`/`devarch doctor` yields the same environment on any machine.
+
 ## Core Value
 
 Two stacks using the same service template must never collide. Isolation (naming, networking, ports) is the primitive everything else depends on.
@@ -39,6 +41,8 @@ Two stacks using the same service template must never collide. Isolation (naming
 - [ ] Env var injection from wires (DB_HOST, DB_PORT, etc. using internal DNS)
 - [ ] devarch.yml export (serialize stack + instances + overrides, secrets redacted)
 - [ ] devarch.yml import with reconciliation (create-update mode)
+- [ ] devarch.lock generation/validation (resolved ports/digests/template versions)
+- [ ] Bootstrap: `devarch init` + `devarch doctor`
 - [ ] Secrets encrypted at rest (AES-256-GCM, key in ~/.devarch/secret.key)
 - [ ] Secret redaction in all API responses, plan output, compose previews, exports
 - [ ] Resource limits per instance (CPU, memory mapped to compose fields)
@@ -83,6 +87,7 @@ Two stacks using the same service template must never collide. Isolation (naming
 | Auto-wire + explicit contracts (both layers) | Simple stacks stay simple, complex stacks are possible | — Pending |
 | Encryption at rest from v1 | Avoids painful retrofit; builds trust for adoption | — Pending |
 | Per-phase dashboard UI (not a dedicated UI phase) | Early feedback loop, testable increments, avoids big-bang UI phase | — Pending |
+| Stack name is immutable ID; renames via clone | Deterministic naming, stable resources, simpler portability | — Pending |
 | devarch.yml for sharing + backup (both equally) | Portable definitions that also serve as state backup | — Pending |
 | Redaction only initially was rejected — full encryption chosen | Even for local dev, "secrets are encrypted" is a trust signal for adoption | — Pending |
 
