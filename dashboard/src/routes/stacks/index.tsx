@@ -134,6 +134,7 @@ function StacksPage() {
             onClick: handleCreateStack,
           }}
         />
+        <CreateStackDialog open={createOpen} onOpenChange={setCreateOpen} />
       </div>
     )
   }
