@@ -1,14 +1,16 @@
 import { Link } from '@tanstack/react-router'
+import { Server } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ResourceBar } from '@/components/ui/resource-bar'
 import { StatusBadge } from './status-badge'
 import { ActionButton } from './action-button'
 import { CopyButton } from '@/components/ui/copy-button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { getServiceStatus } from '@/lib/service-utils'
 import type { Service } from '@/types/api'
 import { formatUptime, computeUptime } from '@/lib/format'
-import { titleCase } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { titleCase, cn } from '@/lib/utils'
 
 interface ServiceGridProps {
   services: Service[]
@@ -16,17 +18,15 @@ interface ServiceGridProps {
   onToggleSelect: (name: string) => void
 }
 
-function getStatus(s: Service): string {
-  const raw = s.status?.status ?? 'stopped'
-  if (raw === 'exited' || raw === 'dead' || raw === 'created') return 'stopped'
-  return raw
-}
-
 export function ServiceGrid({ services, selected, onToggleSelect }: ServiceGridProps) {
+  if (services.length === 0) {
+    return <EmptyState icon={Server} message="No services match your filters" />
+  }
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {services.map((service) => {
-        const status = getStatus(service)
+        const status = getServiceStatus(service)
         const isSelected = selected.has(service.name)
         const uptime = computeUptime(service.status?.started_at)
         const cpuPct = service.metrics?.cpu_percentage ?? 0

@@ -1,55 +1,65 @@
 import { useMemo } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Server, Play, Square, Activity, Loader2, Cpu, MemoryStick, Search } from 'lucide-react'
+import { Server, Play, Square, Activity, Loader2, Cpu, MemoryStick, FolderOpen } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { ResourceBar } from '@/components/ui/resource-bar'
 import { StatCard } from '@/components/ui/stat-card'
 import { FilterBar, type FilterOption } from '@/components/ui/filter-bar'
-import { ViewSwitcher, type ViewMode } from '@/components/ui/view-switcher'
+import { ListToolbar } from '@/components/ui/list-toolbar'
+import { EmptyState } from '@/components/ui/empty-state'
 import { useStatusOverview } from '@/features/status/queries'
 import { useServices } from '@/features/services/queries'
 import { useStartCategory, useStopCategory } from '@/features/categories/queries'
-import { useLocalStorage } from '@/hooks/use-local-storage'
-import { useDebounce } from '@/hooks/use-debounce'
+import { useListControls } from '@/hooks/use-list-controls'
 import type { CategoryOverview } from '@/types/api'
 import { titleCase } from '@/lib/utils'
-import { useState } from 'react'
 
 export const Route = createFileRoute('/')({
   component: OverviewPage,
 })
 
+const searchFn = (c: CategoryOverview, q: string) =>
+  c.name.toLowerCase().includes(q.toLowerCase())
+
+const filterFns = {
+  status: (c: CategoryOverview, value: string) => {
+    const running = c.running_services ?? 0
+    const total = c.total_services ?? 0
+    if (value === 'running') return running === total && total > 0
+    if (value === 'partial') return running > 0 && running < total
+    if (value === 'stopped') return running === 0
+    return true
+  },
+}
+
+const sortFns: Record<string, (a: CategoryOverview, b: CategoryOverview) => number> = {
+  name: (a, b) => a.name.localeCompare(b.name),
+  services: (a, b) => (a.total_services ?? 0) - (b.total_services ?? 0),
+  running: (a, b) => (a.running_services ?? 0) - (b.running_services ?? 0),
+}
+
+const sortOptions = [
+  { value: 'name', label: 'Name' },
+  { value: 'services', label: 'Services' },
+  { value: 'running', label: 'Running' },
+]
+
 function OverviewPage() {
   const { data: status, isLoading } = useStatusOverview()
   const { data: servicesData } = useServices()
   const services = useMemo(() => servicesData?.services ?? [], [servicesData])
-
-  const [viewMode, setViewMode] = useLocalStorage<ViewMode>('overview-view', 'grid')
-  const [searchRaw, setSearch] = useState('')
-  const search = useDebounce(searchRaw, 200)
-  const [statusFilter, setStatusFilter] = useState('all')
-
   const categories = useMemo(() => status?.categories ?? [], [status])
 
-  const filteredCategories = useMemo(() => {
-    let result = categories
-    if (search) {
-      result = result.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
-    }
-    if (statusFilter !== 'all') {
-      result = result.filter((c) => {
-        const running = c.running_services ?? 0
-        const total = c.total_services ?? 0
-        if (statusFilter === 'running') return running === total && total > 0
-        if (statusFilter === 'partial') return running > 0 && running < total
-        if (statusFilter === 'stopped') return running === 0
-        return true
-      })
-    }
-    return result
-  }, [categories, search, statusFilter])
+  const controls = useListControls({
+    storageKey: 'overview',
+    items: categories,
+    searchFn,
+    filterFns,
+    sortFns,
+    defaultSort: 'name',
+    defaultView: 'grid',
+  })
 
   const serviceStats = useMemo(() => {
     let totalCpu = 0
@@ -114,28 +124,30 @@ function OverviewPage() {
       </div>
 
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-lg font-semibold">Categories</h2>
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              placeholder="Search categories..."
-              value={searchRaw}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+        <h2 className="text-lg font-semibold">Categories</h2>
+
+        <ListToolbar
+          search={controls.search}
+          onSearchChange={controls.setSearch}
+          searchPlaceholder="Search categories..."
+          sortOptions={sortOptions}
+          sortBy={controls.sortBy}
+          sortDir={controls.sortDir}
+          onSortByChange={controls.setSortBy}
+          onSortDirChange={controls.setSortDir}
+          viewMode={controls.viewMode}
+          onViewModeChange={controls.setViewMode}
+        >
           <FilterBar
             options={statusOptions}
-            value={statusFilter}
-            onChange={setStatusFilter}
+            value={controls.filters.status ?? 'all'}
+            onChange={(v) => controls.setFilter('status', v)}
           />
-          <div className="ml-auto">
-            <ViewSwitcher value={viewMode} onChange={setViewMode} />
-          </div>
-        </div>
+        </ListToolbar>
 
-        {viewMode === 'table' ? (
+        {controls.filtered.length === 0 ? (
+          <EmptyState icon={FolderOpen} message="No categories match your filters" />
+        ) : controls.viewMode === 'table' ? (
           <div className="rounded-lg border">
             <table className="w-full text-sm">
               <thead>
@@ -147,7 +159,7 @@ function OverviewPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredCategories.map((category) => (
+                {controls.filtered.map((category) => (
                   <OverviewCategoryRow key={category.name} category={category} />
                 ))}
               </tbody>
@@ -155,18 +167,14 @@ function OverviewPage() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredCategories.map((category) => (
+            {controls.filtered.map((category) => (
               <CategoryQuickCard key={category.name} category={category} />
             ))}
           </div>
         )}
 
-        {filteredCategories.length === 0 && (
-          <p className="text-center text-muted-foreground py-8">No categories match your filters</p>
-        )}
-
         <div className="text-sm text-muted-foreground">
-          Showing {filteredCategories.length} of {categories.length} categories
+          Showing {controls.filtered.length} of {categories.length} categories
         </div>
       </div>
     </div>

@@ -1,8 +1,8 @@
-import { LayoutGrid, List, LayoutList } from 'lucide-react'
+import { LayoutGrid, List } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-export type ViewMode = 'table' | 'grid' | 'card'
+export type ViewMode = 'table' | 'grid'
 
 interface ViewSwitcherProps {
   value: ViewMode
@@ -12,7 +12,6 @@ interface ViewSwitcherProps {
 const views: { mode: ViewMode; icon: typeof List; label: string }[] = [
   { mode: 'table', icon: List, label: 'Table' },
   { mode: 'grid', icon: LayoutGrid, label: 'Grid' },
-  { mode: 'card', icon: LayoutList, label: 'Card' },
 ]
 
 export function ViewSwitcher({ value, onChange }: ViewSwitcherProps) {
