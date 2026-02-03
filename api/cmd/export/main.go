@@ -126,7 +126,7 @@ func exportCategories(db *sql.DB, b *strings.Builder) error {
 func exportServices(db *sql.DB, b *strings.Builder) error {
 	rows, err := db.Query(`
 		SELECT s.name, c.name, s.image_name, s.image_tag, s.restart_policy,
-		       s.command, s.user_spec, s.enabled, s.compose_overrides, s.env_file
+		       s.command, s.user_spec, s.enabled, s.compose_overrides
 		FROM services s
 		LEFT JOIN categories c ON c.id = s.category_id
 		ORDER BY s.id
@@ -139,10 +139,10 @@ func exportServices(db *sql.DB, b *strings.Builder) error {
 	b.WriteString("-- Services\n")
 	for rows.Next() {
 		var name, imageName string
-		var catName, imageTag, restartPolicy, command, userSpec, envFile sql.NullString
+		var catName, imageTag, restartPolicy, command, userSpec sql.NullString
 		var enabled bool
 		var composeOverrides sql.NullString
-		if err := rows.Scan(&name, &catName, &imageName, &imageTag, &restartPolicy, &command, &userSpec, &enabled, &composeOverrides, &envFile); err != nil {
+		if err := rows.Scan(&name, &catName, &imageName, &imageTag, &restartPolicy, &command, &userSpec, &enabled, &composeOverrides); err != nil {
 			return err
 		}
 
@@ -157,9 +157,9 @@ func exportServices(db *sql.DB, b *strings.Builder) error {
 		}
 
 		b.WriteString(fmt.Sprintf(
-			"INSERT INTO services (name, category_id, image_name, image_tag, restart_policy, command, user_spec, enabled, compose_overrides, env_file) VALUES ('%s', %s, '%s', %s, %s, %s, %s, %t, %s, %s) ON CONFLICT (name) DO UPDATE SET category_id = EXCLUDED.category_id, image_name = EXCLUDED.image_name, image_tag = EXCLUDED.image_tag, restart_policy = EXCLUDED.restart_policy, command = EXCLUDED.command, user_spec = EXCLUDED.user_spec, compose_overrides = EXCLUDED.compose_overrides, env_file = EXCLUDED.env_file, updated_at = NOW();\n",
+			"INSERT INTO services (name, category_id, image_name, image_tag, restart_policy, command, user_spec, enabled, compose_overrides) VALUES ('%s', %s, '%s', %s, %s, %s, %s, %t, %s) ON CONFLICT (name) DO UPDATE SET category_id = EXCLUDED.category_id, image_name = EXCLUDED.image_name, image_tag = EXCLUDED.image_tag, restart_policy = EXCLUDED.restart_policy, command = EXCLUDED.command, user_spec = EXCLUDED.user_spec, compose_overrides = EXCLUDED.compose_overrides, updated_at = NOW();\n",
 			esc(name), catExpr, esc(imageName), nullStr(imageTag), nullStr(restartPolicy),
-			nullStr(command), nullStr(userSpec), enabled, coVal, nullStr(envFile),
+			nullStr(command), nullStr(userSpec), enabled, coVal,
 		))
 	}
 	b.WriteString("\n")

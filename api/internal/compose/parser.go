@@ -34,7 +34,7 @@ type ComposeService struct {
 	Ports         []string               `yaml:"ports"`
 	Volumes       []string               `yaml:"volumes"`
 	Environment   interface{}            `yaml:"environment"`
-	EnvFile       interface{}            `yaml:"env_file"`
+	EnvFile       interface{}            `yaml:"env_file"` // parsed but not stored
 	DependsOn     interface{}            `yaml:"depends_on"`
 	Labels        interface{}            `yaml:"labels"`
 	Healthcheck   *ComposeHealthcheck    `yaml:"healthcheck"`
@@ -57,7 +57,6 @@ type ParsedService struct {
 	RestartPolicy string
 	Command       string
 	UserSpec      string
-	EnvFile       string
 	Ports         []ParsedPort
 	Volumes       []ParsedVolume
 	EnvVars       []ParsedEnvVar
@@ -149,7 +148,6 @@ func ParseFileAll(path string) ([]*ParsedService, error) {
 
 		parseImage(svc.Image, parsed)
 		parsed.Command = parseCommand(svc.Command)
-		parsed.EnvFile = parseEnvFile(svc.EnvFile)
 		parsed.Ports = parsePorts(svc.Ports)
 		parsed.Volumes = parseVolumes(svc.Volumes, compose.Volumes)
 		parsed.EnvVars = parseEnvironment(svc.Environment)
@@ -305,21 +303,6 @@ func isExternalVolume(volDef interface{}) bool {
 	}
 	b, ok := ext.(bool)
 	return ok && b
-}
-
-func parseEnvFile(ef interface{}) string {
-	if ef == nil {
-		return ""
-	}
-	switch v := ef.(type) {
-	case string:
-		return v
-	case []interface{}:
-		if len(v) > 0 {
-			return fmt.Sprintf("%v", v[0])
-		}
-	}
-	return ""
 }
 
 var secretPatterns = []string{

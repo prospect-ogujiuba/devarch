@@ -48,7 +48,7 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 		SELECT s.id, s.name, s.category_id, s.image_name, s.image_tag,
 			s.restart_policy, s.command, s.user_spec, s.enabled,
 			s.created_at, s.updated_at, c.name as category_name,
-			COALESCE(s.compose_overrides, '{}'), s.env_file
+			COALESCE(s.compose_overrides, '{}')
 		FROM services s
 		JOIN categories c ON s.category_id = c.id
 		WHERE 1=1
@@ -122,7 +122,7 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 			&s.ID, &s.Name, &s.CategoryID, &s.ImageName, &s.ImageTag,
 			&s.RestartPolicy, &s.Command, &s.UserSpec, &s.Enabled,
 			&s.CreatedAt, &s.UpdatedAt, &catName,
-			&s.ComposeOverrides, &s.EnvFile,
+			&s.ComposeOverrides,
 		); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -133,9 +133,6 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 		if s.UserSpec.Valid {
 			s.UserSpecStr = s.UserSpec.String
-		}
-		if s.EnvFile.Valid {
-			s.EnvFileStr = s.EnvFile.String
 		}
 		services = append(services, s)
 	}
@@ -228,7 +225,7 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 			s.restart_policy, s.command, s.user_spec, s.enabled,
 			s.created_at, s.updated_at, c.name as category_name,
 			s.config_status, s.last_validated_at, s.validation_errors,
-			s.compose_overrides, s.env_file
+			s.compose_overrides
 		FROM services s
 		JOIN categories c ON s.category_id = c.id
 		WHERE s.name = $1
@@ -237,7 +234,7 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 		&s.RestartPolicy, &s.Command, &s.UserSpec, &s.Enabled,
 		&s.CreatedAt, &s.UpdatedAt, &catName,
 		&s.ConfigStatus, &s.LastValidatedAt, &s.ValidationErrors,
-		&s.ComposeOverrides, &s.EnvFile,
+		&s.ComposeOverrides,
 	)
 	if err == sql.ErrNoRows {
 		http.Error(w, "service not found", http.StatusNotFound)
@@ -255,9 +252,6 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if s.UserSpec.Valid {
 		s.UserSpecStr = s.UserSpec.String
 	}
-	if s.EnvFile.Valid {
-		s.EnvFileStr = s.EnvFile.String
-	}
 	if s.LastValidatedAt.Valid {
 		s.LastValidatedStr = &s.LastValidatedAt.Time
 	}
@@ -272,9 +266,9 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *ServiceHandler) loadServiceByName(name string) (*models.Service, error) {
 	var s models.Service
 	err := h.db.QueryRow(
-		`SELECT id, name, image_name, image_tag, restart_policy, command, user_spec, compose_overrides, env_file FROM services WHERE name = $1`,
+		`SELECT id, name, image_name, image_tag, restart_policy, command, user_spec, compose_overrides FROM services WHERE name = $1`,
 		name,
-	).Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec, &s.ComposeOverrides, &s.EnvFile)
+	).Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec, &s.ComposeOverrides)
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +345,6 @@ type createServiceRequest struct {
 	RestartPolicy string                 `json:"restart_policy"`
 	Command       string                 `json:"command"`
 	UserSpec      string                 `json:"user_spec"`
-	EnvFile       string                 `json:"env_file"`
 	Ports         []models.ServicePort   `json:"ports"`
 	Volumes       []models.ServiceVolume `json:"volumes"`
 	EnvVars       []models.ServiceEnvVar `json:"env_vars"`
@@ -390,10 +383,10 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	var serviceID int
 	err = tx.QueryRow(`
-		INSERT INTO services (name, category_id, image_name, image_tag, restart_policy, command, user_spec, env_file)
-		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''))
+		INSERT INTO services (name, category_id, image_name, image_tag, restart_policy, command, user_spec)
+		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), NULLIF($7, ''))
 		RETURNING id
-	`, req.Name, req.CategoryID, req.ImageName, req.ImageTag, req.RestartPolicy, req.Command, req.UserSpec, req.EnvFile).Scan(&serviceID)
+	`, req.Name, req.CategoryID, req.ImageName, req.ImageTag, req.RestartPolicy, req.Command, req.UserSpec).Scan(&serviceID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

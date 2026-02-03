@@ -159,11 +159,6 @@ func (i *Importer) resolvePaths(parsed *ParsedService, composePath string) {
 	}
 	composeDir := filepath.Dir(composePath)
 
-	// Resolve env_file relative path to absolute
-	if parsed.EnvFile != "" && !filepath.IsAbs(parsed.EnvFile) {
-		parsed.EnvFile = filepath.Clean(filepath.Join(composeDir, parsed.EnvFile))
-	}
-
 	// Resolve bind mount sources
 	for idx := range parsed.Volumes {
 		v := &parsed.Volumes[idx]
@@ -219,8 +214,8 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 
 	var serviceID int
 	err = tx.QueryRow(`
-		INSERT INTO services (name, category_id, image_name, image_tag, restart_policy, command, user_spec, compose_overrides, env_file)
-		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), NULLIF($7, ''), $8, NULLIF($9, ''))
+		INSERT INTO services (name, category_id, image_name, image_tag, restart_policy, command, user_spec, compose_overrides)
+		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), NULLIF($7, ''), $8)
 		ON CONFLICT (name) DO UPDATE SET
 			category_id = $2,
 			image_name = $3,
@@ -229,11 +224,10 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 			command = NULLIF($6, ''),
 			user_spec = NULLIF($7, ''),
 			compose_overrides = $8,
-			env_file = NULLIF($9, ''),
 			updated_at = NOW()
 		RETURNING id
 	`, parsed.Name, categoryID, parsed.ImageName, parsed.ImageTag,
-		parsed.RestartPolicy, parsed.Command, parsed.UserSpec, overridesJSON, parsed.EnvFile).Scan(&serviceID)
+		parsed.RestartPolicy, parsed.Command, parsed.UserSpec, overridesJSON).Scan(&serviceID)
 	if err != nil {
 		return fmt.Errorf("insert service: %w", err)
 	}
