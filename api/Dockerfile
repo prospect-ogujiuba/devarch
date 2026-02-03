@@ -15,6 +15,7 @@ FROM base AS builder
 RUN CGO_ENABLED=0 GOOS=linux go build -o /devarch-api ./cmd/server
 RUN CGO_ENABLED=0 GOOS=linux go build -o /devarch-migrate ./cmd/migrate
 RUN CGO_ENABLED=0 GOOS=linux go build -o /devarch-import ./cmd/import
+RUN CGO_ENABLED=0 GOOS=linux go build -o /devarch-export ./cmd/export
 
 FROM alpine:3.19 AS production
 
@@ -25,6 +26,7 @@ WORKDIR /app
 COPY --from=builder /devarch-api /usr/local/bin/
 COPY --from=builder /devarch-migrate /usr/local/bin/
 COPY --from=builder /devarch-import /usr/local/bin/
+COPY --from=builder /devarch-export /usr/local/bin/
 COPY --from=builder /app/migrations ./migrations
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
@@ -40,6 +42,7 @@ FROM base AS dev
 RUN go install github.com/air-verse/air@v1.61.7
 RUN CGO_ENABLED=0 go build -o /usr/local/bin/devarch-migrate ./cmd/migrate
 RUN CGO_ENABLED=0 go build -o /usr/local/bin/devarch-import ./cmd/import
+RUN CGO_ENABLED=0 go build -o /usr/local/bin/devarch-export ./cmd/export
 
 COPY entrypoint-dev.sh /usr/local/bin/entrypoint-dev.sh
 RUN chmod +x /usr/local/bin/entrypoint-dev.sh

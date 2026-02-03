@@ -1,0 +1,10 @@
+DELETE FROM service_config_files;
+DELETE FROM service_dependencies;
+DELETE FROM service_domains;
+DELETE FROM service_labels;
+DELETE FROM service_healthchecks;
+DELETE FROM service_env_vars;
+DELETE FROM service_volumes;
+DELETE FROM service_ports;
+DELETE FROM services;
+DELETE FROM categories;
