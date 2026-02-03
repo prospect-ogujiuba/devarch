@@ -41,6 +41,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	projectHandler := handlers.NewProjectHandler(db, projectScanner, projectController)
 	runtimeHandler := handlers.NewRuntimeHandler(containerClient, podmanClient)
 	nginxHandler := handlers.NewNginxHandler(nginxGenerator, containerClient)
+	stackHandler := handlers.NewStackHandler(db, containerClient)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(mw.APIKeyAuth)
@@ -127,6 +128,28 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 		r.Post("/runtime/switch", runtimeHandler.Switch)
 		r.Get("/socket/status", runtimeHandler.SocketStatus)
 		r.Post("/socket/start", runtimeHandler.SocketStart)
+
+		r.Route("/stacks", func(r chi.Router) {
+			r.Get("/", stackHandler.List)
+			r.Post("/", stackHandler.Create)
+
+			r.Get("/trash", stackHandler.ListTrash)
+			r.Post("/trash/{name}/restore", stackHandler.Restore)
+			r.Delete("/trash/{name}", stackHandler.PermanentDelete)
+
+			r.Route("/{name}", func(r chi.Router) {
+				r.Get("/", stackHandler.Get)
+				r.Put("/", stackHandler.Update)
+				r.Delete("/", stackHandler.Delete)
+
+				r.Post("/enable", stackHandler.Enable)
+				r.Post("/disable", stackHandler.Disable)
+				r.Post("/clone", stackHandler.Clone)
+				r.Post("/rename", stackHandler.Rename)
+
+				r.Get("/delete-preview", stackHandler.DeletePreview)
+			})
+		})
 	})
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
