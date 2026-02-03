@@ -40,7 +40,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	wsHandler := handlers.NewWebSocketHandler(syncManager)
 	projectHandler := handlers.NewProjectHandler(db, projectScanner, projectController)
 	runtimeHandler := handlers.NewRuntimeHandler(containerClient, podmanClient)
-	nginxHandler := handlers.NewNginxHandler(nginxGenerator)
+	nginxHandler := handlers.NewNginxHandler(nginxGenerator, containerClient)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(mw.APIKeyAuth)

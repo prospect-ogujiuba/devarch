@@ -76,7 +76,7 @@ func main() {
 		log.Println("initial nginx config generation complete")
 	}
 
-	projectController := project.NewController(db, podmanClient)
+	projectController := project.NewController(db, containerClient)
 
 	syncManager := sync.NewManager(db, podmanClient)
 	router := api.NewRouter(db, containerClient, podmanClient, syncManager, projectScanner, nginxGenerator, projectController)

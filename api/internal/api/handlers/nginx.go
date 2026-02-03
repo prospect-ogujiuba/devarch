@@ -3,18 +3,19 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"os/exec"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/nginx"
 )
 
 type NginxHandler struct {
-	generator *nginx.Generator
+	generator       *nginx.Generator
+	containerClient *container.Client
 }
 
-func NewNginxHandler(g *nginx.Generator) *NginxHandler {
-	return &NginxHandler{generator: g}
+func NewNginxHandler(g *nginx.Generator, containerClient *container.Client) *NginxHandler {
+	return &NginxHandler{generator: g, containerClient: containerClient}
 }
 
 func (h *NginxHandler) GenerateAll(w http.ResponseWriter, r *http.Request) {
@@ -37,9 +38,9 @@ func (h *NginxHandler) GenerateOne(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *NginxHandler) Reload(w http.ResponseWriter, r *http.Request) {
-	out, err := exec.Command("podman", "exec", "nginx-proxy-manager", "nginx", "-s", "reload").CombinedOutput()
+	out, err := h.containerClient.Exec("nginx-proxy-manager", []string{"nginx", "-s", "reload"})
 	if err != nil {
-		http.Error(w, string(out), http.StatusInternalServerError)
+		http.Error(w, out, http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

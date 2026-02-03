@@ -5,19 +5,17 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"os/exec"
-	"strings"
 
-	"github.com/priz/devarch-api/internal/podman"
+	"github.com/priz/devarch-api/internal/container"
 )
 
 type Controller struct {
-	db           *sql.DB
-	podmanClient *podman.Client
+	db              *sql.DB
+	containerClient *container.Client
 }
 
-func NewController(db *sql.DB, podmanClient *podman.Client) *Controller {
-	return &Controller{db: db, podmanClient: podmanClient}
+func NewController(db *sql.DB, containerClient *container.Client) *Controller {
+	return &Controller{db: db, containerClient: containerClient}
 }
 
 type ServiceStatus struct {
@@ -80,9 +78,9 @@ func (c *Controller) Status(ctx context.Context, name string) ([]ServiceStatus, 
 		}
 
 		status := "unknown"
-		inspectOut, err := exec.Command("podman", "inspect", "--format", "{{.State.Status}}", cName).Output()
-		if err == nil {
-			status = strings.TrimSpace(string(inspectOut))
+		state, err := c.containerClient.GetStatus(cName)
+		if err == nil && state != nil {
+			status = state.Status
 		} else {
 			status = "not-created"
 		}
@@ -119,15 +117,7 @@ func (c *Controller) getComposePath(name string) (string, error) {
 }
 
 func (c *Controller) runCompose(composePath string, args ...string) (string, error) {
-	cmdArgs := []string{"compose", "-f", composePath}
-	cmdArgs = append(cmdArgs, args...)
-	cmd := exec.Command("podman", cmdArgs...)
-
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return string(out), fmt.Errorf("compose error: %s: %w", string(out), err)
-	}
-	return string(out), nil
+	return c.containerClient.RunCompose(composePath, args...)
 }
 
 func (c *Controller) StatusJSON(ctx context.Context, name string) (json.RawMessage, error) {
