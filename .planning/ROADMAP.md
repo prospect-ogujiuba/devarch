@@ -13,7 +13,7 @@ Transform DevArch from single-service orchestration to multi-stack isolation, en
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation & Guardrails** - Identity system, validation, runtime abstraction
-- [ ] **Phase 2: Stack CRUD** - Stack management API + dashboard UI
+- [x] **Phase 2: Stack CRUD** - Stack management API + dashboard UI
 - [ ] **Phase 3: Service Instances** - Instance overrides + config resolution
 - [ ] **Phase 4: Network Isolation** - Per-stack networks, deterministic naming
 - [ ] **Phase 5: Compose Generation** - Stack-scoped YAML generation
@@ -52,12 +52,14 @@ Plans:
   6. User can delete stack and all resources cascade (containers, instances, network)
   7. User can enable/disable stack without deleting it
   8. User can clone stack with new name (copies instances + overrides)
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 02-01-PLAN.md: TBD
-- [ ] 02-02-PLAN.md: TBD
-- [ ] 02-03-PLAN.md: TBD
+- [x] 02-01-PLAN.md — Migration soft-delete + Stack handler core CRUD (COMPLETE 2026-02-03)
+- [x] 02-02-PLAN.md — Advanced ops (enable/disable/clone/rename/trash) + route wiring (COMPLETE 2026-02-03)
+- [x] 02-03-PLAN.md — Dashboard types, query hooks, navigation (COMPLETE 2026-02-03)
+- [x] 02-04-PLAN.md — Stack list page (grid + table views, empty state, toolbar) (COMPLETE 2026-02-03)
+- [x] 02-05-PLAN.md — Stack detail page + all action dialogs (COMPLETE 2026-02-03)
 
 ### Phase 3: Service Instances
 **Goal**: Users can create service instances from templates with full copy-on-write overrides
@@ -196,7 +198,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Guardrails | 2/2 | Complete | 2026-02-03 |
-| 2. Stack CRUD | 0/TBD | Not started | - |
+| 2. Stack CRUD | 5/5 | Complete | 2026-02-03 |
 | 3. Service Instances | 0/TBD | Not started | - |
 | 4. Network Isolation | 0/TBD | Not started | - |
 | 5. Compose Generation | 0/TBD | Not started | - |
@@ -207,4 +209,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-03 after phase 1 execution*
+*Last updated: 2026-02-03 after phase 2 execution*

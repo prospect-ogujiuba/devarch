@@ -13,14 +13,14 @@
 
 ### Stack Management
 
-- [ ] **STCK-01**: Create stack with name, description, optional network name
-- [ ] **STCK-02**: List stacks with status summary (instance count, running count)
-- [ ] **STCK-03**: Get stack detail (instances, network, last applied)
-- [ ] **STCK-04**: Update stack metadata (description only; stack name immutable)
-- [ ] **STCK-05**: Delete stack (with cascade: stop containers, remove instances, remove network)
-- [ ] **STCK-06**: Enable/disable stack without deleting
-- [ ] **STCK-07**: Clone stack with new name (primary rename mechanism; copies instances + overrides)
-- [ ] **STCK-08**: Dashboard UI for stack CRUD (list, create, detail, edit, delete, clone)
+- [x] **STCK-01**: Create stack with name, description, optional network name
+- [x] **STCK-02**: List stacks with status summary (instance count, running count)
+- [x] **STCK-03**: Get stack detail (instances, network, last applied)
+- [x] **STCK-04**: Update stack metadata (description only; stack name immutable)
+- [x] **STCK-05**: Delete stack (with cascade: stop containers, remove instances, remove network)
+- [x] **STCK-06**: Enable/disable stack without deleting
+- [x] **STCK-07**: Clone stack with new name (primary rename mechanism; copies instances + overrides)
+- [x] **STCK-08**: Dashboard UI for stack CRUD (list, create, detail, edit, delete, clone)
 
 ### Service Instances
 
@@ -93,7 +93,7 @@
 
 ### Database Migrations
 
-- [ ] **MIGR-01**: Migration 013: stacks table (Phase 2)
+- [x] **MIGR-01**: Migration 013: stacks table (Phase 2)
 - [ ] **MIGR-02**: Migration 014: service_instances + all instance override tables (Phase 3)
 - [ ] **MIGR-03**: Migration 015: service_exports, service_import_contracts, service_instance_wires (Phase 8)
 - [ ] **MIGR-04**: Migration 016: secrets encryption fields (Phase 9)
@@ -155,15 +155,15 @@
 | BASE-01 | Phase 1 | Complete |
 | BASE-02 | Phase 1 | Complete |
 | BASE-03 | Phase 1 | Complete |
-| STCK-01 | Phase 2 | Pending |
-| STCK-02 | Phase 2 | Pending |
-| STCK-03 | Phase 2 | Pending |
-| STCK-04 | Phase 2 | Pending |
-| STCK-05 | Phase 2 | Pending |
-| STCK-06 | Phase 2 | Pending |
-| STCK-07 | Phase 2 | Pending |
-| STCK-08 | Phase 2 | Pending |
-| MIGR-01 | Phase 2 | Pending |
+| STCK-01 | Phase 2 | Complete |
+| STCK-02 | Phase 2 | Complete |
+| STCK-03 | Phase 2 | Complete |
+| STCK-04 | Phase 2 | Complete |
+| STCK-05 | Phase 2 | Complete |
+| STCK-06 | Phase 2 | Complete |
+| STCK-07 | Phase 2 | Complete |
+| STCK-08 | Phase 2 | Complete |
+| MIGR-01 | Phase 2 | Complete |
 | INST-01 | Phase 3 | Pending |
 | INST-02 | Phase 3 | Pending |
 | INST-03 | Phase 3 | Pending |
@@ -226,4 +226,4 @@
 
 ---
 *Requirements defined: 2026-02-03*
-*Last updated: 2026-02-03 after roadmap creation*
+*Last updated: 2026-02-03 after phase 2 execution*
