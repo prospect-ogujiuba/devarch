@@ -10,28 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 ## Current Position
 
 Phase: 2 of 9 (Stack CRUD)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-03 — Phase 1 complete (verified)
+Plan: 5 of 5 in current phase
+Status: Phase complete
+Last activity: 2026-02-03 — Completed 02-05-PLAN.md
 
-Progress: [█░░░░░░░░░] ~10% (2 plans complete, estimate ~20 total)
+Progress: [███░░░░░░░] ~26% (7 plans complete of ~27 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 3 min
-- Total execution time: 0.1 hours
+- Total plans completed: 7
+- Average duration: 2.5 min
+- Total execution time: 0.29 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1 | 2/2 | 6min | 3min |
+| 1 | 2/2 | 1min | 0.5min |
+| 2 | 5/5 | 17.5min | 3.5min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (3min), 01-02 (3min)
-- Trend: Consistent 3min/plan
+- Last 3 plans: 02-03 (1.2min), 02-04 (2.4min), 02-05 (11min)
+- Trend: UI tasks take longer than API (expected)
 
 *Updated after each plan completion*
 
@@ -63,6 +64,33 @@ Recent decisions affecting current work:
 - Network stubs return ErrNotImplemented (Phase 4 ready)
 - Backward compat preserved during refactor (GetStatus/GetMetrics)
 
+**From 02-01:**
+- Soft-delete pattern using deleted_at with partial unique index on active stacks only
+- Stack name is immutable identifier (used in URL routes)
+- Running count placeholder set to 0 until Phase 3+ wires container client queries
+
+**From 02-02:**
+- Rename implemented as atomic clone + soft-delete transaction
+- Restore checks for active name conflicts with prescriptive error
+- Trash routes registered before /{name} routes to avoid chi parameter conflicts
+
+**From 02-03:**
+- Stack hooks follow existing service hooks pattern for consistency
+- 5-second polling for real-time updates (WebSocket extension deferred)
+- Stacks positioned second in navigation (after Overview, before Services)
+
+**From 02-04:**
+- Grid as default view for stacks (better visual hierarchy)
+- Color-coded status indicators (green/yellow/gray) for running status
+- Create/clone/rename dialogs deferred to 02-05
+
+**From 02-05:**
+- Delete cascade preview pattern shows blast radius before destructive ops
+- Rename UX hides clone+soft-delete implementation (feels first-class)
+- Clone creates records only, doesn't start containers (aligns with plan/apply workflow)
+- Disable dialog enumerates containers by name for transparency
+- All actions accessible from both list and detail views
+
 ### Pending Todos
 
 None yet.
@@ -73,6 +101,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-03
-Stopped at: Phase 1 complete, verified, ready for Phase 2 planning
+Last session: 2026-02-03T22:13:50Z
+Stopped at: Completed 02-05-PLAN.md (Stack detail & dialogs) — Phase 2 complete
 Resume file: None
+
+**Phase 2 complete.** Ready to begin Phase 3 (Service Instances).
