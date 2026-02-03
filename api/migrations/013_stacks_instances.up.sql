@@ -1,12 +1,16 @@
 CREATE TABLE stacks (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(63) UNIQUE NOT NULL,
+    name VARCHAR(63) NOT NULL,
     description TEXT DEFAULT '',
     network_name VARCHAR(63),
     enabled BOOLEAN DEFAULT true,
+    deleted_at TIMESTAMPTZ DEFAULT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX uq_stacks_name_active ON stacks(name) WHERE deleted_at IS NULL;
+CREATE INDEX idx_stacks_deleted_at ON stacks(deleted_at);
 
 CREATE TABLE service_instances (
     id SERIAL PRIMARY KEY,
