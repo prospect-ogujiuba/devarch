@@ -1,0 +1,29 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  synapse_data:
+
+services:
+  synapse:
+    container_name: matrix-synapse
+    image: matrixdotorg/synapse:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - SYNAPSE_SERVER_NAME=localhost
+      - SYNAPSE_REPORT_STATS=no
+      - SYNAPSE_CONFIG_PATH=/data/homeserver.yaml
+    ports:
+      - "127.0.0.1:10241:8008"
+    volumes:
+      - synapse_data:/data
+      - ../../config/synapse/homeserver.yaml:/data/homeserver.yaml:ro
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

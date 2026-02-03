@@ -1,0 +1,19 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  mysql_data:
+
+services:
+  mysql:
+    container_name: mysql
+    image: mysql:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8505:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - microservices-net

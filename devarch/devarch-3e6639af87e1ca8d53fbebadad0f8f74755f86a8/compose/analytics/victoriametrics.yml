@@ -1,0 +1,30 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  victoriametrics_data:
+
+services:
+  victoriametrics:
+    container_name: victoriametrics
+    image: victoriametrics/victoria-metrics:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - VM_httpListenAddr=:8428
+    ports:
+      - "127.0.0.1:8428:8428"
+    volumes:
+      - victoriametrics_data:/victoria-metrics-data
+    command:
+      - --storageDataPath=/victoria-metrics-data
+      - --httpListenAddr=:8428
+      - --retentionPeriod=12
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8428/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

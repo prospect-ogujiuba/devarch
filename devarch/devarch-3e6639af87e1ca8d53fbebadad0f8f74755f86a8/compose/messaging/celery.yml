@@ -1,0 +1,42 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  python_venv:
+    external: true
+
+services:
+  celery:
+    container_name: celery
+    build:
+      context: ../../config/python
+      dockerfile: Dockerfile
+      args:
+        MY_UID: ${MY_UID:-1000}
+        MY_GID: ${MY_GID:-1000}
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:${SHARED_DB_PASSWORD}@postgres:5432/python_db
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - C_FORCE_ROOT=true
+    ports:
+      - "127.0.0.1:8303:5555"  # Flower monitoring UI
+    volumes:
+      - ../../apps:/app
+      - ../../scripts:/scripts:ro
+      - python_venv:/opt/venv
+    networks:
+      - microservices-net
+    depends_on:
+      - redis
+    healthcheck:
+      test: [ "CMD", "celery", "--version" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3

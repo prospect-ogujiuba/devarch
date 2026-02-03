@@ -1,0 +1,26 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  bun_apps:
+
+services:
+  bun:
+    container_name: bun
+    image: oven/bun:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "127.0.0.1:4020:3000"
+      - "127.0.0.1:4021:3001"
+      - "127.0.0.1:4022:5173"  # Vite dev server
+    volumes:
+      - bun_apps:/app
+      - ../../apps:/apps
+    working_dir: /app
+    command: bun --watch
+    networks:
+      - microservices-net

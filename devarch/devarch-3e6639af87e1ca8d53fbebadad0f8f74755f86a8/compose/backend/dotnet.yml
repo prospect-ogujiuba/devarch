@@ -1,0 +1,65 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  dotnet_nuget:
+  dotnet_cache:
+
+services:
+  dotnet:
+    container_name: dotnet
+    build:
+      context: ../../config/dotnet
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      # .NET Environment
+      - ASPNETCORE_ENVIRONMENT=Development
+      - DOTNET_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - DOTNET_USE_POLLING_FILE_WATCHER=true
+      - DOTNET_WATCH_RESTART_ON_RUDE_EDIT=true
+
+      # Database connections (using .NET's ConnectionStrings__ pattern)
+      - ConnectionStrings__DefaultConnection=Server=postgres;Port=5432;Database=dotnet_db;User Id=postgres;Password=${SHARED_DB_PASSWORD}
+      - ConnectionStrings__MariaDB=Server=mariadb;Port=3306;Database=dotnet_db;User=root;Password=${SHARED_DB_PASSWORD}
+      - ConnectionStrings__MySQL=Server=mysql;Port=3306;Database=dotnet_db;User=root;Password=${SHARED_DB_PASSWORD}
+      - ConnectionStrings__MongoDB=mongodb://root:${SHARED_ROOT_PASSWORD}@mongodb:27017
+      - ConnectionStrings__Redis=redis:6379,password=${SHARED_DB_PASSWORD}
+
+      # Message queue
+      - ConnectionStrings__RabbitMQ=amqp://${ADMIN_USER}:${ADMIN_PASSWORD}@rabbitmq:5672
+
+      # Email configuration
+      - SMTP__Host=mailpit
+      - SMTP__Port=1025
+      - SMTP__From=noreply@devarch.test
+      - SMTP__EnableSsl=false
+
+      # JWT (optional, matches Node pattern)
+      - JWT__Secret=${JWT_SECRET:-your-secret-key}
+      - JWT__Issuer=devarch.test
+      - JWT__Audience=devarch.test
+
+    ports:
+      - "127.0.0.1:8600:8080"  # Main Kestrel server
+      - "127.0.0.1:8601:8081"  # Additional service/health
+      - "127.0.0.1:8602:10000" # vsdbg debugger
+      - "127.0.0.1:8603:52323" # Hot reload
+
+    volumes:
+      - ../../apps:/app
+      - dotnet_nuget:/home/dotnet-user/.nuget/packages
+      - dotnet_cache:/home/dotnet-user/.dotnet
+      - ../../scripts:/scripts
+
+    networks:
+      - microservices-net
+
+    healthcheck:
+      test: [ "CMD", "dotnet", "--version" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3

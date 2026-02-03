@@ -1,0 +1,41 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  rust_cargo:
+  rust_target:
+
+services:
+  rust:
+    container_name: rust
+    build:
+      context: ../../config/rust
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - RUST_ENV=development
+      - RUST_BACKTRACE=1
+      - CARGO_HOME=/usr/local/cargo
+      - DATABASE_URL=postgresql://postgres:${SHARED_DB_PASSWORD}@postgres:5432/rust_db
+      - REDIS_URL=redis://:${SHARED_DB_PASSWORD}@redis:6379
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
+    ports:
+      - "127.0.0.1:8700:8080"  # Main app
+      - "127.0.0.1:8701:8081"  # Secondary app
+      - "127.0.0.1:8702:8082"  # Debugger
+      - "127.0.0.1:8703:8083"  # Metrics
+    volumes:
+      - ../../apps:/app
+      - rust_cargo:/usr/local/cargo/registry
+      - rust_target:/app/target
+      - ../../scripts:/scripts
+    networks:
+      - microservices-net
+    healthcheck:
+      test: [ "CMD", "rustc", "--version" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3

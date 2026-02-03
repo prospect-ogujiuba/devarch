@@ -1,0 +1,28 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  dockge_data:
+
+services:
+  dockge:
+    container_name: dockge
+    image: louislam/dockge:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - DOCKGE_STACKS_DIR=/opt/stacks
+    ports:
+      - "127.0.0.1:9008:5001"
+    volumes:
+      - dockge_data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/stacks:/opt/stacks
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

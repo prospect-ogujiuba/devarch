@@ -1,0 +1,19 @@
+{
+    admin 0.0.0.0:2019
+    auto_https off
+}
+
+:80 {
+    respond "Caddy is running!" 200
+
+    handle /health {
+        respond "OK" 200
+    }
+
+    # Example reverse proxy configuration
+    # reverse_proxy /api/* localhost:8080
+}
+
+:443 {
+    respond "Caddy HTTPS is running!" 200
+}

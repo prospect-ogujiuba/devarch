@@ -1,0 +1,34 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  typesense_data:
+
+services:
+  typesense:
+    container_name: typesense
+    image: typesense/typesense:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - TYPESENSE_DATA_DIR=/data
+      - TYPESENSE_API_KEY=${TYPESENSE_API_KEY:-typesenseApiKey123456789}
+      - TYPESENSE_ENABLE_CORS=true
+      - TYPESENSE_CORS_DOMAINS=http://localhost,https://*.test
+      - TYPESENSE_LOG_LEVEL=info
+      - TYPESENSE_THREAD_POOL_SIZE=8
+      - TYPESENSE_NUM_MEMORY_SHARDS=4
+    ports:
+      - "127.0.0.1:8108:8108"
+    volumes:
+      - typesense_data:/data
+      - ../../config/typesense/typesense-server.ini:/etc/typesense/typesense-server.ini:ro
+    networks:
+      - microservices-net
+    command: "--data-dir /data --api-key=${TYPESENSE_API_KEY:-typesenseApiKey123456789}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8108/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

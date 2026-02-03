@@ -1,0 +1,31 @@
+{
+  "$schema": "https://www.krakend.io/schema/v3.json",
+  "version": 3,
+  "name": "devarch-gateway",
+  "port": 8080,
+  "timeout": "3s",
+  "endpoints": [
+    {
+      "endpoint": "/api/users",
+      "method": "GET",
+      "backend": [
+        { "url_pattern": "/users", "host": ["http://users:8080"] }
+      ]
+    },
+    {
+      "endpoint": "/api/orders",
+      "method": "GET",
+      "backend": [
+        { "url_pattern": "/orders", "host": ["http://orders:8080"] }
+      ]
+    },
+    {
+      "endpoint": "/api/account",
+      "method": "GET",
+      "backend": [
+        { "url_pattern": "/users/me", "host": ["http://users:8080"] },
+        { "url_pattern": "/orders/by-user", "host": ["http://orders:8080"] }
+      ]
+    }
+  ]
+}

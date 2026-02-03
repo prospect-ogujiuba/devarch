@@ -1,0 +1,15 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  krakend:
+    image: devopsfaith/krakend:2.6
+    container_name: krakend
+    command: ["run", "-c", "/etc/krakend/krakend.json"]
+    volumes:
+      - ../../config/krakend/krakend.json:/etc/krakend/krakend.json:ro
+    ports:
+      - "127.0.0.1:4000:8080"
+    networks:
+      - microservices-net

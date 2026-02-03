@@ -1,0 +1,37 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  rabbitmq_data:
+  rabbitmq_logs:
+
+services:
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - RABBITMQ_DEFAULT_USER=${ADMIN_USER}
+      - RABBITMQ_DEFAULT_PASS=${ADMIN_PASSWORD}
+      - RABBITMQ_DEFAULT_VHOST=/
+      - RABBITMQ_DISK_FREE_LIMIT=1GB
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit log [{console,[{level,info}]}]
+    ports:
+      - "127.0.0.1:5672:5672"   # AMQP port
+      - "127.0.0.1:15672:15672" # Management UI
+      - "127.0.0.1:25672:25672" # Clustering
+      - "127.0.0.1:15692:15692" # Prometheus metrics
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_logs:/var/log/rabbitmq
+      - ../../config/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ../../config/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

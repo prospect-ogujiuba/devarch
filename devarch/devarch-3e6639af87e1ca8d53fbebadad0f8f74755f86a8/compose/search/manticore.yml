@@ -1,0 +1,25 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  manticore_data:
+
+services:
+  manticore:
+    container_name: manticore
+    image: manticoresearch/manticore:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:9306:9306"
+      - "127.0.0.1:9307:9308"
+    volumes:
+      - manticore_data:/var/lib/manticore
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9308/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

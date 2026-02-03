@@ -1,0 +1,24 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  ollama_data:
+
+services:
+  ollama:
+    container_name: ollama
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

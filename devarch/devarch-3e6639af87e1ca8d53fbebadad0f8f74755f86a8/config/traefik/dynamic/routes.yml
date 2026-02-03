@@ -1,0 +1,20 @@
+http:
+  routers:
+    users:
+      rule: "PathPrefix(`/api/users`)"
+      entryPoints: ["web"]
+      service: users-svc
+    orders:
+      rule: "PathPrefix(`/api/orders`)"
+      entryPoints: ["web"]
+      service: orders-svc
+
+  services:
+    users-svc:
+      loadBalancer:
+        servers:
+          - url: "http://users:8080"
+    orders-svc:
+      loadBalancer:
+        servers:
+          - url: "http://orders:8080"

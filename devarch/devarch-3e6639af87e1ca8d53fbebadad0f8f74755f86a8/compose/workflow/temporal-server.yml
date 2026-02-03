@@ -1,0 +1,26 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  temporal_data:
+
+services:
+  temporal:
+    container_name: temporal
+    image: temporalio/auto-setup:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=admin1234567
+      - POSTGRES_SEEDS=postgres
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+    ports:
+      - "127.0.0.1:9931:7233"
+    volumes:
+      - temporal_data:/etc/temporal
+    networks:
+      - microservices-net

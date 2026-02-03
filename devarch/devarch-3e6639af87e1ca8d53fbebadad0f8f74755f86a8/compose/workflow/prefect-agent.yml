@@ -1,0 +1,15 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  prefect-agent:
+    container_name: prefect-agent
+    image: prefecthq/prefect:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - PREFECT_API_URL=http://prefect-server:4200/api
+    command: prefect agent start --pool default-agent-pool
+    networks:
+      - microservices-net

@@ -1,0 +1,28 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  erpnext_sites:
+    external: true
+  erpnext_logs:
+    external: true
+
+services:
+  erpnext-queue-long:
+    container_name: erpnext-queue-long
+    image: frappe/erpnext:latest
+    restart: unless-stopped
+    networks:
+      - microservices-net
+    command:
+      - bench
+      - worker
+      - --queue
+      - long,default,short
+    volumes:
+      - erpnext_sites:/home/frappe/frappe-bench/sites
+      - erpnext_logs:/home/frappe/frappe-bench/logs
+    environment:
+      FRAPPE_REDIS_CACHE: redis://redis:6379
+      FRAPPE_REDIS_QUEUE: redis://redis:6379
