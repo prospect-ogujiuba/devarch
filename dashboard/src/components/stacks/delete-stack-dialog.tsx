@@ -50,7 +50,7 @@ export function DeleteStackDialog({ stack, open, onOpenChange, onSuccess }: Dele
                   <p className="font-medium">
                     {preview.instance_count} {preview.instance_count === 1 ? 'instance' : 'instances'} will be deleted
                   </p>
-                  {preview.container_names.length > 0 && (
+                  {preview.container_names && preview.container_names.length > 0 && (
                     <div className="mt-2">
                       <p className="text-muted-foreground mb-1">Containers to be stopped:</p>
                       <ul className="list-disc list-inside space-y-0.5">
