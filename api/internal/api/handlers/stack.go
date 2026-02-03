@@ -310,3 +310,547 @@ func (h *StackHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		"message": fmt.Sprintf("stack %q deleted successfully", name),
 	})
 }
+
+// Enable handles POST /stacks/{name}/enable
+func (h *StackHandler) Enable(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	var stack stackResponse
+	err := h.db.QueryRow(`
+		UPDATE stacks
+		SET enabled = true, updated_at = NOW()
+		WHERE name = $1 AND deleted_at IS NULL
+		RETURNING id, name, description, network_name, enabled, created_at, updated_at
+	`, name).Scan(
+		&stack.ID,
+		&stack.Name,
+		&stack.Description,
+		&stack.NetworkName,
+		&stack.Enabled,
+		&stack.CreatedAt,
+		&stack.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to enable stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Query instance count
+	err = h.db.QueryRow(`
+		SELECT COUNT(*) FROM service_instances WHERE stack_id = $1
+	`, stack.ID).Scan(&stack.InstanceCount)
+	if err != nil {
+		stack.InstanceCount = 0
+	}
+
+	stack.RunningCount = 0
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stack)
+}
+
+type disableResponse struct {
+	Stack             stackResponse `json:"stack"`
+	StoppedContainers []string      `json:"stopped_containers"`
+}
+
+// Disable handles POST /stacks/{name}/disable
+func (h *StackHandler) Disable(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	// Get stack and its instances
+	var stackID int
+	err := h.db.QueryRow(`
+		SELECT id FROM stacks WHERE name = $1 AND deleted_at IS NULL
+	`, name).Scan(&stackID)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Get all instance IDs for container stopping
+	rows, err := h.db.Query(`
+		SELECT id FROM service_instances WHERE stack_id = $1
+	`, stackID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to query instances: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var stoppedContainers []string
+	for rows.Next() {
+		var instanceID int
+		if err := rows.Scan(&instanceID); err != nil {
+			continue
+		}
+
+		// Build container name and stop it
+		containerName := container.ContainerName(name, fmt.Sprintf("%d", instanceID))
+		stoppedContainers = append(stoppedContainers, containerName)
+
+		// TODO: Actually stop container via containerClient when Phase 3 implements runtime operations
+		// For now, just track container names that would be stopped
+	}
+
+	// Update stack to disabled
+	var stack stackResponse
+	err = h.db.QueryRow(`
+		UPDATE stacks
+		SET enabled = false, updated_at = NOW()
+		WHERE name = $1 AND deleted_at IS NULL
+		RETURNING id, name, description, network_name, enabled, created_at, updated_at
+	`, name).Scan(
+		&stack.ID,
+		&stack.Name,
+		&stack.Description,
+		&stack.NetworkName,
+		&stack.Enabled,
+		&stack.CreatedAt,
+		&stack.UpdatedAt,
+	)
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to disable stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Query instance count
+	err = h.db.QueryRow(`
+		SELECT COUNT(*) FROM service_instances WHERE stack_id = $1
+	`, stack.ID).Scan(&stack.InstanceCount)
+	if err != nil {
+		stack.InstanceCount = 0
+	}
+
+	stack.RunningCount = 0
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(disableResponse{
+		Stack:             stack,
+		StoppedContainers: stoppedContainers,
+	})
+}
+
+type cloneRequest struct {
+	Name string `json:"name"`
+}
+
+// Clone handles POST /stacks/{name}/clone
+func (h *StackHandler) Clone(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	var req cloneRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Validate new name
+	if err := container.ValidateName(req.Name); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Begin transaction
+	tx, err := h.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	// Copy stack record with new name
+	var newStack stackResponse
+	err = tx.QueryRow(`
+		INSERT INTO stacks (name, description, enabled)
+		SELECT $1, description, true
+		FROM stacks
+		WHERE name = $2 AND deleted_at IS NULL
+		RETURNING id, name, description, network_name, enabled, created_at, updated_at
+	`, req.Name, name).Scan(
+		&newStack.ID,
+		&newStack.Name,
+		&newStack.Description,
+		&newStack.NetworkName,
+		&newStack.Enabled,
+		&newStack.CreatedAt,
+		&newStack.UpdatedAt,
+	)
+
+	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+			http.Error(w, fmt.Sprintf("stack name %q already exists", req.Name), http.StatusConflict)
+			return
+		}
+		if err == sql.ErrNoRows {
+			http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("failed to clone stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Copy all service_instances from source to new stack
+	_, err = tx.Exec(`
+		INSERT INTO service_instances (stack_id, instance_id, template_service_id)
+		SELECT $1, instance_id, template_service_id
+		FROM service_instances si
+		JOIN stacks s ON s.id = si.stack_id
+		WHERE s.name = $2 AND s.deleted_at IS NULL
+	`, newStack.ID, name)
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to clone instances: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Query instance count for new stack
+	err = h.db.QueryRow(`
+		SELECT COUNT(*) FROM service_instances WHERE stack_id = $1
+	`, newStack.ID).Scan(&newStack.InstanceCount)
+	if err != nil {
+		newStack.InstanceCount = 0
+	}
+
+	newStack.RunningCount = 0
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(newStack)
+}
+
+type renameRequest struct {
+	Name string `json:"name"`
+}
+
+// Rename handles POST /stacks/{name}/rename
+func (h *StackHandler) Rename(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	var req renameRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Validate new name
+	if err := container.ValidateName(req.Name); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Begin transaction - rename is clone + soft-delete in single tx
+	tx, err := h.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	// Clone stack record with new name
+	var newStack stackResponse
+	err = tx.QueryRow(`
+		INSERT INTO stacks (name, description, enabled)
+		SELECT $1, description, enabled
+		FROM stacks
+		WHERE name = $2 AND deleted_at IS NULL
+		RETURNING id, name, description, network_name, enabled, created_at, updated_at
+	`, req.Name, name).Scan(
+		&newStack.ID,
+		&newStack.Name,
+		&newStack.Description,
+		&newStack.NetworkName,
+		&newStack.Enabled,
+		&newStack.CreatedAt,
+		&newStack.UpdatedAt,
+	)
+
+	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+			http.Error(w, fmt.Sprintf("stack name %q already exists", req.Name), http.StatusConflict)
+			return
+		}
+		if err == sql.ErrNoRows {
+			http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("failed to rename stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Copy all service_instances from source to new stack
+	_, err = tx.Exec(`
+		INSERT INTO service_instances (stack_id, instance_id, template_service_id)
+		SELECT $1, instance_id, template_service_id
+		FROM service_instances si
+		JOIN stacks s ON s.id = si.stack_id
+		WHERE s.name = $2 AND s.deleted_at IS NULL
+	`, newStack.ID, name)
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to copy instances: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Soft-delete the original stack
+	_, err = tx.Exec(`
+		UPDATE stacks
+		SET deleted_at = NOW(), updated_at = NOW()
+		WHERE name = $1 AND deleted_at IS NULL
+	`, name)
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to delete original stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Query instance count for new stack
+	err = h.db.QueryRow(`
+		SELECT COUNT(*) FROM service_instances WHERE stack_id = $1
+	`, newStack.ID).Scan(&newStack.InstanceCount)
+	if err != nil {
+		newStack.InstanceCount = 0
+	}
+
+	newStack.RunningCount = 0
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(newStack)
+}
+
+type deletePreviewResponse struct {
+	StackName      string   `json:"stack_name"`
+	InstanceCount  int      `json:"instance_count"`
+	ContainerNames []string `json:"container_names"`
+}
+
+// DeletePreview handles GET /stacks/{name}/delete-preview
+func (h *StackHandler) DeletePreview(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	// Get stack ID
+	var stackID int
+	err := h.db.QueryRow(`
+		SELECT id FROM stacks WHERE name = $1 AND deleted_at IS NULL
+	`, name).Scan(&stackID)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Get all instance IDs and build container names
+	rows, err := h.db.Query(`
+		SELECT id FROM service_instances WHERE stack_id = $1
+	`, stackID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to query instances: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var containerNames []string
+	instanceCount := 0
+	for rows.Next() {
+		var instanceID int
+		if err := rows.Scan(&instanceID); err != nil {
+			continue
+		}
+		instanceCount++
+		containerNames = append(containerNames, container.ContainerName(name, fmt.Sprintf("%d", instanceID)))
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(deletePreviewResponse{
+		StackName:      name,
+		InstanceCount:  instanceCount,
+		ContainerNames: containerNames,
+	})
+}
+
+type trashStackResponse struct {
+	ID            int        `json:"id"`
+	Name          string     `json:"name"`
+	Description   string     `json:"description"`
+	NetworkName   *string    `json:"network_name"`
+	Enabled       bool       `json:"enabled"`
+	InstanceCount int        `json:"instance_count"`
+	DeletedAt     *time.Time `json:"deleted_at"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+}
+
+// ListTrash handles GET /stacks/trash
+func (h *StackHandler) ListTrash(w http.ResponseWriter, r *http.Request) {
+	query := `
+		SELECT
+			s.id,
+			s.name,
+			s.description,
+			s.network_name,
+			s.enabled,
+			s.created_at,
+			s.updated_at,
+			s.deleted_at,
+			COUNT(si.id) AS instance_count
+		FROM stacks s
+		LEFT JOIN service_instances si ON si.stack_id = s.id
+		WHERE s.deleted_at IS NOT NULL
+		GROUP BY s.id
+		ORDER BY s.deleted_at DESC
+	`
+
+	rows, err := h.db.Query(query)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to query trash: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	stacks := []trashStackResponse{}
+	for rows.Next() {
+		var stack trashStackResponse
+		err := rows.Scan(
+			&stack.ID,
+			&stack.Name,
+			&stack.Description,
+			&stack.NetworkName,
+			&stack.Enabled,
+			&stack.CreatedAt,
+			&stack.UpdatedAt,
+			&stack.DeletedAt,
+			&stack.InstanceCount,
+		)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to scan stack: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		stacks = append(stacks, stack)
+	}
+
+	if err := rows.Err(); err != nil {
+		http.Error(w, fmt.Sprintf("error iterating trash: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stacks)
+}
+
+// Restore handles POST /stacks/trash/{name}/restore
+func (h *StackHandler) Restore(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	// Check if name conflicts with an active stack
+	var existingID int
+	err := h.db.QueryRow(`
+		SELECT id FROM stacks WHERE name = $1 AND deleted_at IS NULL
+	`, name).Scan(&existingID)
+
+	if err == nil {
+		http.Error(w, fmt.Sprintf("Stack name %q is already in use. Rename before restoring.", name), http.StatusConflict)
+		return
+	}
+	if err != sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("failed to check name conflict: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Restore stack by clearing deleted_at
+	var stack stackResponse
+	err = h.db.QueryRow(`
+		UPDATE stacks
+		SET deleted_at = NULL, updated_at = NOW()
+		WHERE name = $1 AND deleted_at IS NOT NULL
+		RETURNING id, name, description, network_name, enabled, created_at, updated_at
+	`, name).Scan(
+		&stack.ID,
+		&stack.Name,
+		&stack.Description,
+		&stack.NetworkName,
+		&stack.Enabled,
+		&stack.CreatedAt,
+		&stack.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("stack %q not found in trash", name), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to restore stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Query instance count
+	err = h.db.QueryRow(`
+		SELECT COUNT(*) FROM service_instances WHERE stack_id = $1
+	`, stack.ID).Scan(&stack.InstanceCount)
+	if err != nil {
+		stack.InstanceCount = 0
+	}
+
+	stack.RunningCount = 0
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stack)
+}
+
+// PermanentDelete handles DELETE /stacks/trash/{name}
+func (h *StackHandler) PermanentDelete(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	result, err := h.db.Exec(`
+		DELETE FROM stacks
+		WHERE name = $1 AND deleted_at IS NOT NULL
+	`, name)
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to permanently delete stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get rows affected: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if rowsAffected == 0 {
+		http.Error(w, fmt.Sprintf("stack %q not found in trash", name), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": fmt.Sprintf("stack %q permanently deleted", name),
+	})
+}
