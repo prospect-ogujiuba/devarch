@@ -2,70 +2,68 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Project
 
-DevArch is a microservices development environment managing multiple backend runtimes, databases, and services via Docker/Podman Compose. The database is the source of truth — compose YAML is generated on-the-fly from DB state by the Go API.
+DevArch — local microservices dev environment. Go API + React dashboard + bash CLI. DB (Postgres) is source of truth; compose YAML generated on-the-fly. Runtime: Podman or Docker.
 
-## Essential Commands
+Current milestone: **Stacks & Instances** — isolated, composable service groups. Core invariant: two stacks using the same service template must never collide.
 
+## Commands
+
+### API (from `api/`)
 ```bash
-# Service management (requires API running at localhost:8550)
-./scripts/service-manager.sh up <service>           # Start service
-./scripts/service-manager.sh down <service>         # Stop service
-./scripts/service-manager.sh rebuild <service>      # Rebuild and restart (--no-cache)
-./scripts/service-manager.sh logs <service> -f      # Follow logs
-./scripts/service-manager.sh start <category>       # Start category
-./scripts/service-manager.sh stop <category>        # Stop category
-./scripts/service-manager.sh status                 # Show all statuses
-./scripts/service-manager.sh list                   # List available services
-./scripts/service-manager.sh compose <service>      # Show generated compose YAML
-./scripts/service-manager.sh check                  # Verify runtime + API
+go run ./cmd/server                              # start API server
+go run ./cmd/migrate -migrations ./migrations     # run migrations
+go run ./cmd/import -compose-dir ../apps          # import service templates
+```
 
-# Import compose files into DB (one-time or re-import)
-cd api && go run cmd/import/main.go --compose-dir ../compose --project-root .. --db $DATABASE_URL
+### Dashboard (from `dashboard/`)
+```bash
+npm run dev            # vite dev server on :5174
+npm run build          # production build
+npm run build:strict   # tsc + vite build
+npm run lint           # eslint
+```
 
-# Dashboard development
-cd apps/dashboard && npm run dev    # Start Vite dev server
-cd apps/dashboard && npm run build  # Production build
-cd apps/dashboard && npm run lint   # ESLint check
+### Docker Compose (from root)
+```bash
+docker compose up      # postgres :5433, api :8550
 ```
 
 ## Architecture
 
-### Directory Structure
-- `api/` - Go API backend (compose generation, service CRUD, container ops)
-- `config/<service>/` - Dockerfiles and service configs
-- `config/devarch-api/compose.yml` - Bootstrap compose for the API itself
-- `scripts/` - CLI wrapper (service-manager.sh) and runtime config (config.sh)
-- `apps/dashboard/` - React management UI (Vite + Tailwind + HeadlessUI)
+**API** (`api/`): Go 1.22, chi router, lib/pq, gorilla/websocket, yaml.v3
+- `cmd/server` — entry point, wires DB + container client + router
+- `cmd/migrate` — migration runner
+- `cmd/import`, `cmd/export` — compose import/export
+- `internal/api/routes.go` — all route definitions, chi middleware chain
+- `internal/api/handlers/` — HTTP handlers (service CRUD is the largest at ~40KB)
+- `internal/compose/` — YAML generation (`generator.go`), parsing, importing, validation
+- `internal/container/client.go` — Docker/Podman abstraction layer
+- `internal/podman/` — Podman-specific implementation
+- `internal/nginx/` — nginx config generation
+- `internal/project/` — project controller
+- `migrations/` — 12 SQL migrations (001-012)
 
-### Key Components
-- `api/internal/compose/generator.go` - Generates compose YAML from DB
-- `api/internal/compose/importer.go` - Imports compose files into DB
-- `api/internal/compose/parser.go` - Parses compose YAML files
-- `scripts/config.sh` - Runtime detection, network config, env vars
-- `scripts/service-manager.sh` - Thin API client CLI
+**Dashboard** (`dashboard/`): React 19, Vite, TanStack Router (file-based) + Query, Tailwind 4, Radix UI, Zod, CodeMirror
+- `src/routes/` — page components (services, projects, categories, settings)
+- `src/components/services/` — service-specific UI (editors, tables, log viewer)
+- `src/types/api.ts` — API type definitions
+- `@` alias maps to `src/`
+- Vite proxies `/api` → `localhost:8550`
 
-### Service Categories (defined in database)
-database, storage, dbms, security, registry, gateway, proxy, management, backend, ci, project, mail, exporters, analytics, messaging, search, workflow, docs, testing, collaboration, erp, support, ai
+**Scripts** (`scripts/`): bash CLI wrapper (`devarch`), service manager, runtime switcher, config management
 
-### Port Allocation (backend runtimes)
-- PHP: 8100-8199
-- Node.js: 8200-8299
-- Python: 8300-8399
-- Go: 8400-8499
-- .NET: 8600-8699
-- Rust: 8700-8799
+**Apps** (`apps/`): sample containerized applications mounted read-only into API container
 
-### Network
-All services connect to `microservices-net` bridge network. Use service names as hostnames.
+## Key Patterns
 
-## Dashboard Tech Stack
-React 18, Vite, Tailwind CSS, @headlessui/react, @heroicons/react
+- API key auth via `X-API-Key` header + rate limiting middleware on all `/api/v1` routes
+- Services identified by `{name}` in URL paths, not IDs
+- Compose YAML is never stored — always generated from DB state via `compose/generator.go`
+- WebSocket at `/api/v1/ws/status` for real-time container status
+- DB connection string via `DATABASE_URL` env var, API port via `PORT`
 
-## Code Conventions
-- Use existing HeadlessUI components
-- Use @heroicons/react icons
-- Service names: lowercase, hyphen-separated
-- Service configs: placed in `config/<service>/`
-- Compose is generated from DB, not stored as files
+## Planning
+
+`.planning/` contains project management artifacts (PROJECT.md, REQUIREMENTS.md, ROADMAP.md, STATE.md). 48 requirements across categories: BASE, STCK, INST, NETW, COMP, PLAN, WIRE, EXIM, SECR, RESC, MIGR. 9-phase roadmap.
