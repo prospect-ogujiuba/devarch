@@ -71,6 +71,14 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 				r.Post("/export", serviceHandler.Export)
 				r.Post("/materialize", serviceHandler.Materialize)
 
+				r.Put("/ports", serviceHandler.UpdatePorts)
+				r.Put("/volumes", serviceHandler.UpdateVolumes)
+				r.Put("/env-vars", serviceHandler.UpdateEnvVars)
+				r.Put("/dependencies", serviceHandler.UpdateDependencies)
+				r.Put("/healthcheck", serviceHandler.UpdateHealthcheck)
+				r.Put("/labels", serviceHandler.UpdateLabels)
+				r.Put("/domains", serviceHandler.UpdateDomains)
+
 				r.Get("/files", serviceHandler.ListConfigFiles)
 				r.Get("/files/*", serviceHandler.GetConfigFile)
 				r.Put("/files/*", serviceHandler.PutConfigFile)

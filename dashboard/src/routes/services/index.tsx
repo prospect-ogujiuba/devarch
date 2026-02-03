@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
-import { Loader2, Server, Play, Square, Cpu, MemoryStick } from 'lucide-react'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { Loader2, Server, Play, Square, Cpu, MemoryStick, Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { useServices } from '@/features/services/queries'
 import { ServiceTable } from '@/components/services/service-table'
 import { ServiceGrid } from '@/components/services/service-grid'
@@ -98,6 +99,9 @@ function ServicesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button asChild size="sm">
+            <Link to="/services/new"><Plus className="size-4" /> New Service</Link>
+          </Button>
           <SortControls
             options={sortOptions}
             sortBy={sortBy}

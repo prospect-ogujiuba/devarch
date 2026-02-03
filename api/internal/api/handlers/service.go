@@ -1095,6 +1095,334 @@ func (h *ServiceHandler) PutConfigFile(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "saved"})
 }
 
+func (h *ServiceHandler) lookupServiceID(w http.ResponseWriter, r *http.Request) (int, bool) {
+	name := chi.URLParam(r, "name")
+	var id int
+	err := h.db.QueryRow("SELECT id FROM services WHERE name = $1", name).Scan(&id)
+	if err == sql.ErrNoRows {
+		http.Error(w, "service not found", http.StatusNotFound)
+		return 0, false
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return 0, false
+	}
+	return id, true
+}
+
+func (h *ServiceHandler) snapshotAndUpdate(serviceID int) {
+	var s models.Service
+	s.ID = serviceID
+	h.db.QueryRow(
+		`SELECT name, image_name, image_tag, restart_policy, command, user_spec, compose_overrides FROM services WHERE id = $1`,
+		serviceID,
+	).Scan(&s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec, &s.ComposeOverrides)
+	h.loadServiceRelations(&s)
+	h.snapshotConfig(&s, "sub-resource update")
+	h.db.Exec(`UPDATE services SET config_status = 'modified', updated_at = NOW() WHERE id = $1`, serviceID)
+}
+
+func (h *ServiceHandler) UpdatePorts(w http.ResponseWriter, r *http.Request) {
+	serviceID, ok := h.lookupServiceID(w, r)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		Ports []models.ServicePort `json:"ports"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	h.snapshotAndUpdate(serviceID)
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	tx.Exec("DELETE FROM service_ports WHERE service_id = $1", serviceID)
+	for _, p := range req.Ports {
+		_, err = tx.Exec(
+			`INSERT INTO service_ports (service_id, host_ip, host_port, container_port, protocol) VALUES ($1, $2, $3, $4, $5)`,
+			serviceID, p.HostIP, p.HostPort, p.ContainerPort, p.Protocol,
+		)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func (h *ServiceHandler) UpdateVolumes(w http.ResponseWriter, r *http.Request) {
+	serviceID, ok := h.lookupServiceID(w, r)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		Volumes []models.ServiceVolume `json:"volumes"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	h.snapshotAndUpdate(serviceID)
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	tx.Exec("DELETE FROM service_volumes WHERE service_id = $1", serviceID)
+	for _, v := range req.Volumes {
+		_, err = tx.Exec(
+			`INSERT INTO service_volumes (service_id, volume_type, source, target, read_only, is_external) VALUES ($1, $2, $3, $4, $5, $6)`,
+			serviceID, v.VolumeType, v.Source, v.Target, v.ReadOnly, v.IsExternal,
+		)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func (h *ServiceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) {
+	serviceID, ok := h.lookupServiceID(w, r)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		EnvVars []models.ServiceEnvVar `json:"env_vars"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	h.snapshotAndUpdate(serviceID)
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	tx.Exec("DELETE FROM service_env_vars WHERE service_id = $1", serviceID)
+	for _, e := range req.EnvVars {
+		_, err = tx.Exec(
+			`INSERT INTO service_env_vars (service_id, key, value, is_secret) VALUES ($1, $2, $3, $4)`,
+			serviceID, e.Key, e.Value, e.IsSecret,
+		)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func (h *ServiceHandler) UpdateDependencies(w http.ResponseWriter, r *http.Request) {
+	serviceID, ok := h.lookupServiceID(w, r)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		Dependencies []string `json:"dependencies"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	h.snapshotAndUpdate(serviceID)
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	tx.Exec("DELETE FROM service_dependencies WHERE service_id = $1", serviceID)
+	for _, depName := range req.Dependencies {
+		var depID int
+		err := tx.QueryRow("SELECT id FROM services WHERE name = $1", depName).Scan(&depID)
+		if err != nil {
+			http.Error(w, "dependency not found: "+depName, http.StatusBadRequest)
+			return
+		}
+		_, err = tx.Exec(
+			`INSERT INTO service_dependencies (service_id, depends_on_service_id) VALUES ($1, $2)`,
+			serviceID, depID,
+		)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func (h *ServiceHandler) UpdateHealthcheck(w http.ResponseWriter, r *http.Request) {
+	serviceID, ok := h.lookupServiceID(w, r)
+	if !ok {
+		return
+	}
+
+	var req *models.ServiceHealthcheck
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	h.snapshotAndUpdate(serviceID)
+
+	h.db.Exec("DELETE FROM service_healthchecks WHERE service_id = $1", serviceID)
+
+	if req != nil && req.Test != "" {
+		_, err := h.db.Exec(
+			`INSERT INTO service_healthchecks (service_id, test, interval_seconds, timeout_seconds, retries, start_period_seconds) VALUES ($1, $2, $3, $4, $5, $6)`,
+			serviceID, req.Test, req.IntervalSeconds, req.TimeoutSeconds, req.Retries, req.StartPeriodSeconds,
+		)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func (h *ServiceHandler) UpdateLabels(w http.ResponseWriter, r *http.Request) {
+	serviceID, ok := h.lookupServiceID(w, r)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		Labels []models.ServiceLabel `json:"labels"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	h.snapshotAndUpdate(serviceID)
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	tx.Exec("DELETE FROM service_labels WHERE service_id = $1", serviceID)
+	for _, l := range req.Labels {
+		_, err = tx.Exec(
+			`INSERT INTO service_labels (service_id, key, value) VALUES ($1, $2, $3)`,
+			serviceID, l.Key, l.Value,
+		)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func (h *ServiceHandler) UpdateDomains(w http.ResponseWriter, r *http.Request) {
+	serviceID, ok := h.lookupServiceID(w, r)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		Domains []models.ServiceDomain `json:"domains"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	h.snapshotAndUpdate(serviceID)
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	tx.Exec("DELETE FROM service_domains WHERE service_id = $1", serviceID)
+	for _, d := range req.Domains {
+		_, err = tx.Exec(
+			`INSERT INTO service_domains (service_id, domain, proxy_port) VALUES ($1, $2, $3)`,
+			serviceID, d.Domain, d.ProxyPort,
+		)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
 // DeleteConfigFile removes a config file
 func (h *ServiceHandler) DeleteConfigFile(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")

@@ -110,6 +110,7 @@ export interface ServiceVolume {
   source: string
   target: string
   read_only: boolean
+  is_external: boolean
 }
 
 export interface ServiceEnvVar {
@@ -142,6 +143,17 @@ export interface ServiceDomain {
   service_id: number
   domain: string
   proxy_port?: number
+}
+
+export interface ServiceConfigFile {
+  id: number
+  service_id: number
+  file_path: string
+  content: string
+  file_mode: string
+  is_template: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface ContainerState {

@@ -14,6 +14,7 @@ import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ServicesIndexRouteImport } from './routes/services/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as CategoriesIndexRouteImport } from './routes/categories/index'
+import { Route as ServicesNewRouteImport } from './routes/services/new'
 import { Route as ServicesNameRouteImport } from './routes/services/$name'
 import { Route as ProjectsNameRouteImport } from './routes/projects/$name'
 
@@ -42,6 +43,11 @@ const CategoriesIndexRoute = CategoriesIndexRouteImport.update({
   path: '/categories/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ServicesNewRoute = ServicesNewRouteImport.update({
+  id: '/services/new',
+  path: '/services/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ServicesNameRoute = ServicesNameRouteImport.update({
   id: '/services/$name',
   path: '/services/$name',
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/projects/$name': typeof ProjectsNameRoute
   '/services/$name': typeof ServicesNameRoute
+  '/services/new': typeof ServicesNewRoute
   '/categories/': typeof CategoriesIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/services/': typeof ServicesIndexRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/projects/$name': typeof ProjectsNameRoute
   '/services/$name': typeof ServicesNameRoute
+  '/services/new': typeof ServicesNewRoute
   '/categories': typeof CategoriesIndexRoute
   '/projects': typeof ProjectsIndexRoute
   '/services': typeof ServicesIndexRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/projects/$name': typeof ProjectsNameRoute
   '/services/$name': typeof ServicesNameRoute
+  '/services/new': typeof ServicesNewRoute
   '/categories/': typeof CategoriesIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/services/': typeof ServicesIndexRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/projects/$name'
     | '/services/$name'
+    | '/services/new'
     | '/categories/'
     | '/projects/'
     | '/services/'
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/projects/$name'
     | '/services/$name'
+    | '/services/new'
     | '/categories'
     | '/projects'
     | '/services'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/projects/$name'
     | '/services/$name'
+    | '/services/new'
     | '/categories/'
     | '/projects/'
     | '/services/'
@@ -115,6 +127,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ProjectsNameRoute: typeof ProjectsNameRoute
   ServicesNameRoute: typeof ServicesNameRoute
+  ServicesNewRoute: typeof ServicesNewRoute
   CategoriesIndexRoute: typeof CategoriesIndexRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
   ServicesIndexRoute: typeof ServicesIndexRoute
@@ -158,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CategoriesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/services/new': {
+      id: '/services/new'
+      path: '/services/new'
+      fullPath: '/services/new'
+      preLoaderRoute: typeof ServicesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/services/$name': {
       id: '/services/$name'
       path: '/services/$name'
@@ -179,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ProjectsNameRoute: ProjectsNameRoute,
   ServicesNameRoute: ServicesNameRoute,
+  ServicesNewRoute: ServicesNewRoute,
   CategoriesIndexRoute: CategoriesIndexRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
   ServicesIndexRoute: ServicesIndexRoute,

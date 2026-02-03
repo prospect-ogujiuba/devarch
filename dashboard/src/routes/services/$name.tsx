@@ -1,16 +1,29 @@
 import { useState } from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Clock, RefreshCw, Cpu, MemoryStick, Network, Eye, EyeOff, ExternalLink } from 'lucide-react'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { ArrowLeft, Loader2, Clock, RefreshCw, Cpu, MemoryStick, Network, Eye, EyeOff, ExternalLink, Pencil, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ResourceBar } from '@/components/ui/resource-bar'
 import { CopyButton } from '@/components/ui/copy-button'
-import { useService, useServiceCompose } from '@/features/services/queries'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useService, useServiceCompose, useDeleteService, useUpdateService } from '@/features/services/queries'
+import { useCategories } from '@/features/categories/queries'
 import { StatusBadge } from '@/components/services/status-badge'
 import { ActionButton } from '@/components/services/action-button'
 import { LogViewer } from '@/components/services/log-viewer'
+import { EditablePorts } from '@/components/services/editable-ports'
+import { EditableVolumes } from '@/components/services/editable-volumes'
+import { EditableEnvVars } from '@/components/services/editable-env-vars'
+import { EditableDependencies } from '@/components/services/editable-dependencies'
+import { EditableHealthcheck } from '@/components/services/editable-healthcheck'
+import { EditableLabels } from '@/components/services/editable-labels'
+import { EditableDomains } from '@/components/services/editable-domains'
+import { ConfigFilesPanel } from '@/components/services/config-files-panel'
 import { formatUptime, formatBytes, computeUptime } from '@/lib/format'
 
 export const Route = createFileRoute('/services/$name')({
@@ -19,17 +32,46 @@ export const Route = createFileRoute('/services/$name')({
 
 function ServiceDetailPage() {
   const { name } = Route.useParams()
+  const navigate = useNavigate()
   const { data: service, isLoading } = useService(name)
   const { data: composeYaml, isLoading: composeLoading } = useServiceCompose(name)
-  const [revealedSecrets, setRevealedSecrets] = useState<Set<number>>(new Set())
+  const { data: categories } = useCategories()
+  const deleteService = useDeleteService()
+  const updateService = useUpdateService()
 
-  const toggleSecret = (index: number) => {
-    setRevealedSecrets((prev) => {
-      const next = new Set(prev)
-      if (next.has(index)) next.delete(index)
-      else next.add(index)
-      return next
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editForm, setEditForm] = useState({
+    image_name: '',
+    image_tag: '',
+    restart_policy: '',
+    command: '',
+    user_spec: '',
+  })
+
+  const openEdit = () => {
+    if (!service) return
+    setEditForm({
+      image_name: service.image_name,
+      image_tag: service.image_tag,
+      restart_policy: service.restart_policy,
+      command: service.command ?? '',
+      user_spec: service.user_spec ?? '',
     })
+    setEditOpen(true)
+  }
+
+  const handleDelete = () => {
+    deleteService.mutate(name, {
+      onSuccess: () => navigate({ to: '/services' }),
+    })
+  }
+
+  const handleEditSave = () => {
+    updateService.mutate(
+      { name, data: editForm },
+      { onSuccess: () => setEditOpen(false) },
+    )
   }
 
   if (isLoading) {
@@ -78,7 +120,17 @@ function ServiceDetailPage() {
           </div>
           <p className="text-muted-foreground">{image}</p>
         </div>
-        <ActionButton name={service.name} status={status} showRestart />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={openEdit}>
+            <Pencil className="size-4" />
+            Edit
+          </Button>
+          <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="size-4" />
+            Delete
+          </Button>
+          <ActionButton name={service.name} status={status} showRestart />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -144,6 +196,7 @@ function ServiceDetailPage() {
           <TabsTrigger value="env">Environment</TabsTrigger>
           <TabsTrigger value="logs">Logs</TabsTrigger>
           <TabsTrigger value="compose">Compose</TabsTrigger>
+          <TabsTrigger value="files">Files</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="space-y-4">
@@ -184,151 +237,16 @@ function ServiceDetailPage() {
             </CardContent>
           </Card>
 
-          {service.domains && service.domains.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Domains</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {service.domains.map((d) => (
-                    <div key={d.domain} className="flex items-center gap-2">
-                      <a
-                        href={`http://${d.domain}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline flex items-center gap-1"
-                      >
-                        {d.domain}
-                        <ExternalLink className="size-3" />
-                      </a>
-                      <CopyButton value={d.domain} />
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Ports</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {service.ports && service.ports.length > 0 ? (
-                <div className="space-y-2">
-                  {service.ports.map((port, i) => {
-                    const url = `http://localhost:${port.host_port}`
-                    return (
-                      <div key={i} className="flex items-center gap-2">
-                        <Badge variant="outline">
-                          {port.host_ip ? `${port.host_ip}:` : ''}{port.host_port}:{port.container_port}/{port.protocol}
-                        </Badge>
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline flex items-center gap-1"
-                        >
-                          {url}
-                          <ExternalLink className="size-3" />
-                        </a>
-                        <CopyButton value={url} />
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No ports exposed</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Volumes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {service.volumes && service.volumes.length > 0 ? (
-                <div className="space-y-1">
-                  {service.volumes.map((vol, i) => (
-                    <div key={i} className="text-sm font-mono text-muted-foreground">
-                      {vol.source}:{vol.target}{vol.read_only ? ' (ro)' : ''}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No volumes mounted</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {service.dependencies && service.dependencies.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Dependencies</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {service.dependencies.map((dep) => (
-                    <Badge key={dep} variant="outline">
-                      <Link to="/services/$name" params={{ name: dep }} className="hover:underline">
-                        {dep}
-                      </Link>
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {service.healthcheck && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Healthcheck</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-2 text-sm">
-                  <div className="flex"><span className="text-muted-foreground w-40">Test:</span> <code>{service.healthcheck.test}</code></div>
-                  <div className="flex"><span className="text-muted-foreground w-40">Interval:</span> {service.healthcheck.interval_seconds}s</div>
-                  <div className="flex"><span className="text-muted-foreground w-40">Timeout:</span> {service.healthcheck.timeout_seconds}s</div>
-                  <div className="flex"><span className="text-muted-foreground w-40">Retries:</span> {service.healthcheck.retries}</div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <EditableDomains name={service.name} domains={service.domains ?? []} />
+          <EditablePorts name={service.name} ports={service.ports ?? []} />
+          <EditableVolumes name={service.name} volumes={service.volumes ?? []} />
+          <EditableDependencies name={service.name} dependencies={service.dependencies ?? []} />
+          <EditableHealthcheck name={service.name} healthcheck={service.healthcheck ?? null} />
+          <EditableLabels name={service.name} labels={service.labels ?? []} />
         </TabsContent>
 
         <TabsContent value="env">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Environment Variables</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {service.env_vars && service.env_vars.length > 0 ? (
-                <div className="space-y-1">
-                  {service.env_vars.map((env, i) => (
-                    <div key={i} className="text-sm font-mono flex items-center">
-                      <span className="text-muted-foreground min-w-[200px]">{env.key}:</span>
-                      <span>{env.is_secret && !revealedSecrets.has(i) ? '********' : env.value}</span>
-                      {env.is_secret && (
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          className="size-6 ml-1"
-                          onClick={() => toggleSecret(i)}
-                        >
-                          {revealedSecrets.has(i) ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No environment variables</p>
-              )}
-            </CardContent>
-          </Card>
+          <EditableEnvVars name={service.name} envVars={service.env_vars ?? []} />
         </TabsContent>
 
         <TabsContent value="logs">
@@ -355,7 +273,67 @@ function ServiceDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="files">
+          <ConfigFilesPanel serviceName={service.name} />
+        </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`Delete ${service.name}?`}
+        description="This will permanently delete the service and all its configuration. This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        variant="destructive"
+      />
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit {service.name}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Image Name</label>
+              <Input value={editForm.image_name} onChange={(e) => setEditForm((f) => ({ ...f, image_name: e.target.value }))} />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Image Tag</label>
+              <Input value={editForm.image_tag} onChange={(e) => setEditForm((f) => ({ ...f, image_tag: e.target.value }))} />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Restart Policy</label>
+              <Select value={editForm.restart_policy} onValueChange={(v) => setEditForm((f) => ({ ...f, restart_policy: v }))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no">no</SelectItem>
+                  <SelectItem value="always">always</SelectItem>
+                  <SelectItem value="unless-stopped">unless-stopped</SelectItem>
+                  <SelectItem value="on-failure">on-failure</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Command</label>
+              <Input value={editForm.command} onChange={(e) => setEditForm((f) => ({ ...f, command: e.target.value }))} placeholder="Optional" />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">User</label>
+              <Input value={editForm.user_spec} onChange={(e) => setEditForm((f) => ({ ...f, user_spec: e.target.value }))} placeholder="Optional" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={handleEditSave} disabled={updateService.isPending}>
+              {updateService.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
