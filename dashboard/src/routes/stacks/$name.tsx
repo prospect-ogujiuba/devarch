@@ -18,7 +18,19 @@ import { DeleteStackDialog } from '@/components/stacks/delete-stack-dialog'
 import { CloneStackDialog } from '@/components/stacks/clone-stack-dialog'
 import { RenameStackDialog } from '@/components/stacks/rename-stack-dialog'
 import { DisableStackDialog } from '@/components/stacks/disable-stack-dialog'
-import { formatDistanceToNow } from 'date-fns'
+
+function timeAgo(dateStr: string): string {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
+  const intervals: [number, string][] = [
+    [31536000, 'year'], [2592000, 'month'], [86400, 'day'],
+    [3600, 'hour'], [60, 'minute'], [1, 'second'],
+  ]
+  for (const [secs, label] of intervals) {
+    const count = Math.floor(seconds / secs)
+    if (count >= 1) return `${count} ${label}${count > 1 ? 's' : ''} ago`
+  }
+  return 'just now'
+}
 
 export const Route = createFileRoute('/stacks/$name')({
   component: StackDetailPage,
@@ -72,8 +84,8 @@ function StackDetailPage() {
     )
   }
 
-  const createdAgo = formatDistanceToNow(new Date(stack.created_at), { addSuffix: true })
-  const updatedAgo = formatDistanceToNow(new Date(stack.updated_at), { addSuffix: true })
+  const createdAgo = timeAgo(stack.created_at)
+  const updatedAgo = timeAgo(stack.updated_at)
 
   return (
     <div className="space-y-6">
