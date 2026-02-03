@@ -313,3 +313,34 @@ export interface ProjectScanResponse {
   scanned: number
   projects: Project[]
 }
+
+export interface Stack {
+  id: number
+  name: string
+  description: string
+  network_name: string | null
+  enabled: boolean
+  instance_count: number
+  running_count: number
+  created_at: string
+  updated_at: string
+  deleted_at?: string | null
+  instances?: StackInstance[]
+}
+
+export interface StackInstance {
+  id: number
+  stack_id: number
+  instance_id: string
+  template_service_id: number | null
+  container_name: string | null
+  enabled: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface DeletePreview {
+  stack_name: string
+  instance_count: number
+  container_names: string[]
+}
