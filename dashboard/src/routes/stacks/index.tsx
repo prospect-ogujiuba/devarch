@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { useStacks, useDeleteStack, useEnableStack, useDisableStack } from '@/features/stacks/queries'
 import { StackTable } from '@/components/stacks/stack-table'
 import { StackGrid } from '@/components/stacks/stack-grid'
+import { CreateStackDialog } from '@/components/stacks/create-stack-dialog'
 import { ListToolbar } from '@/components/ui/list-toolbar'
 import { StatCard } from '@/components/ui/stat-card'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -54,6 +55,7 @@ function StacksPage() {
   const enableMutation = useEnableStack()
   const disableMutation = useDisableStack()
 
+  const [createOpen, setCreateOpen] = useState(false)
   const [cloneDialogStack, setCloneDialogStack] = useState<string | null>(null)
   const [renameDialogStack, setRenameDialogStack] = useState<string | null>(null)
 
@@ -104,8 +106,7 @@ function StacksPage() {
   }
 
   const handleCreateStack = () => {
-    // TODO: Open create dialog when form components ready
-    console.log('Create stack dialog')
+    setCreateOpen(true)
   }
 
   if (isLoading) {
@@ -190,6 +191,8 @@ function StacksPage() {
           onDelete={handleDelete}
         />
       )}
+
+      <CreateStackDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   )
 }
