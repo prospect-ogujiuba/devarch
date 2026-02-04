@@ -13,27 +13,46 @@ interface Props {
 }
 
 export function EffectiveConfigTab({ stackName, instanceId }: Props) {
-  const { data: config, isLoading } = useEffectiveConfig(stackName, instanceId)
+  const { data: raw, isLoading } = useEffectiveConfig(stackName, instanceId)
   const [format, setFormat] = useState<'yaml' | 'json'>('yaml')
   const [copied, setCopied] = useState(false)
-
-  const handleCopy = () => {
-    if (!config) return
-    const content = format === 'yaml' ? toYAML(config) : JSON.stringify(config, null, 2)
-    navigator.clipboard.writeText(content)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
 
   if (isLoading) {
     return <div className="text-muted-foreground">Loading...</div>
   }
 
-  if (!config) {
+  if (!raw) {
     return <div className="text-muted-foreground">No configuration available</div>
   }
 
-  const { overrides_applied: o } = config
+  const config = {
+    ...raw,
+    ports: raw.ports ?? [],
+    volumes: raw.volumes ?? [],
+    env_vars: raw.env_vars ?? [],
+    labels: raw.labels ?? [],
+    domains: raw.domains ?? [],
+    dependencies: raw.dependencies ?? [],
+    config_files: raw.config_files ?? [],
+  }
+
+  const oa = config.overrides_applied ?? {}
+  const o = {
+    ports: !!oa.ports,
+    volumes: !!oa.volumes,
+    env_vars: !!oa.env_vars,
+    labels: !!oa.labels,
+    domains: !!oa.domains,
+    healthcheck: !!oa.healthcheck,
+    config_files: !!oa.config_files,
+  }
+
+  const handleCopy = () => {
+    const content = format === 'yaml' ? toYAML(config) : JSON.stringify(config, null, 2)
+    navigator.clipboard.writeText(content)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div className="space-y-4">
@@ -67,12 +86,9 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
         </div>
       </div>
 
-      <Card className={cn(o.ports && 'border-l-2 border-l-blue-500')}>
+      <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Image</CardTitle>
-            {o.ports && <Badge variant="secondary">Overridden</Badge>}
-          </div>
+          <CardTitle className="text-base">Image</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div className="flex"><span className="text-muted-foreground w-32">Image:</span> <code>{config.image_name}:{config.image_tag}</code></div>
@@ -158,11 +174,11 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
         </CardContent>
       </Card>
 
-      <Card className={cn(o.env_vars.length > 0 && 'border-l-2 border-l-blue-500')}>
+      <Card className={cn(o.env_vars && 'border-l-2 border-l-blue-500')}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Environment Variables</CardTitle>
-            {o.env_vars.length > 0 && <Badge variant="secondary">Overridden</Badge>}
+            {o.env_vars && <Badge variant="secondary">Overridden</Badge>}
           </div>
         </CardHeader>
         <CardContent>
@@ -179,10 +195,7 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
                 </thead>
                 <tbody>
                   {config.env_vars.map((e, i) => (
-                    <tr
-                      key={i}
-                      className={cn('border-b last:border-b-0', o.env_vars.includes(e.key) && 'border-l-2 border-l-blue-500')}
-                    >
+                    <tr key={i} className="border-b last:border-b-0">
                       <td className="py-2 font-mono">{e.key}</td>
                       <td className="py-2 font-mono">{e.is_secret ? '***' : e.value ?? ''}</td>
                     </tr>
@@ -194,11 +207,11 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
         </CardContent>
       </Card>
 
-      <Card className={cn(o.labels.length > 0 && 'border-l-2 border-l-blue-500')}>
+      <Card className={cn(o.labels && 'border-l-2 border-l-blue-500')}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Labels</CardTitle>
-            {o.labels.length > 0 && <Badge variant="secondary">Overridden</Badge>}
+            {o.labels && <Badge variant="secondary">Overridden</Badge>}
           </div>
         </CardHeader>
         <CardContent>
@@ -215,10 +228,7 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
                 </thead>
                 <tbody>
                   {config.labels.map((l, i) => (
-                    <tr
-                      key={i}
-                      className={cn('border-b last:border-b-0', o.labels.includes(l.key) && 'border-l-2 border-l-blue-500')}
-                    >
+                    <tr key={i} className="border-b last:border-b-0">
                       <td className="py-2 font-mono">{l.key}</td>
                       <td className="py-2 font-mono">{l.value}</td>
                     </tr>
@@ -305,11 +315,11 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
         </CardContent>
       </Card>
 
-      <Card className={cn(o.config_files.length > 0 && 'border-l-2 border-l-blue-500')}>
+      <Card className={cn(o.config_files && 'border-l-2 border-l-blue-500')}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Config Files</CardTitle>
-            {o.config_files.length > 0 && <Badge variant="secondary">Overridden</Badge>}
+            {o.config_files && <Badge variant="secondary">Overridden</Badge>}
           </div>
         </CardHeader>
         <CardContent>
@@ -318,13 +328,7 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
           ) : (
             <div className="space-y-2">
               {config.config_files.map((f, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    'p-3 border rounded-md',
-                    o.config_files.includes(f.file_path) && 'border-l-2 border-l-blue-500'
-                  )}
-                >
+                <div key={i} className="p-3 border rounded-md">
                   <div className="flex items-center justify-between mb-2">
                     <code className="text-sm font-mono">{f.file_path}</code>
                     <Badge variant="outline" className="text-xs">{f.file_mode}</Badge>
@@ -360,32 +364,32 @@ function toYAML(config: any): string {
     svc.command = config.command
   }
 
-  if (config.ports.length > 0) {
+  if (config.ports?.length > 0) {
     svc.ports = config.ports.map((p: any) => `${p.host_ip}:${p.host_port}:${p.container_port}/${p.protocol}`)
   }
 
-  if (config.volumes.length > 0) {
+  if (config.volumes?.length > 0) {
     svc.volumes = config.volumes.map((v: any) => {
       const vol = `${v.source}:${v.target}`
       return v.read_only ? `${vol}:ro` : vol
     })
   }
 
-  if (config.env_vars.length > 0) {
+  if (config.env_vars?.length > 0) {
     svc.environment = config.env_vars.reduce((acc: any, e: any) => {
       acc[e.key] = e.is_secret ? '***' : (e.value ?? '')
       return acc
     }, {})
   }
 
-  if (config.labels.length > 0) {
+  if (config.labels?.length > 0) {
     svc.labels = config.labels.reduce((acc: any, l: any) => {
       acc[l.key] = l.value
       return acc
     }, {})
   }
 
-  if (config.dependencies.length > 0) {
+  if (config.dependencies?.length > 0) {
     svc.depends_on = config.dependencies
   }
 

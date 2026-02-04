@@ -453,11 +453,11 @@ export interface EffectiveConfig {
 export interface OverridesApplied {
   ports: boolean
   volumes: boolean
-  env_vars: string[]
-  labels: string[]
+  env_vars: boolean | string[]
+  labels: boolean | string[]
   domains: boolean
   healthcheck: boolean
-  config_files: string[]
+  config_files: boolean | string[]
 }
 
 export interface InstanceDeletePreview {
