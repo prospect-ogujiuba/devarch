@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit } from 'lucide-react'
+import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,12 +12,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useStack, useEnableStack, useDisableStack } from '@/features/stacks/queries'
-import { CreateStackDialog } from '@/components/stacks/create-stack-dialog'
+import { useInstances } from '@/features/instances/queries'
 import { EditStackDialog } from '@/components/stacks/edit-stack-dialog'
 import { DeleteStackDialog } from '@/components/stacks/delete-stack-dialog'
 import { CloneStackDialog } from '@/components/stacks/clone-stack-dialog'
 import { RenameStackDialog } from '@/components/stacks/rename-stack-dialog'
 import { DisableStackDialog } from '@/components/stacks/disable-stack-dialog'
+import { AddInstanceDialog } from '@/components/stacks/add-instance-dialog'
+import { cn } from '@/lib/utils'
 
 function timeAgo(dateStr: string): string {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
@@ -40,6 +42,7 @@ function StackDetailPage() {
   const { name } = Route.useParams()
   const navigate = useNavigate()
   const { data: stack, isLoading } = useStack(name)
+  const { data: instances = [] } = useInstances(name)
   const enableStack = useEnableStack()
   const disableStack = useDisableStack()
 
@@ -48,6 +51,7 @@ function StackDetailPage() {
   const [cloneOpen, setCloneOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [disableDialogOpen, setDisableDialogOpen] = useState(false)
+  const [addInstanceOpen, setAddInstanceOpen] = useState(false)
 
   const handleToggleEnabled = () => {
     if (!stack) return
@@ -199,45 +203,72 @@ function StackDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Instances</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">
+              Instances ({instances.length})
+            </CardTitle>
+            <Button size="sm" onClick={() => setAddInstanceOpen(true)}>
+              <Plus className="size-4" />
+              Add Instance
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          {!stack.instances || stack.instances.length === 0 ? (
-            <div className="text-center py-8">
-              <Layers className="size-12 mx-auto text-muted-foreground/50 mb-2" />
-              <p className="text-muted-foreground">No instances yet</p>
-              <p className="text-sm text-muted-foreground">Add services in Phase 3</p>
+          {instances.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="rounded-full bg-muted p-3 mb-4">
+                <Layers className="size-8 text-muted-foreground" />
+              </div>
+              <h3 className="font-medium mb-1">Add your first service</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Choose from available templates to get started
+              </p>
+              <Button onClick={() => setAddInstanceOpen(true)}>
+                <Plus className="size-4" />
+                Add Instance
+              </Button>
             </div>
           ) : (
-            <div className="border rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="text-left px-4 py-2 font-medium">Instance ID</th>
-                    <th className="text-left px-4 py-2 font-medium">Template Service</th>
-                    <th className="text-left px-4 py-2 font-medium">Container Name</th>
-                    <th className="text-left px-4 py-2 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stack.instances.map((instance) => (
-                    <tr key={instance.id} className="border-t">
-                      <td className="px-4 py-2 font-mono text-xs">{instance.instance_id}</td>
-                      <td className="px-4 py-2">
-                        {instance.template_service_id ? `Service #${instance.template_service_id}` : '-'}
-                      </td>
-                      <td className="px-4 py-2 font-mono text-xs">
-                        {instance.container_name || '-'}
-                      </td>
-                      <td className="px-4 py-2">
-                        <Badge variant={instance.enabled ? 'default' : 'outline'} className="text-xs">
-                          {instance.enabled ? 'Enabled' : 'Disabled'}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {instances.map((instance) => {
+                const statusColor = instance.enabled
+                  ? 'bg-green-500'
+                  : 'bg-muted-foreground'
+                return (
+                  <Card key={instance.id} className="py-3 hover:border-primary/50 transition-colors h-full cursor-pointer">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start gap-2">
+                        <div className={cn('size-2 rounded-full mt-1.5 shrink-0', statusColor)} />
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-sm font-semibold truncate">
+                            {instance.instance_id}
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {instance.template_name}
+                          </p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {instance.container_name && (
+                        <div className="text-xs font-mono text-muted-foreground truncate">
+                          {instance.container_name}
+                        </div>
+                      )}
+                      {instance.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {instance.description}
+                        </p>
+                      )}
+                      {instance.override_count > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          {instance.override_count} {instance.override_count === 1 ? 'override' : 'overrides'}
                         </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </CardContent>
@@ -268,6 +299,7 @@ function StackDetailPage() {
           <CloneStackDialog stack={stack} open={cloneOpen} onOpenChange={setCloneOpen} />
           <RenameStackDialog stack={stack} open={renameOpen} onOpenChange={setRenameOpen} />
           <DisableStackDialog stack={stack} open={disableDialogOpen} onOpenChange={setDisableDialogOpen} />
+          <AddInstanceDialog stackName={name} open={addInstanceOpen} onOpenChange={setAddInstanceOpen} />
         </>
       )}
     </div>
