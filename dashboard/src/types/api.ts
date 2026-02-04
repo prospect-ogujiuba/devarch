@@ -344,3 +344,125 @@ export interface DeletePreview {
   instance_count: number
   container_names: string[]
 }
+
+export interface Instance {
+  id: number
+  stack_id: number
+  instance_id: string
+  template_service_id: number | null
+  template_name: string
+  container_name: string | null
+  description: string
+  enabled: boolean
+  override_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface InstanceDetail extends Instance {
+  ports: InstancePort[]
+  volumes: InstanceVolume[]
+  env_vars: InstanceEnvVar[]
+  labels: InstanceLabel[]
+  domains: InstanceDomain[]
+  healthcheck: InstanceHealthcheck | null
+  config_files: InstanceConfigFile[]
+}
+
+export interface InstancePort {
+  id: number
+  instance_id: number
+  host_ip: string
+  host_port: number
+  container_port: number
+  protocol: string
+}
+
+export interface InstanceVolume {
+  id: number
+  instance_id: number
+  volume_type: string
+  source: string
+  target: string
+  read_only: boolean
+  is_external: boolean
+}
+
+export interface InstanceEnvVar {
+  id: number
+  instance_id: number
+  key: string
+  value?: string
+  is_secret: boolean
+}
+
+export interface InstanceLabel {
+  id: number
+  instance_id: number
+  key: string
+  value: string
+}
+
+export interface InstanceDomain {
+  id: number
+  instance_id: number
+  domain: string
+  proxy_port?: number
+}
+
+export interface InstanceHealthcheck {
+  id: number
+  instance_id: number
+  test: string
+  interval_seconds: number
+  timeout_seconds: number
+  retries: number
+  start_period_seconds: number
+}
+
+export interface InstanceConfigFile {
+  id: number
+  instance_id: number
+  file_path: string
+  content: string
+  file_mode: string
+  is_template: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface EffectiveConfig {
+  instance_id: string
+  template_name: string
+  image_name: string
+  image_tag: string
+  restart_policy: string
+  command?: string
+  container_name: string
+  ports: ServicePort[]
+  volumes: ServiceVolume[]
+  env_vars: ServiceEnvVar[]
+  dependencies: string[]
+  labels: ServiceLabel[]
+  domains: ServiceDomain[]
+  healthcheck: ServiceHealthcheck | null
+  config_files: ServiceConfigFile[]
+  overrides_applied: OverridesApplied
+}
+
+export interface OverridesApplied {
+  ports: boolean
+  volumes: boolean
+  env_vars: string[]
+  labels: string[]
+  domains: boolean
+  healthcheck: boolean
+  config_files: string[]
+}
+
+export interface InstanceDeletePreview {
+  instance_id: string
+  template_name: string
+  override_count: number
+  container_name: string | null
+}
