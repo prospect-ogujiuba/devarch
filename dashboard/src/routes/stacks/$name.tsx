@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, Outlet, useMatch, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -124,8 +124,14 @@ function InstanceCard({ instance, stackName, onDelete, onDuplicate }: InstanceCa
 }
 
 export const Route = createFileRoute('/stacks/$name')({
-  component: StackDetailPage,
+  component: StackDetailLayout,
 })
+
+function StackDetailLayout() {
+  const childMatch = useMatch({ from: '/stacks/$name/instances/$instance', shouldThrow: false })
+  if (childMatch) return <Outlet />
+  return <StackDetailPage />
+}
 
 function StackDetailPage() {
   const { name } = Route.useParams()
