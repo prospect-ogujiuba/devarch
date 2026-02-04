@@ -72,13 +72,14 @@ Plans:
   4. User can view effective config before applying (no surprises)
   5. User can edit instance overrides after creation
   6. User can remove instance from stack
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 03-01-PLAN.md: TBD
-- [ ] 03-02-PLAN.md: TBD
-- [ ] 03-03-PLAN.md: TBD
-- [ ] 03-04-PLAN.md: TBD
+- [ ] 03-01-PLAN.md — Migration 014 (override tables) + instance CRUD handler
+- [ ] 03-02-PLAN.md — Override PUT handlers + effective config resolver
+- [ ] 03-03-PLAN.md — Dashboard types, hooks, add-instance dialog, instance list
+- [ ] 03-04-PLAN.md — Instance detail page with tabbed override editors
+- [ ] 03-05-PLAN.md — Effective config tab + instance lifecycle actions
 
 ### Phase 4: Network Isolation
 **Goal**: Each stack runs on isolated network with deterministic container naming (no cross-stack contamination). Implementation must be runtime-agnostic: Docker and Podman both get per-stack isolated networks and the same DNS/service-discovery semantics.
@@ -199,7 +200,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 |-------|----------------|--------|-----------|
 | 1. Foundation & Guardrails | 2/2 | Complete | 2026-02-03 |
 | 2. Stack CRUD | 5/5 | Complete | 2026-02-03 |
-| 3. Service Instances | 0/TBD | Not started | - |
+| 3. Service Instances | 0/5 | Not started | - |
 | 4. Network Isolation | 0/TBD | Not started | - |
 | 5. Compose Generation | 0/TBD | Not started | - |
 | 6. Plan/Apply Workflow | 0/TBD | Not started | - |
@@ -209,4 +210,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-03 after phase 2 execution*
+*Last updated: 2026-02-03 after phase 3 planning*
