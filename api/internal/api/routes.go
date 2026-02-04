@@ -42,6 +42,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	runtimeHandler := handlers.NewRuntimeHandler(containerClient, podmanClient)
 	nginxHandler := handlers.NewNginxHandler(nginxGenerator, containerClient)
 	stackHandler := handlers.NewStackHandler(db, containerClient)
+	instanceHandler := handlers.NewInstanceHandler(db, containerClient)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(mw.APIKeyAuth)
@@ -148,6 +149,21 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 				r.Post("/rename", stackHandler.Rename)
 
 				r.Get("/delete-preview", stackHandler.DeletePreview)
+
+				r.Route("/instances", func(r chi.Router) {
+					r.Get("/", instanceHandler.List)
+					r.Post("/", instanceHandler.Create)
+
+					r.Route("/{instance}", func(r chi.Router) {
+						r.Get("/", instanceHandler.Get)
+						r.Put("/", instanceHandler.Update)
+						r.Delete("/", instanceHandler.Delete)
+
+						r.Post("/duplicate", instanceHandler.Duplicate)
+						r.Put("/rename", instanceHandler.Rename)
+						r.Get("/delete-preview", instanceHandler.DeletePreview)
+					})
+				})
 			})
 		})
 	})
