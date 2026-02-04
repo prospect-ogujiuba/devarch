@@ -19,6 +19,7 @@ import { Route as StacksNameRouteImport } from './routes/stacks/$name'
 import { Route as ServicesNewRouteImport } from './routes/services/new'
 import { Route as ServicesNameRouteImport } from './routes/services/$name'
 import { Route as ProjectsNameRouteImport } from './routes/projects/$name'
+import { Route as StacksNameInstancesInstanceRouteImport } from './routes/stacks/$name.instances.$instance'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -70,30 +71,38 @@ const ProjectsNameRoute = ProjectsNameRouteImport.update({
   path: '/projects/$name',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StacksNameInstancesInstanceRoute =
+  StacksNameInstancesInstanceRouteImport.update({
+    id: '/instances/$instance',
+    path: '/instances/$instance',
+    getParentRoute: () => StacksNameRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/projects/$name': typeof ProjectsNameRoute
   '/services/$name': typeof ServicesNameRoute
   '/services/new': typeof ServicesNewRoute
-  '/stacks/$name': typeof StacksNameRoute
+  '/stacks/$name': typeof StacksNameRouteWithChildren
   '/categories/': typeof CategoriesIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/services/': typeof ServicesIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/stacks/': typeof StacksIndexRoute
+  '/stacks/$name/instances/$instance': typeof StacksNameInstancesInstanceRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/projects/$name': typeof ProjectsNameRoute
   '/services/$name': typeof ServicesNameRoute
   '/services/new': typeof ServicesNewRoute
-  '/stacks/$name': typeof StacksNameRoute
+  '/stacks/$name': typeof StacksNameRouteWithChildren
   '/categories': typeof CategoriesIndexRoute
   '/projects': typeof ProjectsIndexRoute
   '/services': typeof ServicesIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/stacks': typeof StacksIndexRoute
+  '/stacks/$name/instances/$instance': typeof StacksNameInstancesInstanceRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -101,12 +110,13 @@ export interface FileRoutesById {
   '/projects/$name': typeof ProjectsNameRoute
   '/services/$name': typeof ServicesNameRoute
   '/services/new': typeof ServicesNewRoute
-  '/stacks/$name': typeof StacksNameRoute
+  '/stacks/$name': typeof StacksNameRouteWithChildren
   '/categories/': typeof CategoriesIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/services/': typeof ServicesIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/stacks/': typeof StacksIndexRoute
+  '/stacks/$name/instances/$instance': typeof StacksNameInstancesInstanceRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/services/'
     | '/settings/'
     | '/stacks/'
+    | '/stacks/$name/instances/$instance'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/settings'
     | '/stacks'
+    | '/stacks/$name/instances/$instance'
   id:
     | '__root__'
     | '/'
@@ -145,6 +157,7 @@ export interface FileRouteTypes {
     | '/services/'
     | '/settings/'
     | '/stacks/'
+    | '/stacks/$name/instances/$instance'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -152,7 +165,7 @@ export interface RootRouteChildren {
   ProjectsNameRoute: typeof ProjectsNameRoute
   ServicesNameRoute: typeof ServicesNameRoute
   ServicesNewRoute: typeof ServicesNewRoute
-  StacksNameRoute: typeof StacksNameRoute
+  StacksNameRoute: typeof StacksNameRouteWithChildren
   CategoriesIndexRoute: typeof CategoriesIndexRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
   ServicesIndexRoute: typeof ServicesIndexRoute
@@ -232,15 +245,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsNameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stacks/$name/instances/$instance': {
+      id: '/stacks/$name/instances/$instance'
+      path: '/instances/$instance'
+      fullPath: '/stacks/$name/instances/$instance'
+      preLoaderRoute: typeof StacksNameInstancesInstanceRouteImport
+      parentRoute: typeof StacksNameRoute
+    }
   }
 }
+
+interface StacksNameRouteChildren {
+  StacksNameInstancesInstanceRoute: typeof StacksNameInstancesInstanceRoute
+}
+
+const StacksNameRouteChildren: StacksNameRouteChildren = {
+  StacksNameInstancesInstanceRoute: StacksNameInstancesInstanceRoute,
+}
+
+const StacksNameRouteWithChildren = StacksNameRoute._addFileChildren(
+  StacksNameRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ProjectsNameRoute: ProjectsNameRoute,
   ServicesNameRoute: ServicesNameRoute,
   ServicesNewRoute: ServicesNewRoute,
-  StacksNameRoute: StacksNameRoute,
+  StacksNameRoute: StacksNameRouteWithChildren,
   CategoriesIndexRoute: CategoriesIndexRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
   ServicesIndexRoute: ServicesIndexRoute,

@@ -235,38 +235,40 @@ function StackDetailPage() {
                   ? 'bg-green-500'
                   : 'bg-muted-foreground'
                 return (
-                  <Card key={instance.id} className="py-3 hover:border-primary/50 transition-colors h-full cursor-pointer">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start gap-2">
-                        <div className={cn('size-2 rounded-full mt-1.5 shrink-0', statusColor)} />
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-sm font-semibold truncate">
-                            {instance.instance_id}
-                          </CardTitle>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {instance.template_name}
+                  <Link key={instance.id} to="/stacks/$name/instances/$instance" params={{ name, instance: instance.instance_id }}>
+                    <Card className="py-3 hover:border-primary/50 transition-colors h-full cursor-pointer">
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start gap-2">
+                          <div className={cn('size-2 rounded-full mt-1.5 shrink-0', statusColor)} />
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-sm font-semibold truncate">
+                              {instance.instance_id}
+                            </CardTitle>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {instance.template_name}
+                            </p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {instance.container_name && (
+                          <div className="text-xs font-mono text-muted-foreground truncate">
+                            {instance.container_name}
+                          </div>
+                        )}
+                        {instance.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {instance.description}
                           </p>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      {instance.container_name && (
-                        <div className="text-xs font-mono text-muted-foreground truncate">
-                          {instance.container_name}
-                        </div>
-                      )}
-                      {instance.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          {instance.description}
-                        </p>
-                      )}
-                      {instance.override_count > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {instance.override_count} {instance.override_count === 1 ? 'override' : 'overrides'}
-                        </Badge>
-                      )}
-                    </CardContent>
-                  </Card>
+                        )}
+                        {instance.override_count > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {instance.override_count} {instance.override_count === 1 ? 'override' : 'overrides'}
+                          </Badge>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Link>
                 )
               })}
             </div>
