@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 ## Current Position
 
 Phase: 3 of 9 (Service Instances)
-Plan: 1 of 5 in current phase
+Plan: 2 of 5 in current phase
 Status: In progress
-Last activity: 2026-02-03 — Completed 03-01-PLAN.md
+Last activity: 2026-02-04 — Completed 03-02-PLAN.md
 
-Progress: [███░░░░░░░] ~30% (8 plans complete of ~27 total)
+Progress: [███░░░░░░░] ~33% (9 plans complete of ~27 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 2.3 min
-- Total execution time: 0.37 hours
+- Total plans completed: 9
+- Average duration: 2.4 min
+- Total execution time: 0.4 hours
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [███░░░░░░░] ~30% (8 plans complete of ~27 total)
 |-------|-------|-------|----------|
 | 1 | 2/2 | 1min | 0.5min |
 | 2 | 5/5 | 17.5min | 3.5min |
-| 3 | 1/5 | 5min | 5min |
+| 3 | 2/5 | 8min | 4min |
 
 **Recent Trend:**
-- Last 3 plans: 02-04 (2.4min), 02-05 (11min), 03-01 (5min)
-- Trend: API schema + handlers avg 3-5min
+- Last 3 plans: 02-05 (11min), 03-01 (5min), 03-02 (3min)
+- Trend: Override API handlers faster than schema (3min vs 5min)
 
 *Updated after each plan completion*
 
@@ -100,6 +100,13 @@ Recent decisions affecting current work:
 - Duplicate copies all override records in transaction (atomic, all-or-nothing)
 - Rename is direct UPDATE on instance_id + container_name (instances are DB records at this phase)
 
+**From 03-02:**
+- Override PUT endpoints follow service handler pattern (DELETE + INSERT transaction)
+- Config files use UPSERT pattern with ON CONFLICT for idempotent updates
+- System labels (devarch.*) validated at API layer and auto-injected in effective config
+- Dependencies read-only in effective config per INST-05 requirement
+- Merge semantics: full replacement for ports/volumes/domains/healthcheck, key-based for env/labels, path-based for config files
+
 ### Pending Todos
 
 None yet.
@@ -110,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-03T21:51:00Z
-Stopped at: Completed 03-01-PLAN.md (Instance override schema & CRUD) — Phase 3 started
+Last session: 2026-02-04T02:56:42Z
+Stopped at: Completed 03-02-PLAN.md (Instance override API & effective config)
 Resume file: None
