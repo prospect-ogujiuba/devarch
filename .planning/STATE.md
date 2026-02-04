@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-03)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Phase 2 - Stack CRUD
+**Current focus:** Phase 3 - Service Instances
 
 ## Current Position
 
-Phase: 2 of 9 (Stack CRUD)
-Plan: 5 of 5 in current phase
-Status: Phase complete
-Last activity: 2026-02-03 — Completed 02-05-PLAN.md
+Phase: 3 of 9 (Service Instances)
+Plan: 1 of 5 in current phase
+Status: In progress
+Last activity: 2026-02-03 — Completed 03-01-PLAN.md
 
-Progress: [███░░░░░░░] ~26% (7 plans complete of ~27 total)
+Progress: [███░░░░░░░] ~30% (8 plans complete of ~27 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 2.5 min
-- Total execution time: 0.29 hours
+- Total plans completed: 8
+- Average duration: 2.3 min
+- Total execution time: 0.37 hours
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: [███░░░░░░░] ~26% (7 plans complete of ~27 total)
 |-------|-------|-------|----------|
 | 1 | 2/2 | 1min | 0.5min |
 | 2 | 5/5 | 17.5min | 3.5min |
+| 3 | 1/5 | 5min | 5min |
 
 **Recent Trend:**
-- Last 3 plans: 02-03 (1.2min), 02-04 (2.4min), 02-05 (11min)
-- Trend: UI tasks take longer than API (expected)
+- Last 3 plans: 02-04 (2.4min), 02-05 (11min), 03-01 (5min)
+- Trend: API schema + handlers avg 3-5min
 
 *Updated after each plan completion*
 
@@ -91,6 +92,14 @@ Recent decisions affecting current work:
 - Disable dialog enumerates containers by name for transparency
 - All actions accessible from both list and detail views
 
+**From 03-01:**
+- Override tables mirror service tables exactly (consistency, type safety, efficient queries)
+- Partial unique index WHERE deleted_at IS NULL enables soft-delete while preventing duplicates
+- Container name follows devarch-{stack}-{instance} pattern
+- Override count computed via subquery sum in single query (avoids N+1)
+- Duplicate copies all override records in transaction (atomic, all-or-nothing)
+- Rename is direct UPDATE on instance_id + container_name (instances are DB records at this phase)
+
 ### Pending Todos
 
 None yet.
@@ -101,8 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-03T22:13:50Z
-Stopped at: Completed 02-05-PLAN.md (Stack detail & dialogs) — Phase 2 complete
+Last session: 2026-02-03T21:51:00Z
+Stopped at: Completed 03-01-PLAN.md (Instance override schema & CRUD) — Phase 3 started
 Resume file: None
-
-**Phase 2 complete.** Ready to begin Phase 3 (Service Instances).
