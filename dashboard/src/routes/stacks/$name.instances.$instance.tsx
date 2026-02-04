@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Power, PowerOff, Copy, Edit, Trash2, MoreVertical } from 'lucide-react'
+import { ArrowLeft, Loader2, Power, PowerOff, Edit, MoreVertical } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,15 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import {
-  useInstance,
-  useUpdateInstance,
-  useDeleteInstance,
-  useDuplicateInstance,
-  useRenameInstance,
-  useInstanceDeletePreview,
-} from '@/features/instances/queries'
+import { useInstance, useUpdateInstance } from '@/features/instances/queries'
 import { useService } from '@/features/services/queries'
 import { OverridePorts } from '@/components/instances/override-ports'
 import { OverrideVolumes } from '@/components/instances/override-volumes'
@@ -30,6 +22,12 @@ import { OverrideLabels } from '@/components/instances/override-labels'
 import { OverrideDomains } from '@/components/instances/override-domains'
 import { OverrideHealthcheck } from '@/components/instances/override-healthcheck'
 import { OverrideConfigFiles } from '@/components/instances/override-config-files'
+import { EffectiveConfigTab } from '@/components/instances/effective-config-tab'
+import {
+  DeleteInstanceDialog,
+  DuplicateInstanceDialog,
+  RenameInstanceDialog,
+} from '@/components/instances/instance-actions'
 import { cn } from '@/lib/utils'
 
 function timeAgo(dateStr: string): string {
@@ -55,35 +53,17 @@ function InstanceDetailPage() {
   const { data: instance, isLoading } = useInstance(stackName, instanceId)
   const { data: templateService } = useService(instance?.template_name ?? '')
   const updateInstance = useUpdateInstance(stackName, instanceId)
-  const deleteInstance = useDeleteInstance(stackName, instanceId)
-  const duplicateInstance = useDuplicateInstance(stackName, instanceId)
-  const renameInstance = useRenameInstance(stackName, instanceId)
-  const { data: deletePreview } = useInstanceDeletePreview(stackName, instanceId)
 
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [duplicateOpen, setDuplicateOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [editDescription, setEditDescription] = useState('')
-  const [duplicateName, setDuplicateName] = useState('')
-  const [renameName, setRenameName] = useState('')
 
   const openEdit = () => {
     if (!instance) return
     setEditDescription(instance.description ?? '')
     setEditOpen(true)
-  }
-
-  const openDuplicate = () => {
-    if (!instance) return
-    setDuplicateName(`${instanceId}-copy`)
-    setDuplicateOpen(true)
-  }
-
-  const openRename = () => {
-    if (!instance) return
-    setRenameName(instanceId)
-    setRenameOpen(true)
   }
 
   const handleToggleEnabled = () => {
@@ -97,28 +77,16 @@ function InstanceDetailPage() {
     })
   }
 
-  const handleDuplicate = () => {
-    duplicateInstance.mutate(duplicateName, {
-      onSuccess: () => {
-        setDuplicateOpen(false)
-        navigate({ to: '/stacks/$name', params: { name: stackName } })
-      },
-    })
+  const handleDeleteSuccess = () => {
+    navigate({ to: '/stacks/$name', params: { name: stackName } })
   }
 
-  const handleRename = () => {
-    renameInstance.mutate({ instance_id: renameName }, {
-      onSuccess: () => {
-        setRenameOpen(false)
-        navigate({ to: '/stacks/$name/instances/$instance', params: { name: stackName, instance: renameName } })
-      },
-    })
+  const handleDuplicateSuccess = () => {
+    navigate({ to: '/stacks/$name', params: { name: stackName } })
   }
 
-  const handleDelete = () => {
-    deleteInstance.mutate(undefined, {
-      onSuccess: () => navigate({ to: '/stacks/$name', params: { name: stackName } }),
-    })
+  const handleRenameSuccess = (newName: string) => {
+    navigate({ to: '/stacks/$name/instances/$instance', params: { name: stackName, instance: newName } })
   }
 
   if (isLoading) {
@@ -197,17 +165,14 @@ function InstanceDetailPage() {
                 <Edit className="size-4" />
                 Edit Description
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={openDuplicate}>
-                <Copy className="size-4" />
+              <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
                 Duplicate
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={openRename}>
-                <Edit className="size-4" />
+              <DropdownMenuItem onClick={() => setRenameOpen(true)}>
                 Rename
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
-                <Trash2 className="size-4" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -336,14 +301,7 @@ function InstanceDetailPage() {
         </TabsContent>
 
         <TabsContent value="effective">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Effective Configuration</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Coming in Plan 05</p>
-            </CardContent>
-          </Card>
+          <EffectiveConfigTab stackName={stackName} instanceId={instanceId} />
         </TabsContent>
       </Tabs>
 
@@ -367,54 +325,28 @@ function InstanceDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={duplicateOpen} onOpenChange={setDuplicateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Duplicate Instance</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">New Instance Name</label>
-              <Input value={duplicateName} onChange={(e) => setDuplicateName(e.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDuplicateOpen(false)}>Cancel</Button>
-            <Button onClick={handleDuplicate} disabled={duplicateInstance.isPending || !duplicateName}>
-              {duplicateInstance.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Duplicate'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DuplicateInstanceDialog
+        stackName={stackName}
+        instanceId={instanceId}
+        open={duplicateOpen}
+        onOpenChange={setDuplicateOpen}
+        onSuccess={handleDuplicateSuccess}
+      />
 
-      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rename Instance</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">Instance Name</label>
-              <Input value={renameName} onChange={(e) => setRenameName(e.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRenameOpen(false)}>Cancel</Button>
-            <Button onClick={handleRename} disabled={renameInstance.isPending || !renameName || renameName === instanceId}>
-              {renameInstance.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Rename'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RenameInstanceDialog
+        stackName={stackName}
+        instanceId={instanceId}
+        open={renameOpen}
+        onOpenChange={setRenameOpen}
+        onSuccess={handleRenameSuccess}
+      />
 
-      <ConfirmDialog
+      <DeleteInstanceDialog
+        stackName={stackName}
+        instanceId={instanceId}
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title={`Delete ${instanceId}?`}
-        description={deletePreview ? `This will delete the instance and ${deletePreview.override_count} override(s). Container: ${deletePreview.container_name ?? 'none'}` : 'This will permanently delete the instance and all overrides.'}
-        confirmLabel="Delete"
-        onConfirm={handleDelete}
-        variant="destructive"
+        onSuccess={handleDeleteSuccess}
       />
     </div>
   )

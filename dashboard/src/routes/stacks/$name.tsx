@@ -12,13 +12,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useStack, useEnableStack, useDisableStack } from '@/features/stacks/queries'
-import { useInstances } from '@/features/instances/queries'
+import { useInstances, useUpdateInstance } from '@/features/instances/queries'
 import { EditStackDialog } from '@/components/stacks/edit-stack-dialog'
 import { DeleteStackDialog } from '@/components/stacks/delete-stack-dialog'
 import { CloneStackDialog } from '@/components/stacks/clone-stack-dialog'
 import { RenameStackDialog } from '@/components/stacks/rename-stack-dialog'
 import { DisableStackDialog } from '@/components/stacks/disable-stack-dialog'
 import { AddInstanceDialog } from '@/components/stacks/add-instance-dialog'
+import {
+  DeleteInstanceDialog,
+  DuplicateInstanceDialog,
+} from '@/components/instances/instance-actions'
+import type { Instance } from '@/types/api'
 import { cn } from '@/lib/utils'
 
 function timeAgo(dateStr: string): string {
@@ -32,6 +37,90 @@ function timeAgo(dateStr: string): string {
     if (count >= 1) return `${count} ${label}${count > 1 ? 's' : ''} ago`
   }
   return 'just now'
+}
+
+interface InstanceCardProps {
+  instance: Instance
+  stackName: string
+  onDelete: (id: string) => void
+  onDuplicate: (id: string) => void
+}
+
+function InstanceCard({ instance, stackName, onDelete, onDuplicate }: InstanceCardProps) {
+  const updateInstance = useUpdateInstance(stackName, instance.instance_id)
+  const statusColor = instance.enabled ? 'bg-green-500' : 'bg-muted-foreground'
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.preventDefault()
+    updateInstance.mutate({ enabled: !instance.enabled })
+  }
+
+  return (
+    <Card className="py-3 hover:border-primary/50 transition-colors h-full group relative">
+      <Link to="/stacks/$name/instances/$instance" params={{ name: stackName, instance: instance.instance_id }} className="block">
+        <CardHeader className="pb-2">
+          <div className="flex items-start gap-2">
+            <div className={cn('size-2 rounded-full mt-1.5 shrink-0', statusColor)} />
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-sm font-semibold truncate">
+                {instance.instance_id}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground truncate">
+                {instance.template_name}
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {instance.container_name && (
+            <div className="text-xs font-mono text-muted-foreground truncate">
+              {instance.container_name}
+            </div>
+          )}
+          {instance.description && (
+            <p className="text-xs text-muted-foreground line-clamp-2">
+              {instance.description}
+            </p>
+          )}
+          {instance.override_count > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {instance.override_count} {instance.override_count === 1 ? 'override' : 'overrides'}
+            </Badge>
+          )}
+        </CardContent>
+      </Link>
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
+            <Button variant="ghost" size="sm" className="size-6 p-0">
+              <MoreVertical className="size-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem onClick={handleToggle}>
+              {instance.enabled ? <PowerOff className="size-4" /> : <Power className="size-4" />}
+              {instance.enabled ? 'Disable' : 'Enable'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => {
+              e.preventDefault()
+              onDuplicate(instance.instance_id)
+            }}>
+              <Copy className="size-4" />
+              Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={(e) => {
+              e.preventDefault()
+              onDelete(instance.instance_id)
+            }}>
+              <Trash2 className="size-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </Card>
+  )
 }
 
 export const Route = createFileRoute('/stacks/$name')({
@@ -52,6 +141,9 @@ function StackDetailPage() {
   const [renameOpen, setRenameOpen] = useState(false)
   const [disableDialogOpen, setDisableDialogOpen] = useState(false)
   const [addInstanceOpen, setAddInstanceOpen] = useState(false)
+  const [instanceDeleteOpen, setInstanceDeleteOpen] = useState(false)
+  const [instanceDuplicateOpen, setInstanceDuplicateOpen] = useState(false)
+  const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null)
 
   const handleToggleEnabled = () => {
     if (!stack) return
@@ -64,6 +156,16 @@ function StackDetailPage() {
 
   const handleDeleteSuccess = () => {
     navigate({ to: '/stacks' })
+  }
+
+  const openInstanceDelete = (instanceId: string) => {
+    setSelectedInstanceId(instanceId)
+    setInstanceDeleteOpen(true)
+  }
+
+  const openInstanceDuplicate = (instanceId: string) => {
+    setSelectedInstanceId(instanceId)
+    setInstanceDuplicateOpen(true)
   }
 
   if (isLoading) {
@@ -230,47 +332,15 @@ function StackDetailPage() {
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {instances.map((instance) => {
-                const statusColor = instance.enabled
-                  ? 'bg-green-500'
-                  : 'bg-muted-foreground'
-                return (
-                  <Link key={instance.id} to="/stacks/$name/instances/$instance" params={{ name, instance: instance.instance_id }}>
-                    <Card className="py-3 hover:border-primary/50 transition-colors h-full cursor-pointer">
-                      <CardHeader className="pb-2">
-                        <div className="flex items-start gap-2">
-                          <div className={cn('size-2 rounded-full mt-1.5 shrink-0', statusColor)} />
-                          <div className="flex-1 min-w-0">
-                            <CardTitle className="text-sm font-semibold truncate">
-                              {instance.instance_id}
-                            </CardTitle>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {instance.template_name}
-                            </p>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        {instance.container_name && (
-                          <div className="text-xs font-mono text-muted-foreground truncate">
-                            {instance.container_name}
-                          </div>
-                        )}
-                        {instance.description && (
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {instance.description}
-                          </p>
-                        )}
-                        {instance.override_count > 0 && (
-                          <Badge variant="secondary" className="text-xs">
-                            {instance.override_count} {instance.override_count === 1 ? 'override' : 'overrides'}
-                          </Badge>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Link>
-                )
-              })}
+              {instances.map((instance) => (
+                <InstanceCard
+                  key={instance.id}
+                  instance={instance}
+                  stackName={name}
+                  onDelete={openInstanceDelete}
+                  onDuplicate={openInstanceDuplicate}
+                />
+              ))}
             </div>
           )}
         </CardContent>
@@ -302,6 +372,23 @@ function StackDetailPage() {
           <RenameStackDialog stack={stack} open={renameOpen} onOpenChange={setRenameOpen} />
           <DisableStackDialog stack={stack} open={disableDialogOpen} onOpenChange={setDisableDialogOpen} />
           <AddInstanceDialog stackName={name} open={addInstanceOpen} onOpenChange={setAddInstanceOpen} />
+        </>
+      )}
+
+      {selectedInstanceId && (
+        <>
+          <DeleteInstanceDialog
+            stackName={name}
+            instanceId={selectedInstanceId}
+            open={instanceDeleteOpen}
+            onOpenChange={setInstanceDeleteOpen}
+          />
+          <DuplicateInstanceDialog
+            stackName={name}
+            instanceId={selectedInstanceId}
+            open={instanceDuplicateOpen}
+            onOpenChange={setInstanceDuplicateOpen}
+          />
         </>
       )}
     </div>
