@@ -162,6 +162,20 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 						r.Post("/duplicate", instanceHandler.Duplicate)
 						r.Put("/rename", instanceHandler.Rename)
 						r.Get("/delete-preview", instanceHandler.DeletePreview)
+
+						r.Put("/ports", instanceHandler.UpdatePorts)
+						r.Put("/volumes", instanceHandler.UpdateVolumes)
+						r.Put("/env-vars", instanceHandler.UpdateEnvVars)
+						r.Put("/labels", instanceHandler.UpdateLabels)
+						r.Put("/domains", instanceHandler.UpdateDomains)
+						r.Put("/healthcheck", instanceHandler.UpdateHealthcheck)
+
+						r.Get("/files", instanceHandler.ListConfigFiles)
+						r.Get("/files/*", instanceHandler.GetConfigFile)
+						r.Put("/files/*", instanceHandler.PutConfigFile)
+						r.Delete("/files/*", instanceHandler.DeleteConfigFile)
+
+						r.Get("/effective-config", instanceHandler.EffectiveConfig)
 					})
 				})
 			})
