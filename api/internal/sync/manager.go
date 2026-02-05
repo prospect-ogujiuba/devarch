@@ -520,7 +520,7 @@ func (m *Manager) deleteInBatches(ctx context.Context, query string, arg1 any, b
 			break
 		}
 	}
-	if total > 0 {
+	if total >= int64(batchSize) {
 		log.Printf("sync: %s: deleted %d rows", label, total)
 	}
 }
@@ -573,7 +573,11 @@ func parseDurationWithDays(s string) (time.Duration, error) {
 		if days < 0 || math.IsNaN(days) || math.IsInf(days, 0) {
 			return 0, fmt.Errorf("invalid day value: %v", days)
 		}
-		return time.Duration(days * 24 * float64(time.Hour)), nil
+		ns := days * 24 * float64(time.Hour)
+		if ns > float64(math.MaxInt64) {
+			return 0, fmt.Errorf("duration overflow: %vd", days)
+		}
+		return time.Duration(ns), nil
 	}
 	d, err := time.ParseDuration(s)
 	if err != nil {
