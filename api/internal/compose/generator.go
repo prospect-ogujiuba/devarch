@@ -112,7 +112,8 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 		}
 		svc.Volumes = append(svc.Volumes, volStr)
 
-		if vol.VolumeType == "named" {
+		isNamed := vol.VolumeType == "named" || extractNamedVolume(volStr) != ""
+		if isNamed {
 			if vol.IsExternal {
 				namedVolumes[vol.Source] = map[string]interface{}{"external": true}
 			} else {
