@@ -3,7 +3,11 @@ package sync
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
+	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +23,18 @@ type Manager struct {
 	eventCancel  context.CancelFunc
 	registrySync *RegistrySync
 	trivyScanner *TrivyScanner
+
+	metricsInterval  time.Duration
+	metricsRetention time.Duration
+	cleanupInterval  time.Duration
+	cleanupBatch     int
+
+	configVersionsMax      int
+	registryImageRetention time.Duration
+	vulnOrphanRetention    time.Duration
+	softDeleteRetention    time.Duration
+
+	lastDailyCleanup time.Time
 }
 
 type Job struct {
@@ -44,6 +60,35 @@ type StatusUpdate struct {
 }
 
 func NewManager(db *sql.DB, pc *podman.Client) *Manager {
+	metricsInterval := mustParseDurationEnv("DEVARCH_METRICS_INTERVAL", "30s")
+	if metricsInterval < 5*time.Second {
+		metricsInterval = 5 * time.Second
+	}
+
+	metricsRetention := mustParseDurationEnv("DEVARCH_METRICS_RETENTION", "3d")
+	if metricsRetention < time.Hour {
+		metricsRetention = time.Hour
+	}
+
+	cleanupInterval := mustParseDurationEnv("DEVARCH_CLEANUP_INTERVAL", "1h")
+	if cleanupInterval < time.Minute {
+		cleanupInterval = time.Minute
+	}
+
+	cleanupBatch := mustParseIntEnv("DEVARCH_CLEANUP_BATCH", 50000)
+	if cleanupBatch < 1000 {
+		cleanupBatch = 1000
+	}
+
+	configVersionsMax := mustParseIntEnv("DEVARCH_CONFIG_VERSIONS_MAX", 25)
+	if configVersionsMax < 0 {
+		configVersionsMax = 0
+	}
+
+	registryImageRetention := mustParseDurationEnv("DEVARCH_REGISTRY_IMAGE_RETENTION", "30d")
+	vulnOrphanRetention := mustParseDurationEnv("DEVARCH_VULN_ORPHAN_RETENTION", "30d")
+	softDeleteRetention := mustParseDurationEnv("DEVARCH_SOFT_DELETE_RETENTION", "30d")
+
 	return &Manager{
 		db:           db,
 		podman:       pc,
@@ -54,6 +99,16 @@ func NewManager(db *sql.DB, pc *podman.Client) *Manager {
 			data:       make(map[string]interface{}),
 			containers: make(map[string]string),
 		},
+
+		metricsInterval:  metricsInterval,
+		metricsRetention: metricsRetention,
+		cleanupInterval:  cleanupInterval,
+		cleanupBatch:     cleanupBatch,
+
+		configVersionsMax:      configVersionsMax,
+		registryImageRetention: registryImageRetention,
+		vulnOrphanRetention:    vulnOrphanRetention,
+		softDeleteRetention:    softDeleteRetention,
 	}
 }
 
@@ -132,7 +187,7 @@ func (m *Manager) syncContainerStatus(ctx context.Context) {
 }
 
 func (m *Manager) metricsLoop(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(m.metricsInterval)
 	defer ticker.Stop()
 
 	for {
@@ -266,7 +321,7 @@ func (m *Manager) updateContainerHealth(ctx context.Context, name string, event 
 }
 
 func (m *Manager) cleanupLoop(ctx context.Context) {
-	ticker := time.NewTicker(1 * time.Hour)
+	ticker := time.NewTicker(m.cleanupInterval)
 	defer ticker.Stop()
 
 	for {
@@ -274,16 +329,199 @@ func (m *Manager) cleanupLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			m.cleanupOldMetrics()
+			m.cleanupOldMetrics(ctx)
+			m.runDailyCleanupIfDue(ctx)
 		}
 	}
 }
 
-func (m *Manager) cleanupOldMetrics() {
-	_, err := m.db.Exec("DELETE FROM container_metrics WHERE recorded_at < NOW() - INTERVAL '7 days'")
-	if err != nil {
-		log.Printf("sync: failed to cleanup old metrics: %v", err)
+func (m *Manager) cleanupOldMetrics(ctx context.Context) {
+	cutoff := time.Now().Add(-m.metricsRetention)
+	m.deleteInBatches(
+		ctx,
+		`WITH doomed AS (
+			SELECT id FROM container_metrics
+			WHERE recorded_at < $1
+			LIMIT $2
+		)
+		DELETE FROM container_metrics cm
+		USING doomed d
+		WHERE cm.id = d.id`,
+		cutoff,
+		m.cleanupBatch,
+		"cleanup old metrics",
+	)
+}
+
+func (m *Manager) runDailyCleanupIfDue(ctx context.Context) {
+	if m.lastDailyCleanup.IsZero() || time.Since(m.lastDailyCleanup) >= 24*time.Hour {
+		m.cleanupConfigVersions(ctx)
+		m.cleanupRegistryImages(ctx)
+		m.cleanupOrphanVulnerabilities(ctx)
+		m.cleanupSoftDeleted(ctx)
+		m.lastDailyCleanup = time.Now()
 	}
+}
+
+func (m *Manager) cleanupConfigVersions(ctx context.Context) {
+	if m.configVersionsMax <= 0 {
+		return
+	}
+
+	m.deleteInBatches(
+		ctx,
+		`WITH doomed AS (
+			SELECT id FROM (
+				SELECT id,
+					row_number() OVER (PARTITION BY service_id ORDER BY version DESC) AS rn
+				FROM service_config_versions
+			) t
+			WHERE rn > $1
+			LIMIT $2
+		)
+		DELETE FROM service_config_versions v
+		USING doomed d
+		WHERE v.id = d.id`,
+		m.configVersionsMax,
+		m.cleanupBatch,
+		"cleanup old config versions",
+	)
+}
+
+func (m *Manager) cleanupRegistryImages(ctx context.Context) {
+	if m.registryImageRetention <= 0 {
+		return
+	}
+	cutoff := time.Now().Add(-m.registryImageRetention)
+	m.deleteInBatches(ctx,
+		`WITH doomed AS (
+			SELECT i.id FROM images i
+			WHERE i.last_synced_at < $1
+			AND NOT EXISTS (
+				SELECT 1 FROM services s
+				WHERE s.enabled = true
+				AND s.image_name = i.repository
+			)
+			LIMIT $2
+		)
+		DELETE FROM images USING doomed WHERE images.id = doomed.id`,
+		cutoff, m.cleanupBatch, "cleanup registry images",
+	)
+}
+
+func (m *Manager) cleanupOrphanVulnerabilities(ctx context.Context) {
+	if m.vulnOrphanRetention <= 0 {
+		return
+	}
+	cutoff := time.Now().Add(-m.vulnOrphanRetention)
+	m.deleteInBatches(ctx,
+		`WITH doomed AS (
+			SELECT v.id FROM vulnerabilities v
+			WHERE v.created_at < $1
+			AND NOT EXISTS (
+				SELECT 1 FROM image_tag_vulnerabilities tv
+				WHERE tv.vulnerability_id = v.id
+			)
+			LIMIT $2
+		)
+		DELETE FROM vulnerabilities USING doomed WHERE vulnerabilities.id = doomed.id`,
+		cutoff, m.cleanupBatch, "cleanup orphan vulnerabilities",
+	)
+}
+
+func (m *Manager) cleanupSoftDeleted(ctx context.Context) {
+	if m.softDeleteRetention <= 0 {
+		return
+	}
+	cutoff := time.Now().Add(-m.softDeleteRetention)
+	m.deleteInBatches(ctx,
+		`WITH doomed AS (
+			SELECT id FROM service_instances
+			WHERE deleted_at IS NOT NULL AND deleted_at < $1
+			LIMIT $2
+		)
+		DELETE FROM service_instances USING doomed WHERE service_instances.id = doomed.id`,
+		cutoff, m.cleanupBatch, "cleanup soft-deleted instances",
+	)
+	m.deleteInBatches(ctx,
+		`WITH doomed AS (
+			SELECT id FROM stacks
+			WHERE deleted_at IS NOT NULL AND deleted_at < $1
+			LIMIT $2
+		)
+		DELETE FROM stacks USING doomed WHERE stacks.id = doomed.id`,
+		cutoff, m.cleanupBatch, "cleanup soft-deleted stacks",
+	)
+}
+
+func (m *Manager) deleteInBatches(ctx context.Context, query string, arg1 any, batchSize int, label string) {
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+		res, err := m.db.ExecContext(ctx, query, arg1, batchSize)
+		if err != nil {
+			log.Printf("sync: %s failed: %v", label, err)
+			return
+		}
+		n, _ := res.RowsAffected()
+		if n == 0 {
+			return
+		}
+		if n < int64(batchSize) {
+			return
+		}
+	}
+}
+
+func mustParseIntEnv(key string, def int) int {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return def
+	}
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		log.Printf("sync: invalid %s=%q, using %d", key, v, def)
+		return def
+	}
+	return i
+}
+
+func mustParseDurationEnv(key string, def string) time.Duration {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		v = def
+	}
+	d, err := parseDurationWithDays(v)
+	if err != nil {
+		dd, derr := parseDurationWithDays(def)
+		if derr != nil {
+			log.Printf("sync: invalid %s=%q and default %q, using 0", key, v, def)
+			return 0
+		}
+		log.Printf("sync: invalid %s=%q, using default %q", key, v, def)
+		return dd
+	}
+	return d
+}
+
+func parseDurationWithDays(s string) (time.Duration, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, fmt.Errorf("empty duration")
+	}
+	if strings.HasSuffix(s, "d") {
+		base := strings.TrimSpace(strings.TrimSuffix(s, "d"))
+		if base == "" {
+			return 0, fmt.Errorf("invalid day duration")
+		}
+		days, err := strconv.ParseFloat(base, 64)
+		if err != nil {
+			return 0, err
+		}
+		return time.Duration(days * 24 * float64(time.Hour)), nil
+	}
+	return time.ParseDuration(s)
 }
 
 func (m *Manager) TriggerSync(syncType string) string {
