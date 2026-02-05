@@ -103,7 +103,7 @@ func (c *Client) execCommand(args ...string) (string, error) {
 	return stdout.String(), nil
 }
 
-func (c *Client) execComposeCommand(composeYAML []byte, args ...string) error {
+func (c *Client) execComposeCommand(composeYAML []byte, projectName string, args ...string) error {
 	tmpFile, err := os.CreateTemp("", "devarch-compose-*.yml")
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
@@ -118,9 +118,9 @@ func (c *Client) execComposeCommand(composeYAML []byte, args ...string) error {
 
 	var cmdArgs []string
 	if c.composeCmd == "compose" {
-		cmdArgs = []string{c.composeCmd, "-f", tmpFile.Name()}
+		cmdArgs = []string{c.composeCmd, "-f", tmpFile.Name(), "--project-name", projectName}
 	} else {
-		cmdArgs = []string{"-f", tmpFile.Name()}
+		cmdArgs = []string{"-f", tmpFile.Name(), "--project-name", projectName}
 	}
 	cmdArgs = append(cmdArgs, args...)
 
@@ -152,32 +152,32 @@ func (c *Client) execComposeCommand(composeYAML []byte, args ...string) error {
 }
 
 func (c *Client) StartService(name string, composeYAML []byte) error {
-	return c.execComposeCommand(composeYAML, "up", "-d")
+	return c.execComposeCommand(composeYAML, name, "up", "-d")
 }
 
 func (c *Client) StopService(name string, composeYAML []byte) error {
-	return c.execComposeCommand(composeYAML, "down")
+	return c.execComposeCommand(composeYAML, name, "down")
 }
 
 func (c *Client) RestartService(name string, composeYAML []byte) error {
-	if err := c.execComposeCommand(composeYAML, "down"); err != nil {
+	if err := c.execComposeCommand(composeYAML, name, "down"); err != nil {
 		return err
 	}
-	return c.execComposeCommand(composeYAML, "up", "-d")
+	return c.execComposeCommand(composeYAML, name, "up", "-d")
 }
 
 func (c *Client) RebuildService(name string, composeYAML []byte, noCache bool) error {
-	c.execComposeCommand(composeYAML, "down")
+	c.execComposeCommand(composeYAML, name, "down")
 
 	buildArgs := []string{"build"}
 	if noCache {
 		buildArgs = append(buildArgs, "--no-cache")
 	}
-	if err := c.execComposeCommand(composeYAML, buildArgs...); err != nil {
+	if err := c.execComposeCommand(composeYAML, name, buildArgs...); err != nil {
 		return err
 	}
 
-	return c.execComposeCommand(composeYAML, "up", "-d", "--force-recreate")
+	return c.execComposeCommand(composeYAML, name, "up", "-d", "--force-recreate")
 }
 
 func (c *Client) GetStatus(name string) (*models.ContainerState, error) {
