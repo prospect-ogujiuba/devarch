@@ -19,6 +19,7 @@ import (
 const (
 	metricsCleanupTimeout = 60 * time.Second
 	dailyCleanupTimeout   = 5 * time.Minute
+	dailyOpTimeout        = 90 * time.Second
 	maxBatchesPerOp       = 10
 )
 
@@ -93,6 +94,7 @@ func NewManager(db *sql.DB, pc *podman.Client) *Manager {
 		configVersionsMax = 0
 	}
 
+	// Optional retention: 0 disables, negative rejected (falls back to default via parseDurationWithDays)
 	registryImageRetention := mustParseDurationEnv("DEVARCH_REGISTRY_IMAGE_RETENTION", "30d")
 	vulnOrphanRetention := mustParseDurationEnv("DEVARCH_VULN_ORPHAN_RETENTION", "30d")
 	softDeleteRetention := mustParseDurationEnv("DEVARCH_SOFT_DELETE_RETENTION", "30d")
@@ -333,11 +335,13 @@ func (m *Manager) updateContainerHealth(ctx context.Context, name string, event 
 
 func (m *Manager) cleanupLoop(ctx context.Context) {
 	// Jitter initial delay to avoid aligned DB pressure across instances
-	jitter := time.Duration(rand.Int63n(int64(m.cleanupInterval / 10)))
-	select {
-	case <-ctx.Done():
-		return
-	case <-time.After(jitter):
+	if maxJitter := m.cleanupInterval / 10; maxJitter > 0 {
+		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(time.Duration(rng.Int63n(int64(maxJitter)))):
+		}
 	}
 
 	ticker := time.NewTicker(m.cleanupInterval)
@@ -378,13 +382,26 @@ func (m *Manager) cleanupOldMetrics(ctx context.Context) {
 }
 
 func (m *Manager) runDailyCleanupIfDue(ctx context.Context) {
-	if m.lastDailyCleanup.IsZero() || time.Since(m.lastDailyCleanup) >= 24*time.Hour {
-		m.cleanupConfigVersions(ctx)
-		m.cleanupRegistryImages(ctx)
-		m.cleanupOrphanVulnerabilities(ctx)
-		m.cleanupSoftDeleted(ctx)
-		m.lastDailyCleanup = time.Now()
+	if !m.lastDailyCleanup.IsZero() && time.Since(m.lastDailyCleanup) < 24*time.Hour {
+		return
 	}
+	for _, op := range []struct {
+		name string
+		fn   func(context.Context)
+	}{
+		{"config versions", m.cleanupConfigVersions},
+		{"registry images", m.cleanupRegistryImages},
+		{"orphan vulns", m.cleanupOrphanVulnerabilities},
+		{"soft-deleted", m.cleanupSoftDeleted},
+	} {
+		if ctx.Err() != nil {
+			return
+		}
+		opCtx, cancel := context.WithTimeout(ctx, dailyOpTimeout)
+		op.fn(opCtx)
+		cancel()
+	}
+	m.lastDailyCleanup = time.Now()
 }
 
 func (m *Manager) cleanupConfigVersions(ctx context.Context) {
