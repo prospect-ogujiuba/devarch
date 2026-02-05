@@ -1,6 +1,8 @@
 FROM golang:1.23-alpine AS base
 
-RUN apk add --no-cache git ca-certificates tzdata podman podman-compose
+RUN apk add --no-cache git ca-certificates tzdata podman podman-compose && \
+    mkdir -p /etc/containers && \
+    printf '[engine]\nremote = true\n' > /etc/containers/containers.conf
 
 WORKDIR /app
 
@@ -19,7 +21,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /devarch-export ./cmd/export
 
 FROM alpine:3.19 AS production
 
-RUN apk add --no-cache ca-certificates tzdata podman podman-compose
+RUN apk add --no-cache ca-certificates tzdata podman podman-compose && \
+    mkdir -p /etc/containers && \
+    printf '[engine]\nremote = true\n' > /etc/containers/containers.conf
 
 WORKDIR /app
 
