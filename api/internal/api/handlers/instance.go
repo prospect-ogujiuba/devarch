@@ -189,6 +189,8 @@ func (h *InstanceHandler) List(w http.ResponseWriter, r *http.Request) {
 			) + (
 				SELECT COUNT(*) FROM instance_healthchecks WHERE instance_id = si.id
 			) + (
+				SELECT COUNT(*) FROM instance_dependencies WHERE instance_id = si.id
+			) + (
 				SELECT COUNT(*) FROM instance_config_files WHERE instance_id = si.id
 			) as override_count
 		FROM service_instances si
@@ -281,6 +283,8 @@ func (h *InstanceHandler) Get(w http.ResponseWriter, r *http.Request) {
 				SELECT COUNT(*) FROM instance_domains WHERE instance_id = si.id
 			) + (
 				SELECT COUNT(*) FROM instance_healthchecks WHERE instance_id = si.id
+			) + (
+				SELECT COUNT(*) FROM instance_dependencies WHERE instance_id = si.id
 			) + (
 				SELECT COUNT(*) FROM instance_config_files WHERE instance_id = si.id
 			) as override_count
@@ -404,6 +408,7 @@ func (h *InstanceHandler) Update(w http.ResponseWriter, r *http.Request) {
 			(SELECT COUNT(*) FROM instance_labels WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_domains WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_healthchecks WHERE instance_id = $1) +
+			(SELECT COUNT(*) FROM instance_dependencies WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_config_files WHERE instance_id = $1)
 	`, instance.ID).Scan(&instance.OverrideCount)
 	if err != nil {
@@ -573,6 +578,13 @@ func (h *InstanceHandler) Duplicate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_, err = tx.Exec(`INSERT INTO instance_dependencies (instance_id, depends_on, condition)
+		SELECT $1, depends_on, condition FROM instance_dependencies WHERE instance_id = $2`, newInstance.ID, sourceInstanceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to copy dependencies: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	_, err = tx.Exec(`INSERT INTO instance_config_files (instance_id, file_path, content, file_mode, is_template)
 		SELECT $1, file_path, content, file_mode, is_template FROM instance_config_files WHERE instance_id = $2`, newInstance.ID, sourceInstanceID)
 	if err != nil {
@@ -598,6 +610,7 @@ func (h *InstanceHandler) Duplicate(w http.ResponseWriter, r *http.Request) {
 			(SELECT COUNT(*) FROM instance_labels WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_domains WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_healthchecks WHERE instance_id = $1) +
+			(SELECT COUNT(*) FROM instance_dependencies WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_config_files WHERE instance_id = $1)
 	`, newInstance.ID).Scan(&newInstance.OverrideCount)
 	if err != nil {
@@ -696,6 +709,7 @@ func (h *InstanceHandler) Rename(w http.ResponseWriter, r *http.Request) {
 			(SELECT COUNT(*) FROM instance_labels WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_domains WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_healthchecks WHERE instance_id = $1) +
+			(SELECT COUNT(*) FROM instance_dependencies WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_config_files WHERE instance_id = $1)
 	`, instance.ID).Scan(&instance.OverrideCount)
 	if err != nil {
@@ -729,6 +743,8 @@ func (h *InstanceHandler) DeletePreview(w http.ResponseWriter, r *http.Request) 
 				SELECT COUNT(*) FROM instance_domains WHERE instance_id = si.id
 			) + (
 				SELECT COUNT(*) FROM instance_healthchecks WHERE instance_id = si.id
+			) + (
+				SELECT COUNT(*) FROM instance_dependencies WHERE instance_id = si.id
 			) + (
 				SELECT COUNT(*) FROM instance_config_files WHERE instance_id = si.id
 			) as override_count

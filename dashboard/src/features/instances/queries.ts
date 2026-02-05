@@ -11,6 +11,7 @@ import type {
   InstanceLabel,
   InstanceDomain,
   InstanceHealthcheck,
+  InstanceDependency,
 } from '@/types/api'
 import { toast } from 'sonner'
 
@@ -278,6 +279,25 @@ export function useUpdateInstanceHealthcheck(stackName: string, instanceId: stri
     },
     onError: (error: any) => {
       toast.error(error.response?.data || 'Failed to update healthcheck')
+    },
+  })
+}
+
+export function useUpdateInstanceDependencies(stackName: string, instanceId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (dependencies: Omit<InstanceDependency, 'id' | 'instance_id'>[]) => {
+      const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/dependencies`, { dependencies })
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Dependencies updated')
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data || 'Failed to update dependencies')
     },
   })
 }

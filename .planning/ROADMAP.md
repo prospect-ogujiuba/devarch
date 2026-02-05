@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation & Guardrails** - Identity system, validation, runtime abstraction
 - [x] **Phase 2: Stack CRUD** - Stack management API + dashboard UI
-- [ ] **Phase 3: Service Instances** - Instance overrides + config resolution
+- [x] **Phase 3: Service Instances** - Instance overrides + config resolution
 - [ ] **Phase 4: Network Isolation** - Per-stack networks, deterministic naming
 - [ ] **Phase 5: Compose Generation** - Stack-scoped YAML generation
 - [ ] **Phase 6: Plan/Apply Workflow** - Safety mechanism with advisory locking
@@ -75,11 +75,11 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Migration 014 (override tables) + instance CRUD handler
-- [ ] 03-02-PLAN.md — Override PUT handlers + effective config resolver
-- [ ] 03-03-PLAN.md — Dashboard types, hooks, add-instance dialog, instance list
-- [ ] 03-04-PLAN.md — Instance detail page with tabbed override editors
-- [ ] 03-05-PLAN.md — Effective config tab + instance lifecycle actions
+- [x] 03-01-PLAN.md — Migration 014 (override tables) + instance CRUD handler (COMPLETE 2026-02-04)
+- [x] 03-02-PLAN.md — Override PUT handlers + effective config resolver (COMPLETE 2026-02-04)
+- [x] 03-03-PLAN.md — Dashboard types, hooks, add-instance dialog, instance list (COMPLETE 2026-02-04)
+- [x] 03-04-PLAN.md — Instance detail page with tabbed override editors (COMPLETE 2026-02-04)
+- [x] 03-05-PLAN.md — Effective config tab + instance lifecycle actions (COMPLETE 2026-02-04)
 
 ### Phase 4: Network Isolation
 **Goal**: Each stack runs on isolated network with deterministic container naming (no cross-stack contamination). Implementation must be runtime-agnostic: Docker and Podman both get per-stack isolated networks and the same DNS/service-discovery semantics.
@@ -200,7 +200,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 |-------|----------------|--------|-----------|
 | 1. Foundation & Guardrails | 2/2 | Complete | 2026-02-03 |
 | 2. Stack CRUD | 5/5 | Complete | 2026-02-03 |
-| 3. Service Instances | 0/5 | Not started | - |
+| 3. Service Instances | 5/5 | Complete | 2026-02-04 |
 | 4. Network Isolation | 0/TBD | Not started | - |
 | 5. Compose Generation | 0/TBD | Not started | - |
 | 6. Plan/Apply Workflow | 0/TBD | Not started | - |
@@ -210,4 +210,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-03 after phase 3 planning*
+*Last updated: 2026-02-05 after phase 3 completion*

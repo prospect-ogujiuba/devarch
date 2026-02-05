@@ -366,6 +366,7 @@ export interface InstanceDetail extends Instance {
   labels: InstanceLabel[]
   domains: InstanceDomain[]
   healthcheck: InstanceHealthcheck | null
+  dependencies: InstanceDependency[]
   config_files: InstanceConfigFile[]
 }
 
@@ -418,6 +419,13 @@ export interface InstanceHealthcheck {
   timeout_seconds: number
   retries: number
   start_period_seconds: number
+}
+
+export interface InstanceDependency {
+  id: number
+  instance_id: number
+  depends_on: string
+  condition: string
 }
 
 export interface InstanceConfigFile {

@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-03)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Phase 3 - Service Instances
+**Current focus:** Phase 4 - Network Isolation
 
 ## Current Position
 
-Phase: 3 of 9 (Service Instances)
-Plan: 4 of 5 in current phase
-Status: In progress
-Last activity: 2026-02-04 — Completed 03-04-PLAN.md
+Phase: 3 of 9 complete, ready for Phase 4
+Plan: All Phase 3 plans complete
+Status: Between phases
+Last activity: 2026-02-05 — Phase 3 complete, cleanup hardening committed
 
-Progress: [███░░░░░░░] ~41% (11 plans complete of ~27 total)
+Progress: [████░░░░░░] ~45% (12 plans complete of ~27 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 2.7 min
-- Total execution time: 0.5 hours
+- Total plans completed: 12
+- Average duration: 2.8 min
+- Total execution time: ~0.6 hours
 
 **By Phase:**
 
@@ -29,11 +29,7 @@ Progress: [███░░░░░░░] ~41% (11 plans complete of ~27 total)
 |-------|-------|-------|----------|
 | 1 | 2/2 | 1min | 0.5min |
 | 2 | 5/5 | 17.5min | 3.5min |
-| 3 | 4/5 | 16.4min | 4.1min |
-
-**Recent Trend:**
-- Last 3 plans: 03-02 (3min), 03-03 (3.4min), 03-04 (5min)
-- Trend: Dashboard UI plans 3-5min, override editors slightly longer (7 components)
+| 3 | 5/5 | ~21min | ~4.2min |
 
 *Updated after each plan completion*
 
@@ -130,6 +126,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-04T03:06:12Z
-Stopped at: Completed 03-04-PLAN.md (Instance detail page with 7 override editor tabs)
+Last session: 2026-02-05
+Stopped at: Phase 3 complete. Cleanup hardening (persistent sync state, advisory locking) committed. Ready for Phase 4.
 Resume file: None

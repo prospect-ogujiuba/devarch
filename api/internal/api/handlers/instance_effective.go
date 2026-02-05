@@ -37,6 +37,7 @@ type overrideMetadata struct {
 	Labels       bool `json:"labels"`
 	Domains      bool `json:"domains"`
 	Healthcheck  bool `json:"healthcheck"`
+	Dependencies bool `json:"dependencies"`
 	ConfigFiles  bool `json:"config_files"`
 }
 
@@ -192,12 +193,24 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 		resp.Healthcheck = templateHealthcheck
 	}
 
-	deps, err := h.loadServiceDependencies(templateServiceID)
+	templateDeps, err := h.loadServiceDependencies(templateServiceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load dependencies: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("failed to load template dependencies: %v", err), http.StatusInternalServerError)
 		return
 	}
-	resp.Dependencies = deps
+
+	instanceDeps, err := h.loadInstanceDependencies(instanceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to load instance dependencies: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if len(instanceDeps) > 0 {
+		resp.Dependencies = instanceDeps
+		resp.OverridesApplied.Dependencies = true
+	} else {
+		resp.Dependencies = templateDeps
+	}
 
 	templateConfigFiles, err := h.loadServiceConfigFiles(templateServiceID)
 	if err != nil {
@@ -468,6 +481,26 @@ func (h *InstanceHandler) loadServiceDependencies(serviceID int) ([]string, erro
 		WHERE sd.service_id = $1
 		ORDER BY s.name
 	`, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var deps []string
+	for rows.Next() {
+		var dep string
+		if err := rows.Scan(&dep); err != nil {
+			return nil, err
+		}
+		deps = append(deps, dep)
+	}
+	return deps, rows.Err()
+}
+
+func (h *InstanceHandler) loadInstanceDependencies(instanceID int) ([]string, error) {
+	rows, err := h.db.Query(`
+		SELECT depends_on FROM instance_dependencies WHERE instance_id = $1 ORDER BY depends_on
+	`, instanceID)
 	if err != nil {
 		return nil, err
 	}

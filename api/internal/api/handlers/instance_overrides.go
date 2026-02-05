@@ -345,6 +345,68 @@ func (h *InstanceHandler) UpdateHealthcheck(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
 }
 
+func (h *InstanceHandler) UpdateDependencies(w http.ResponseWriter, r *http.Request) {
+	stackName := chi.URLParam(r, "name")
+	instanceName := chi.URLParam(r, "instance")
+
+	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	var req struct {
+		Dependencies []struct {
+			DependsOn string `json:"depends_on"`
+			Condition string `json:"condition"`
+		} `json:"dependencies"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("DELETE FROM instance_dependencies WHERE instance_id = $1", instanceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to delete existing dependencies: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	for _, d := range req.Dependencies {
+		condition := d.Condition
+		if condition == "" {
+			condition = "service_started"
+		}
+		_, err = tx.Exec(
+			`INSERT INTO instance_dependencies (instance_id, depends_on, condition) VALUES ($1, $2, $3)`,
+			instanceID, d.DependsOn, condition,
+		)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to insert dependency: %v", err), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
 func (h *InstanceHandler) ListConfigFiles(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")

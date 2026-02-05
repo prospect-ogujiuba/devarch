@@ -21,6 +21,7 @@ import { OverrideEnvVars } from '@/components/instances/override-env-vars'
 import { OverrideLabels } from '@/components/instances/override-labels'
 import { OverrideDomains } from '@/components/instances/override-domains'
 import { OverrideHealthcheck } from '@/components/instances/override-healthcheck'
+import { OverrideDependencies } from '@/components/instances/override-dependencies'
 import { OverrideConfigFiles } from '@/components/instances/override-config-files'
 import { EffectiveConfigTab } from '@/components/instances/effective-config-tab'
 import {
@@ -189,6 +190,7 @@ function InstanceDetailPage() {
           <TabsTrigger value="labels">Labels</TabsTrigger>
           <TabsTrigger value="domains">Domains</TabsTrigger>
           <TabsTrigger value="healthcheck">Healthcheck</TabsTrigger>
+          <TabsTrigger value="dependencies">Dependencies</TabsTrigger>
           <TabsTrigger value="files">Config Files</TabsTrigger>
           <TabsTrigger value="effective">Effective Config</TabsTrigger>
         </TabsList>
@@ -281,6 +283,17 @@ function InstanceDetailPage() {
         <TabsContent value="healthcheck">
           {templateService && (
             <OverrideHealthcheck
+              instance={instance}
+              templateData={templateService}
+              stackName={stackName}
+              instanceId={instanceId}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="dependencies">
+          {templateService && (
+            <OverrideDependencies
               instance={instance}
               templateData={templateService}
               stackName={stackName}
