@@ -21,6 +21,7 @@ const (
 	dailyCleanupTimeout   = 5 * time.Minute
 	dailyOpTimeout        = 90 * time.Second
 	maxBatchesPerOp       = 10
+	unlockTimeout         = 5 * time.Second
 
 	// Stable advisory lock ID for cleanup coordination across instances.
 	cleanupAdvisoryLockID = 847301
@@ -368,21 +369,24 @@ func (m *Manager) runCleanupTick(ctx context.Context) {
 	).Scan(&acquired); err != nil || !acquired {
 		return
 	}
-	defer m.db.ExecContext(context.Background(),
-		"SELECT pg_advisory_unlock($1)", cleanupAdvisoryLockID)
+	defer func() {
+		unlockCtx, cancel := context.WithTimeout(context.Background(), unlockTimeout)
+		defer cancel()
+		_, _ = m.db.ExecContext(unlockCtx, "SELECT pg_advisory_unlock($1)", cleanupAdvisoryLockID)
+	}()
 
 	mCtx, mCancel := context.WithTimeout(ctx, metricsCleanupTimeout)
-	m.cleanupOldMetrics(mCtx)
+	_ = m.cleanupOldMetrics(mCtx)
 	mCancel()
 
 	dCtx, dCancel := context.WithTimeout(ctx, dailyCleanupTimeout)
-	m.runDailyCleanupIfDue(dCtx)
+	_ = m.runDailyCleanupIfDue(dCtx)
 	dCancel()
 }
 
-func (m *Manager) cleanupOldMetrics(ctx context.Context) {
+func (m *Manager) cleanupOldMetrics(ctx context.Context) error {
 	cutoff := time.Now().Add(-m.metricsRetention)
-	m.deleteInBatches(
+	_, err := m.deleteInBatches(
 		ctx,
 		`WITH doomed AS (
 			SELECT id FROM container_metrics
@@ -396,25 +400,34 @@ func (m *Manager) cleanupOldMetrics(ctx context.Context) {
 		m.cleanupBatch,
 		"cleanup old metrics",
 	)
+	return err
 }
 
-func (m *Manager) runDailyCleanupIfDue(ctx context.Context) {
+func (m *Manager) runDailyCleanupIfDue(ctx context.Context) error {
 	// Read persisted timestamp from sync_state (survives restarts).
 	var lastRun time.Time
 	err := m.db.QueryRowContext(ctx,
 		`SELECT value FROM sync_state WHERE key = 'last_daily_cleanup'`,
 	).Scan(&lastRun)
-	if err != nil {
+	if err == sql.ErrNoRows {
+		// Best-effort initialization if migration row is missing.
+		_, _ = m.db.ExecContext(ctx,
+			`INSERT INTO sync_state (key, value, updated_at) VALUES ('last_daily_cleanup', '1970-01-01T00:00:00Z', '1970-01-01T00:00:00Z')
+			ON CONFLICT (key) DO NOTHING`,
+		)
+		lastRun = time.Unix(0, 0).UTC()
+	} else if err != nil {
 		log.Printf("sync: daily cleanup state read failed: %v", err)
-		return
+		return err
 	}
 	if time.Since(lastRun) < 24*time.Hour {
-		return
+		return nil
 	}
 
+	var anyErr error
 	for _, op := range []struct {
 		name string
-		fn   func(context.Context)
+		fn   func(context.Context) error
 	}{
 		{"config versions", m.cleanupConfigVersions},
 		{"registry images", m.cleanupRegistryImages},
@@ -422,11 +435,20 @@ func (m *Manager) runDailyCleanupIfDue(ctx context.Context) {
 		{"soft-deleted", m.cleanupSoftDeleted},
 	} {
 		if ctx.Err() != nil {
-			return
+			return ctx.Err()
 		}
 		opCtx, cancel := context.WithTimeout(ctx, dailyOpTimeout)
-		op.fn(opCtx)
+		opErr := op.fn(opCtx)
 		cancel()
+		if opErr != nil {
+			// Keep going, but don't persist the timestamp.
+			anyErr = opErr
+			log.Printf("sync: daily cleanup op %q failed: %v", op.name, opErr)
+		}
+	}
+
+	if anyErr != nil {
+		return anyErr
 	}
 
 	// Persist completion — only after all ops succeed.
@@ -434,15 +456,17 @@ func (m *Manager) runDailyCleanupIfDue(ctx context.Context) {
 		`UPDATE sync_state SET value = NOW(), updated_at = NOW() WHERE key = 'last_daily_cleanup'`,
 	); err != nil {
 		log.Printf("sync: daily cleanup state update failed: %v", err)
+		return err
 	}
+	return nil
 }
 
-func (m *Manager) cleanupConfigVersions(ctx context.Context) {
+func (m *Manager) cleanupConfigVersions(ctx context.Context) error {
 	if m.configVersionsMax <= 0 {
-		return
+		return nil
 	}
 
-	m.deleteInBatches(
+	_, err := m.deleteInBatches(
 		ctx,
 		`WITH doomed AS (
 			SELECT v.id
@@ -461,14 +485,15 @@ func (m *Manager) cleanupConfigVersions(ctx context.Context) {
 		m.cleanupBatch,
 		"cleanup old config versions",
 	)
+	return err
 }
 
-func (m *Manager) cleanupRegistryImages(ctx context.Context) {
+func (m *Manager) cleanupRegistryImages(ctx context.Context) error {
 	if m.registryImageRetention <= 0 {
-		return
+		return nil
 	}
 	cutoff := time.Now().Add(-m.registryImageRetention)
-	m.deleteInBatches(ctx,
+	_, err := m.deleteInBatches(ctx,
 		`WITH doomed AS (
 			SELECT i.id FROM images i
 			WHERE i.last_synced_at < $1
@@ -482,14 +507,15 @@ func (m *Manager) cleanupRegistryImages(ctx context.Context) {
 		DELETE FROM images USING doomed WHERE images.id = doomed.id`,
 		cutoff, m.cleanupBatch, "cleanup registry images",
 	)
+	return err
 }
 
-func (m *Manager) cleanupOrphanVulnerabilities(ctx context.Context) {
+func (m *Manager) cleanupOrphanVulnerabilities(ctx context.Context) error {
 	if m.vulnOrphanRetention <= 0 {
-		return
+		return nil
 	}
 	cutoff := time.Now().Add(-m.vulnOrphanRetention)
-	m.deleteInBatches(ctx,
+	_, err := m.deleteInBatches(ctx,
 		`WITH doomed AS (
 			SELECT v.id FROM vulnerabilities v
 			WHERE v.created_at < $1
@@ -502,14 +528,15 @@ func (m *Manager) cleanupOrphanVulnerabilities(ctx context.Context) {
 		DELETE FROM vulnerabilities USING doomed WHERE vulnerabilities.id = doomed.id`,
 		cutoff, m.cleanupBatch, "cleanup orphan vulnerabilities",
 	)
+	return err
 }
 
-func (m *Manager) cleanupSoftDeleted(ctx context.Context) {
+func (m *Manager) cleanupSoftDeleted(ctx context.Context) error {
 	if m.softDeleteRetention <= 0 {
-		return
+		return nil
 	}
 	cutoff := time.Now().Add(-m.softDeleteRetention)
-	m.deleteInBatches(ctx,
+	_, err1 := m.deleteInBatches(ctx,
 		`WITH doomed AS (
 			SELECT id FROM service_instances
 			WHERE deleted_at IS NOT NULL AND deleted_at < $1
@@ -518,7 +545,7 @@ func (m *Manager) cleanupSoftDeleted(ctx context.Context) {
 		DELETE FROM service_instances USING doomed WHERE service_instances.id = doomed.id`,
 		cutoff, m.cleanupBatch, "cleanup soft-deleted instances",
 	)
-	m.deleteInBatches(ctx,
+	_, err2 := m.deleteInBatches(ctx,
 		`WITH doomed AS (
 			SELECT id FROM stacks
 			WHERE deleted_at IS NOT NULL AND deleted_at < $1
@@ -527,16 +554,20 @@ func (m *Manager) cleanupSoftDeleted(ctx context.Context) {
 		DELETE FROM stacks USING doomed WHERE stacks.id = doomed.id`,
 		cutoff, m.cleanupBatch, "cleanup soft-deleted stacks",
 	)
+	if err1 != nil {
+		return err1
+	}
+	return err2
 }
 
-func (m *Manager) deleteInBatches(ctx context.Context, query string, arg1 any, batchSize int, label string) {
+func (m *Manager) deleteInBatches(ctx context.Context, query string, arg1 any, batchSize int, label string) (int64, error) {
 	var total int64
 	for i := 0; i < maxBatchesPerOp; i++ {
 		if ctx.Err() != nil {
 			if total > 0 {
 				log.Printf("sync: %s: deleted %d rows (interrupted)", label, total)
 			}
-			return
+			return total, ctx.Err()
 		}
 		res, err := m.db.ExecContext(ctx, query, arg1, batchSize)
 		if err != nil {
@@ -545,7 +576,7 @@ func (m *Manager) deleteInBatches(ctx context.Context, query string, arg1 any, b
 			} else {
 				log.Printf("sync: %s failed: %v", label, err)
 			}
-			return
+			return total, err
 		}
 		n, _ := res.RowsAffected()
 		total += n
@@ -556,6 +587,7 @@ func (m *Manager) deleteInBatches(ctx context.Context, query string, arg1 any, b
 	if total >= int64(batchSize) {
 		log.Printf("sync: %s: deleted %d rows", label, total)
 	}
+	return total, nil
 }
 
 func mustParseIntEnv(key string, def int) int {
