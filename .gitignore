@@ -3,6 +3,9 @@ apps/**
 context/
 backup/
 prompts/
+# Build artifacts
+api/tmp/
+
 # Other ignores
 .env
 .DS_Store

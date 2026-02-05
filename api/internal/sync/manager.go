@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"math"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -12,6 +14,12 @@ import (
 	"time"
 
 	"github.com/priz/devarch-api/internal/podman"
+)
+
+const (
+	metricsCleanupTimeout = 60 * time.Second
+	dailyCleanupTimeout   = 5 * time.Minute
+	maxBatchesPerOp       = 10
 )
 
 type Manager struct {
@@ -88,6 +96,9 @@ func NewManager(db *sql.DB, pc *podman.Client) *Manager {
 	registryImageRetention := mustParseDurationEnv("DEVARCH_REGISTRY_IMAGE_RETENTION", "30d")
 	vulnOrphanRetention := mustParseDurationEnv("DEVARCH_VULN_ORPHAN_RETENTION", "30d")
 	softDeleteRetention := mustParseDurationEnv("DEVARCH_SOFT_DELETE_RETENTION", "30d")
+
+	log.Printf("sync: config — metrics every %s retain %s, cleanup every %s batch %d, config versions max %d",
+		metricsInterval, metricsRetention, cleanupInterval, cleanupBatch, configVersionsMax)
 
 	return &Manager{
 		db:           db,
@@ -321,6 +332,14 @@ func (m *Manager) updateContainerHealth(ctx context.Context, name string, event 
 }
 
 func (m *Manager) cleanupLoop(ctx context.Context) {
+	// Jitter initial delay to avoid aligned DB pressure across instances
+	jitter := time.Duration(rand.Int63n(int64(m.cleanupInterval / 10)))
+	select {
+	case <-ctx.Done():
+		return
+	case <-time.After(jitter):
+	}
+
 	ticker := time.NewTicker(m.cleanupInterval)
 	defer ticker.Stop()
 
@@ -329,8 +348,13 @@ func (m *Manager) cleanupLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			m.cleanupOldMetrics(ctx)
-			m.runDailyCleanupIfDue(ctx)
+			mCtx, mCancel := context.WithTimeout(ctx, metricsCleanupTimeout)
+			m.cleanupOldMetrics(mCtx)
+			mCancel()
+
+			dCtx, dCancel := context.WithTimeout(ctx, dailyCleanupTimeout)
+			m.runDailyCleanupIfDue(dCtx)
+			dCancel()
 		}
 	}
 }
@@ -371,17 +395,18 @@ func (m *Manager) cleanupConfigVersions(ctx context.Context) {
 	m.deleteInBatches(
 		ctx,
 		`WITH doomed AS (
-			SELECT id FROM (
-				SELECT id,
-					row_number() OVER (PARTITION BY service_id ORDER BY version DESC) AS rn
-				FROM service_config_versions
-			) t
-			WHERE rn > $1
+			SELECT v.id
+			FROM (SELECT DISTINCT service_id FROM service_config_versions) s,
+			LATERAL (
+				SELECT id FROM service_config_versions
+				WHERE service_id = s.service_id
+				ORDER BY version DESC
+				OFFSET $1
+			) v
 			LIMIT $2
 		)
-		DELETE FROM service_config_versions v
-		USING doomed d
-		WHERE v.id = d.id`,
+		DELETE FROM service_config_versions
+		USING doomed WHERE service_config_versions.id = doomed.id`,
 		m.configVersionsMax,
 		m.cleanupBatch,
 		"cleanup old config versions",
@@ -455,22 +480,31 @@ func (m *Manager) cleanupSoftDeleted(ctx context.Context) {
 }
 
 func (m *Manager) deleteInBatches(ctx context.Context, query string, arg1 any, batchSize int, label string) {
-	for {
+	var total int64
+	for i := 0; i < maxBatchesPerOp; i++ {
 		if ctx.Err() != nil {
+			if total > 0 {
+				log.Printf("sync: %s: deleted %d rows (interrupted)", label, total)
+			}
 			return
 		}
 		res, err := m.db.ExecContext(ctx, query, arg1, batchSize)
 		if err != nil {
-			log.Printf("sync: %s failed: %v", label, err)
+			if total > 0 {
+				log.Printf("sync: %s: deleted %d rows before error: %v", label, total, err)
+			} else {
+				log.Printf("sync: %s failed: %v", label, err)
+			}
 			return
 		}
 		n, _ := res.RowsAffected()
-		if n == 0 {
-			return
-		}
+		total += n
 		if n < int64(batchSize) {
-			return
+			break
 		}
+	}
+	if total > 0 {
+		log.Printf("sync: %s: deleted %d rows", label, total)
 	}
 }
 
@@ -519,9 +553,19 @@ func parseDurationWithDays(s string) (time.Duration, error) {
 		if err != nil {
 			return 0, err
 		}
+		if days < 0 || math.IsNaN(days) || math.IsInf(days, 0) {
+			return 0, fmt.Errorf("invalid day value: %v", days)
+		}
 		return time.Duration(days * 24 * float64(time.Hour)), nil
 	}
-	return time.ParseDuration(s)
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return 0, err
+	}
+	if d < 0 {
+		return 0, fmt.Errorf("negative duration: %s", s)
+	}
+	return d, nil
 }
 
 func (m *Manager) TriggerSync(syncType string) string {
