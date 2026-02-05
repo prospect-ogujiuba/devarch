@@ -170,12 +170,26 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 				svcMap[k] = v
 			}
 
+			// Extract named volumes from overrides
+			if volumes, ok := overrides["volumes"]; ok {
+				if volList, ok := volumes.([]interface{}); ok {
+					for _, v := range volList {
+						if volStr, ok := v.(string); ok {
+							volName := extractNamedVolume(volStr)
+							if volName != "" && namedVolumes[volName] == nil {
+								namedVolumes[volName] = nil
+							}
+						}
+					}
+				}
+			}
+
 			rawCompose := map[string]interface{}{
 				"networks": compose.Networks,
 				"services": map[string]interface{}{service.Name: svcMap},
 			}
-			if len(compose.Volumes) > 0 {
-				rawCompose["volumes"] = compose.Volumes
+			if len(namedVolumes) > 0 {
+				rawCompose["volumes"] = namedVolumes
 			}
 			return yaml.Marshal(rawCompose)
 		}
@@ -372,4 +386,18 @@ func parseFileMode(mode string) os.FileMode {
 		return 0644
 	}
 	return os.FileMode(m)
+}
+
+// extractNamedVolume checks if a volume string is a named volume and returns the name
+func extractNamedVolume(volStr string) string {
+	parts := strings.Split(volStr, ":")
+	if len(parts) < 2 {
+		return ""
+	}
+	source := parts[0]
+	// Named volumes don't start with . / or ~
+	if strings.HasPrefix(source, ".") || strings.HasPrefix(source, "/") || strings.HasPrefix(source, "~") {
+		return ""
+	}
+	return source
 }
