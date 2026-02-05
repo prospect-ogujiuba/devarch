@@ -21,6 +21,9 @@ const (
 	dailyCleanupTimeout   = 5 * time.Minute
 	dailyOpTimeout        = 90 * time.Second
 	maxBatchesPerOp       = 10
+
+	// Stable advisory lock ID for cleanup coordination across instances.
+	cleanupAdvisoryLockID = 847301
 )
 
 type Manager struct {
@@ -42,8 +45,6 @@ type Manager struct {
 	registryImageRetention time.Duration
 	vulnOrphanRetention    time.Duration
 	softDeleteRetention    time.Duration
-
-	lastDailyCleanup time.Time
 }
 
 type Job struct {
@@ -352,15 +353,31 @@ func (m *Manager) cleanupLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			mCtx, mCancel := context.WithTimeout(ctx, metricsCleanupTimeout)
-			m.cleanupOldMetrics(mCtx)
-			mCancel()
-
-			dCtx, dCancel := context.WithTimeout(ctx, dailyCleanupTimeout)
-			m.runDailyCleanupIfDue(dCtx)
-			dCancel()
+			m.runCleanupTick(ctx)
 		}
 	}
+}
+
+// runCleanupTick acquires a Postgres advisory lock so only one instance
+// runs cleanup at a time. If another instance already holds the lock, this
+// tick is silently skipped (the other instance is doing the work).
+func (m *Manager) runCleanupTick(ctx context.Context) {
+	var acquired bool
+	if err := m.db.QueryRowContext(ctx,
+		"SELECT pg_try_advisory_lock($1)", cleanupAdvisoryLockID,
+	).Scan(&acquired); err != nil || !acquired {
+		return
+	}
+	defer m.db.ExecContext(context.Background(),
+		"SELECT pg_advisory_unlock($1)", cleanupAdvisoryLockID)
+
+	mCtx, mCancel := context.WithTimeout(ctx, metricsCleanupTimeout)
+	m.cleanupOldMetrics(mCtx)
+	mCancel()
+
+	dCtx, dCancel := context.WithTimeout(ctx, dailyCleanupTimeout)
+	m.runDailyCleanupIfDue(dCtx)
+	dCancel()
 }
 
 func (m *Manager) cleanupOldMetrics(ctx context.Context) {
@@ -382,9 +399,19 @@ func (m *Manager) cleanupOldMetrics(ctx context.Context) {
 }
 
 func (m *Manager) runDailyCleanupIfDue(ctx context.Context) {
-	if !m.lastDailyCleanup.IsZero() && time.Since(m.lastDailyCleanup) < 24*time.Hour {
+	// Read persisted timestamp from sync_state (survives restarts).
+	var lastRun time.Time
+	err := m.db.QueryRowContext(ctx,
+		`SELECT value FROM sync_state WHERE key = 'last_daily_cleanup'`,
+	).Scan(&lastRun)
+	if err != nil {
+		log.Printf("sync: daily cleanup state read failed: %v", err)
 		return
 	}
+	if time.Since(lastRun) < 24*time.Hour {
+		return
+	}
+
 	for _, op := range []struct {
 		name string
 		fn   func(context.Context)
@@ -401,7 +428,13 @@ func (m *Manager) runDailyCleanupIfDue(ctx context.Context) {
 		op.fn(opCtx)
 		cancel()
 	}
-	m.lastDailyCleanup = time.Now()
+
+	// Persist completion — only after all ops succeed.
+	if _, err := m.db.ExecContext(ctx,
+		`UPDATE sync_state SET value = NOW(), updated_at = NOW() WHERE key = 'last_daily_cleanup'`,
+	); err != nil {
+		log.Printf("sync: daily cleanup state update failed: %v", err)
+	}
 }
 
 func (m *Manager) cleanupConfigVersions(ctx context.Context) {
