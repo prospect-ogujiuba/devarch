@@ -33,6 +33,9 @@ func NewServiceHandler(db *sql.DB, cc *container.Client, pc *podman.Client) *Ser
 	if projectRoot != "" {
 		gen.SetProjectRoot(projectRoot)
 	}
+	if hostRoot := os.Getenv("HOST_PROJECT_ROOT"); hostRoot != "" {
+		gen.SetHostProjectRoot(hostRoot)
+	}
 	return &ServiceHandler{
 		db:              db,
 		containerClient: cc,

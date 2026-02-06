@@ -14,9 +14,10 @@ import (
 )
 
 type Generator struct {
-	db          *sql.DB
-	networkName string
-	projectRoot string
+	db              *sql.DB
+	networkName     string
+	projectRoot     string
+	hostProjectRoot string
 }
 
 func NewGenerator(db *sql.DB, networkName string) *Generator {
@@ -28,6 +29,10 @@ func NewGenerator(db *sql.DB, networkName string) *Generator {
 
 func (g *Generator) SetProjectRoot(root string) {
 	g.projectRoot = root
+}
+
+func (g *Generator) SetHostProjectRoot(root string) {
+	g.hostProjectRoot = root
 }
 
 type generatedCompose struct {
@@ -106,6 +111,7 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 
 	for _, vol := range service.Volumes {
 		source := g.rewriteConfigPath(vol.Source, categoryName, service.Name)
+		source = g.resolveRelativePath(source, categoryName)
 		volStr := fmt.Sprintf("%s:%s", source, vol.Target)
 		if vol.ReadOnly {
 			volStr += ":ro"
@@ -167,22 +173,36 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 			var svcMap map[string]interface{}
 			yaml.Unmarshal(svcBytes, &svcMap)
 
-			for k, v := range overrides {
-				svcMap[k] = v
-			}
-
-			// Extract named volumes from overrides
+			// Resolve relative paths in override volumes
 			if volumes, ok := overrides["volumes"]; ok {
 				if volList, ok := volumes.([]interface{}); ok {
-					for _, v := range volList {
+					for i, v := range volList {
 						if volStr, ok := v.(string); ok {
 							volName := extractNamedVolume(volStr)
 							if volName != "" && namedVolumes[volName] == nil {
 								namedVolumes[volName] = nil
 							}
+							volList[i] = g.resolveRelativeVolStr(volStr, categoryName)
 						}
 					}
+					overrides["volumes"] = volList
 				}
+			}
+
+			// Resolve relative build context paths
+			if build, ok := overrides["build"]; ok {
+				if buildMap, ok := build.(map[string]interface{}); ok {
+					if ctx, ok := buildMap["context"].(string); ok {
+						buildMap["context"] = g.resolveRelativePath(ctx, categoryName)
+					}
+				} else if ctx, ok := build.(string); ok {
+					overrides["build"] = g.resolveRelativePath(ctx, categoryName)
+				}
+			}
+
+			// Merge overrides into service map (after path resolution)
+			for k, v := range overrides {
+				svcMap[k] = v
 			}
 
 			rawCompose := map[string]interface{}{
@@ -387,6 +407,34 @@ func parseFileMode(mode string) os.FileMode {
 		return 0644
 	}
 	return os.FileMode(m)
+}
+
+// resolveRelativePath resolves a relative path against the original compose file directory on the host.
+// The original compose files live in {hostProjectRoot}/apps/{category}/.
+func (g *Generator) resolveRelativePath(source, categoryName string) string {
+	if g.hostProjectRoot == "" || categoryName == "" {
+		return source
+	}
+	if filepath.IsAbs(source) || source == "" {
+		return source
+	}
+	// Skip named-volume-style sources (no dots or slashes at start)
+	if !strings.HasPrefix(source, ".") && !strings.Contains(source, "/") {
+		return source
+	}
+	base := filepath.Join(g.hostProjectRoot, "apps", categoryName)
+	return filepath.Clean(filepath.Join(base, source))
+}
+
+// resolveRelativeVolStr resolves relative bind mount paths within a volume string (source:target[:opts]).
+func (g *Generator) resolveRelativeVolStr(volStr, categoryName string) string {
+	parts := strings.SplitN(volStr, ":", 3)
+	if len(parts) < 2 {
+		return volStr
+	}
+	resolved := g.resolveRelativePath(parts[0], categoryName)
+	parts[0] = resolved
+	return strings.Join(parts, ":")
 }
 
 // extractNamedVolume checks if a volume string is a named volume and returns the name
