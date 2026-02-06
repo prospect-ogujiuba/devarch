@@ -182,6 +182,7 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 							if volName != "" && namedVolumes[volName] == nil {
 								namedVolumes[volName] = nil
 							}
+							volStr = g.rewriteConfigVolStr(volStr, categoryName, service.Name)
 							volList[i] = g.resolveRelativeVolStr(volStr, categoryName)
 						}
 					}
@@ -193,9 +194,11 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 			if build, ok := overrides["build"]; ok {
 				if buildMap, ok := build.(map[string]interface{}); ok {
 					if ctx, ok := buildMap["context"].(string); ok {
+						ctx = g.rewriteBuildContext(ctx, categoryName, service.Name)
 						buildMap["context"] = g.resolveRelativePath(ctx, categoryName)
 					}
 				} else if ctx, ok := build.(string); ok {
+					ctx = g.rewriteBuildContext(ctx, categoryName, service.Name)
 					overrides["build"] = g.resolveRelativePath(ctx, categoryName)
 				}
 			}
@@ -319,25 +322,67 @@ func (g *Generator) loadServiceRelations(service *models.Service) error {
 	return nil
 }
 
-// rewriteConfigPath rewrites volume source paths from config/{service}/ to compose/{category}/{service}/
+// rewriteConfigPath rewrites volume source paths that reference config/{service}/
+// to host-absolute materialized paths: {hostProjectRoot}/api/compose/{category}/{service}/
 func (g *Generator) rewriteConfigPath(source, categoryName, serviceName string) string {
-	if g.projectRoot == "" || categoryName == "" {
+	if g.hostProjectRoot == "" || categoryName == "" {
 		return source
 	}
 
-	configPrefix := filepath.Join(g.projectRoot, "config", serviceName)
-	if strings.HasPrefix(source, configPrefix) {
-		relPart := strings.TrimPrefix(source, configPrefix)
-		return filepath.Join(g.projectRoot, "compose", categoryName, serviceName, relPart)
+	// Normalize: strip leading ../ segments and check for config/{serviceName} pattern
+	cleaned := source
+	for strings.HasPrefix(cleaned, "../") {
+		cleaned = strings.TrimPrefix(cleaned, "../")
 	}
 
-	// Also handle relative config/ paths
-	if strings.HasPrefix(source, "config/"+serviceName) {
-		relPart := strings.TrimPrefix(source, "config/"+serviceName)
-		return filepath.Join("compose", categoryName, serviceName, relPart)
+	configPrefix := "config/" + serviceName
+	if strings.HasPrefix(cleaned, configPrefix) {
+		relPart := strings.TrimPrefix(cleaned, configPrefix)
+		return filepath.Join(g.hostProjectRoot, "api", "compose", categoryName, serviceName, relPart)
+	}
+
+	// Also handle absolute container paths
+	if g.projectRoot != "" {
+		absConfigPrefix := filepath.Join(g.projectRoot, "config", serviceName)
+		if strings.HasPrefix(source, absConfigPrefix) {
+			relPart := strings.TrimPrefix(source, absConfigPrefix)
+			return filepath.Join(g.hostProjectRoot, "api", "compose", categoryName, serviceName, relPart)
+		}
 	}
 
 	return source
+}
+
+// rewriteConfigVolStr applies rewriteConfigPath to the source part of a volume string (source:target[:opts]).
+func (g *Generator) rewriteConfigVolStr(volStr, categoryName, serviceName string) string {
+	parts := strings.SplitN(volStr, ":", 3)
+	if len(parts) < 2 {
+		return volStr
+	}
+	parts[0] = g.rewriteConfigPath(parts[0], categoryName, serviceName)
+	return strings.Join(parts, ":")
+}
+
+// rewriteBuildContext rewrites build contexts that reference config directories
+// to the host-absolute materialized config directory.
+func (g *Generator) rewriteBuildContext(ctx, categoryName, serviceName string) string {
+	if g.hostProjectRoot == "" || categoryName == "" {
+		return ctx
+	}
+
+	cleaned := ctx
+	for strings.HasPrefix(cleaned, "../") {
+		cleaned = strings.TrimPrefix(cleaned, "../")
+	}
+
+	// Match config/{name} at the end of the cleaned path
+	configDir := "config/" + serviceName
+	if cleaned == configDir || strings.HasPrefix(cleaned, configDir+"/") {
+		relPart := strings.TrimPrefix(cleaned, configDir)
+		return filepath.Join(g.hostProjectRoot, "api", "compose", categoryName, serviceName, relPart)
+	}
+
+	return ctx
 }
 
 // MaterializeConfigFiles writes all config files from DB to compose/{category}/{service}/

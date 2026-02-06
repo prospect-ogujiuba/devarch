@@ -41,6 +41,7 @@ services:
       - PORT=8080
       - DEVARCH_USE_SUDO=false
       - CONTAINER_HOST=unix:///run/podman/podman.sock
+      - PROJECT_ROOT=/app
       - HOST_PROJECT_ROOT=/home/priz/projects/devarch
     ports:
       - "127.0.0.1:8550:8080"
