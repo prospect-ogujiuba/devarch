@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { MoreHorizontal, Power, PowerOff, Copy, Edit, Trash2 } from 'lucide-react'
+import { MoreHorizontal, Power, PowerOff, Copy, Edit, Trash2, Globe } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -41,6 +41,7 @@ export function StackTable({ stacks, onEnable, onDisable, onClone, onRename, onD
               <TableHead>Status</TableHead>
               <TableHead>Instances</TableHead>
               <TableHead>Running</TableHead>
+              <TableHead>Network</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -48,7 +49,7 @@ export function StackTable({ stacks, onEnable, onDisable, onClone, onRename, onD
           <TableBody>
             {stacks.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   No stacks found
                 </TableCell>
               </TableRow>
@@ -87,6 +88,16 @@ export function StackTable({ stacks, onEnable, onDisable, onClone, onRename, onD
                     <TableCell>{stack.instance_count}</TableCell>
                     <TableCell className={cn('font-medium', statusColor)}>
                       {runningRatio}
+                    </TableCell>
+                    <TableCell>
+                      {stack.network_name ? (
+                        <div className="flex items-center gap-1.5 text-blue-500">
+                          <Globe className="size-3" />
+                          <span className="font-mono text-xs">{stack.network_name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(stack.created_at).toLocaleDateString()}
