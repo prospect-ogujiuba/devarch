@@ -31,10 +31,11 @@ type Runtime interface {
 	// Container exec
 	Exec(containerName string, command []string) (string, error)
 
-	// Network operations (stubs in Phase 1, implemented Phase 4)
+	// Network operations
 	CreateNetwork(name string, labels map[string]string) error
 	RemoveNetwork(name string) error
 	ListNetworks() ([]string, error)
+	InspectNetwork(name string) (*NetworkInfo, error)
 }
 
 // ContainerStatus holds container state info
@@ -57,4 +58,14 @@ type ContainerMetrics struct {
 	NetworkRxBytes   int64
 	NetworkTxBytes   int64
 	RecordedAt       time.Time
+}
+
+// NetworkInfo holds network metadata
+type NetworkInfo struct {
+	Name       string
+	ID         string
+	Driver     string
+	Labels     map[string]string
+	Containers []string
+	Created    time.Time
 }
