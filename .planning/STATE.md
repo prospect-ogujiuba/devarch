@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 ## Current Position
 
 Phase: 4 of 9 (Network Isolation)
-Plan: 04-01 complete (1 of ~3 in phase)
+Plan: 04-02 complete (2 of ~3 in phase)
 Status: In progress
-Last activity: 2026-02-06 — Completed 04-01-PLAN.md (network operations backend)
+Last activity: 2026-02-06 — Completed 04-02-PLAN.md (identity labels & network UI)
 
-Progress: [█████░░░░░] ~48% (13 plans complete of ~27 total)
+Progress: [█████░░░░░] ~52% (14 plans complete of ~27 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
-- Average duration: 3.0 min
-- Total execution time: ~0.7 hours
+- Total plans completed: 14
+- Average duration: 3.1 min
+- Total execution time: ~0.75 hours
 
 **By Phase:**
 
@@ -30,7 +30,7 @@ Progress: [█████░░░░░] ~48% (13 plans complete of ~27 total)
 | 1 | 2/2 | 1min | 0.5min |
 | 2 | 5/5 | 17.5min | 3.5min |
 | 3 | 5/5 | ~21min | ~4.2min |
-| 4 | 1/3 | 4.1min | 4.1min |
+| 4 | 2/3 | 7.3min | 3.7min |
 
 *Updated after each plan completion*
 
@@ -125,6 +125,12 @@ Recent decisions affecting current work:
 - Network name auto-computed but overridable (devarch-{stack}-net default)
 - Clone/Rename recompute network_name for new stack (prevents shared networks)
 
+**From 04-02:**
+- Identity labels injected in effective config (single source of truth before compose generation)
+- User overrides preserved (identity labels only added if not present)
+- Network status polling at 10s (less frequent than stack - network changes rarely)
+- Globe icon with blue coloring for network indicators (distinct from container status dots/green/gray)
+
 ### Pending Todos
 
 None yet.
@@ -136,5 +142,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Completed 04-01-PLAN.md (network operations backend, 2 tasks, 2 commits)
+Stopped at: Completed 04-02-PLAN.md (identity labels & network UI, 2 tasks, 2 commits)
 Resume file: None
