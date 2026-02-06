@@ -43,6 +43,23 @@ func ValidateName(name string) error {
 	return nil
 }
 
+// ValidateContainerName validates combined stack+instance name length for container naming
+func ValidateContainerName(stackName, instanceName string) error {
+	fullName := ContainerName(stackName, instanceName)
+
+	if len(fullName) > 127 {
+		return fmt.Errorf("container name %q (%d chars) exceeds 127-char limit — shorten stack name %q or instance name %q",
+			fullName, len(fullName), stackName, instanceName)
+	}
+
+	// Belt-and-suspenders: ensure DNS-safe pattern (should be by construction)
+	if !dnsNamePattern.MatchString(fullName) {
+		return fmt.Errorf("container name %q is not DNS-safe", fullName)
+	}
+
+	return nil
+}
+
 // Slugify converts a string to a valid DNS-safe name
 func Slugify(input string) string {
 	// Lowercase

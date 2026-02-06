@@ -37,8 +37,9 @@ type stackResponse struct {
 }
 
 type createStackRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	NetworkName *string `json:"network_name,omitempty"`
 }
 
 type updateStackRequest struct {
@@ -59,13 +60,24 @@ func (h *StackHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Insert stack
+	// Compute or validate network_name
+	networkName := container.NetworkName(req.Name)
+	if req.NetworkName != nil && *req.NetworkName != "" {
+		// User provided custom network name, validate it
+		if err := container.ValidateName(*req.NetworkName); err != nil {
+			http.Error(w, fmt.Sprintf("invalid network_name: %v", err), http.StatusBadRequest)
+			return
+		}
+		networkName = *req.NetworkName
+	}
+
+	// Insert stack with network_name
 	var stack stackResponse
 	err := h.db.QueryRow(`
-		INSERT INTO stacks (name, description)
-		VALUES ($1, $2)
+		INSERT INTO stacks (name, description, network_name)
+		VALUES ($1, $2, $3)
 		RETURNING id, name, description, network_name, enabled, created_at, updated_at
-	`, req.Name, req.Description).Scan(
+	`, req.Name, req.Description, networkName).Scan(
 		&stack.ID,
 		&stack.Name,
 		&stack.Description,
@@ -354,6 +366,62 @@ func (h *StackHandler) Enable(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(stack)
 }
 
+type networkStatusResponse struct {
+	NetworkName string            `json:"network_name"`
+	Status      string            `json:"status"` // "active" or "not_created"
+	Driver      string            `json:"driver,omitempty"`
+	Containers  []string          `json:"containers"`
+	Labels      map[string]string `json:"labels,omitempty"`
+}
+
+// NetworkStatus handles GET /stacks/{name}/network
+func (h *StackHandler) NetworkStatus(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	// Get stack with network_name
+	var networkName *string
+	err := h.db.QueryRow(`
+		SELECT network_name FROM stacks WHERE name = $1 AND deleted_at IS NULL
+	`, name).Scan(&networkName)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	response := networkStatusResponse{
+		Containers: []string{},
+	}
+
+	if networkName != nil && *networkName != "" {
+		response.NetworkName = *networkName
+
+		// Inspect network via container client
+		info, err := h.containerClient.InspectNetwork(*networkName)
+		if err != nil {
+			// Network doesn't exist yet
+			response.Status = "not_created"
+		} else {
+			// Network exists
+			response.Status = "active"
+			response.Driver = info.Driver
+			response.Containers = info.Containers
+			response.Labels = info.Labels
+		}
+	} else {
+		// No network_name set (shouldn't happen after migration)
+		response.NetworkName = container.NetworkName(name)
+		response.Status = "not_created"
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 type disableResponse struct {
 	Stack             stackResponse `json:"stack"`
 	StoppedContainers []string      `json:"stopped_containers"`
@@ -462,6 +530,9 @@ func (h *StackHandler) Clone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Compute network_name for cloned stack (not copied from source)
+	newNetworkName := container.NetworkName(req.Name)
+
 	// Begin transaction
 	tx, err := h.db.BeginTx(r.Context(), nil)
 	if err != nil {
@@ -470,15 +541,15 @@ func (h *StackHandler) Clone(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	// Copy stack record with new name
+	// Copy stack record with new name and new network_name
 	var newStack stackResponse
 	err = tx.QueryRow(`
-		INSERT INTO stacks (name, description, enabled)
-		SELECT $1, description, true
+		INSERT INTO stacks (name, description, network_name, enabled)
+		SELECT $1, description, $3, true
 		FROM stacks
 		WHERE name = $2 AND deleted_at IS NULL
 		RETURNING id, name, description, network_name, enabled, created_at, updated_at
-	`, req.Name, name).Scan(
+	`, req.Name, name, newNetworkName).Scan(
 		&newStack.ID,
 		&newStack.Name,
 		&newStack.Description,
@@ -556,6 +627,9 @@ func (h *StackHandler) Rename(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Compute network_name for renamed stack
+	newNetworkName := container.NetworkName(req.Name)
+
 	// Begin transaction - rename is clone + soft-delete in single tx
 	tx, err := h.db.BeginTx(r.Context(), nil)
 	if err != nil {
@@ -564,15 +638,15 @@ func (h *StackHandler) Rename(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	// Clone stack record with new name
+	// Clone stack record with new name and new network_name
 	var newStack stackResponse
 	err = tx.QueryRow(`
-		INSERT INTO stacks (name, description, enabled)
-		SELECT $1, description, enabled
+		INSERT INTO stacks (name, description, network_name, enabled)
+		SELECT $1, description, $3, enabled
 		FROM stacks
 		WHERE name = $2 AND deleted_at IS NULL
 		RETURNING id, name, description, network_name, enabled, created_at, updated_at
-	`, req.Name, name).Scan(
+	`, req.Name, name, newNetworkName).Scan(
 		&newStack.ID,
 		&newStack.Name,
 		&newStack.Description,
