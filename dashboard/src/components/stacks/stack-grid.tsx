@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Layers, Trash2, Power, PowerOff } from 'lucide-react'
+import { Layers, Trash2, Power, PowerOff, Globe } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -64,6 +64,12 @@ export function StackGrid({ stacks, onEnable, onDisable, onDelete }: StackGridPr
                   {runningRatio} running
                 </span>
               </div>
+              {stack.network_name && (
+                <div className="flex items-center gap-1.5 text-xs text-blue-500">
+                  <Globe className="size-3" />
+                  <span className="font-mono">{stack.network_name}</span>
+                </div>
+              )}
             </CardContent>
             <CardFooter className="flex gap-2 pt-2">
               {stack.enabled ? (

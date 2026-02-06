@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { Stack, DeletePreview } from '@/types/api'
+import type { Stack, DeletePreview, NetworkStatus } from '@/types/api'
 import { toast } from 'sonner'
 
 // Queries
@@ -45,6 +45,18 @@ export function useDeletePreview(name: string) {
       return response.data
     },
     enabled: !!name,
+  })
+}
+
+export function useStackNetwork(name: string) {
+  return useQuery({
+    queryKey: ['stacks', name, 'network'],
+    queryFn: async () => {
+      const response = await api.get<NetworkStatus>(`/stacks/${name}/network`)
+      return response.data
+    },
+    enabled: !!name,
+    refetchInterval: 10000,
   })
 }
 

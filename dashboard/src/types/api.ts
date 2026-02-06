@@ -474,3 +474,11 @@ export interface InstanceDeletePreview {
   override_count: number
   container_name: string | null
 }
+
+export interface NetworkStatus {
+  network_name: string
+  status: 'active' | 'not_created'
+  driver: string
+  containers: string[]
+  labels: Record<string, string>
+}

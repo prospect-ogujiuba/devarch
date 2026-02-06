@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link, Outlet, useMatch, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus } from 'lucide-react'
+import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useStack, useEnableStack, useDisableStack } from '@/features/stacks/queries'
+import { useStack, useEnableStack, useDisableStack, useStackNetwork } from '@/features/stacks/queries'
 import { useInstances, useUpdateInstance } from '@/features/instances/queries'
 import { EditStackDialog } from '@/components/stacks/edit-stack-dialog'
 import { DeleteStackDialog } from '@/components/stacks/delete-stack-dialog'
@@ -138,6 +138,7 @@ function StackDetailPage() {
   const navigate = useNavigate()
   const { data: stack, isLoading } = useStack(name)
   const { data: instances = [] } = useInstances(name)
+  const { data: networkStatus } = useStackNetwork(name)
   const enableStack = useEnableStack()
   const disableStack = useDisableStack()
 
@@ -354,19 +355,54 @@ function StackDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Network</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm">
-            {stack.network_name ? (
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Network:</span>
-                <code className="bg-muted px-2 py-1 rounded">{stack.network_name}</code>
-              </div>
-            ) : (
-              <p className="text-muted-foreground">Not configured</p>
-            )}
+          <div className="flex items-center gap-2">
+            <Globe className="size-4 text-blue-500" />
+            <CardTitle className="text-base">Network</CardTitle>
           </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {networkStatus ? (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Name:</span>
+                <code className="bg-muted px-2 py-1 rounded text-sm font-mono">{networkStatus.network_name}</code>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Status:</span>
+                <Badge variant={networkStatus.status === 'active' ? 'success' : 'outline'}>
+                  {networkStatus.status === 'active' ? 'Active' : 'Not Created'}
+                </Badge>
+              </div>
+              {networkStatus.status === 'active' && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Driver:</span>
+                    <span className="text-sm">{networkStatus.driver}</span>
+                  </div>
+                  {networkStatus.containers.length > 0 && (
+                    <div>
+                      <div className="text-sm text-muted-foreground mb-1">Connected containers:</div>
+                      <div className="flex flex-wrap gap-1">
+                        {networkStatus.containers.map((container) => (
+                          <code key={container} className="bg-muted px-2 py-0.5 rounded text-xs font-mono">
+                            {container}
+                          </code>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="text-xs text-muted-foreground pt-1 border-t">
+                    Containers resolve each other by instance name within this network
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Loading network status...</span>
+            </div>
+          )}
         </CardContent>
       </Card>
 
