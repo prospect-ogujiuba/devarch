@@ -461,13 +461,87 @@ func (c *Client) RunCompose(composePath string, args ...string) (string, error) 
 }
 
 func (c *Client) CreateNetwork(name string, labels map[string]string) error {
-	return ErrNotImplemented
+	// Check if network exists (idempotent)
+	_, err := c.execCommand("network", "inspect", name)
+	if err == nil {
+		return nil // Already exists, no-op
+	}
+
+	// Create network with labels
+	args := []string{"network", "create", "--driver", "bridge"}
+	for k, v := range labels {
+		args = append(args, "--label", fmt.Sprintf("%s=%s", k, v))
+	}
+	args = append(args, name)
+
+	_, err = c.execCommand(args...)
+	return err
 }
 
 func (c *Client) RemoveNetwork(name string) error {
-	return ErrNotImplemented
+	_, err := c.execCommand("network", "rm", name)
+	if err != nil {
+		// Graceful: ignore "not found" errors
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "not found") || strings.Contains(errStr, "no such network") {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (c *Client) ListNetworks() ([]string, error) {
-	return nil, ErrNotImplemented
+	output, err := c.execCommand("network", "ls", "--filter", "label=devarch.managed_by=devarch", "--format", "{{.Name}}")
+	if err != nil {
+		return nil, err
+	}
+	return c.parseNamesList(output)
+}
+
+func (c *Client) InspectNetwork(name string) (*NetworkInfo, error) {
+	output, err := c.execCommand("network", "inspect", name)
+	if err != nil {
+		return nil, fmt.Errorf("network not found: %w", err)
+	}
+
+	// Both Docker and Podman return JSON array with one element
+	var networks []struct {
+		Name    string            `json:"Name"`
+		Id      string            `json:"Id"`
+		Driver  string            `json:"Driver"`
+		Labels  map[string]string `json:"Labels"`
+		Created string            `json:"Created"`
+		Containers map[string]interface{} `json:"Containers"`
+	}
+
+	if err := json.Unmarshal([]byte(output), &networks); err != nil {
+		return nil, fmt.Errorf("parse network inspect: %w", err)
+	}
+
+	if len(networks) == 0 {
+		return nil, fmt.Errorf("network %q not found", name)
+	}
+
+	net := networks[0]
+	info := &NetworkInfo{
+		Name:   net.Name,
+		ID:     net.Id,
+		Driver: net.Driver,
+		Labels: net.Labels,
+	}
+
+	// Parse Created timestamp if available
+	if net.Created != "" && net.Created != "0001-01-01T00:00:00Z" {
+		if t, err := time.Parse(time.RFC3339, net.Created); err == nil {
+			info.Created = t
+		}
+	}
+
+	// Extract container names from Containers map
+	for containerName := range net.Containers {
+		info.Containers = append(info.Containers, containerName)
+	}
+
+	return info, nil
 }
