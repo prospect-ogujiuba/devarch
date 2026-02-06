@@ -105,13 +105,11 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 		svc.Ports = append(svc.Ports, portStr)
 	}
 
-	// Get category name for path rewriting
 	var categoryName string
 	g.db.QueryRow(`SELECT c.name FROM categories c JOIN services s ON s.category_id = c.id WHERE s.id = $1`, service.ID).Scan(&categoryName)
 
 	for _, vol := range service.Volumes {
-		source := g.rewriteConfigPath(vol.Source, categoryName, service.Name)
-		source = g.resolveRelativePath(source, categoryName)
+		source := g.resolveRelativePath(vol.Source, categoryName)
 		volStr := fmt.Sprintf("%s:%s", source, vol.Target)
 		if vol.ReadOnly {
 			volStr += ":ro"
@@ -182,7 +180,6 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 							if volName != "" && namedVolumes[volName] == nil {
 								namedVolumes[volName] = nil
 							}
-							volStr = g.rewriteConfigVolStr(volStr, categoryName, service.Name)
 							volList[i] = g.resolveRelativeVolStr(volStr, categoryName)
 						}
 					}
@@ -194,11 +191,9 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 			if build, ok := overrides["build"]; ok {
 				if buildMap, ok := build.(map[string]interface{}); ok {
 					if ctx, ok := buildMap["context"].(string); ok {
-						ctx = g.rewriteBuildContext(ctx, categoryName, service.Name)
 						buildMap["context"] = g.resolveRelativePath(ctx, categoryName)
 					}
 				} else if ctx, ok := build.(string); ok {
-					ctx = g.rewriteBuildContext(ctx, categoryName, service.Name)
 					overrides["build"] = g.resolveRelativePath(ctx, categoryName)
 				}
 			}
@@ -322,69 +317,6 @@ func (g *Generator) loadServiceRelations(service *models.Service) error {
 	return nil
 }
 
-// rewriteConfigPath rewrites volume source paths that reference config/{service}/
-// to host-absolute materialized paths: {hostProjectRoot}/api/compose/{category}/{service}/
-func (g *Generator) rewriteConfigPath(source, categoryName, serviceName string) string {
-	if g.hostProjectRoot == "" || categoryName == "" {
-		return source
-	}
-
-	// Normalize: strip leading ../ segments and check for config/{serviceName} pattern
-	cleaned := source
-	for strings.HasPrefix(cleaned, "../") {
-		cleaned = strings.TrimPrefix(cleaned, "../")
-	}
-
-	configPrefix := "config/" + serviceName
-	if strings.HasPrefix(cleaned, configPrefix) {
-		relPart := strings.TrimPrefix(cleaned, configPrefix)
-		return filepath.Join(g.hostProjectRoot, "api", "compose", categoryName, serviceName, relPart)
-	}
-
-	// Also handle absolute container paths
-	if g.projectRoot != "" {
-		absConfigPrefix := filepath.Join(g.projectRoot, "config", serviceName)
-		if strings.HasPrefix(source, absConfigPrefix) {
-			relPart := strings.TrimPrefix(source, absConfigPrefix)
-			return filepath.Join(g.hostProjectRoot, "api", "compose", categoryName, serviceName, relPart)
-		}
-	}
-
-	return source
-}
-
-// rewriteConfigVolStr applies rewriteConfigPath to the source part of a volume string (source:target[:opts]).
-func (g *Generator) rewriteConfigVolStr(volStr, categoryName, serviceName string) string {
-	parts := strings.SplitN(volStr, ":", 3)
-	if len(parts) < 2 {
-		return volStr
-	}
-	parts[0] = g.rewriteConfigPath(parts[0], categoryName, serviceName)
-	return strings.Join(parts, ":")
-}
-
-// rewriteBuildContext rewrites build contexts that reference config directories
-// to the host-absolute materialized config directory.
-func (g *Generator) rewriteBuildContext(ctx, categoryName, serviceName string) string {
-	if g.hostProjectRoot == "" || categoryName == "" {
-		return ctx
-	}
-
-	cleaned := ctx
-	for strings.HasPrefix(cleaned, "../") {
-		cleaned = strings.TrimPrefix(cleaned, "../")
-	}
-
-	// Match config/{name} at the end of the cleaned path
-	configDir := "config/" + serviceName
-	if cleaned == configDir || strings.HasPrefix(cleaned, configDir+"/") {
-		relPart := strings.TrimPrefix(cleaned, configDir)
-		return filepath.Join(g.hostProjectRoot, "api", "compose", categoryName, serviceName, relPart)
-	}
-
-	return ctx
-}
-
 // MaterializeConfigFiles writes all config files from DB to compose/{category}/{service}/
 func (g *Generator) MaterializeConfigFiles(service *models.Service, baseDir string) error {
 	var categoryName string
@@ -454,10 +386,11 @@ func parseFileMode(mode string) os.FileMode {
 	return os.FileMode(m)
 }
 
-// resolveRelativePath resolves a relative path against the original compose file directory on the host.
-// The original compose files live in {hostProjectRoot}/apps/{category}/.
+// resolveRelativePath resolves a relative path against the host project root.
+// Paths starting with "compose/" are resolved against {hostProjectRoot}/api/.
+// Other relative paths are resolved against {hostProjectRoot}/apps/{category}/.
 func (g *Generator) resolveRelativePath(source, categoryName string) string {
-	if g.hostProjectRoot == "" || categoryName == "" {
+	if g.hostProjectRoot == "" {
 		return source
 	}
 	if filepath.IsAbs(source) || source == "" {
@@ -465,6 +398,13 @@ func (g *Generator) resolveRelativePath(source, categoryName string) string {
 	}
 	// Skip named-volume-style sources (no dots or slashes at start)
 	if !strings.HasPrefix(source, ".") && !strings.Contains(source, "/") {
+		return source
+	}
+	// Materialized config paths stored as compose/{category}/{service}/...
+	if strings.HasPrefix(source, "compose/") {
+		return filepath.Join(g.hostProjectRoot, "api", source)
+	}
+	if categoryName == "" {
 		return source
 	}
 	base := filepath.Join(g.hostProjectRoot, "apps", categoryName)
@@ -489,8 +429,8 @@ func extractNamedVolume(volStr string) string {
 		return ""
 	}
 	source := parts[0]
-	// Named volumes don't start with . / or ~
-	if strings.HasPrefix(source, ".") || strings.HasPrefix(source, "/") || strings.HasPrefix(source, "~") {
+	// Named volumes don't start with . / or ~ and don't contain path separators
+	if strings.HasPrefix(source, ".") || strings.HasPrefix(source, "/") || strings.HasPrefix(source, "~") || strings.Contains(source, "/") {
 		return ""
 	}
 	return source

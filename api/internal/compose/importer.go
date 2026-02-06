@@ -130,7 +130,7 @@ func (i *Importer) importCategoryServices(category string) error {
 		}
 
 		path := filepath.Join(categoryDir, entry.Name())
-		if err := i.importServices(path, categoryID); err != nil {
+		if err := i.importServices(path, categoryID, category); err != nil {
 			fmt.Printf("warning: failed to import %s: %v\n", path, err)
 		}
 	}
@@ -138,19 +138,87 @@ func (i *Importer) importCategoryServices(category string) error {
 	return nil
 }
 
-func (i *Importer) importServices(path string, categoryID int) error {
+func (i *Importer) importServices(path string, categoryID int, categoryName string) error {
 	services, err := ParseFileAll(path)
 	if err != nil {
 		return err
 	}
 
 	for _, parsed := range services {
+		i.rewriteConfigPaths(parsed, categoryName)
 		i.resolvePaths(parsed, path)
 		if err := i.importService(parsed, categoryID); err != nil {
 			fmt.Printf("warning: failed to import service %s: %v\n", parsed.Name, err)
 		}
 	}
 	return nil
+}
+
+// rewriteConfigPaths rewrites volume source paths and build contexts that reference
+// config/{dirName}/... to compose/{categoryName}/{serviceName}/... so the DB stores
+// the final materialized path. This eliminates runtime path guessing in the generator.
+func (i *Importer) rewriteConfigPaths(parsed *ParsedService, categoryName string) {
+	for idx := range parsed.Volumes {
+		v := &parsed.Volumes[idx]
+		if v.VolumeType != "bind" {
+			continue
+		}
+		v.Source = rewriteConfigSource(v.Source, categoryName, parsed.Name)
+	}
+
+	if parsed.Overrides == nil {
+		return
+	}
+
+	// Rewrite override volumes
+	if volumes, ok := parsed.Overrides["volumes"]; ok {
+		if volList, ok := volumes.([]interface{}); ok {
+			for i, v := range volList {
+				if volStr, ok := v.(string); ok {
+					parts := strings.SplitN(volStr, ":", 3)
+					if len(parts) >= 2 {
+						parts[0] = rewriteConfigSource(parts[0], categoryName, parsed.Name)
+						volList[i] = strings.Join(parts, ":")
+					}
+				}
+			}
+		}
+	}
+
+	// Rewrite build context
+	if build, ok := parsed.Overrides["build"]; ok {
+		switch b := build.(type) {
+		case string:
+			parsed.Overrides["build"] = rewriteConfigSource(b, categoryName, parsed.Name)
+		case map[string]interface{}:
+			if ctx, ok := b["context"].(string); ok {
+				b["context"] = rewriteConfigSource(ctx, categoryName, parsed.Name)
+			}
+		}
+	}
+}
+
+// rewriteConfigSource converts a config/ path to a compose/ path.
+// ../config/nginx/custom → compose/proxy/nginx-proxy-manager/custom
+// ../config/nginx        → compose/proxy/nginx-proxy-manager
+func rewriteConfigSource(source, categoryName, serviceName string) string {
+	cleaned := source
+	for strings.HasPrefix(cleaned, "../") {
+		cleaned = strings.TrimPrefix(cleaned, "../")
+	}
+
+	if !strings.HasPrefix(cleaned, "config/") {
+		return source
+	}
+
+	rest := strings.TrimPrefix(cleaned, "config/")
+	// Strip the first path component (the config dir name, e.g. "nginx")
+	if idx := strings.Index(rest, "/"); idx >= 0 {
+		relPart := rest[idx:] // includes leading /
+		return filepath.Join("compose", categoryName, serviceName) + relPart
+	}
+	// Exact match: config/{dirName} with no trailing path
+	return filepath.Join("compose", categoryName, serviceName)
 }
 
 func (i *Importer) resolvePaths(parsed *ParsedService, composePath string) {
@@ -162,7 +230,7 @@ func (i *Importer) resolvePaths(parsed *ParsedService, composePath string) {
 	// Resolve bind mount sources
 	for idx := range parsed.Volumes {
 		v := &parsed.Volumes[idx]
-		if v.VolumeType == "bind" && !filepath.IsAbs(v.Source) {
+		if v.VolumeType == "bind" && !filepath.IsAbs(v.Source) && !strings.HasPrefix(v.Source, "compose/") {
 			v.Source = filepath.Clean(filepath.Join(composeDir, v.Source))
 		}
 	}
@@ -172,11 +240,11 @@ func (i *Importer) resolvePaths(parsed *ParsedService, composePath string) {
 		if build, ok := parsed.Overrides["build"]; ok {
 			switch b := build.(type) {
 			case string:
-				if !filepath.IsAbs(b) {
+				if !filepath.IsAbs(b) && !strings.HasPrefix(b, "compose/") {
 					parsed.Overrides["build"] = filepath.Clean(filepath.Join(composeDir, b))
 				}
 			case map[string]interface{}:
-				if ctx, ok := b["context"].(string); ok && !filepath.IsAbs(ctx) {
+				if ctx, ok := b["context"].(string); ok && !filepath.IsAbs(ctx) && !strings.HasPrefix(ctx, "compose/") {
 					b["context"] = filepath.Clean(filepath.Join(composeDir, ctx))
 				}
 			}
