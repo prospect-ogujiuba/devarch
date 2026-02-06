@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 
 ## Current Position
 
-Phase: 3 of 9 complete (verified), ready for Phase 4
-Plan: All Phase 3 plans complete + verified (6/6 must-haves passed)
-Status: Between phases
-Last activity: 2026-02-06 — Phase 3 verified, SUMMARY reconstructed, requirements marked Complete
+Phase: 4 of 9 (Network Isolation)
+Plan: 04-01 complete (1 of ~3 in phase)
+Status: In progress
+Last activity: 2026-02-06 — Completed 04-01-PLAN.md (network operations backend)
 
-Progress: [████░░░░░░] ~45% (12 plans complete of ~27 total)
+Progress: [█████░░░░░] ~48% (13 plans complete of ~27 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: 2.8 min
-- Total execution time: ~0.6 hours
+- Total plans completed: 13
+- Average duration: 3.0 min
+- Total execution time: ~0.7 hours
 
 **By Phase:**
 
@@ -30,6 +30,7 @@ Progress: [████░░░░░░] ~45% (12 plans complete of ~27 total)
 | 1 | 2/2 | 1min | 0.5min |
 | 2 | 5/5 | 17.5min | 3.5min |
 | 3 | 5/5 | ~21min | ~4.2min |
+| 4 | 1/3 | 4.1min | 4.1min |
 
 *Updated after each plan completion*
 
@@ -116,6 +117,14 @@ Recent decisions affecting current work:
 - Config files use CodeMirror with language detection (JSON/YAML/XML)
 - Template config files shown read-only as reference above editable override
 
+**From 04-01:**
+- Idempotent CreateNetwork via inspect-then-create pattern (Docker/Podman return errors on duplicate)
+- Graceful RemoveNetwork ignores not-found errors (safe delete operations)
+- ListNetworks filters by devarch.managed_by label (orphan detection boundary)
+- Container name validation at instance creation (127-char limit, fail early with prescriptive error)
+- Network name auto-computed but overridable (devarch-{stack}-net default)
+- Clone/Rename recompute network_name for new stack (prevents shared networks)
+
 ### Pending Todos
 
 None yet.
@@ -127,5 +136,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Phase 3 verified (6/6 must-haves). SUMMARY.md for 03-05 reconstructed. REQUIREMENTS.md updated. Ready for Phase 4.
+Stopped at: Completed 04-01-PLAN.md (network operations backend, 2 tasks, 2 commits)
 Resume file: None
