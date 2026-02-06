@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/pkg/models"
 )
 
@@ -150,10 +152,20 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 	}
 
 	resp.Labels = mergeLabels(templateLabels, instanceLabels)
-	resp.Labels = append(resp.Labels, models.ServiceLabel{Key: "devarch.stack_id", Value: fmt.Sprintf("%d", stackID)})
-	resp.Labels = append(resp.Labels, models.ServiceLabel{Key: "devarch.instance_id", Value: instanceName})
-	resp.Labels = append(resp.Labels, models.ServiceLabel{Key: "devarch.template_service_id", Value: fmt.Sprintf("%d", templateServiceID)})
 	resp.OverridesApplied.Labels = len(instanceLabels) > 0
+
+	// Inject identity labels from container package (NETW-04 requirement)
+	// User overrides take precedence — only add if not already present
+	identityLabels := container.BuildLabels(stackName, instanceName, strconv.Itoa(templateServiceID))
+	existingKeys := make(map[string]bool)
+	for _, l := range resp.Labels {
+		existingKeys[l.Key] = true
+	}
+	for key, value := range identityLabels {
+		if !existingKeys[key] {
+			resp.Labels = append(resp.Labels, models.ServiceLabel{Key: key, Value: value})
+		}
+	}
 
 	templateDomains, err := h.loadServiceDomains(templateServiceID)
 	if err != nil {
