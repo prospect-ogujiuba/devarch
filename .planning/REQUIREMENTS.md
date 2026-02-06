@@ -39,10 +39,10 @@
 
 ### Network Isolation
 
-- [ ] **NETW-01**: Deterministic container naming: devarch-{stack}-{instance}
-- [ ] **NETW-02**: Per-stack bridge network: devarch-{stack}-net
-- [ ] **NETW-03**: EnsureNetwork in container client (create if not exists, Docker + Podman)
-- [ ] **NETW-04**: Identity labels injected on all stack containers
+- [x] **NETW-01**: Deterministic container naming: devarch-{stack}-{instance}
+- [x] **NETW-02**: Per-stack bridge network: devarch-{stack}-net
+- [x] **NETW-03**: EnsureNetwork in container client (create if not exists, Docker + Podman)
+- [x] **NETW-04**: Identity labels injected on all stack containers
 
 ### Compose Generation
 
