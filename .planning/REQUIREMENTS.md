@@ -24,18 +24,18 @@
 
 ### Service Instances
 
-- [ ] **INST-01**: Create instance from template service within a stack
-- [ ] **INST-02**: Override instance ports (copy-on-write from template)
-- [ ] **INST-03**: Override instance volumes
-- [ ] **INST-04**: Override instance environment variables
-- [ ] **INST-05**: Override instance dependencies
-- [ ] **INST-06**: Override instance labels
-- [ ] **INST-07**: Override instance domains
-- [ ] **INST-08**: Override instance healthchecks
-- [ ] **INST-09**: Override instance config files
-- [ ] **INST-10**: Effective config resolver (template + overrides merged, overrides win)
-- [ ] **INST-11**: List/get/update/delete instances within a stack
-- [ ] **INST-12**: Dashboard UI for instance management (add to stack, edit overrides, remove)
+- [x] **INST-01**: Create instance from template service within a stack
+- [x] **INST-02**: Override instance ports (copy-on-write from template)
+- [x] **INST-03**: Override instance volumes
+- [x] **INST-04**: Override instance environment variables
+- [x] **INST-05**: Override instance dependencies
+- [x] **INST-06**: Override instance labels
+- [x] **INST-07**: Override instance domains
+- [x] **INST-08**: Override instance healthchecks
+- [x] **INST-09**: Override instance config files
+- [x] **INST-10**: Effective config resolver (template + overrides merged, overrides win)
+- [x] **INST-11**: List/get/update/delete instances within a stack
+- [x] **INST-12**: Dashboard UI for instance management (add to stack, edit overrides, remove)
 
 ### Network Isolation
 
@@ -94,7 +94,7 @@
 ### Database Migrations
 
 - [x] **MIGR-01**: Migration 013: stacks table (Phase 2)
-- [ ] **MIGR-02**: Migration 014: service_instances + all instance override tables (Phase 3)
+- [x] **MIGR-02**: Migration 014: service_instances + all instance override tables (Phase 3)
 - [ ] **MIGR-03**: Migration 015: service_exports, service_import_contracts, service_instance_wires (Phase 8)
 - [ ] **MIGR-04**: Migration 016: secrets encryption fields (Phase 9)
 - [ ] **MIGR-05**: Migration 017: service_instance_resources (Phase 9)
@@ -164,19 +164,19 @@
 | STCK-07 | Phase 2 | Complete |
 | STCK-08 | Phase 2 | Complete |
 | MIGR-01 | Phase 2 | Complete |
-| INST-01 | Phase 3 | Pending |
-| INST-02 | Phase 3 | Pending |
-| INST-03 | Phase 3 | Pending |
-| INST-04 | Phase 3 | Pending |
-| INST-05 | Phase 3 | Pending |
-| INST-06 | Phase 3 | Pending |
-| INST-07 | Phase 3 | Pending |
-| INST-08 | Phase 3 | Pending |
-| INST-09 | Phase 3 | Pending |
-| INST-10 | Phase 3 | Pending |
-| INST-11 | Phase 3 | Pending |
-| INST-12 | Phase 3 | Pending |
-| MIGR-02 | Phase 3 | Pending |
+| INST-01 | Phase 3 | Complete |
+| INST-02 | Phase 3 | Complete |
+| INST-03 | Phase 3 | Complete |
+| INST-04 | Phase 3 | Complete |
+| INST-05 | Phase 3 | Complete |
+| INST-06 | Phase 3 | Complete |
+| INST-07 | Phase 3 | Complete |
+| INST-08 | Phase 3 | Complete |
+| INST-09 | Phase 3 | Complete |
+| INST-10 | Phase 3 | Complete |
+| INST-11 | Phase 3 | Complete |
+| INST-12 | Phase 3 | Complete |
+| MIGR-02 | Phase 3 | Complete |
 | NETW-01 | Phase 4 | Pending |
 | NETW-02 | Phase 4 | Pending |
 | NETW-03 | Phase 4 | Pending |
@@ -226,4 +226,4 @@
 
 ---
 *Requirements defined: 2026-02-03*
-*Last updated: 2026-02-03 after phase 2 execution*
+*Last updated: 2026-02-06 after phase 3 execution*
