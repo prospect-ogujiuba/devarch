@@ -91,11 +91,11 @@ Plans:
   3. Network is created automatically before containers start (Docker + Podman)
   4. All stack containers have identity labels (devarch.stack_id, devarch.instance_id, devarch.template_service_id)
   5. Two stacks using same template never collide on names or networks
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md: TBD
-- [ ] 04-02-PLAN.md: TBD
+- [ ] 04-01-PLAN.md — Container client network methods, name validation, network_name auto-population, network status API
+- [ ] 04-02-PLAN.md — Effective config identity label injection, dashboard network UI (detail card + list badges)
 
 ### Phase 5: Compose Generation
 **Goal**: Stack compose generator produces single YAML with all instances, replacing per-service generation
