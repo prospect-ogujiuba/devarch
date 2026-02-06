@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation & Guardrails** - Identity system, validation, runtime abstraction
 - [x] **Phase 2: Stack CRUD** - Stack management API + dashboard UI
 - [x] **Phase 3: Service Instances** - Instance overrides + config resolution
-- [ ] **Phase 4: Network Isolation** - Per-stack networks, deterministic naming
+- [x] **Phase 4: Network Isolation** - Per-stack networks, deterministic naming
 - [ ] **Phase 5: Compose Generation** - Stack-scoped YAML generation
 - [ ] **Phase 6: Plan/Apply Workflow** - Safety mechanism with advisory locking
 - [ ] **Phase 7: Export/Import & Bootstrap** - Shareable devarch.yml, lockfile, init/doctor
@@ -94,8 +94,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Container client network methods, name validation, network_name auto-population, network status API
-- [ ] 04-02-PLAN.md — Effective config identity label injection, dashboard network UI (detail card + list badges)
+- [x] 04-01-PLAN.md — Container client network methods, name validation, network_name auto-population, network status API (COMPLETE 2026-02-06)
+- [x] 04-02-PLAN.md — Effective config identity label injection, dashboard network UI (detail card + list badges) (COMPLETE 2026-02-06)
 
 ### Phase 5: Compose Generation
 **Goal**: Stack compose generator produces single YAML with all instances, replacing per-service generation
@@ -201,7 +201,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 | 1. Foundation & Guardrails | 2/2 | Complete | 2026-02-03 |
 | 2. Stack CRUD | 5/5 | Complete | 2026-02-03 |
 | 3. Service Instances | 5/5 | Complete | 2026-02-04 (verified 2026-02-06) |
-| 4. Network Isolation | 0/TBD | Not started | - |
+| 4. Network Isolation | 2/2 | Complete | 2026-02-06 |
 | 5. Compose Generation | 0/TBD | Not started | - |
 | 6. Plan/Apply Workflow | 0/TBD | Not started | - |
 | 7. Export/Import & Bootstrap | 0/TBD | Not started | - |
@@ -210,4 +210,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-06 after phase 3 verification*
+*Last updated: 2026-02-06 after phase 4 execution*
