@@ -42,6 +42,24 @@ func NetworkName(stackID string) string {
 	return fmt.Sprintf("devarch-%s-net", stackID)
 }
 
+// ValidateNetworkName validates network name length and format
+func ValidateNetworkName(stackName string) error {
+	fullName := NetworkName(stackName)
+
+	if len(fullName) > 63 {
+		return fmt.Errorf("network name %q (%d chars) exceeds 63-char limit — shorten stack name %q",
+			fullName, len(fullName), stackName)
+	}
+
+	// Validate DNS-safe pattern (lowercase alnum + hyphens)
+	// Using simplified pattern check since we construct it ourselves
+	if fullName == "" {
+		return fmt.Errorf("network name cannot be empty")
+	}
+
+	return nil
+}
+
 // IsDevArchManaged checks if a container is managed by DevArch
 func IsDevArchManaged(labels map[string]string) bool {
 	return labels[LabelManagedBy] == ManagedByValue

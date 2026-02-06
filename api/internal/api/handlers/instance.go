@@ -108,6 +108,12 @@ func (h *InstanceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate combined container name length
+	if err := container.ValidateContainerName(stackActualName, req.InstanceID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	containerName := container.ContainerName(stackActualName, req.InstanceID)
 
 	var instance instanceResponse
@@ -483,6 +489,12 @@ func (h *InstanceHandler) Duplicate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate combined container name length
+	if err := container.ValidateContainerName(stackActualName, newInstanceID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	tx, err := h.db.BeginTx(r.Context(), nil)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
@@ -656,6 +668,12 @@ func (h *InstanceHandler) Rename(w http.ResponseWriter, r *http.Request) {
 	}
 	if exists {
 		http.Error(w, fmt.Sprintf("instance %q already exists in stack %q", req.InstanceID, stackName), http.StatusConflict)
+		return
+	}
+
+	// Validate combined container name length
+	if err := container.ValidateContainerName(stackActualName, req.InstanceID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 

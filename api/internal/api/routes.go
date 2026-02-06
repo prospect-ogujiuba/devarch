@@ -149,6 +149,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 				r.Post("/rename", stackHandler.Rename)
 
 				r.Get("/delete-preview", stackHandler.DeletePreview)
+				r.Get("/network", stackHandler.NetworkStatus)
 
 				r.Route("/instances", func(r chi.Router) {
 					r.Get("/", instanceHandler.List)
