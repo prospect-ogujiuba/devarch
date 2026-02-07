@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { Stack, DeletePreview, NetworkStatus } from '@/types/api'
+import type { Stack, DeletePreview, NetworkStatus, StackCompose } from '@/types/api'
 import { toast } from 'sonner'
 
 // Queries
@@ -57,6 +57,17 @@ export function useStackNetwork(name: string) {
     },
     enabled: !!name,
     refetchInterval: 10000,
+  })
+}
+
+export function useStackCompose(name: string) {
+  return useQuery({
+    queryKey: ['stacks', name, 'compose'],
+    queryFn: async () => {
+      const response = await api.get<StackCompose>(`/stacks/${name}/compose`)
+      return response.data
+    },
+    enabled: !!name,
   })
 }
 

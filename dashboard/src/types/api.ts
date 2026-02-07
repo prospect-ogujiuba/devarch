@@ -482,3 +482,9 @@ export interface NetworkStatus {
   containers: string[]
   labels: Record<string, string>
 }
+
+export interface StackCompose {
+  yaml: string
+  warnings: string[]
+  instance_count: number
+}
