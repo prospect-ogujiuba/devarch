@@ -106,11 +106,11 @@ Plans:
   2. Config files materialize to compose/stacks/{stack}/{instance}/ (no race conditions)
   3. Existing single-service compose generation still works (backward compatibility)
   4. Generated compose includes proper network references and depends_on
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md: TBD
-- [ ] 05-02-PLAN.md: TBD
+- [ ] 05-01-PLAN.md — Stack compose generator, config materialization, handler + route wiring
+- [ ] 05-02-PLAN.md — Dashboard compose tab with CodeMirror preview, warnings, download
 
 ### Phase 6: Plan/Apply Workflow
 **Goal**: Users preview changes before applying (Terraform-style safety), with advisory locking preventing concurrent modifications
@@ -202,7 +202,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 | 2. Stack CRUD | 5/5 | Complete | 2026-02-03 |
 | 3. Service Instances | 5/5 | Complete | 2026-02-04 (verified 2026-02-06) |
 | 4. Network Isolation | 2/2 | Complete | 2026-02-06 |
-| 5. Compose Generation | 0/TBD | Not started | - |
+| 5. Compose Generation | 0/2 | Not started | - |
 | 6. Plan/Apply Workflow | 0/TBD | Not started | - |
 | 7. Export/Import & Bootstrap | 0/TBD | Not started | - |
 | 8. Service Wiring | 0/TBD | Not started | - |
@@ -210,4 +210,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-06 after phase 4 execution*
+*Last updated: 2026-02-07 after phase 5 planning*
