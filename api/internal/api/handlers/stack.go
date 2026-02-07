@@ -119,7 +119,7 @@ func (h *StackHandler) List(w http.ResponseWriter, r *http.Request) {
 			s.updated_at,
 			COUNT(si.id) AS instance_count
 		FROM stacks s
-		LEFT JOIN service_instances si ON si.stack_id = s.id
+		LEFT JOIN service_instances si ON si.stack_id = s.id AND si.deleted_at IS NULL
 		WHERE s.deleted_at IS NULL
 		GROUP BY s.id
 		ORDER BY s.name ASC
@@ -181,7 +181,7 @@ func (h *StackHandler) Get(w http.ResponseWriter, r *http.Request) {
 			s.updated_at,
 			COUNT(si.id) AS instance_count
 		FROM stacks s
-		LEFT JOIN service_instances si ON si.stack_id = s.id
+		LEFT JOIN service_instances si ON si.stack_id = s.id AND si.deleted_at IS NULL
 		WHERE s.name = $1 AND s.deleted_at IS NULL
 		GROUP BY s.id
 	`, name).Scan(
@@ -795,7 +795,7 @@ func (h *StackHandler) ListTrash(w http.ResponseWriter, r *http.Request) {
 			s.deleted_at,
 			COUNT(si.id) AS instance_count
 		FROM stacks s
-		LEFT JOIN service_instances si ON si.stack_id = s.id
+		LEFT JOIN service_instances si ON si.stack_id = s.id AND si.deleted_at IS NULL
 		WHERE s.deleted_at IS NOT NULL
 		GROUP BY s.id
 		ORDER BY s.deleted_at DESC
