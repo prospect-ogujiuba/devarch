@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { createFileRoute, Link, Outlet, useMatch, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe } from 'lucide-react'
+import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useStack, useEnableStack, useDisableStack, useStackNetwork } from '@/features/stacks/queries'
+import { useStack, useEnableStack, useDisableStack, useStackNetwork, useStackCompose } from '@/features/stacks/queries'
+import { CodeEditor } from '@/components/services/code-editor'
 import { useInstances, useUpdateInstance } from '@/features/instances/queries'
 import { EditStackDialog } from '@/components/stacks/edit-stack-dialog'
 import { DeleteStackDialog } from '@/components/stacks/delete-stack-dialog'
@@ -139,6 +141,7 @@ function StackDetailPage() {
   const { data: stack, isLoading } = useStack(name)
   const { data: instances = [] } = useInstances(name)
   const { data: networkStatus } = useStackNetwork(name)
+  const { data: composeData, isLoading: composeLoading } = useStackCompose(name)
   const enableStack = useEnableStack()
   const disableStack = useDisableStack()
 
@@ -173,6 +176,17 @@ function StackDetailPage() {
   const openInstanceDuplicate = (instanceId: string) => {
     setSelectedInstanceId(instanceId)
     setInstanceDuplicateOpen(true)
+  }
+
+  const handleDownload = () => {
+    if (!composeData?.yaml) return
+    const blob = new Blob([composeData.yaml], { type: 'text/yaml' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `docker-compose-${name}.yml`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   if (isLoading) {
@@ -310,101 +324,154 @@ function StackDetailPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">
-              Instances ({instances.length})
-            </CardTitle>
-            <Button size="sm" onClick={() => setAddInstanceOpen(true)}>
-              <Plus className="size-4" />
-              Add Instance
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {instances.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="rounded-full bg-muted p-3 mb-4">
-                <Layers className="size-8 text-muted-foreground" />
-              </div>
-              <h3 className="font-medium mb-1">Add your first service</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Choose from available templates to get started
-              </p>
-              <Button onClick={() => setAddInstanceOpen(true)}>
-                <Plus className="size-4" />
-                Add Instance
-              </Button>
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {instances.map((instance) => (
-                <InstanceCard
-                  key={instance.id}
-                  instance={instance}
-                  stackName={name}
-                  onDelete={openInstanceDelete}
-                  onDuplicate={openInstanceDuplicate}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="instances" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="instances">Instances ({instances.length})</TabsTrigger>
+          <TabsTrigger value="compose">Compose</TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Globe className="size-4 text-blue-500" />
-            <CardTitle className="text-base">Network</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {networkStatus ? (
-            <>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Name:</span>
-                <code className="bg-muted px-2 py-1 rounded text-sm font-mono">{networkStatus.network_name}</code>
+        <TabsContent value="instances" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">
+                  Instances ({instances.length})
+                </CardTitle>
+                <Button size="sm" onClick={() => setAddInstanceOpen(true)}>
+                  <Plus className="size-4" />
+                  Add Instance
+                </Button>
               </div>
+            </CardHeader>
+            <CardContent>
+              {instances.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="rounded-full bg-muted p-3 mb-4">
+                    <Layers className="size-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-medium mb-1">Add your first service</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Choose from available templates to get started
+                  </p>
+                  <Button onClick={() => setAddInstanceOpen(true)}>
+                    <Plus className="size-4" />
+                    Add Instance
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {instances.map((instance) => (
+                    <InstanceCard
+                      key={instance.id}
+                      instance={instance}
+                      stackName={name}
+                      onDelete={openInstanceDelete}
+                      onDuplicate={openInstanceDuplicate}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Status:</span>
-                <Badge variant={networkStatus.status === 'active' ? 'success' : 'outline'}>
-                  {networkStatus.status === 'active' ? 'Active' : 'Not Created'}
-                </Badge>
+                <Globe className="size-4 text-blue-500" />
+                <CardTitle className="text-base">Network</CardTitle>
               </div>
-              {networkStatus.status === 'active' && (
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {networkStatus ? (
                 <>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Driver:</span>
-                    <span className="text-sm">{networkStatus.driver}</span>
+                    <span className="text-sm text-muted-foreground">Name:</span>
+                    <code className="bg-muted px-2 py-1 rounded text-sm font-mono">{networkStatus.network_name}</code>
                   </div>
-                  {networkStatus.containers.length > 0 && (
-                    <div>
-                      <div className="text-sm text-muted-foreground mb-1">Connected containers:</div>
-                      <div className="flex flex-wrap gap-1">
-                        {networkStatus.containers.map((container) => (
-                          <code key={container} className="bg-muted px-2 py-0.5 rounded text-xs font-mono">
-                            {container}
-                          </code>
-                        ))}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Status:</span>
+                    <Badge variant={networkStatus.status === 'active' ? 'success' : 'outline'}>
+                      {networkStatus.status === 'active' ? 'Active' : 'Not Created'}
+                    </Badge>
+                  </div>
+                  {networkStatus.status === 'active' && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Driver:</span>
+                        <span className="text-sm">{networkStatus.driver}</span>
                       </div>
-                    </div>
+                      {networkStatus.containers.length > 0 && (
+                        <div>
+                          <div className="text-sm text-muted-foreground mb-1">Connected containers:</div>
+                          <div className="flex flex-wrap gap-1">
+                            {networkStatus.containers.map((container) => (
+                              <code key={container} className="bg-muted px-2 py-0.5 rounded text-xs font-mono">
+                                {container}
+                              </code>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground pt-1 border-t">
+                        Containers resolve each other by instance name within this network
+                      </div>
+                    </>
                   )}
-                  <div className="text-xs text-muted-foreground pt-1 border-t">
-                    Containers resolve each other by instance name within this network
-                  </div>
                 </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Loading network status...</span>
+                </div>
               )}
-            </>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Loading network status...</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="compose">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Generated Compose YAML</CardTitle>
+                <Button size="sm" variant="outline" onClick={handleDownload} disabled={!composeData?.yaml}>
+                  <Download className="size-4" />
+                  Download
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {composeLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : composeData?.yaml ? (
+                <CodeEditor value={composeData.yaml} onChange={() => {}} language="yaml" readOnly />
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No compose YAML available</p>
+                  <p className="text-sm mt-1">Add instances to this stack to generate compose configuration</p>
+                </div>
+              )}
+
+              {composeData?.warnings && composeData.warnings.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium flex items-center gap-2">
+                    <AlertTriangle className="size-4 text-yellow-500" />
+                    Warnings ({composeData.warnings.length})
+                  </h4>
+                  <div className="space-y-1">
+                    {composeData.warnings.map((warning, i) => (
+                      <div key={i} className="text-sm text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950/20 px-3 py-2 rounded-md">
+                        {warning}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {stack && (
         <>
