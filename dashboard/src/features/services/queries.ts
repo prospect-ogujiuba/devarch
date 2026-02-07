@@ -19,7 +19,7 @@ export function useServices() {
         total: parseInt(response.headers['x-total-count'] ?? '0', 10) || services.length,
       }
     },
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   })
 }
 
@@ -31,7 +31,7 @@ export function useService(name: string) {
       return response.data
     },
     enabled: !!name,
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   })
 }
 
@@ -43,7 +43,7 @@ export function useServiceMetrics(name: string) {
       return response.data?.metrics ?? null
     },
     enabled: !!name,
-    refetchInterval: 3000,
+    refetchInterval: 30000,
   })
 }
 
@@ -57,7 +57,7 @@ export function useServiceLogs(name: string, tail: number = 100) {
       return response.data as string
     },
     enabled: !!name,
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   })
 }
 

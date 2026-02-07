@@ -71,7 +71,7 @@ func (h *WebSocketHandler) Handle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *WebSocketHandler) broadcastLoop() {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
 	pingTicker := time.NewTicker(30 * time.Second)
