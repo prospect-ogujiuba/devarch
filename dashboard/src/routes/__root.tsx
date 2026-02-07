@@ -10,7 +10,7 @@ import { useState, useCallback } from 'react'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5000,
+      staleTime: 30000,
       retry: 1,
     },
   },

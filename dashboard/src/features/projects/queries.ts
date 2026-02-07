@@ -42,7 +42,7 @@ export function useProjectStatus(name: string, enabled = true) {
       return response.data
     },
     enabled: !!name && enabled,
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   })
 }
 

@@ -14,7 +14,7 @@ export function useContainers(filter?: string, search?: string) {
       const response = await api.get<ContainersResponse>(url)
       return response.data
     },
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   })
 }
 
@@ -26,7 +26,7 @@ export function useContainerLogs(name: string, lines: number = 100) {
       return response.data
     },
     enabled: !!name,
-    refetchInterval: 3000,
+    refetchInterval: 30000,
   })
 }
 

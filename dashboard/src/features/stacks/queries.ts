@@ -11,7 +11,7 @@ export function useStacks() {
       const response = await api.get<Stack[]>('/stacks')
       return Array.isArray(response.data) ? response.data : []
     },
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   })
 }
 
@@ -23,7 +23,7 @@ export function useStack(name: string) {
       return response.data
     },
     enabled: !!name,
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   })
 }
 
@@ -56,7 +56,7 @@ export function useStackNetwork(name: string) {
       return response.data
     },
     enabled: !!name,
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   })
 }
 

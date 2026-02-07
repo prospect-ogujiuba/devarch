@@ -9,6 +9,6 @@ export function useStatusOverview() {
       const response = await api.get<StatusOverview>('/status')
       return response.data
     },
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   })
 }

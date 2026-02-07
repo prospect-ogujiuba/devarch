@@ -23,7 +23,7 @@ export function useInstances(stackName: string) {
       return Array.isArray(response.data) ? response.data : []
     },
     enabled: !!stackName,
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   })
 }
 
@@ -35,7 +35,7 @@ export function useInstance(stackName: string, instanceId: string) {
       return response.data
     },
     enabled: !!stackName && !!instanceId,
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   })
 }
 

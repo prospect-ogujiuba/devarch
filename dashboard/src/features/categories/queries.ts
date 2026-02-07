@@ -10,7 +10,7 @@ export function useCategories() {
       const response = await api.get<Category[]>('/categories')
       return Array.isArray(response.data) ? response.data : []
     },
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   })
 }
 
