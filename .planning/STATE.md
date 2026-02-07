@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-03)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Phase 5 - Compose Generation
+**Current focus:** Phase 6 - Plan/Apply Workflow
 
 ## Current Position
 
-Phase: 5 of 9 (Compose Generation)
-Plan: 1 of 2 complete in Phase 5
-Status: In progress
-Last activity: 2026-02-07 — Completed 05-01-PLAN.md
+Phase: 5 of 9 (Compose Generation) -- COMPLETE
+Plan: 2 of 2 complete in Phase 5
+Status: Phase 5 complete
+Last activity: 2026-02-07 — Completed 05-02-PLAN.md
 
-Progress: [██████░░░░] ~56% (15 plans complete of ~27 total)
+Progress: [██████░░░░] ~59% (16 plans complete of ~27 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: 3.0 min
-- Total execution time: ~0.79 hours
+- Total plans completed: 16
+- Average duration: 2.9 min
+- Total execution time: ~0.82 hours
 
 **By Phase:**
 
@@ -31,7 +31,7 @@ Progress: [██████░░░░] ~56% (15 plans complete of ~27 total)
 | 2 | 5/5 | 17.5min | 3.5min |
 | 3 | 5/5 | ~21min | ~4.2min |
 | 4 | 2/2 | 7.3min | 3.7min |
-| 5 | 1/2 | 2.2min | 2.2min |
+| 5 | 2/2 | 4.0min | 2.0min |
 
 *Updated after each plan completion*
 
@@ -138,6 +138,11 @@ Recent decisions affecting current work:
 - Identity labels injected via container.BuildLabels, user overrides preserved
 - Config files materialized atomically via tmp dir + rename swap
 
+**From 05-02:**
+- Tabbed layout on stack detail (Instances + Compose tabs)
+- CodeMirror read-only with yaml language for syntax-highlighted compose preview
+- Blob download pattern for client-side YAML file save
+
 ### Pending Todos
 
 None yet.
@@ -149,5 +154,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 05-01-PLAN.md (stack compose generator). 05-02 next.
+Stopped at: Completed 05-02-PLAN.md (dashboard compose preview). Phase 5 complete. Phase 6 next.
 Resume file: None

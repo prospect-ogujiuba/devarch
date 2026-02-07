@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Stack CRUD** - Stack management API + dashboard UI
 - [x] **Phase 3: Service Instances** - Instance overrides + config resolution
 - [x] **Phase 4: Network Isolation** - Per-stack networks, deterministic naming
-- [ ] **Phase 5: Compose Generation** - Stack-scoped YAML generation
+- [x] **Phase 5: Compose Generation** - Stack-scoped YAML generation
 - [ ] **Phase 6: Plan/Apply Workflow** - Safety mechanism with advisory locking
 - [ ] **Phase 7: Export/Import & Bootstrap** - Shareable devarch.yml, lockfile, init/doctor
 - [ ] **Phase 8: Service Wiring** - Contract-based auto-wiring + explicit wiring
@@ -110,7 +110,7 @@ Plans:
 
 Plans:
 - [x] 05-01-PLAN.md — Stack compose generator, config materialization, handler + route wiring (COMPLETE 2026-02-07)
-- [ ] 05-02-PLAN.md — Dashboard compose tab with CodeMirror preview, warnings, download
+- [x] 05-02-PLAN.md — Dashboard compose tab with CodeMirror preview, warnings, download (COMPLETE 2026-02-07)
 
 ### Phase 6: Plan/Apply Workflow
 **Goal**: Users preview changes before applying (Terraform-style safety), with advisory locking preventing concurrent modifications
@@ -202,7 +202,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 | 2. Stack CRUD | 5/5 | Complete | 2026-02-03 |
 | 3. Service Instances | 5/5 | Complete | 2026-02-04 (verified 2026-02-06) |
 | 4. Network Isolation | 2/2 | Complete | 2026-02-06 |
-| 5. Compose Generation | 1/2 | In progress | - |
+| 5. Compose Generation | 2/2 | Complete | 2026-02-07 |
 | 6. Plan/Apply Workflow | 0/TBD | Not started | - |
 | 7. Export/Import & Bootstrap | 0/TBD | Not started | - |
 | 8. Service Wiring | 0/TBD | Not started | - |
@@ -210,4 +210,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-07 after phase 5 planning*
+*Last updated: 2026-02-07 after phase 5 completion*
