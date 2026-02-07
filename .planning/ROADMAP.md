@@ -109,7 +109,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Stack compose generator, config materialization, handler + route wiring
+- [x] 05-01-PLAN.md — Stack compose generator, config materialization, handler + route wiring (COMPLETE 2026-02-07)
 - [ ] 05-02-PLAN.md — Dashboard compose tab with CodeMirror preview, warnings, download
 
 ### Phase 6: Plan/Apply Workflow
@@ -202,7 +202,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 | 2. Stack CRUD | 5/5 | Complete | 2026-02-03 |
 | 3. Service Instances | 5/5 | Complete | 2026-02-04 (verified 2026-02-06) |
 | 4. Network Isolation | 2/2 | Complete | 2026-02-06 |
-| 5. Compose Generation | 0/2 | Not started | - |
+| 5. Compose Generation | 1/2 | In progress | - |
 | 6. Plan/Apply Workflow | 0/TBD | Not started | - |
 | 7. Export/Import & Bootstrap | 0/TBD | Not started | - |
 | 8. Service Wiring | 0/TBD | Not started | - |
