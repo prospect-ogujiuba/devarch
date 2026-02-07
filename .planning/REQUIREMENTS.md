@@ -46,9 +46,9 @@
 
 ### Compose Generation
 
-- [ ] **COMP-01**: Stack compose generator produces one YAML with N services from effective configs
-- [ ] **COMP-02**: Stack-scoped materialization path: compose/stacks/{stack}/{instance}/
-- [ ] **COMP-03**: Existing single-service generator continues working (backward compat)
+- [x] **COMP-01**: Stack compose generator produces one YAML with N services from effective configs
+- [x] **COMP-02**: Stack-scoped materialization path: compose/stacks/{stack}/{instance}/
+- [x] **COMP-03**: Existing single-service generator continues working (backward compat)
 
 ### Plan/Apply
 
