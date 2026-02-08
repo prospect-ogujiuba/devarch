@@ -322,6 +322,7 @@ export interface Stack {
   enabled: boolean
   instance_count: number
   running_count: number
+  network_active: boolean
   created_at: string
   updated_at: string
   deleted_at?: string | null
