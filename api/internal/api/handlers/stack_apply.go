@@ -36,11 +36,12 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 
 	var stackID int
 	var networkName sql.NullString
+	var enabled bool
 	err := h.db.QueryRow(`
-		SELECT id, network_name
+		SELECT id, network_name, enabled
 		FROM stacks
 		WHERE name = $1 AND deleted_at IS NULL
-	`, stackName).Scan(&stackID, &networkName)
+	`, stackName).Scan(&stackID, &networkName, &enabled)
 
 	if err == sql.ErrNoRows {
 		http.Error(w, fmt.Sprintf("stack %q not found", stackName), http.StatusNotFound)
@@ -48,6 +49,11 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if !enabled {
+		http.Error(w, "stack is disabled — enable it first", http.StatusConflict)
 		return
 	}
 

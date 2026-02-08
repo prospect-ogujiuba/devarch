@@ -151,6 +151,22 @@ func (c *Client) execComposeCommand(composeYAML []byte, projectName string, args
 	return nil
 }
 
+func (c *Client) StopStack(projectName string, composeYAML []byte) error {
+	return c.execComposeCommand(composeYAML, projectName, "down", "--remove-orphans")
+}
+
+func (c *Client) StopComposeService(projectName string, composeYAML []byte, service string) error {
+	return c.execComposeCommand(composeYAML, projectName, "stop", service)
+}
+
+func (c *Client) StartComposeService(projectName string, composeYAML []byte, service string) error {
+	return c.execComposeCommand(composeYAML, projectName, "start", service)
+}
+
+func (c *Client) RestartComposeService(projectName string, composeYAML []byte, service string) error {
+	return c.execComposeCommand(composeYAML, projectName, "restart", service)
+}
+
 func (c *Client) StartService(name string, composeYAML []byte) error {
 	return c.execComposeCommand(composeYAML, name, "up", "-d")
 }

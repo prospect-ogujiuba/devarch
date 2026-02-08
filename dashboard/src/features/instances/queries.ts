@@ -169,6 +169,60 @@ export function useRenameInstance(stackName: string, instanceId: string) {
   })
 }
 
+export function useStopInstance(stackName: string, instanceId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.post(`/stacks/${stackName}/instances/${instanceId}/stop`)
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success(`Stopped ${instanceId}`)
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data || `Failed to stop ${instanceId}`)
+    },
+  })
+}
+
+export function useStartInstance(stackName: string, instanceId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.post(`/stacks/${stackName}/instances/${instanceId}/start`)
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success(`Started ${instanceId}`)
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data || `Failed to start ${instanceId}`)
+    },
+  })
+}
+
+export function useRestartInstance(stackName: string, instanceId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.post(`/stacks/${stackName}/instances/${instanceId}/restart`)
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success(`Restarted ${instanceId}`)
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data || `Failed to restart ${instanceId}`)
+    },
+  })
+}
+
 export function useUpdateInstancePorts(stackName: string, instanceId: string) {
   const queryClient = useQueryClient()
   return useMutation({

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link, Outlet, useMatch, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2, Play } from 'lucide-react'
+import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2, Play, Square, RotateCcw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,9 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useStack, useEnableStack, useDisableStack, useStackNetwork, useStackCompose, useGeneratePlan, useApplyPlan } from '@/features/stacks/queries'
+import { useStack, useEnableStack, useDisableStack, useStopStack, useStartStack, useRestartStack, useStackNetwork, useStackCompose, useGeneratePlan, useApplyPlan } from '@/features/stacks/queries'
 import { CodeEditor } from '@/components/services/code-editor'
-import { useInstances, useUpdateInstance } from '@/features/instances/queries'
+import { useInstances, useUpdateInstance, useStopInstance, useStartInstance, useRestartInstance } from '@/features/instances/queries'
 import { EditStackDialog } from '@/components/stacks/edit-stack-dialog'
 import { DeleteStackDialog } from '@/components/stacks/delete-stack-dialog'
 import { CloneStackDialog } from '@/components/stacks/clone-stack-dialog'
@@ -50,6 +50,9 @@ interface InstanceCardProps {
 
 function InstanceCard({ instance, stackName, onDelete, onDuplicate }: InstanceCardProps) {
   const updateInstance = useUpdateInstance(stackName, instance.instance_id)
+  const stopInstance = useStopInstance(stackName, instance.instance_id)
+  const startInstance = useStartInstance(stackName, instance.instance_id)
+  const restartInstance = useRestartInstance(stackName, instance.instance_id)
   const statusColor = instance.enabled ? 'bg-green-500' : 'bg-muted-foreground'
 
   const handleToggle = (e: React.MouseEvent) => {
@@ -99,6 +102,19 @@ function InstanceCard({ instance, stackName, onDelete, onDuplicate }: InstanceCa
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem onClick={(e) => { e.preventDefault(); stopInstance.mutate() }}>
+              <Square className="size-4" />
+              Stop
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { e.preventDefault(); startInstance.mutate() }}>
+              <Play className="size-4" />
+              Start
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { e.preventDefault(); restartInstance.mutate() }}>
+              <RotateCcw className="size-4" />
+              Restart
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleToggle}>
               {instance.enabled ? <PowerOff className="size-4" /> : <Power className="size-4" />}
               {instance.enabled ? 'Disable' : 'Enable'}
@@ -144,6 +160,9 @@ function StackDetailPage() {
   const { data: composeData, isLoading: composeLoading } = useStackCompose(name)
   const enableStack = useEnableStack()
   const disableStack = useDisableStack()
+  const stopStack = useStopStack()
+  const startStack = useStartStack()
+  const restartStack = useRestartStack()
   const generatePlan = useGeneratePlan(name)
   const applyPlan = useApplyPlan(name)
 
@@ -236,6 +255,39 @@ function StackDetailPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {stack.enabled && stack.running_count > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => stopStack.mutate(stack.name)}
+              disabled={stopStack.isPending}
+            >
+              {stopStack.isPending ? <Loader2 className="size-4 animate-spin" /> : <Square className="size-4" />}
+              Stop
+            </Button>
+          )}
+          {stack.enabled && stack.running_count === 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => startStack.mutate(stack.name)}
+              disabled={startStack.isPending}
+            >
+              {startStack.isPending ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
+              Start
+            </Button>
+          )}
+          {stack.enabled && stack.running_count > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => restartStack.mutate(stack.name)}
+              disabled={restartStack.isPending}
+            >
+              {restartStack.isPending ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
+              Restart
+            </Button>
+          )}
           <Button
             variant={stack.enabled ? 'outline' : 'success'}
             size="sm"
