@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { z } from 'zod'
 import { Loader2, Server, Play, Square } from 'lucide-react'
 import { useCategories } from '@/features/categories/queries'
 import { CategoryCard } from '@/components/categories/category-card'
@@ -12,6 +13,13 @@ import { useListControls } from '@/hooks/use-list-controls'
 import type { Category } from '@/types/api'
 
 export const Route = createFileRoute('/categories/')({
+  validateSearch: z.object({
+    q: z.string().optional(),
+    status: z.string().optional(),
+    sort: z.enum(['name', 'services', 'running', 'order']).optional(),
+    dir: z.enum(['asc', 'desc']).optional(),
+    view: z.enum(['table', 'grid']).optional(),
+  }),
   component: CategoriesPage,
 })
 
@@ -45,6 +53,8 @@ const sortOptions = [
 
 function CategoriesPage() {
   const { data: categories, isLoading } = useCategories()
+  const routeSearch = Route.useSearch()
+  const navigate = Route.useNavigate()
   const items = useMemo(() => categories ?? [], [categories])
 
   const controls = useListControls({
@@ -56,6 +66,90 @@ function CategoriesPage() {
     defaultSort: 'order',
     defaultView: 'grid',
   })
+
+  const {
+    search,
+    setSearch,
+    filters,
+    setFilter,
+    sortBy,
+    setSortBy,
+    sortDir,
+    setSortDir,
+    viewMode,
+    setViewMode,
+  } = controls
+  const syncingFromUrlRef = useRef(false)
+
+  useEffect(() => {
+    syncingFromUrlRef.current = true
+    setSearch(routeSearch.q ?? '')
+    setFilter('status', routeSearch.status ?? 'all')
+    setSortBy(routeSearch.sort ?? 'order')
+    setSortDir(routeSearch.dir ?? 'asc')
+    setViewMode(routeSearch.view ?? 'grid')
+  }, [
+    routeSearch.q,
+    routeSearch.status,
+    routeSearch.sort,
+    routeSearch.dir,
+    routeSearch.view,
+    setSearch,
+    setFilter,
+    setSortBy,
+    setSortDir,
+    setViewMode,
+  ])
+
+  useEffect(() => {
+    if (syncingFromUrlRef.current) {
+      syncingFromUrlRef.current = false
+      return
+    }
+
+    const nextQ = search || undefined
+    const nextStatus = filters.status && filters.status !== 'all' ? filters.status : undefined
+    const nextSort =
+      sortBy !== 'order' && sortOptions.some((option) => option.value === sortBy)
+        ? (sortBy as typeof routeSearch.sort)
+        : undefined
+    const nextDir = sortDir === 'asc' ? undefined : sortDir
+    const nextView = viewMode === 'grid' ? undefined : viewMode
+
+    if (
+      routeSearch.q === nextQ
+      && routeSearch.status === nextStatus
+      && routeSearch.sort === nextSort
+      && routeSearch.dir === nextDir
+      && routeSearch.view === nextView
+    ) {
+      return
+    }
+
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        q: nextQ,
+        status: nextStatus,
+        sort: nextSort,
+        dir: nextDir,
+        view: nextView,
+      }),
+      replace: true,
+    })
+  }, [
+    search,
+    filters.status,
+    sortBy,
+    sortDir,
+    viewMode,
+    routeSearch.q,
+    routeSearch.status,
+    routeSearch.sort,
+    routeSearch.dir,
+    routeSearch.view,
+    navigate,
+  ])
 
   const statusCounts = useMemo(() => {
     let running = 0
@@ -90,15 +184,15 @@ function CategoriesPage() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Categories</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-xl font-bold sm:text-2xl">Categories</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
           {totalRunning} of {totalServices} services running across {items.length} categories
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard icon={Server} label="Categories" value={items.length} />
         <StatCard icon={Play} label="Services Running" value={totalRunning} color="text-green-500" />
         <StatCard icon={Square} label="Services Stopped" value={totalServices - totalRunning} color="text-muted-foreground" />

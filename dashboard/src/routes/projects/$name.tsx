@@ -1,18 +1,31 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { z } from 'zod'
 import { ArrowLeft, Loader2, GitBranch, Package, Code2, ExternalLink, Puzzle, Palette, Play, Square, RotateCcw, Server } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ProjectLogo } from '@/components/projects/project-logo'
 import { useProject, useProjectServices, useProjectStatus, useProjectControl } from '@/features/projects/queries'
 
 export const Route = createFileRoute('/projects/$name')({
+  validateSearch: z.object({
+    tab: z.string().optional(),
+  }),
   component: ProjectDetailPage,
 })
 
 function ProjectDetailPage() {
   const { name } = Route.useParams()
+  const routeSearch = Route.useSearch()
+  const navigate = Route.useNavigate()
   const { data: project, isLoading } = useProject(name)
   const { data: services } = useProjectServices(name)
   const { data: statuses } = useProjectStatus(name, !!project?.compose_path)
@@ -56,6 +69,26 @@ function ProjectDetailPage() {
 
   const statusMap = new Map(statuses?.map(s => [s.name, s]) ?? [])
   const hasCompose = !!project.compose_path
+  const tabs: string[] = [
+    ...(hasCompose ? ['services'] : []),
+    'info',
+    'deps',
+    ...(isWordPress && plugins.length > 0 ? ['plugins'] : []),
+    ...(isWordPress && themes.length > 0 ? ['themes'] : []),
+    'scripts',
+    'git',
+  ]
+  const defaultTab = hasCompose ? 'services' : 'info'
+  const activeTab = routeSearch.tab && tabs.includes(routeSearch.tab) ? routeSearch.tab : defaultTab
+  const tabLabels: Record<string, string> = {
+    services: `Services (${services?.length ?? 0})`,
+    info: 'Info',
+    deps: `Dependencies (${flatDeps.length})`,
+    plugins: `Plugins (${plugins.length})`,
+    themes: `Themes (${themes.length})`,
+    scripts: `Scripts (${scriptEntries.length})`,
+    git: 'Git',
+  }
 
   return (
     <div className="space-y-6">
@@ -185,8 +218,28 @@ function ProjectDetailPage() {
         )}
       </div>
 
-      <Tabs defaultValue={hasCompose ? 'services' : 'info'} className="space-y-4">
-        <TabsList>
+      <Tabs
+        value={activeTab}
+        onValueChange={(tab) => navigate({ search: (prev) => ({ ...prev, tab }) })}
+        className="space-y-4"
+      >
+        <div className="sm:hidden">
+          <Select
+            value={activeTab}
+            onValueChange={(tab) => navigate({ search: (prev) => ({ ...prev, tab }) })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {tabs.map((tab) => (
+                <SelectItem key={tab} value={tab}>{tabLabels[tab] ?? tab}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <TabsList className="hidden sm:inline-flex">
           {hasCompose && (
             <TabsTrigger value="services" className="flex items-center gap-1.5">
               <Server className="size-3.5" />

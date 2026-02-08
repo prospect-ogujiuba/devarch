@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { z } from 'zod'
 import { Loader2, RefreshCw, FolderOpen, Package, Code, Globe } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useProjects, useScanProjects } from '@/features/projects/queries'
@@ -13,6 +14,14 @@ import { useListControls } from '@/hooks/use-list-controls'
 import type { Project } from '@/types/api'
 
 export const Route = createFileRoute('/projects/')({
+  validateSearch: z.object({
+    q: z.string().optional(),
+    type: z.string().optional(),
+    language: z.string().optional(),
+    sort: z.enum(['name', 'type', 'services', 'updated']).optional(),
+    dir: z.enum(['asc', 'desc']).optional(),
+    view: z.enum(['table', 'grid']).optional(),
+  }),
   component: ProjectsPage,
 })
 
@@ -47,6 +56,8 @@ const sortOptions = [
 
 function ProjectsPage() {
   const { data: projects, isLoading } = useProjects()
+  const routeSearch = Route.useSearch()
+  const navigate = Route.useNavigate()
   const scanMutation = useScanProjects()
   const items = useMemo(() => projects ?? [], [projects])
 
@@ -59,6 +70,97 @@ function ProjectsPage() {
     defaultSort: 'name',
     defaultView: 'grid',
   })
+
+  const {
+    search,
+    setSearch,
+    filters,
+    setFilter,
+    sortBy,
+    setSortBy,
+    sortDir,
+    setSortDir,
+    viewMode,
+    setViewMode,
+  } = controls
+  const syncingFromUrlRef = useRef(false)
+
+  useEffect(() => {
+    syncingFromUrlRef.current = true
+    setSearch(routeSearch.q ?? '')
+    setFilter('type', routeSearch.type ?? 'all')
+    setFilter('language', routeSearch.language ?? 'all')
+    setSortBy(routeSearch.sort ?? 'name')
+    setSortDir(routeSearch.dir ?? 'asc')
+    setViewMode(routeSearch.view ?? 'grid')
+  }, [
+    routeSearch.q,
+    routeSearch.type,
+    routeSearch.language,
+    routeSearch.sort,
+    routeSearch.dir,
+    routeSearch.view,
+    setSearch,
+    setFilter,
+    setSortBy,
+    setSortDir,
+    setViewMode,
+  ])
+
+  useEffect(() => {
+    if (syncingFromUrlRef.current) {
+      syncingFromUrlRef.current = false
+      return
+    }
+
+    const nextQ = search || undefined
+    const nextType = filters.type && filters.type !== 'all' ? filters.type : undefined
+    const nextLanguage = filters.language && filters.language !== 'all' ? filters.language : undefined
+    const nextSort =
+      sortBy !== 'name' && sortOptions.some((option) => option.value === sortBy)
+        ? (sortBy as typeof routeSearch.sort)
+        : undefined
+    const nextDir = sortDir === 'asc' ? undefined : sortDir
+    const nextView = viewMode === 'grid' ? undefined : viewMode
+
+    if (
+      routeSearch.q === nextQ
+      && routeSearch.type === nextType
+      && routeSearch.language === nextLanguage
+      && routeSearch.sort === nextSort
+      && routeSearch.dir === nextDir
+      && routeSearch.view === nextView
+    ) {
+      return
+    }
+
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        q: nextQ,
+        type: nextType,
+        language: nextLanguage,
+        sort: nextSort,
+        dir: nextDir,
+        view: nextView,
+      }),
+      replace: true,
+    })
+  }, [
+    search,
+    filters.type,
+    filters.language,
+    sortBy,
+    sortDir,
+    viewMode,
+    routeSearch.q,
+    routeSearch.type,
+    routeSearch.language,
+    routeSearch.sort,
+    routeSearch.dir,
+    routeSearch.view,
+    navigate,
+  ])
 
   if (isLoading) {
     return (
@@ -92,17 +194,18 @@ function ProjectsPage() {
   ]
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Projects</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl font-bold sm:text-2xl">Projects</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">
             {controls.filtered.length} project{controls.filtered.length !== 1 ? 's' : ''} in apps/
           </p>
         </div>
         <Button
           variant="outline"
           size="sm"
+          className="w-full sm:w-auto"
           onClick={() => scanMutation.mutate()}
           disabled={scanMutation.isPending}
         >
@@ -115,7 +218,7 @@ function ProjectsPage() {
         </Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={FolderOpen} label="Projects" value={items.length} />
         <StatCard icon={Code} label="Types" value={types.length} />
         <StatCard icon={Package} label="Total Services" value={totalServices} />

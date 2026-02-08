@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { z } from 'zod'
 import { Server, Play, Square, Activity, Loader2, Cpu, MemoryStick, FolderOpen } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -16,6 +17,13 @@ import type { CategoryOverview } from '@/types/api'
 import { titleCase } from '@/lib/utils'
 
 export const Route = createFileRoute('/')({
+  validateSearch: z.object({
+    q: z.string().optional(),
+    status: z.string().optional(),
+    sort: z.enum(['name', 'services', 'running']).optional(),
+    dir: z.enum(['asc', 'desc']).optional(),
+    view: z.enum(['table', 'grid']).optional(),
+  }),
   component: OverviewPage,
 })
 
@@ -47,6 +55,8 @@ const sortOptions = [
 
 function OverviewPage() {
   const { data: status, isLoading } = useStatusOverview()
+  const routeSearch = Route.useSearch()
+  const navigate = Route.useNavigate()
   const { data: servicesData } = useServices()
   const services = useMemo(() => servicesData?.services ?? [], [servicesData])
   const categories = useMemo(() => status?.categories ?? [], [status])
@@ -60,6 +70,90 @@ function OverviewPage() {
     defaultSort: 'name',
     defaultView: 'grid',
   })
+
+  const {
+    search,
+    setSearch,
+    filters,
+    setFilter,
+    sortBy,
+    setSortBy,
+    sortDir,
+    setSortDir,
+    viewMode,
+    setViewMode,
+  } = controls
+  const syncingFromUrlRef = useRef(false)
+
+  useEffect(() => {
+    syncingFromUrlRef.current = true
+    setSearch(routeSearch.q ?? '')
+    setFilter('status', routeSearch.status ?? 'all')
+    setSortBy(routeSearch.sort ?? 'name')
+    setSortDir(routeSearch.dir ?? 'asc')
+    setViewMode(routeSearch.view ?? 'grid')
+  }, [
+    routeSearch.q,
+    routeSearch.status,
+    routeSearch.sort,
+    routeSearch.dir,
+    routeSearch.view,
+    setSearch,
+    setFilter,
+    setSortBy,
+    setSortDir,
+    setViewMode,
+  ])
+
+  useEffect(() => {
+    if (syncingFromUrlRef.current) {
+      syncingFromUrlRef.current = false
+      return
+    }
+
+    const nextQ = search || undefined
+    const nextStatus = filters.status && filters.status !== 'all' ? filters.status : undefined
+    const nextSort =
+      sortBy !== 'name' && sortOptions.some((option) => option.value === sortBy)
+        ? (sortBy as typeof routeSearch.sort)
+        : undefined
+    const nextDir = sortDir === 'asc' ? undefined : sortDir
+    const nextView = viewMode === 'grid' ? undefined : viewMode
+
+    if (
+      routeSearch.q === nextQ
+      && routeSearch.status === nextStatus
+      && routeSearch.sort === nextSort
+      && routeSearch.dir === nextDir
+      && routeSearch.view === nextView
+    ) {
+      return
+    }
+
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        q: nextQ,
+        status: nextStatus,
+        sort: nextSort,
+        dir: nextDir,
+        view: nextView,
+      }),
+      replace: true,
+    })
+  }, [
+    search,
+    filters.status,
+    sortBy,
+    sortDir,
+    viewMode,
+    routeSearch.q,
+    routeSearch.status,
+    routeSearch.sort,
+    routeSearch.dir,
+    routeSearch.view,
+    navigate,
+  ])
 
   const serviceStats = useMemo(() => {
     let totalCpu = 0
@@ -108,13 +202,13 @@ function OverviewPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5 sm:space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Overview</h1>
-        <p className="text-muted-foreground">Monitor and manage your development services</p>
+        <h1 className="text-xl font-bold sm:text-2xl">Overview</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">Monitor and manage your development services</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard icon={Server} label="Total Services" value={status?.total_services ?? 0} />
         <StatCard icon={Play} label="Running" value={status?.running_services ?? 0} color="text-green-500" />
         <StatCard icon={Square} label="Stopped" value={status?.stopped_services ?? 0} color="text-muted-foreground" />

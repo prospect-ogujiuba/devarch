@@ -1,10 +1,18 @@
 import { useState } from 'react'
 import { createFileRoute, Link, Outlet, useMatch, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2, Play, Square, RotateCcw, Network, Unplug } from 'lucide-react'
+import { z } from 'zod'
+import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2, Play, Square, RotateCcw, Network, Unplug, Clock3 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +35,7 @@ import {
 } from '@/components/instances/instance-actions'
 import type { Instance, StackPlan } from '@/types/api'
 import { cn } from '@/lib/utils'
+import { StatCard } from '@/components/ui/stat-card'
 
 function timeAgo(dateStr: string): string {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
@@ -101,7 +110,7 @@ function InstanceCard({ instance, stackName, runningContainerNames, onDelete, on
           </div>
         </CardContent>
       </Link>
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute right-2 top-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
         <DropdownMenu>
           <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
             <Button variant="ghost" size="sm" className="size-6 p-0">
@@ -149,8 +158,14 @@ function InstanceCard({ instance, stackName, runningContainerNames, onDelete, on
 }
 
 export const Route = createFileRoute('/stacks/$name')({
+  validateSearch: z.object({
+    tab: z.enum(['instances', 'compose', 'deploy']).optional(),
+  }),
   component: StackDetailLayout,
 })
+
+const stackTabs = ['instances', 'compose', 'deploy'] as const
+type StackTab = (typeof stackTabs)[number]
 
 function StackDetailLayout() {
   const childMatch = useMatch({ from: '/stacks/$name/instances/$instance', shouldThrow: false })
@@ -160,6 +175,8 @@ function StackDetailLayout() {
 
 function StackDetailPage() {
   const { name } = Route.useParams()
+  const routeSearch = Route.useSearch()
+  const routeNavigate = Route.useNavigate()
   const navigate = useNavigate()
   const { data: stack, isLoading } = useStack(name)
   const { data: instances = [] } = useInstances(name)
@@ -245,27 +262,35 @@ function StackDetailPage() {
     )
   }
 
-  const createdAgo = timeAgo(stack.created_at)
   const updatedAgo = timeAgo(stack.updated_at)
+  const activeTab: StackTab = routeSearch.tab ?? 'instances'
+  const tabLabels: Record<StackTab, string> = {
+    instances: `Instances (${instances.length})`,
+    compose: 'Compose',
+    deploy: 'Deploy',
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link to="/stacks" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-5" />
+    <div className="space-y-5 sm:space-y-6">
+      <div className="space-y-3">
+        <Link to="/stacks" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-4" />
+          Back to Stacks
         </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{stack.name}</h1>
-            <Badge variant={stack.enabled ? 'success' : 'outline'}>
-              {stack.enabled ? 'Enabled' : 'Disabled'}
-            </Badge>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="truncate text-xl font-bold sm:text-2xl">{stack.name}</h1>
+              <Badge variant={stack.enabled ? 'success' : 'outline'}>
+                {stack.enabled ? 'Enabled' : 'Disabled'}
+              </Badge>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground sm:text-base">
+              {stack.description || `Manage ${stack.instance_count} instance${stack.instance_count === 1 ? '' : 's'} in this stack`}
+            </p>
           </div>
-          {stack.description && (
-            <p className="text-muted-foreground mt-1">{stack.description}</p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {stack.enabled && stack.running_count > 0 && (
             <Button
               variant="outline"
@@ -343,56 +368,57 @@ function StackDetailPage() {
                 <Trash2 className="size-4" />
                 Delete
               </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="py-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-semibold">
-              {stack.enabled ? 'Enabled' : 'Disabled'}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="py-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Instances</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-semibold">{stack.instance_count}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="py-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Running</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-semibold">
-              {stack.running_count} / {stack.instance_count}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="py-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Created</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm">{createdAgo}</div>
-            <div className="text-xs text-muted-foreground">Updated {updatedAgo}</div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon={Power}
+          label="Status"
+          value={stack.enabled ? 'Enabled' : 'Disabled'}
+          color={stack.enabled ? 'text-green-500' : 'text-muted-foreground'}
+        />
+        <StatCard icon={Layers} label="Instances" value={stack.instance_count} />
+        <StatCard
+          icon={Play}
+          label="Running"
+          value={`${stack.running_count} / ${stack.instance_count}`}
+          color={stack.running_count > 0 ? 'text-green-500' : 'text-muted-foreground'}
+        />
+        <StatCard icon={Clock3} label="Updated" value={updatedAgo} />
       </div>
 
-      <Tabs defaultValue="instances" className="space-y-4">
-        <TabsList>
+      <Tabs
+        value={activeTab}
+        onValueChange={(tab) => {
+          if (!stackTabs.includes(tab as StackTab)) return
+          routeNavigate({ search: (prev) => ({ ...prev, tab: tab as StackTab }) })
+        }}
+        className="space-y-4"
+      >
+        <div className="sm:hidden">
+          <Select
+            value={activeTab}
+            onValueChange={(tab) => {
+              if (!stackTabs.includes(tab as StackTab)) return
+              routeNavigate({ search: (prev) => ({ ...prev, tab: tab as StackTab }) })
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {stackTabs.map((tab) => (
+                <SelectItem key={tab} value={tab}>{tabLabels[tab]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <TabsList className="hidden sm:inline-flex">
           <TabsTrigger value="instances">Instances ({instances.length})</TabsTrigger>
           <TabsTrigger value="compose">Compose</TabsTrigger>
           <TabsTrigger value="deploy">Deploy</TabsTrigger>
@@ -401,11 +427,11 @@ function StackDetailPage() {
         <TabsContent value="instances" className="space-y-6">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="text-base">
                   Instances ({instances.length})
                 </CardTitle>
-                <Button size="sm" onClick={() => setAddInstanceOpen(true)}>
+                <Button size="sm" className="w-full sm:w-auto" onClick={() => setAddInstanceOpen(true)}>
                   <Plus className="size-4" />
                   Add Instance
                 </Button>
@@ -445,7 +471,7 @@ function StackDetailPage() {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   <Globe className="size-4 text-blue-500" />
                   <CardTitle className="text-base">Network</CardTitle>
@@ -454,6 +480,7 @@ function StackDetailPage() {
                   <Button
                     size="sm"
                     variant="outline"
+                    className="w-full sm:w-auto"
                     onClick={() => createNetwork.mutate(name)}
                     disabled={createNetwork.isPending}
                   >
@@ -465,6 +492,7 @@ function StackDetailPage() {
                   <Button
                     size="sm"
                     variant="outline"
+                    className="w-full sm:w-auto"
                     onClick={() => removeNetwork.mutate(name)}
                     disabled={removeNetwork.isPending}
                   >
@@ -524,14 +552,14 @@ function StackDetailPage() {
         <TabsContent value="compose">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="text-base">Generated Compose YAML</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setComposeExpanded(!composeExpanded)} disabled={!composeData?.yaml}>
+                <div className="flex w-full items-center gap-2 sm:w-auto">
+                  <Button size="sm" variant="outline" className="flex-1 sm:flex-none" onClick={() => setComposeExpanded(!composeExpanded)} disabled={!composeData?.yaml}>
                     {composeExpanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
                     {composeExpanded ? 'Collapse' : 'Expand'}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={handleDownload} disabled={!composeData?.yaml}>
+                  <Button size="sm" variant="outline" className="flex-1 sm:flex-none" onClick={handleDownload} disabled={!composeData?.yaml}>
                     <Download className="size-4" />
                     Download
                   </Button>
@@ -574,10 +602,11 @@ function StackDetailPage() {
         <TabsContent value="deploy">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="text-base">Deploy Stack</CardTitle>
                 <Button
                   size="sm"
+                  className="w-full sm:w-auto"
                   onClick={() => generatePlan.mutate(undefined, { onSuccess: (data) => setCurrentPlan(data.data) })}
                   disabled={generatePlan.isPending || applyPlan.isPending}
                 >
