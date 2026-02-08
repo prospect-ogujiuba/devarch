@@ -13,11 +13,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/priz/devarch-api/internal/compose"
+	"github.com/priz/devarch-api/internal/lock"
 	"github.com/priz/devarch-api/internal/plan"
 )
 
 type applyRequest struct {
-	Token string `json:"token"`
+	Token string          `json:"token"`
+	Lock  *lock.LockFile  `json:"lock,omitempty"`
 }
 
 func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
@@ -147,9 +149,19 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	response := map[string]interface{}{
 		"status": "applied",
 		"output": output,
-	})
+	}
+
+	if req.Lock != nil {
+		validator := lock.NewValidator(h.db, h.containerClient)
+		result, err := validator.Validate(req.Lock, stackName)
+		if err == nil && len(result.Warnings) > 0 {
+			response["lock_warnings"] = result.Warnings
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
