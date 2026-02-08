@@ -148,6 +148,10 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 				r.Post("/clone", stackHandler.Clone)
 				r.Post("/rename", stackHandler.Rename)
 
+				r.Post("/stop", stackHandler.Stop)
+				r.Post("/start", stackHandler.Start)
+				r.Post("/restart", stackHandler.Restart)
+
 				r.Get("/delete-preview", stackHandler.DeletePreview)
 				r.Get("/network", stackHandler.NetworkStatus)
 				r.Get("/compose", stackHandler.Compose)
@@ -166,6 +170,10 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 						r.Post("/duplicate", instanceHandler.Duplicate)
 						r.Put("/rename", instanceHandler.Rename)
 						r.Get("/delete-preview", instanceHandler.DeletePreview)
+
+						r.Post("/stop", instanceHandler.Stop)
+						r.Post("/start", instanceHandler.Start)
+						r.Post("/restart", instanceHandler.Restart)
 
 						r.Put("/ports", instanceHandler.UpdatePorts)
 						r.Put("/volumes", instanceHandler.UpdateVolumes)

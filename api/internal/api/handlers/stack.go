@@ -4,11 +4,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/lib/pq"
+	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
 )
 
@@ -32,6 +35,43 @@ func (h *StackHandler) runningCount(stackName string) int {
 		return 0
 	}
 	return count
+}
+
+func (h *StackHandler) stackCompose(stackName string) ([]byte, error) {
+	var networkName sql.NullString
+	err := h.db.QueryRow(`
+		SELECT network_name FROM stacks WHERE name = $1 AND deleted_at IS NULL
+	`, stackName).Scan(&networkName)
+	if err != nil {
+		return nil, fmt.Errorf("lookup stack: %w", err)
+	}
+
+	netName := fmt.Sprintf("devarch-%s-net", stackName)
+	if networkName.Valid && networkName.String != "" {
+		netName = networkName.String
+	}
+
+	gen := compose.NewGenerator(h.db, netName)
+	if root := os.Getenv("PROJECT_ROOT"); root != "" {
+		gen.SetProjectRoot(root)
+	}
+	if hostRoot := os.Getenv("HOST_PROJECT_ROOT"); hostRoot != "" {
+		gen.SetHostProjectRoot(hostRoot)
+	}
+
+	projectRoot := os.Getenv("PROJECT_ROOT")
+	if projectRoot != "" {
+		if err := gen.MaterializeStackConfigs(stackName, projectRoot); err != nil {
+			return nil, fmt.Errorf("materialize configs: %w", err)
+		}
+	}
+
+	yamlBytes, _, err := gen.GenerateStack(stackName)
+	if err != nil {
+		return nil, fmt.Errorf("generate compose: %w", err)
+	}
+
+	return yamlBytes, nil
 }
 
 type stackResponse struct {
@@ -269,13 +309,10 @@ func (h *StackHandler) Update(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(stack)
 }
 
-// Delete handles DELETE /stacks/{name} (soft delete)
 func (h *StackHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	// Get stack ID and instances before soft-deleting
 	var stackID int
-	var instanceIDs []int
 	err := h.db.QueryRow(`
 		SELECT id FROM stacks WHERE name = $1 AND deleted_at IS NULL
 	`, name).Scan(&stackID)
@@ -289,31 +326,15 @@ func (h *StackHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get all instances for this stack to stop their containers
-	rows, err := h.db.Query(`
-		SELECT id FROM service_instances WHERE stack_id = $1
-	`, stackID)
+	yamlBytes, err := h.stackCompose(name)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to query instances: %v", err), http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var id int
-		if err := rows.Scan(&id); err != nil {
-			continue
+		log.Printf("warning: could not generate compose for stack %q (may not have been deployed): %v", name, err)
+	} else {
+		if err := h.containerClient.StopStack("devarch-"+name, yamlBytes); err != nil {
+			log.Printf("warning: failed to stop containers for stack %q: %v", name, err)
 		}
-		instanceIDs = append(instanceIDs, id)
 	}
 
-	// Stop containers for all instances (Phase 3+ will implement actual container stopping)
-	// For now, this is a placeholder since instance management is in Phase 3
-	for range instanceIDs {
-		// TODO: Stop container via containerClient when instance management is implemented
-	}
-
-	// Soft delete the stack
 	_, err = h.db.Exec(`
 		UPDATE stacks
 		SET deleted_at = NOW(), updated_at = NOW()
@@ -435,11 +456,9 @@ type disableResponse struct {
 	StoppedContainers []string      `json:"stopped_containers"`
 }
 
-// Disable handles POST /stacks/{name}/disable
 func (h *StackHandler) Disable(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	// Get stack and its instances
 	var stackID int
 	err := h.db.QueryRow(`
 		SELECT id FROM stacks WHERE name = $1 AND deleted_at IS NULL
@@ -454,32 +473,21 @@ func (h *StackHandler) Disable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get all instance IDs for container stopping
-	rows, err := h.db.Query(`
-		SELECT id FROM service_instances WHERE stack_id = $1
-	`, stackID)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to query instances: %v", err), http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
 	var stoppedContainers []string
-	for rows.Next() {
-		var instanceID int
-		if err := rows.Scan(&instanceID); err != nil {
-			continue
+	yamlBytes, err := h.stackCompose(name)
+	if err != nil {
+		log.Printf("warning: could not generate compose for stack %q: %v", name, err)
+	} else {
+		running, _ := h.containerClient.ListContainersWithLabels(map[string]string{
+			container.LabelStackID: name,
+		})
+		stoppedContainers = running
+
+		if err := h.containerClient.StopStack("devarch-"+name, yamlBytes); err != nil {
+			log.Printf("warning: failed to stop containers for stack %q: %v", name, err)
 		}
-
-		// Build container name and stop it
-		containerName := container.ContainerName(name, fmt.Sprintf("%d", instanceID))
-		stoppedContainers = append(stoppedContainers, containerName)
-
-		// TODO: Actually stop container via containerClient when Phase 3 implements runtime operations
-		// For now, just track container names that would be stopped
 	}
 
-	// Update stack to disabled
 	var stack stackResponse
 	err = h.db.QueryRow(`
 		UPDATE stacks
@@ -501,7 +509,6 @@ func (h *StackHandler) Disable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Query instance count
 	err = h.db.QueryRow(`
 		SELECT COUNT(*) FROM service_instances WHERE stack_id = $1
 	`, stack.ID).Scan(&stack.InstanceCount)

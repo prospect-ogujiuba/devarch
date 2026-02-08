@@ -237,6 +237,57 @@ export function usePermanentDeleteStack() {
   })
 }
 
+export function useStopStack() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const response = await api.post(`/stacks/${name}/stop`)
+      return response.data
+    },
+    onSuccess: (_data, name) => {
+      toast.success(`Stopped ${name}`)
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+    },
+    onError: (error: any, name) => {
+      toast.error(error.response?.data || `Failed to stop ${name}`)
+    },
+  })
+}
+
+export function useStartStack() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const response = await api.post(`/stacks/${name}/start`)
+      return response.data
+    },
+    onSuccess: (_data, name) => {
+      toast.success(`Started ${name}`)
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+    },
+    onError: (error: any, name) => {
+      toast.error(error.response?.data || `Failed to start ${name}`)
+    },
+  })
+}
+
+export function useRestartStack() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const response = await api.post(`/stacks/${name}/restart`)
+      return response.data
+    },
+    onSuccess: (_data, name) => {
+      toast.success(`Restarted ${name}`)
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+    },
+    onError: (error: any, name) => {
+      toast.error(error.response?.data || `Failed to restart ${name}`)
+    },
+  })
+}
+
 export function useGeneratePlan(name: string) {
   return useMutation({
     mutationFn: async () => {
