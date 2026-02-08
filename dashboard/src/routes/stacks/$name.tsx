@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link, Outlet, useMatch, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2, Play } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useStack, useEnableStack, useDisableStack, useStackNetwork, useStackCompose } from '@/features/stacks/queries'
+import { useStack, useEnableStack, useDisableStack, useStackNetwork, useStackCompose, useGeneratePlan, useApplyPlan } from '@/features/stacks/queries'
 import { CodeEditor } from '@/components/services/code-editor'
 import { useInstances, useUpdateInstance } from '@/features/instances/queries'
 import { EditStackDialog } from '@/components/stacks/edit-stack-dialog'
@@ -25,7 +25,7 @@ import {
   DeleteInstanceDialog,
   DuplicateInstanceDialog,
 } from '@/components/instances/instance-actions'
-import type { Instance } from '@/types/api'
+import type { Instance, StackPlan } from '@/types/api'
 import { cn } from '@/lib/utils'
 
 function timeAgo(dateStr: string): string {
@@ -144,6 +144,8 @@ function StackDetailPage() {
   const { data: composeData, isLoading: composeLoading } = useStackCompose(name)
   const enableStack = useEnableStack()
   const disableStack = useDisableStack()
+  const generatePlan = useGeneratePlan(name)
+  const applyPlan = useApplyPlan(name)
 
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -155,6 +157,7 @@ function StackDetailPage() {
   const [instanceDuplicateOpen, setInstanceDuplicateOpen] = useState(false)
   const [composeExpanded, setComposeExpanded] = useState(false)
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null)
+  const [currentPlan, setCurrentPlan] = useState<StackPlan | null>(null)
 
   const handleToggleEnabled = () => {
     if (!stack) return
@@ -329,6 +332,7 @@ function StackDetailPage() {
         <TabsList>
           <TabsTrigger value="instances">Instances ({instances.length})</TabsTrigger>
           <TabsTrigger value="compose">Compose</TabsTrigger>
+          <TabsTrigger value="deploy">Deploy</TabsTrigger>
         </TabsList>
 
         <TabsContent value="instances" className="space-y-6">
@@ -468,6 +472,124 @@ function StackDetailPage() {
                   </h4>
                   <div className="space-y-1">
                     {composeData.warnings.map((warning, i) => (
+                      <div key={i} className="text-sm text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950/20 px-3 py-2 rounded-md">
+                        {warning}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="deploy">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Deploy Stack</CardTitle>
+                <Button
+                  size="sm"
+                  onClick={() => generatePlan.mutate(undefined, { onSuccess: (data) => setCurrentPlan(data.data) })}
+                  disabled={generatePlan.isPending || applyPlan.isPending}
+                >
+                  {generatePlan.isPending ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
+                  Generate Plan
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!currentPlan ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="rounded-full bg-muted p-3 mb-4">
+                    <Play className="size-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-medium mb-1">Generate a plan to preview changes</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Compare running state against desired configuration
+                  </p>
+                </div>
+              ) : currentPlan.changes.length === 0 ? (
+                <div className="flex items-center gap-2 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/20 px-4 py-3 rounded-md">
+                  <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="font-medium">Stack is up to date — no changes needed</span>
+                </div>
+              ) : (
+                <>
+                  <div className="text-sm font-medium">
+                    {currentPlan.changes.length} change(s): {currentPlan.changes.filter(c => c.action === 'add').length} to add, {currentPlan.changes.filter(c => c.action === 'modify').length} to modify, {currentPlan.changes.filter(c => c.action === 'remove').length} to remove
+                  </div>
+                  <div className="space-y-2">
+                    {currentPlan.changes.map((change, i) => (
+                      <div
+                        key={i}
+                        className={cn(
+                          'border-l-4 px-4 py-3 rounded-r-md space-y-2',
+                          change.action === 'add' && 'border-green-500 bg-green-50 dark:bg-green-950/20',
+                          change.action === 'modify' && 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20',
+                          change.action === 'remove' && 'border-red-500 bg-red-50 dark:bg-red-950/20'
+                        )}
+                      >
+                        <div className="flex items-start gap-2">
+                          <span className={cn(
+                            'text-lg font-bold mt-0.5',
+                            change.action === 'add' && 'text-green-600 dark:text-green-400',
+                            change.action === 'modify' && 'text-yellow-600 dark:text-yellow-400',
+                            change.action === 'remove' && 'text-red-600 dark:text-red-400'
+                          )}>
+                            {change.action === 'add' ? '+' : change.action === 'modify' ? '~' : '-'}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium">{change.instance_id}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {change.template_name} {change.container_name && `→ ${change.container_name}`}
+                            </div>
+                            {change.action === 'modify' && change.fields && (
+                              <div className="mt-2 space-y-1 text-sm">
+                                {Object.entries(change.fields).map(([field, fieldChange]) => (
+                                  <div key={field} className="font-mono text-xs">
+                                    <span className="text-muted-foreground">{field}:</span>{' '}
+                                    <span className="text-muted-foreground line-through">{String(fieldChange.old)}</span>
+                                    {' → '}
+                                    <span className="font-semibold">{String(fieldChange.new)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 pt-2">
+                    <Button
+                      onClick={() => applyPlan.mutate({ token: currentPlan.token }, { onSuccess: () => setCurrentPlan(null) })}
+                      disabled={applyPlan.isPending}
+                    >
+                      {applyPlan.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+                      Apply Changes
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => generatePlan.mutate(undefined, { onSuccess: (data) => setCurrentPlan(data.data) })}
+                      disabled={generatePlan.isPending || applyPlan.isPending}
+                    >
+                      Regenerate Plan
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {currentPlan?.warnings && currentPlan.warnings.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium flex items-center gap-2">
+                    <AlertTriangle className="size-4 text-yellow-500" />
+                    Warnings ({currentPlan.warnings.length})
+                  </h4>
+                  <div className="space-y-1">
+                    {currentPlan.warnings.map((warning, i) => (
                       <div key={i} className="text-sm text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950/20 px-3 py-2 rounded-md">
                         {warning}
                       </div>
