@@ -31,8 +31,8 @@ export function ListToolbar({
   children,
 }: ListToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="relative flex-1 max-w-sm">
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className="relative w-full sm:max-w-sm sm:flex-1">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
           placeholder={searchPlaceholder}
@@ -42,7 +42,7 @@ export function ListToolbar({
         />
       </div>
       {children}
-      <div className="ml-auto flex items-center gap-2">
+      <div className="flex w-full items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:justify-start">
         <SortControls
           options={sortOptions}
           sortBy={sortBy}

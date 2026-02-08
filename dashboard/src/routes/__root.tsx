@@ -32,7 +32,7 @@ function RootLayout() {
           <div className="min-h-screen">
             <Header onMenuClick={toggleSidebar} />
             <MobileSidebar open={sidebarOpen} onClose={closeSidebar} />
-            <main className="container mx-auto px-6 py-6">
+            <main className="container mx-auto px-4 py-4 sm:px-6 sm:py-6">
               <Outlet />
             </main>
           </div>

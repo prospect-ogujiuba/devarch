@@ -1,10 +1,18 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { z } from 'zod'
 import { ArrowLeft, Loader2, Power, PowerOff, Edit, MoreVertical } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import {
   DropdownMenu,
@@ -45,11 +53,19 @@ function timeAgo(dateStr: string): string {
 }
 
 export const Route = createFileRoute('/stacks/$name/instances/$instance')({
+  validateSearch: z.object({
+    instanceTab: z.enum(['info', 'ports', 'volumes', 'environment', 'labels', 'domains', 'healthcheck', 'dependencies', 'files', 'effective']).optional(),
+  }),
   component: InstanceDetailPage,
 })
 
+const instanceTabs = ['info', 'ports', 'volumes', 'environment', 'labels', 'domains', 'healthcheck', 'dependencies', 'files', 'effective'] as const
+type InstanceTab = (typeof instanceTabs)[number]
+
 function InstanceDetailPage() {
   const { name: stackName, instance: instanceId } = Route.useParams()
+  const routeSearch = Route.useSearch()
+  const routeNavigate = Route.useNavigate()
   const navigate = useNavigate()
   const { data: instance, isLoading } = useInstance(stackName, instanceId)
   const { data: templateService } = useService(instance?.template_name ?? '')
@@ -114,6 +130,21 @@ function InstanceDetailPage() {
 
   const createdAgo = timeAgo(instance.created_at)
   const updatedAgo = timeAgo(instance.updated_at)
+  const activeTab: InstanceTab = routeSearch.instanceTab && instanceTabs.includes(routeSearch.instanceTab as InstanceTab)
+    ? (routeSearch.instanceTab as InstanceTab)
+    : 'info'
+  const tabLabels: Record<InstanceTab, string> = {
+    info: 'Info',
+    ports: 'Ports',
+    volumes: 'Volumes',
+    environment: 'Environment',
+    labels: 'Labels',
+    domains: 'Domains',
+    healthcheck: 'Healthcheck',
+    dependencies: 'Dependencies',
+    files: 'Config Files',
+    effective: 'Effective Config',
+  }
 
   return (
     <div className="space-y-6">
@@ -181,8 +212,34 @@ function InstanceDetailPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="info" className="space-y-4">
-        <TabsList>
+      <Tabs
+        value={activeTab}
+        onValueChange={(tab) => {
+          if (!instanceTabs.includes(tab as InstanceTab)) return
+          routeNavigate({ search: (prev) => ({ ...prev, instanceTab: tab as InstanceTab }) })
+        }}
+        className="space-y-4"
+      >
+        <div className="sm:hidden">
+          <Select
+            value={activeTab}
+            onValueChange={(tab) => {
+              if (!instanceTabs.includes(tab as InstanceTab)) return
+              routeNavigate({ search: (prev) => ({ ...prev, instanceTab: tab as InstanceTab }) })
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {instanceTabs.map((tab) => (
+                <SelectItem key={tab} value={tab}>{tabLabels[tab]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <TabsList className="hidden sm:inline-flex">
           <TabsTrigger value="info">Info</TabsTrigger>
           <TabsTrigger value="ports">Ports</TabsTrigger>
           <TabsTrigger value="volumes">Volumes</TabsTrigger>

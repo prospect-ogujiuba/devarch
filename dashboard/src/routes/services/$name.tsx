@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { z } from 'zod'
 import { ArrowLeft, Loader2, Clock, RefreshCw, Cpu, MemoryStick, Network, Pencil, Trash2, Download, Maximize2, Minimize2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -27,11 +28,19 @@ import { CodeEditor } from '@/components/services/code-editor'
 import { formatUptime, formatBytes, computeUptime } from '@/lib/format'
 
 export const Route = createFileRoute('/services/$name')({
+  validateSearch: z.object({
+    tab: z.enum(['info', 'env', 'logs', 'compose', 'files']).optional(),
+  }),
   component: ServiceDetailPage,
 })
 
+const serviceTabs = ['info', 'env', 'logs', 'compose', 'files'] as const
+type ServiceTab = (typeof serviceTabs)[number]
+
 function ServiceDetailPage() {
   const { name } = Route.useParams()
+  const routeSearch = Route.useSearch()
+  const routeNavigate = Route.useNavigate()
   const navigate = useNavigate()
   const { data: service, isLoading } = useService(name)
   const { data: composeYaml, isLoading: composeLoading } = useServiceCompose(name)
@@ -106,6 +115,14 @@ function ServiceDetailPage() {
   const memPct = memLimit > 0 ? (memUsed / memLimit) * 100 : 0
   const rxBytes = service.metrics?.network_rx_bytes ?? 0
   const txBytes = service.metrics?.network_tx_bytes ?? 0
+  const activeTab: ServiceTab = routeSearch.tab ?? 'info'
+  const tabLabels: Record<ServiceTab, string> = {
+    info: 'Info',
+    env: 'Environment',
+    logs: 'Logs',
+    compose: 'Compose',
+    files: 'Files',
+  }
 
   return (
     <div className="space-y-6">
@@ -190,8 +207,34 @@ function ServiceDetailPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="info" className="space-y-4">
-        <TabsList>
+      <Tabs
+        value={activeTab}
+        onValueChange={(tab) => {
+          if (!serviceTabs.includes(tab as ServiceTab)) return
+          routeNavigate({ search: (prev) => ({ ...prev, tab: tab as ServiceTab }) })
+        }}
+        className="space-y-4"
+      >
+        <div className="sm:hidden">
+          <Select
+            value={activeTab}
+            onValueChange={(tab) => {
+              if (!serviceTabs.includes(tab as ServiceTab)) return
+              routeNavigate({ search: (prev) => ({ ...prev, tab: tab as ServiceTab }) })
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {serviceTabs.map((tab) => (
+                <SelectItem key={tab} value={tab}>{tabLabels[tab]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <TabsList className="hidden sm:inline-flex">
           <TabsTrigger value="info">Info</TabsTrigger>
           <TabsTrigger value="env">Environment</TabsTrigger>
           <TabsTrigger value="logs">Logs</TabsTrigger>

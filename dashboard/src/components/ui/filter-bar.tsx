@@ -26,8 +26,8 @@ export function FilterBar({ options, value, onChange, className, variant = 'chip
   if (variant === 'dropdown') {
     return (
       <div className={className}>
-        <Select value={value} onValueChange={onChange}>
-          <SelectTrigger className="w-[180px] h-8">
+          <Select value={value} onValueChange={onChange}>
+            <SelectTrigger className="h-8 w-full sm:w-[180px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -60,9 +60,9 @@ export function FilterBar({ options, value, onChange, className, variant = 'chip
           </Button>
         ))}
       </div>
-      <div className={cn('md:hidden', className)}>
+      <div className={cn('w-full md:hidden', className)}>
         <Select value={value} onValueChange={onChange}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

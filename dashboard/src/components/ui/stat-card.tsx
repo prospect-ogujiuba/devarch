@@ -11,11 +11,11 @@ interface StatCardProps {
 
 export function StatCard({ icon: Icon, label, value, color, className }: StatCardProps) {
   return (
-    <div className={cn('flex items-center gap-3 rounded-lg border px-4 py-3', className)}>
-      <Icon className={cn('size-5 text-muted-foreground', color)} />
-      <div>
-        <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="text-lg font-semibold leading-tight">{value}</div>
+    <div className={cn('flex min-w-0 items-center gap-2 rounded-md border px-3 py-2 sm:gap-3 sm:rounded-lg sm:px-4 sm:py-3', className)}>
+      <Icon className={cn('size-4 shrink-0 text-muted-foreground sm:size-5', color)} />
+      <div className="min-w-0">
+        <div className="truncate text-[11px] text-muted-foreground sm:text-xs">{label}</div>
+        <div className="text-base font-semibold leading-tight sm:text-lg">{value}</div>
       </div>
     </div>
   )

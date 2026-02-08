@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect } from 'react'
+import { useMemo, useCallback, useEffect, useRef } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { z } from 'zod'
 import { Loader2, Server, Play, Square, Cpu, MemoryStick, Plus } from 'lucide-react'
@@ -17,6 +17,10 @@ import { titleCase } from '@/lib/utils'
 import type { Service } from '@/types/api'
 
 const servicesSearchSchema = z.object({
+  q: z.string().optional(),
+  sort: z.enum(['name', 'status', 'category', 'cpu', 'memory']).optional(),
+  dir: z.enum(['asc', 'desc']).optional(),
+  view: z.enum(['table', 'grid']).optional(),
   category: z.string().optional(),
   status: z.string().optional(),
 })
@@ -58,6 +62,7 @@ const sortOptions = [
 function ServicesPage() {
   const { data, isLoading } = useServices()
   const routeSearch = Route.useSearch()
+  const navigate = Route.useNavigate()
   const services = useMemo(() => data?.services ?? [], [data])
   const total = data?.total ?? 0
 
@@ -71,10 +76,102 @@ function ServicesPage() {
     defaultView: 'table',
   })
 
+  const {
+    search,
+    setSearch,
+    filters,
+    setFilter,
+    sortBy,
+    setSortBy,
+    sortDir,
+    setSortDir,
+    viewMode,
+    setViewMode,
+  } = controls
+  const syncingFromUrlRef = useRef(false)
+
   useEffect(() => {
-    if (routeSearch.category) controls.setFilter('category', routeSearch.category)
-    if (routeSearch.status) controls.setFilter('status', routeSearch.status)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    syncingFromUrlRef.current = true
+    setSearch(routeSearch.q ?? '')
+    setSortBy(routeSearch.sort ?? 'name')
+    setSortDir(routeSearch.dir ?? 'asc')
+    setViewMode(routeSearch.view ?? 'table')
+    setFilter('category', routeSearch.category ?? 'all')
+    setFilter('status', routeSearch.status ?? 'all')
+  }, [
+    routeSearch.q,
+    routeSearch.sort,
+    routeSearch.dir,
+    routeSearch.view,
+    routeSearch.category,
+    routeSearch.status,
+    setSearch,
+    setSortBy,
+    setSortDir,
+    setViewMode,
+    setFilter,
+  ])
+
+  useEffect(() => {
+    if (syncingFromUrlRef.current) {
+      syncingFromUrlRef.current = false
+      return
+    }
+
+    const nextQ = search || undefined
+    const nextSort =
+      sortBy !== 'name' && sortOptions.some((option) => option.value === sortBy)
+        ? (sortBy as typeof routeSearch.sort)
+        : undefined
+    const nextDir = sortDir === 'asc' ? undefined : sortDir
+    const nextView = viewMode === 'table' ? undefined : viewMode
+    const nextCategory =
+      filters.category && filters.category !== 'all'
+        ? filters.category
+        : undefined
+    const nextStatus =
+      filters.status && filters.status !== 'all'
+        ? filters.status
+        : undefined
+
+    if (
+      routeSearch.q === nextQ
+      && routeSearch.sort === nextSort
+      && routeSearch.dir === nextDir
+      && routeSearch.view === nextView
+      && routeSearch.category === nextCategory
+      && routeSearch.status === nextStatus
+    ) {
+      return
+    }
+
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        q: nextQ,
+        sort: nextSort,
+        dir: nextDir,
+        view: nextView,
+        category: nextCategory,
+        status: nextStatus,
+      }),
+      replace: true,
+    })
+  }, [
+    search,
+    sortBy,
+    sortDir,
+    viewMode,
+    filters.category,
+    filters.status,
+    routeSearch.q,
+    routeSearch.sort,
+    routeSearch.dir,
+    routeSearch.view,
+    routeSearch.category,
+    routeSearch.status,
+    navigate,
+  ])
 
   const handleSelectAll = useCallback(() => {
     controls.selectAll(controls.filtered.map((s) => s.name))
@@ -137,20 +234,20 @@ function ServicesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Services</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl font-bold sm:text-2xl">Services</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">
             Manage all {total} services in your environment
           </p>
         </div>
-        <Button asChild size="sm">
+        <Button asChild size="sm" className="w-full sm:w-auto">
           <Link to="/services/new"><Plus className="size-4" /> New Service</Link>
         </Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard icon={Server} label="Total" value={total} />
         <StatCard icon={Play} label="Running" value={stats.running} color="text-green-500" />
         <StatCard icon={Square} label="Stopped" value={stats.stopped} color="text-muted-foreground" />

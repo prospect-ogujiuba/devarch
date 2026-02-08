@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { z } from 'zod'
 import { Loader2, Layers, Plus, CheckCircle2, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -25,6 +26,12 @@ import { useListControls } from '@/hooks/use-list-controls'
 import type { Stack } from '@/types/api'
 
 export const Route = createFileRoute('/stacks/')({
+  validateSearch: z.object({
+    q: z.string().optional(),
+    sort: z.enum(['name', 'status', 'instances', 'created']).optional(),
+    dir: z.enum(['asc', 'desc']).optional(),
+    view: z.enum(['table', 'grid']).optional(),
+  }),
   component: StacksPage,
 })
 
@@ -60,6 +67,8 @@ const sortOptions = [
 
 function StacksPage() {
   const { data, isLoading } = useStacks()
+  const routeSearch = Route.useSearch()
+  const navigate = Route.useNavigate()
   const stacks = useMemo(() => data ?? [], [data])
 
   const deleteMutation = useDeleteStack()
@@ -84,6 +93,80 @@ function StacksPage() {
     defaultSort: 'name',
     defaultView: 'grid',
   })
+
+  const {
+    search,
+    setSearch,
+    sortBy,
+    setSortBy,
+    sortDir,
+    setSortDir,
+    viewMode,
+    setViewMode,
+  } = controls
+  const syncingFromUrlRef = useRef(false)
+
+  useEffect(() => {
+    syncingFromUrlRef.current = true
+    setSearch(routeSearch.q ?? '')
+    setSortBy(routeSearch.sort ?? 'name')
+    setSortDir(routeSearch.dir ?? 'asc')
+    setViewMode(routeSearch.view ?? 'grid')
+  }, [
+    routeSearch.q,
+    routeSearch.sort,
+    routeSearch.dir,
+    routeSearch.view,
+    setSearch,
+    setSortBy,
+    setSortDir,
+    setViewMode,
+  ])
+
+  useEffect(() => {
+    if (syncingFromUrlRef.current) {
+      syncingFromUrlRef.current = false
+      return
+    }
+
+    const nextQ = search || undefined
+    const nextSort =
+      sortBy !== 'name' && sortOptions.some((option) => option.value === sortBy)
+        ? (sortBy as typeof routeSearch.sort)
+        : undefined
+    const nextDir = sortDir === 'asc' ? undefined : sortDir
+    const nextView = viewMode === 'grid' ? undefined : viewMode
+
+    if (
+      routeSearch.q === nextQ
+      && routeSearch.sort === nextSort
+      && routeSearch.dir === nextDir
+      && routeSearch.view === nextView
+    ) {
+      return
+    }
+
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        q: nextQ,
+        sort: nextSort,
+        dir: nextDir,
+        view: nextView,
+      }),
+      replace: true,
+    })
+  }, [
+    search,
+    sortBy,
+    sortDir,
+    viewMode,
+    routeSearch.q,
+    routeSearch.sort,
+    routeSearch.dir,
+    routeSearch.view,
+    navigate,
+  ])
 
   const stats = useMemo(() => {
     let enabled = 0
@@ -157,11 +240,11 @@ function StacksPage() {
 
   if (stacks.length === 0 && !controls.search && !controls.filters.status) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-5 sm:space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Stacks</h1>
-            <p className="text-muted-foreground">No stacks created yet</p>
+            <h1 className="text-xl font-bold sm:text-2xl">Stacks</h1>
+            <p className="text-sm text-muted-foreground sm:text-base">No stacks created yet</p>
           </div>
         </div>
         <EmptyState
@@ -178,20 +261,20 @@ function StacksPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Stacks</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl font-bold sm:text-2xl">Stacks</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">
             Manage all {stats.total} stack{stats.total !== 1 ? 's' : ''} in your environment
           </p>
         </div>
-        <Button size="sm" onClick={handleCreateStack}>
+        <Button size="sm" className="w-full sm:w-auto" onClick={handleCreateStack}>
           <Plus className="size-4" /> Create Stack
         </Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={Layers} label="Total Stacks" value={stats.total} />
         <StatCard icon={CheckCircle2} label="Enabled" value={stats.enabled} color="text-green-500" />
         <StatCard icon={XCircle} label="Disabled" value={stats.disabled} color="text-muted-foreground" />
