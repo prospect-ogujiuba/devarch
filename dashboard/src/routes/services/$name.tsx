@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ResourceBar } from '@/components/ui/resource-bar'
+import { StatCard } from '@/components/ui/stat-card'
 import { CopyButton } from '@/components/ui/copy-button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -126,85 +126,51 @@ function ServiceDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link to="/services" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-5" />
+      <div className="space-y-3">
+        <Link to="/services" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-4" />
+          Back to Services
         </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{service.name}</h1>
-            <StatusBadge status={status} />
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="truncate text-xl font-bold sm:text-2xl">{service.name}</h1>
+              <StatusBadge status={status} />
+            </div>
+            <p className="mt-1 truncate text-sm text-muted-foreground sm:text-base">{image}</p>
           </div>
-          <p className="text-muted-foreground">{image}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={openEdit}>
-            <Pencil className="size-4" />
-            Edit
-          </Button>
-          <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
-            <Trash2 className="size-4" />
-            Delete
-          </Button>
-          <ActionButton name={service.name} status={status} showRestart />
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <Button variant="outline" size="sm" onClick={openEdit}>
+              <Pencil className="size-4" />
+              Edit
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
+              <Trash2 className="size-4" />
+              Delete
+            </Button>
+            <ActionButton name={service.name} status={status} showRestart />
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="py-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Cpu className="size-4" />
-              CPU
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-lg font-semibold">{cpuPct.toFixed(1)}%</div>
-            <ResourceBar value={cpuPct} />
-          </CardContent>
-        </Card>
-
-        <Card className="py-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <MemoryStick className="size-4" />
-              Memory
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-lg font-semibold">{memUsed.toFixed(0)} / {memLimit.toFixed(0)} MB</div>
-            <ResourceBar value={memPct} />
-          </CardContent>
-        </Card>
-
-        <Card className="py-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Network className="size-4" />
-              Network I/O
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm space-y-1">
-              <div>RX: {formatBytes(rxBytes)}</div>
-              <div>TX: {formatBytes(txBytes)}</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="py-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Clock className="size-4" />
-              Uptime
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-semibold">
-              {status === 'running' && uptime > 0 ? formatUptime(uptime) : '-'}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={Cpu} label="CPU" value={`${cpuPct.toFixed(1)}%`} />
+        <StatCard
+          icon={MemoryStick}
+          label="Memory"
+          value={`${memUsed.toFixed(0)} / ${memLimit.toFixed(0)} MB`}
+        />
+        <StatCard
+          icon={Network}
+          label="Network I/O"
+          value={`${formatBytes(rxBytes)} / ${formatBytes(txBytes)}`}
+        />
+        <StatCard
+          icon={Clock}
+          label="Uptime"
+          value={status === 'running' && uptime > 0 ? formatUptime(uptime) : '-'}
+        />
       </div>
 
       <Tabs
