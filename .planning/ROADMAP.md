@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Service Instances** - Instance overrides + config resolution
 - [x] **Phase 4: Network Isolation** - Per-stack networks, deterministic naming
 - [x] **Phase 5: Compose Generation** - Stack-scoped YAML generation
-- [ ] **Phase 6: Plan/Apply Workflow** - Safety mechanism with advisory locking
+- [x] **Phase 6: Plan/Apply Workflow** - Safety mechanism with advisory locking
 - [ ] **Phase 7: Export/Import & Bootstrap** - Shareable devarch.yml, lockfile, init/doctor
 - [ ] **Phase 8: Service Wiring** - Contract-based auto-wiring + explicit wiring
 - [ ] **Phase 9: Secrets & Resources** - Encryption + resource limits
@@ -127,7 +127,7 @@ Plans:
 Plans:
 - [x] 06-01-PLAN.md — Plan domain package: types, diff computation, staleness detection (COMPLETE 2026-02-07)
 - [x] 06-02-PLAN.md — Plan + Apply API endpoints with advisory locking and route wiring (COMPLETE 2026-02-07)
-- [ ] 06-03-PLAN.md — Dashboard Deploy tab with diff visualization and apply execution
+- [x] 06-03-PLAN.md — Dashboard Deploy tab with diff visualization and apply execution (COMPLETE 2026-02-07)
 
 ### Phase 7: Export/Import & Bootstrap
 **Goal**: Users export stacks to devarch.yml (with resolved specifics) for sharing, import with reconciliation, lockfile for deterministic reproduction, and one-command bootstrap + diagnostics
@@ -203,11 +203,11 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 | 3. Service Instances | 5/5 | Complete | 2026-02-04 (verified 2026-02-06) |
 | 4. Network Isolation | 2/2 | Complete | 2026-02-06 |
 | 5. Compose Generation | 2/2 | Complete | 2026-02-07 |
-| 6. Plan/Apply Workflow | 0/3 | Not started | - |
+| 6. Plan/Apply Workflow | 3/3 | Complete | 2026-02-07 |
 | 7. Export/Import & Bootstrap | 0/TBD | Not started | - |
 | 8. Service Wiring | 0/TBD | Not started | - |
 | 9. Secrets & Resources | 0/TBD | Not started | - |
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-07 after phase 6 planning*
+*Last updated: 2026-02-07 after phase 6 completion*

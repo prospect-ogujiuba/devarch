@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 
 ## Current Position
 
-Phase: 6 of 9 (Plan/Apply Workflow) -- IN PROGRESS
-Plan: 2 of 3 complete in Phase 6
-Status: In progress
-Last activity: 2026-02-07 — Completed 06-02-PLAN.md
+Phase: 6 of 9 (Plan/Apply Workflow) -- COMPLETE
+Plan: 3 of 3 complete in Phase 6
+Status: Phase complete
+Last activity: 2026-02-07 — Completed 06-03-PLAN.md
 
-Progress: [██████░░░░] ~67% (18 plans complete of ~27 total)
+Progress: [███████░░░] ~70% (19 plans complete of ~27 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
+- Total plans completed: 19
 - Average duration: 2.7 min
-- Total execution time: ~0.90 hours
+- Total execution time: ~0.93 hours
 
 **By Phase:**
 
@@ -32,7 +32,7 @@ Progress: [██████░░░░] ~67% (18 plans complete of ~27 total)
 | 3 | 5/5 | ~21min | ~4.2min |
 | 4 | 2/2 | 7.3min | 3.7min |
 | 5 | 2/2 | 4.0min | 2.0min |
-| 6 | 2/3 | 3.0min | 1.5min |
+| 6 | 3/3 | 5.0min | 1.7min |
 
 *Updated after each plan completion*
 
@@ -156,6 +156,11 @@ Recent decisions affecting current work:
 - Sequential apply flow: network -> configs -> compose up (no rollback, configs left for debugging)
 - Empty running containers gracefully handled in Plan (runtime may be down)
 
+**From 06-03:**
+- Ephemeral plan storage (useState, not cached) — plans are one-shot previews, not persisted resources
+- Color-coded border-left visual hierarchy (green/yellow/red) for diff changes
+- Apply clears plan state forcing regenerate before next apply (prevents stale token reuse)
+
 ### Pending Todos
 
 None yet.
@@ -167,5 +172,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 06-02-PLAN.md (plan/apply HTTP handlers).
+Stopped at: Completed 06-03-PLAN.md (dashboard deploy tab). Phase 6 complete.
 Resume file: None
