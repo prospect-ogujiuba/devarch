@@ -138,6 +138,8 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 			r.Post("/trash/{name}/restore", stackHandler.Restore)
 			r.Delete("/trash/{name}", stackHandler.PermanentDelete)
 
+			r.Post("/import", stackHandler.ImportStack)
+
 			r.Route("/{name}", func(r chi.Router) {
 				r.Get("/", stackHandler.Get)
 				r.Put("/", stackHandler.Update)
