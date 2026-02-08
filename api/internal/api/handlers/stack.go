@@ -451,6 +451,40 @@ func (h *StackHandler) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+func (h *StackHandler) CreateNetwork(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	var networkName *string
+	err := h.db.QueryRow(`
+		SELECT network_name FROM stacks WHERE name = $1 AND deleted_at IS NULL
+	`, name).Scan(&networkName)
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	netName := container.NetworkName(name)
+	if networkName != nil && *networkName != "" {
+		netName = *networkName
+	}
+
+	labels := map[string]string{
+		"devarch.managed_by": "devarch",
+		"devarch.stack":      name,
+	}
+	if err := h.containerClient.CreateNetwork(netName, labels); err != nil {
+		http.Error(w, fmt.Sprintf("failed to create network: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "created", "network": netName})
+}
+
 type disableResponse struct {
 	Stack             stackResponse `json:"stack"`
 	StoppedContainers []string      `json:"stopped_containers"`

@@ -53,7 +53,12 @@ export function useStackNetwork(name: string) {
     queryKey: ['stacks', name, 'network'],
     queryFn: async () => {
       const response = await api.get<NetworkStatus>(`/stacks/${name}/network`)
-      return response.data
+      const data = response.data
+      return {
+        ...data,
+        containers: Array.isArray(data.containers) ? data.containers : [],
+        labels: data.labels ?? {},
+      }
     },
     enabled: !!name,
     refetchInterval: 30000,
@@ -284,6 +289,23 @@ export function useRestartStack() {
     },
     onError: (error: any, name) => {
       toast.error(error.response?.data || `Failed to restart ${name}`)
+    },
+  })
+}
+
+export function useCreateNetwork() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const response = await api.post(`/stacks/${name}/network`)
+      return response.data
+    },
+    onSuccess: (_data, name) => {
+      toast.success(`Network created for ${name}`)
+      queryClient.invalidateQueries({ queryKey: ['stacks', name, 'network'] })
+    },
+    onError: (error: any, name) => {
+      toast.error(error.response?.data || `Failed to create network for ${name}`)
     },
   })
 }

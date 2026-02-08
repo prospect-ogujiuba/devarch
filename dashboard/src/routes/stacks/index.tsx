@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Loader2, Layers, Plus, CheckCircle2, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useStacks, useDeleteStack, useEnableStack, useDisableStack } from '@/features/stacks/queries'
+import { useStacks, useDeleteStack, useEnableStack, useDisableStack, useCreateNetwork } from '@/features/stacks/queries'
 import { StackTable } from '@/components/stacks/stack-table'
 import { StackGrid } from '@/components/stacks/stack-grid'
 import { CreateStackDialog } from '@/components/stacks/create-stack-dialog'
@@ -53,6 +53,7 @@ function StacksPage() {
   const deleteMutation = useDeleteStack()
   const enableMutation = useEnableStack()
   const disableMutation = useDisableStack()
+  const createNetworkMutation = useCreateNetwork()
 
   const [createOpen, setCreateOpen] = useState(false)
 
@@ -90,6 +91,10 @@ function StacksPage() {
     if (confirm(`Delete stack "${name}"? This will soft-delete the stack and stop all containers.`)) {
       deleteMutation.mutate(name)
     }
+  }
+
+  const handleCreateNetwork = (name: string) => {
+    createNetworkMutation.mutate(name)
   }
 
   const handleClone = (name: string) => { void name }
@@ -174,6 +179,7 @@ function StacksPage() {
           onClone={handleClone}
           onRename={handleRename}
           onDelete={handleDelete}
+          onCreateNetwork={handleCreateNetwork}
         />
       ) : (
         <StackGrid
@@ -181,6 +187,7 @@ function StacksPage() {
           onEnable={handleEnable}
           onDisable={handleDisable}
           onDelete={handleDelete}
+          onCreateNetwork={handleCreateNetwork}
         />
       )}
 
