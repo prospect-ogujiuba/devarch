@@ -48,9 +48,9 @@ export function EditableEnvVars({ name, envVars }: Props) {
   if (editing) {
     return (
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base">Environment Variables</CardTitle>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1">
             <Button variant="outline" size="sm" onClick={add}><Plus className="size-4" /> Add</Button>
             <Button variant="ghost" size="icon-sm" onClick={() => setEditing(false)}><X className="size-4" /></Button>
             <Button variant="default" size="icon-sm" onClick={save} disabled={mutation.isPending}><Check className="size-4" /></Button>
@@ -58,11 +58,11 @@ export function EditableEnvVars({ name, envVars }: Props) {
         </CardHeader>
         <CardContent className="space-y-2">
           {drafts.map((d, i) => (
-            <div key={i} className="flex gap-2 items-center">
-              <Input className="w-48" value={d.key} onChange={(e) => { const next = [...drafts]; next[i] = { ...d, key: e.target.value }; setDrafts(next) }} placeholder="KEY" />
+            <div key={i} className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+              <Input className="w-full sm:w-48" value={d.key} onChange={(e) => { const next = [...drafts]; next[i] = { ...d, key: e.target.value }; setDrafts(next) }} placeholder="KEY" />
               <span className="text-muted-foreground">=</span>
               <Input className="flex-1" value={d.value} type={d.is_secret ? 'password' : 'text'} onChange={(e) => { const next = [...drafts]; next[i] = { ...d, value: e.target.value }; setDrafts(next) }} placeholder="value" />
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 sm:ml-2">
                 <Checkbox checked={d.is_secret} onCheckedChange={(v) => { const next = [...drafts]; next[i] = { ...d, is_secret: !!v }; setDrafts(next) }} />
                 <span className="text-xs">Secret</span>
               </div>
@@ -87,11 +87,11 @@ export function EditableEnvVars({ name, envVars }: Props) {
         {envVars.length > 0 ? (
           <div className="space-y-1">
             {envVars.map((env, i) => (
-              <div key={i} className="text-sm font-mono flex items-center">
-                <span className="text-muted-foreground min-w-[200px]">{env.key}:</span>
-                <span>{env.is_secret && !revealedSecrets.has(i) ? '********' : env.value}</span>
+              <div key={i} className="text-sm font-mono flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+                <span className="text-muted-foreground sm:min-w-[200px]">{env.key}:</span>
+                <span className="break-all">{env.is_secret && !revealedSecrets.has(i) ? '********' : env.value}</span>
                 {env.is_secret && (
-                  <Button variant="ghost" size="icon-sm" className="size-6 ml-1" onClick={() => toggleSecret(i)}>
+                  <Button variant="ghost" size="icon-sm" className="size-6 sm:ml-1" onClick={() => toggleSecret(i)}>
                     {revealedSecrets.has(i) ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
                   </Button>
                 )}

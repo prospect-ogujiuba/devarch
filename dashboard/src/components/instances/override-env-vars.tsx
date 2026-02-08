@@ -75,9 +75,9 @@ export function OverrideEnvVars({ instance, templateData, stackName, instanceId 
   if (editing) {
     return (
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base">Environment Variable Overrides</CardTitle>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1">
             <Button variant="outline" size="sm" onClick={add}>
               <Plus className="size-4" /> Add
             </Button>
@@ -100,10 +100,10 @@ export function OverrideEnvVars({ instance, templateData, stackName, instanceId 
               <div className="text-xs font-medium text-muted-foreground mb-2">Template Variables (read-only)</div>
               <div className="space-y-2">
                 {templateEnvVars.map((env, i) => (
-                  <div key={i} className="text-sm text-muted-foreground flex items-center gap-2">
-                    <code className="bg-muted px-2 py-1 rounded">{env.key}</code>
+                  <div key={i} className="text-sm text-muted-foreground flex flex-wrap items-center gap-2">
+                    <code className="bg-muted px-2 py-1 rounded break-all">{env.key}</code>
                     <span>=</span>
-                    <span>{env.is_secret ? '••••••••' : env.value ?? ''}</span>
+                    <span className="break-all">{env.is_secret ? '••••••••' : env.value ?? ''}</span>
                     {env.is_secret && <Badge variant="secondary" className="text-xs">secret</Badge>}
                   </div>
                 ))}
@@ -118,9 +118,9 @@ export function OverrideEnvVars({ instance, templateData, stackName, instanceId 
                 const templatePlaceholder = getTemplatePlaceholder(d.key)
                 return (
                   <div key={i} className="border-l-2 border-blue-500 pl-3 space-y-2">
-                    <div className="flex gap-2 items-center">
+                    <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
                       <Input
-                        className="w-48"
+                        className="w-full sm:w-48"
                         value={d.key}
                         onChange={(e) => update(i, 'key', e.target.value)}
                         placeholder="KEY"
@@ -175,13 +175,13 @@ export function OverrideEnvVars({ instance, templateData, stackName, instanceId 
             <div className="text-xs font-medium text-muted-foreground mb-2">Template Variables</div>
             <div className="space-y-2">
               {templateEnvVars.map((env, i) => (
-                <div key={i} className="text-sm text-muted-foreground flex items-center gap-2">
-                  <code className="bg-muted px-2 py-1 rounded">{env.key}</code>
-                  <span>=</span>
-                  <span>{env.is_secret ? '••••••••' : env.value ?? ''}</span>
-                  {env.is_secret && <Badge variant="secondary" className="text-xs">secret</Badge>}
-                </div>
-              ))}
+                  <div key={i} className="text-sm text-muted-foreground flex flex-wrap items-center gap-2">
+                    <code className="bg-muted px-2 py-1 rounded break-all">{env.key}</code>
+                    <span>=</span>
+                    <span className="break-all">{env.is_secret ? '••••••••' : env.value ?? ''}</span>
+                    {env.is_secret && <Badge variant="secondary" className="text-xs">secret</Badge>}
+                  </div>
+                ))}
             </div>
           </div>
         )}
@@ -191,10 +191,10 @@ export function OverrideEnvVars({ instance, templateData, stackName, instanceId 
             <div className="text-xs font-medium mb-2">Overrides</div>
             <div className="space-y-2">
               {overrideEnvVars.map((env, i) => (
-                <div key={i} className="text-sm border-l-2 border-blue-500 pl-2 flex items-center gap-2">
-                  <code className="bg-muted px-2 py-1 rounded">{env.key}</code>
+                <div key={i} className="text-sm border-l-2 border-blue-500 pl-2 flex flex-wrap items-center gap-2">
+                  <code className="bg-muted px-2 py-1 rounded break-all">{env.key}</code>
                   <span>=</span>
-                  <span>{env.is_secret ? '••••••••' : env.value ?? ''}</span>
+                  <span className="break-all">{env.is_secret ? '••••••••' : env.value ?? ''}</span>
                   {env.is_secret && <Badge variant="secondary" className="text-xs">secret</Badge>}
                 </div>
               ))}
