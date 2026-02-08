@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Clock, RefreshCw, Cpu, MemoryStick, Network, Eye, EyeOff, ExternalLink, Pencil, Trash2, Download, Maximize2, Minimize2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Clock, RefreshCw, Cpu, MemoryStick, Network, Pencil, Trash2, Download, Maximize2, Minimize2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,6 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useService, useServiceCompose, useDeleteService, useUpdateService } from '@/features/services/queries'
-import { useCategories } from '@/features/categories/queries'
 import { StatusBadge } from '@/components/services/status-badge'
 import { ActionButton } from '@/components/services/action-button'
 import { LogViewer } from '@/components/services/log-viewer'
@@ -36,7 +35,6 @@ function ServiceDetailPage() {
   const navigate = useNavigate()
   const { data: service, isLoading } = useService(name)
   const { data: composeYaml, isLoading: composeLoading } = useServiceCompose(name)
-  const { data: categories } = useCategories()
   const deleteService = useDeleteService()
   const updateService = useUpdateService()
 
