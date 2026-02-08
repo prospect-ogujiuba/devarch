@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { Stack, DeletePreview, NetworkStatus, StackCompose } from '@/types/api'
+import type { Stack, DeletePreview, NetworkStatus, StackCompose, StackPlan, ApplyResult } from '@/types/api'
 import { toast } from 'sonner'
 
 // Queries
@@ -167,10 +167,6 @@ export function useDisableStack() {
   })
 }
 
-interface CloneStackRequest {
-  name: string
-}
-
 export function useCloneStack() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -186,10 +182,6 @@ export function useCloneStack() {
       toast.error(error.response?.data || 'Failed to clone stack')
     },
   })
-}
-
-interface RenameStackRequest {
-  name: string
 }
 
 export function useRenameStack() {
@@ -241,6 +233,42 @@ export function usePermanentDeleteStack() {
     },
     onError: (error: any) => {
       toast.error(error.response?.data || 'Failed to permanently delete stack')
+    },
+  })
+}
+
+export function useGeneratePlan(name: string) {
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.get<StackPlan>(`/stacks/${name}/plan`)
+      return response
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data || 'Failed to generate plan')
+    },
+  })
+}
+
+export function useApplyPlan(name: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ token }: { token: string }) => {
+      const response = await api.post<ApplyResult>(`/stacks/${name}/apply`, { token })
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Stack deployed')
+      queryClient.invalidateQueries({ queryKey: ['stacks', name] })
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', name, 'compose'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', name, 'network'] })
+    },
+    onError: (error: any) => {
+      if (error.response?.status === 409) {
+        toast.error('Plan is stale or another operation in progress. Regenerate plan.')
+      } else {
+        toast.error(error.response?.data || 'Apply failed')
+      }
     },
   })
 }
