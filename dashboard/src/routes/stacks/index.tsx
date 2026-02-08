@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { Layers, Plus, CheckCircle2, XCircle } from 'lucide-react'
@@ -21,7 +21,10 @@ import { CloneStackDialog } from '@/components/stacks/clone-stack-dialog'
 import { RenameStackDialog } from '@/components/stacks/rename-stack-dialog'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ListPageScaffold } from '@/components/ui/list-page-scaffold'
+import { PaginationControls } from '@/components/ui/pagination-controls'
 import { useUrlSyncedListControls } from '@/hooks/use-url-synced-list-controls'
+import { useUrlPagination } from '@/hooks/use-url-pagination'
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '@/lib/pagination'
 import type { Stack } from '@/types/api'
 
 export const Route = createFileRoute('/stacks/')({
@@ -30,6 +33,8 @@ export const Route = createFileRoute('/stacks/')({
     sort: z.enum(['name', 'status', 'instances', 'created']).optional(),
     dir: z.enum(['asc', 'desc']).optional(),
     view: z.enum(['table', 'grid']).optional(),
+    page: z.string().optional(),
+    size: z.string().optional(),
   }),
   component: StacksPage,
 })
@@ -87,6 +92,33 @@ function StacksPage() {
     { storageKey: 'stacks', items: stacks, searchFn, filterFns, sortFns, defaultSort: 'name', defaultView: 'grid' },
     { routeSearch, navigate, sortOptions },
   )
+  const pagination = useUrlPagination({
+    items: controls.filtered,
+    routeSearch,
+    navigate,
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+    pageSizeOptions: PAGE_SIZE_OPTIONS,
+  })
+
+  const handleSearchChange = useCallback((value: string) => {
+    pagination.resetPage()
+    controls.setSearch(value)
+  }, [controls, pagination])
+
+  const handleSortByChange = useCallback((value: string) => {
+    pagination.resetPage()
+    controls.setSortBy(value)
+  }, [controls, pagination])
+
+  const handleSortDirChange = useCallback((dir: 'asc' | 'desc') => {
+    pagination.resetPage()
+    controls.setSortDir(dir)
+  }, [controls, pagination])
+
+  const handleViewModeChange = useCallback((mode: 'table' | 'grid') => {
+    pagination.resetPage()
+    controls.setViewMode(mode)
+  }, [controls, pagination])
 
   const stats = useMemo(() => {
     let enabled = 0
@@ -154,7 +186,13 @@ function StacksPage() {
           { icon: Layers, label: 'Total Instances', value: stats.totalInstances },
         ]}
         statGridClassName="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4"
-        controls={controls}
+        controls={{
+          ...controls,
+          setSearch: handleSearchChange,
+          setSortBy: handleSortByChange,
+          setSortDir: handleSortDirChange,
+          setViewMode: handleViewModeChange,
+        }}
         sortOptions={sortOptions}
         searchPlaceholder="Search stacks..."
         actionButton={
@@ -165,9 +203,9 @@ function StacksPage() {
         emptyIcon={Layers}
         emptyMessage="No stacks match your filters"
         items={controls.filtered}
-        tableView={(filtered) => (
+        tableView={() => (
           <StackTable
-            stacks={filtered}
+            stacks={pagination.pagedItems}
             onEnable={handleEnable}
             onDisable={handleDisable}
             onClone={handleClone}
@@ -180,9 +218,9 @@ function StacksPage() {
             onRemoveNetwork={handleRemoveNetwork}
           />
         )}
-        gridView={(filtered) => (
+        gridView={() => (
           <StackGrid
-            stacks={filtered}
+            stacks={pagination.pagedItems}
             onEnable={handleEnable}
             onDisable={handleDisable}
             onDelete={handleDelete}
@@ -191,7 +229,20 @@ function StacksPage() {
           />
         )}
         showCount={false}
-      />
+      >
+        {pagination.totalItems > 0 && (
+          <PaginationControls
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            pageSize={pagination.pageSize}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            onPageChange={pagination.setPage}
+            onPageSizeChange={pagination.setPageSize}
+            itemLabel="stacks"
+          />
+        )}
+      </ListPageScaffold>
 
       <CreateStackDialog open={createOpen} onOpenChange={setCreateOpen} />
       {cloneTarget && (

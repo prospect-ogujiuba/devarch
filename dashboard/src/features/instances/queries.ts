@@ -375,6 +375,7 @@ export function useSaveConfigFile(stackName: string, instanceId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
     },
     onError: (error) => {
       toast.error(getErrorMessage(error, 'Failed to save file'))
@@ -392,6 +393,7 @@ export function useDeleteConfigFile(stackName: string, instanceId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
     },
     onError: (error) => {
       toast.error(getErrorMessage(error, 'Failed to delete file'))

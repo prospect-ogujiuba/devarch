@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button'
 import { useTheme } from '@/lib/theme'
 import { navItems } from '@/lib/nav-items'
 
+const settingsItem = navItems.find((item) => item.to === '/settings')
+const primaryNavItems = navItems.filter((item) => item.to !== '/settings')
+
 export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const { resolvedTheme, setTheme } = useTheme()
 
@@ -16,7 +19,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         </Link>
 
         <nav className="hidden md:flex items-center gap-1 ml-6">
-          {navItems.map(item => (
+          {primaryNavItems.map(item => (
             <Button key={item.to} variant="ghost" size="sm" asChild>
               <Link to={item.to} activeProps={{ className: 'bg-accent' }} activeOptions={item.to === '/' ? { exact: true } : undefined}>
                 <item.icon className="size-4" />
@@ -27,6 +30,14 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+          {settingsItem && (
+            <Button variant="ghost" size="sm" className="hidden md:inline-flex" asChild>
+              <Link to={settingsItem.to} activeProps={{ className: 'bg-accent' }}>
+                <settingsItem.icon className="size-4" />
+                {settingsItem.label}
+              </Link>
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon-sm"

@@ -8,8 +8,14 @@ Use URL search params for list state and tab state so pages are shareable and ba
 - `sort`: active sort field
 - `dir`: sort direction (`asc` or `desc`)
 - `view`: list view mode (`grid` or `table`)
+- `page`: current list page (>= 1)
+- `size`: items per page
 
 Only keep non-default values in URL.
+
+- default `page` is `1` (omit from URL)
+- default `size` is `24` (omit from URL)
+- allowed `size` values: `12`, `24`, `50`, `100`, `200`
 
 ## Filter keys
 
