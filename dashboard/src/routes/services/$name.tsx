@@ -6,12 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { StatCard } from '@/components/ui/stat-card'
 import { CopyButton } from '@/components/ui/copy-button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ResponsiveTabsList } from '@/components/ui/responsive-tabs-list'
 import { useService, useServiceCompose, useDeleteService, useUpdateService } from '@/features/services/queries'
 import { StatusBadge } from '@/components/services/status-badge'
 import { ActionButton } from '@/components/services/action-button'
@@ -112,16 +113,21 @@ function ServiceDetailPage() {
   const cpuPct = service.metrics?.cpu_percentage ?? 0
   const memUsed = service.metrics?.memory_used_mb ?? 0
   const memLimit = service.metrics?.memory_limit_mb ?? 0
-  const memPct = memLimit > 0 ? (memUsed / memLimit) * 100 : 0
+
   const rxBytes = service.metrics?.network_rx_bytes ?? 0
   const txBytes = service.metrics?.network_tx_bytes ?? 0
   const activeTab: ServiceTab = routeSearch.tab ?? 'info'
-  const tabLabels: Record<ServiceTab, string> = {
-    info: 'Info',
-    env: 'Environment',
-    logs: 'Logs',
-    compose: 'Compose',
-    files: 'Files',
+  const serviceTabItems = [
+    { value: 'info', label: 'Info' },
+    { value: 'env', label: 'Environment' },
+    { value: 'logs', label: 'Logs' },
+    { value: 'compose', label: 'Compose' },
+    { value: 'files', label: 'Files' },
+  ]
+
+  const handleTabChange = (tab: string) => {
+    if (!serviceTabs.includes(tab as ServiceTab)) return
+    routeNavigate({ search: (prev) => ({ ...prev, tab: tab as ServiceTab }) })
   }
 
   return (
@@ -173,40 +179,8 @@ function ServiceDetailPage() {
         />
       </div>
 
-      <Tabs
-        value={activeTab}
-        onValueChange={(tab) => {
-          if (!serviceTabs.includes(tab as ServiceTab)) return
-          routeNavigate({ search: (prev) => ({ ...prev, tab: tab as ServiceTab }) })
-        }}
-        className="space-y-4"
-      >
-        <div className="sm:hidden">
-          <Select
-            value={activeTab}
-            onValueChange={(tab) => {
-              if (!serviceTabs.includes(tab as ServiceTab)) return
-              routeNavigate({ search: (prev) => ({ ...prev, tab: tab as ServiceTab }) })
-            }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {serviceTabs.map((tab) => (
-                <SelectItem key={tab} value={tab}>{tabLabels[tab]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <TabsList className="hidden sm:inline-flex">
-          <TabsTrigger value="info">Info</TabsTrigger>
-          <TabsTrigger value="env">Environment</TabsTrigger>
-          <TabsTrigger value="logs">Logs</TabsTrigger>
-          <TabsTrigger value="compose">Compose</TabsTrigger>
-          <TabsTrigger value="files">Files</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+        <ResponsiveTabsList tabs={serviceTabItems} value={activeTab} onValueChange={handleTabChange} />
 
         <TabsContent value="info" className="space-y-4">
           <Card>

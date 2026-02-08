@@ -1,26 +1,18 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import { ArrowLeft, Loader2, Power, PowerOff, Edit, MoreVertical } from 'lucide-react'
+import { ArrowLeft, Loader2, Edit } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
+import { ResponsiveTabsList } from '@/components/ui/responsive-tabs-list'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { EnableToggle, MoreActionsMenu } from '@/components/ui/entity-actions'
 import { useInstance, useUpdateInstance } from '@/features/instances/queries'
 import { useService } from '@/features/services/queries'
 import { OverridePorts } from '@/components/instances/override-ports'
@@ -133,18 +125,18 @@ function InstanceDetailPage() {
   const activeTab: InstanceTab = routeSearch.instanceTab && instanceTabs.includes(routeSearch.instanceTab as InstanceTab)
     ? (routeSearch.instanceTab as InstanceTab)
     : 'info'
-  const tabLabels: Record<InstanceTab, string> = {
-    info: 'Info',
-    ports: 'Ports',
-    volumes: 'Volumes',
-    environment: 'Environment',
-    labels: 'Labels',
-    domains: 'Domains',
-    healthcheck: 'Healthcheck',
-    dependencies: 'Dependencies',
-    files: 'Config Files',
-    effective: 'Effective Config',
-  }
+  const instanceTabItems = [
+    { value: 'info', label: 'Info' },
+    { value: 'ports', label: 'Ports' },
+    { value: 'volumes', label: 'Volumes' },
+    { value: 'environment', label: 'Environment' },
+    { value: 'labels', label: 'Labels' },
+    { value: 'domains', label: 'Domains' },
+    { value: 'healthcheck', label: 'Healthcheck' },
+    { value: 'dependencies', label: 'Dependencies' },
+    { value: 'files', label: 'Config Files' },
+    { value: 'effective', label: 'Effective Config' },
+  ]
 
   return (
     <div className="space-y-6">
@@ -166,49 +158,27 @@ function InstanceDetailPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant={instance.enabled ? 'outline' : 'success'}
-            size="sm"
-            onClick={handleToggleEnabled}
-            disabled={updateInstance.isPending}
-          >
-            {updateInstance.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : instance.enabled ? (
-              <>
-                <PowerOff className="size-4" />
-                Disable
-              </>
-            ) : (
-              <>
-                <Power className="size-4" />
-                Enable
-              </>
-            )}
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <MoreVertical className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={openEdit}>
-                <Edit className="size-4" />
-                Edit Description
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
-                Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setRenameOpen(true)}>
-                Rename
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <EnableToggle
+            enabled={instance.enabled}
+            onToggle={handleToggleEnabled}
+            isPending={updateInstance.isPending}
+          />
+          <MoreActionsMenu>
+            <DropdownMenuItem onClick={openEdit}>
+              <Edit className="size-4" />
+              Edit Description
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
+              Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setRenameOpen(true)}>
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+              Delete
+            </DropdownMenuItem>
+          </MoreActionsMenu>
         </div>
       </div>
 
@@ -220,37 +190,14 @@ function InstanceDetailPage() {
         }}
         className="space-y-4"
       >
-        <div className="sm:hidden">
-          <Select
-            value={activeTab}
-            onValueChange={(tab) => {
-              if (!instanceTabs.includes(tab as InstanceTab)) return
-              routeNavigate({ search: (prev) => ({ ...prev, instanceTab: tab as InstanceTab }) })
-            }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {instanceTabs.map((tab) => (
-                <SelectItem key={tab} value={tab}>{tabLabels[tab]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <TabsList className="hidden sm:inline-flex">
-          <TabsTrigger value="info">Info</TabsTrigger>
-          <TabsTrigger value="ports">Ports</TabsTrigger>
-          <TabsTrigger value="volumes">Volumes</TabsTrigger>
-          <TabsTrigger value="environment">Environment</TabsTrigger>
-          <TabsTrigger value="labels">Labels</TabsTrigger>
-          <TabsTrigger value="domains">Domains</TabsTrigger>
-          <TabsTrigger value="healthcheck">Healthcheck</TabsTrigger>
-          <TabsTrigger value="dependencies">Dependencies</TabsTrigger>
-          <TabsTrigger value="files">Config Files</TabsTrigger>
-          <TabsTrigger value="effective">Effective Config</TabsTrigger>
-        </TabsList>
+        <ResponsiveTabsList
+          tabs={instanceTabItems}
+          value={activeTab}
+          onValueChange={(tab) => {
+            if (!instanceTabs.includes(tab as InstanceTab)) return
+            routeNavigate({ search: (prev) => ({ ...prev, instanceTab: tab as InstanceTab }) })
+          }}
+        />
 
         <TabsContent value="info" className="space-y-4">
           <Card>

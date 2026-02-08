@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useServiceConfigFiles, useServiceConfigFile, useSaveConfigFile, useDeleteConfigFile } from '@/features/services/queries'
-import { CodeEditor, detectLang } from '@/components/services/code-editor'
+import { CodeEditor } from '@/components/services/code-editor'
+import { detectLang } from '@/lib/detect-lang'
 
 interface Props {
   serviceName: string

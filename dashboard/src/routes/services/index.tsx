@@ -1,17 +1,15 @@
-import { useMemo, useCallback, useEffect, useRef } from 'react'
+import { useMemo, useCallback } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { z } from 'zod'
-import { Loader2, Server, Play, Square, Cpu, MemoryStick, Plus } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useServices } from '@/features/services/queries'
 import { ServiceTable } from '@/components/services/service-table'
 import { ServiceGrid } from '@/components/services/service-grid'
 import { BulkActionsToolbar } from '@/components/services/bulk-actions-toolbar'
-import { ListToolbar } from '@/components/ui/list-toolbar'
 import { FilterBar, type FilterOption } from '@/components/ui/filter-bar'
-import { StatCard } from '@/components/ui/stat-card'
-import { EmptyState } from '@/components/ui/empty-state'
-import { useListControls } from '@/hooks/use-list-controls'
+import { ListPageScaffold } from '@/components/ui/list-page-scaffold'
+import { useUrlSyncedListControls } from '@/hooks/use-url-synced-list-controls'
 import { getServiceStatus } from '@/lib/service-utils'
 import { titleCase } from '@/lib/utils'
 import type { Service } from '@/types/api'
@@ -66,112 +64,10 @@ function ServicesPage() {
   const services = useMemo(() => data?.services ?? [], [data])
   const total = data?.total ?? 0
 
-  const controls = useListControls({
-    storageKey: 'services',
-    items: services,
-    searchFn,
-    filterFns,
-    sortFns,
-    defaultSort: 'name',
-    defaultView: 'table',
-  })
-
-  const {
-    search,
-    setSearch,
-    filters,
-    setFilter,
-    sortBy,
-    setSortBy,
-    sortDir,
-    setSortDir,
-    viewMode,
-    setViewMode,
-  } = controls
-  const syncingFromUrlRef = useRef(false)
-
-  useEffect(() => {
-    syncingFromUrlRef.current = true
-    setSearch(routeSearch.q ?? '')
-    setSortBy(routeSearch.sort ?? 'name')
-    setSortDir(routeSearch.dir ?? 'asc')
-    setViewMode(routeSearch.view ?? 'table')
-    setFilter('category', routeSearch.category ?? 'all')
-    setFilter('status', routeSearch.status ?? 'all')
-  }, [
-    routeSearch.q,
-    routeSearch.sort,
-    routeSearch.dir,
-    routeSearch.view,
-    routeSearch.category,
-    routeSearch.status,
-    setSearch,
-    setSortBy,
-    setSortDir,
-    setViewMode,
-    setFilter,
-  ])
-
-  useEffect(() => {
-    if (syncingFromUrlRef.current) {
-      syncingFromUrlRef.current = false
-      return
-    }
-
-    const nextQ = search || undefined
-    const nextSort =
-      sortBy !== 'name' && sortOptions.some((option) => option.value === sortBy)
-        ? (sortBy as typeof routeSearch.sort)
-        : undefined
-    const nextDir = sortDir === 'asc' ? undefined : sortDir
-    const nextView = viewMode === 'table' ? undefined : viewMode
-    const nextCategory =
-      filters.category && filters.category !== 'all'
-        ? filters.category
-        : undefined
-    const nextStatus =
-      filters.status && filters.status !== 'all'
-        ? filters.status
-        : undefined
-
-    if (
-      routeSearch.q === nextQ
-      && routeSearch.sort === nextSort
-      && routeSearch.dir === nextDir
-      && routeSearch.view === nextView
-      && routeSearch.category === nextCategory
-      && routeSearch.status === nextStatus
-    ) {
-      return
-    }
-
-    navigate({
-      search: (prev) => ({
-        ...prev,
-        q: nextQ,
-        sort: nextSort,
-        dir: nextDir,
-        view: nextView,
-        category: nextCategory,
-        status: nextStatus,
-      }),
-      replace: true,
-    })
-  }, [
-    search,
-    sortBy,
-    sortDir,
-    viewMode,
-    filters.category,
-    filters.status,
-    routeSearch.q,
-    routeSearch.sort,
-    routeSearch.dir,
-    routeSearch.view,
-    routeSearch.category,
-    routeSearch.status,
-    navigate,
-  ])
+  const controls = useUrlSyncedListControls(
+    { storageKey: 'services', items: services, searchFn, filterFns, sortFns, defaultSort: 'name', defaultView: 'table' },
+    { routeSearch, navigate, sortOptions, filterKeys: ['category', 'status'] },
+  )
 
   const handleSelectAll = useCallback(() => {
     controls.selectAll(controls.filtered.map((s) => s.name))
@@ -225,83 +121,68 @@ function ServicesPage() {
     ...categories.map((cat) => ({ value: cat, label: titleCase(cat) })),
   ]
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="size-8 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-5 sm:space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold sm:text-2xl">Services</h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            Manage all {total} services in your environment
-          </p>
-        </div>
+    <ListPageScaffold
+      title="Services"
+      subtitle={`Manage all ${total} services in your environment`}
+      isLoading={isLoading}
+      statCards={[
+        { icon: Server, label: 'Total', value: total },
+        { icon: Play, label: 'Running', value: stats.running, color: 'text-green-500' },
+        { icon: Square, label: 'Stopped', value: stats.stopped, color: 'text-muted-foreground' },
+        { icon: Cpu, label: 'Avg CPU', value: `${stats.avgCpu.toFixed(1)}%` },
+        { icon: MemoryStick, label: 'Total Memory', value: `${stats.totalMem.toFixed(0)} MB` },
+      ]}
+      statGridClassName="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
+      controls={controls}
+      sortOptions={sortOptions}
+      searchPlaceholder="Search services..."
+      actionButton={
         <Button asChild size="sm" className="w-full sm:w-auto">
           <Link to="/services/new"><Plus className="size-4" /> New Service</Link>
         </Button>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard icon={Server} label="Total" value={total} />
-        <StatCard icon={Play} label="Running" value={stats.running} color="text-green-500" />
-        <StatCard icon={Square} label="Stopped" value={stats.stopped} color="text-muted-foreground" />
-        <StatCard icon={Cpu} label="Avg CPU" value={`${stats.avgCpu.toFixed(1)}%`} />
-        <StatCard icon={MemoryStick} label="Total Memory" value={`${stats.totalMem.toFixed(0)} MB`} />
-      </div>
-
-      <BulkActionsToolbar
-        selected={controls.selected}
-        totalCount={controls.filtered.length}
-        onSelectAll={handleSelectAll}
-        onClear={controls.clearSelection}
-      />
-
-      <ListToolbar
-        search={controls.search}
-        onSearchChange={controls.setSearch}
-        searchPlaceholder="Search services..."
-        sortOptions={sortOptions}
-        sortBy={controls.sortBy}
-        sortDir={controls.sortDir}
-        onSortByChange={controls.setSortBy}
-        onSortDirChange={controls.setSortDir}
-        viewMode={controls.viewMode}
-        onViewModeChange={controls.setViewMode}
-      >
-        <FilterBar
-          options={statusOptions}
-          value={controls.filters.status ?? 'all'}
-          onChange={(v) => controls.setFilter('status', v)}
-        />
-        <FilterBar
-          options={categoryOptions}
-          value={controls.filters.category ?? 'all'}
-          onChange={(v) => controls.setFilter('category', v)}
-          variant="dropdown"
-        />
-      </ListToolbar>
-
-      {controls.filtered.length === 0 ? (
-        <EmptyState icon={Server} message="No services match your filters" />
-      ) : controls.viewMode === 'table' ? (
-        <ServiceTable
-          services={controls.filtered}
+      }
+      selectionSlot={
+        <BulkActionsToolbar
           selected={controls.selected}
-          onToggleSelect={controls.toggleSelect}
+          totalCount={controls.filtered.length}
+          onSelectAll={handleSelectAll}
+          onClear={controls.clearSelection}
         />
-      ) : (
-        <ServiceGrid
-          services={controls.filtered}
+      }
+      emptyIcon={Server}
+      emptyMessage="No services match your filters"
+      items={controls.filtered}
+      filterChildren={
+        <>
+          <FilterBar
+            options={statusOptions}
+            value={controls.filters.status ?? 'all'}
+            onChange={(v) => controls.setFilter('status', v)}
+          />
+          <FilterBar
+            options={categoryOptions}
+            value={controls.filters.category ?? 'all'}
+            onChange={(v) => controls.setFilter('category', v)}
+            variant="dropdown"
+          />
+        </>
+      }
+      tableView={(filtered) => (
+        <ServiceTable
+          services={filtered}
           selected={controls.selected}
           onToggleSelect={controls.toggleSelect}
         />
       )}
-    </div>
+      gridView={(filtered) => (
+        <ServiceGrid
+          services={filtered}
+          selected={controls.selected}
+          onToggleSelect={controls.toggleSelect}
+        />
+      )}
+      showCount={false}
+    />
   )
 }

@@ -1,25 +1,17 @@
 import { useState, useRef } from 'react'
 import { createFileRoute, Link, Outlet, useMatch, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2, Play, Square, RotateCcw, Network, Unplug, Clock3, Upload } from 'lucide-react'
+import { ArrowLeft, Loader2, Layers, Power, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2, Play, Square, RotateCcw, Network, Unplug, Clock3, Upload, PowerOff } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
+import { ResponsiveTabsList } from '@/components/ui/responsive-tabs-list'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { LifecycleButtons, EnableToggle, MoreActionsMenu } from '@/components/ui/entity-actions'
 import { useStack, useEnableStack, useDisableStack, useStopStack, useStartStack, useRestartStack, useStackNetwork, useStackCompose, useGeneratePlan, useApplyPlan, useCreateNetwork, useRemoveNetwork, useExportStack, useImportStack } from '@/features/stacks/queries'
 import { CodeEditor } from '@/components/services/code-editor'
 import { useInstances, useUpdateInstance, useStopInstance, useStartInstance, useRestartInstance } from '@/features/instances/queries'
@@ -111,47 +103,46 @@ function InstanceCard({ instance, stackName, runningContainerNames, onDelete, on
         </CardContent>
       </Link>
       <div className="absolute right-2 top-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
-            <Button variant="ghost" size="sm" className="size-6 p-0">
-              <MoreVertical className="size-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-            <DropdownMenuItem disabled={!canStop} onClick={(e) => { e.preventDefault(); if (canStop) stopInstance.mutate() }}>
-              <Square className="size-4" />
-              Stop
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={!canStart} onClick={(e) => { e.preventDefault(); if (canStart) startInstance.mutate() }}>
-              <Play className="size-4" />
-              Start
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={!canRestart} onClick={(e) => { e.preventDefault(); if (canRestart) restartInstance.mutate() }}>
-              <RotateCcw className="size-4" />
-              Restart
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleToggle}>
-              {instance.enabled ? <PowerOff className="size-4" /> : <Power className="size-4" />}
-              {instance.enabled ? 'Disable' : 'Enable'}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => {
-              e.preventDefault()
-              onDuplicate(instance.instance_id)
-            }}>
-              <Copy className="size-4" />
-              Duplicate
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={(e) => {
-              e.preventDefault()
-              onDelete(instance.instance_id)
-            }}>
-              <Trash2 className="size-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <MoreActionsMenu
+          variant="ghost"
+          triggerClassName="size-6 p-0"
+          iconClassName="size-3"
+          triggerProps={{ onClick: (e) => e.preventDefault() }}
+          contentProps={{ onClick: (e) => e.stopPropagation() }}
+        >
+          <DropdownMenuItem disabled={!canStop} onClick={(e) => { e.preventDefault(); if (canStop) stopInstance.mutate() }}>
+            <Square className="size-4" />
+            Stop
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={!canStart} onClick={(e) => { e.preventDefault(); if (canStart) startInstance.mutate() }}>
+            <Play className="size-4" />
+            Start
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={!canRestart} onClick={(e) => { e.preventDefault(); if (canRestart) restartInstance.mutate() }}>
+            <RotateCcw className="size-4" />
+            Restart
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleToggle}>
+            {instance.enabled ? <PowerOff className="size-4" /> : <Power className="size-4" />}
+            {instance.enabled ? 'Disable' : 'Enable'}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={(e) => {
+            e.preventDefault()
+            onDuplicate(instance.instance_id)
+          }}>
+            <Copy className="size-4" />
+            Duplicate
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" onClick={(e) => {
+            e.preventDefault()
+            onDelete(instance.instance_id)
+          }}>
+            <Trash2 className="size-4" />
+            Delete
+          </DropdownMenuItem>
+        </MoreActionsMenu>
       </div>
     </Card>
   )
@@ -277,11 +268,11 @@ function StackDetailPage() {
 
   const updatedAgo = timeAgo(stack.updated_at)
   const activeTab: StackTab = routeSearch.tab ?? 'instances'
-  const tabLabels: Record<StackTab, string> = {
-    instances: `Instances (${instances.length})`,
-    compose: 'Compose',
-    deploy: 'Deploy',
-  }
+  const stackTabItems = [
+    { value: 'instances', label: `Instances (${instances.length})` },
+    { value: 'compose', label: 'Compose' },
+    { value: 'deploy', label: 'Deploy' },
+  ]
 
   return (
     <div className="space-y-5 sm:space-y-6">
@@ -304,94 +295,51 @@ function StackDetailPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-          {stack.enabled && stack.running_count > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => stopStack.mutate(stack.name)}
-              disabled={stopStack.isPending}
-            >
-              {stopStack.isPending ? <Loader2 className="size-4 animate-spin" /> : <Square className="size-4" />}
-              Stop
-            </Button>
+          {stack.enabled && (
+            <LifecycleButtons
+              isRunning={stack.running_count > 0}
+              onStart={() => startStack.mutate(stack.name)}
+              onStop={() => stopStack.mutate(stack.name)}
+              onRestart={() => restartStack.mutate(stack.name)}
+              isStartPending={startStack.isPending}
+              isStopPending={stopStack.isPending}
+              isRestartPending={restartStack.isPending}
+              showRestart
+            />
           )}
-          {stack.enabled && stack.running_count === 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => startStack.mutate(stack.name)}
-              disabled={startStack.isPending}
-            >
-              {startStack.isPending ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
-              Start
-            </Button>
-          )}
-          {stack.enabled && stack.running_count > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => restartStack.mutate(stack.name)}
-              disabled={restartStack.isPending}
-            >
-              {restartStack.isPending ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
-              Restart
-            </Button>
-          )}
-          <Button
-            variant={stack.enabled ? 'outline' : 'success'}
-            size="sm"
-            onClick={handleToggleEnabled}
-            disabled={enableStack.isPending || disableStack.isPending}
-          >
-            {enableStack.isPending || disableStack.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : stack.enabled ? (
-              <>
-                <PowerOff className="size-4" />
-                Disable
-              </>
-            ) : (
-              <>
-                <Power className="size-4" />
-                Enable
-              </>
-            )}
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <MoreVertical className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setEditOpen(true)}>
-                <Edit className="size-4" />
-                Edit Description
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setCloneOpen(true)}>
-                <Copy className="size-4" />
-                Clone
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setRenameOpen(true)}>
-                <FileEdit className="size-4" />
-                Rename
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => exportStack.mutate()} disabled={exportStack.isPending}>
-                <Download className="size-4" />
-                Export
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => fileInputRef.current?.click()} disabled={importStack.isPending}>
-                <Upload className="size-4" />
-                Import
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
-                <Trash2 className="size-4" />
-                Delete
-              </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <EnableToggle
+            enabled={stack.enabled}
+            onToggle={handleToggleEnabled}
+            isPending={enableStack.isPending || disableStack.isPending}
+          />
+          <MoreActionsMenu>
+            <DropdownMenuItem onClick={() => setEditOpen(true)}>
+              <Edit className="size-4" />
+              Edit Description
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setCloneOpen(true)}>
+              <Copy className="size-4" />
+              Clone
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setRenameOpen(true)}>
+              <FileEdit className="size-4" />
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => exportStack.mutate()} disabled={exportStack.isPending}>
+              <Download className="size-4" />
+              Export
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => fileInputRef.current?.click()} disabled={importStack.isPending}>
+              <Upload className="size-4" />
+              Import
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+              <Trash2 className="size-4" />
+              Delete
+            </DropdownMenuItem>
+          </MoreActionsMenu>
           </div>
         </div>
       </div>
@@ -421,30 +369,14 @@ function StackDetailPage() {
         }}
         className="space-y-4"
       >
-        <div className="sm:hidden">
-          <Select
-            value={activeTab}
-            onValueChange={(tab) => {
-              if (!stackTabs.includes(tab as StackTab)) return
-              routeNavigate({ search: (prev) => ({ ...prev, tab: tab as StackTab }) })
-            }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {stackTabs.map((tab) => (
-                <SelectItem key={tab} value={tab}>{tabLabels[tab]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <TabsList className="hidden sm:inline-flex">
-          <TabsTrigger value="instances">Instances ({instances.length})</TabsTrigger>
-          <TabsTrigger value="compose">Compose</TabsTrigger>
-          <TabsTrigger value="deploy">Deploy</TabsTrigger>
-        </TabsList>
+        <ResponsiveTabsList
+          tabs={stackTabItems}
+          value={activeTab}
+          onValueChange={(tab) => {
+            if (!stackTabs.includes(tab as StackTab)) return
+            routeNavigate({ search: (prev) => ({ ...prev, tab: tab as StackTab }) })
+          }}
+        />
 
         <TabsContent value="instances" className="space-y-6">
           <Card>

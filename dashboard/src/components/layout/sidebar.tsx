@@ -1,7 +1,7 @@
 import { Link, useLocation } from '@tanstack/react-router'
 import { X, Server } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { navItems } from './header'
+import { navItems } from '@/lib/nav-items'
 import { useEffect } from 'react'
 
 export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -18,6 +18,7 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
 
   useEffect(() => {
     onClose()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname])
 
   useEffect(() => {

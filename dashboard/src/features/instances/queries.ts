@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api'
+import { api, getErrorMessage } from '@/lib/api'
 import type {
   Instance,
   InstanceDetail,
@@ -80,8 +80,8 @@ export function useCreateInstance(stackName: string) {
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to create instance')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to create instance'))
     },
   })
 }
@@ -104,8 +104,8 @@ export function useUpdateInstance(stackName: string, instanceId: string) {
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to update instance')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update instance'))
     },
   })
 }
@@ -123,8 +123,8 @@ export function useDeleteInstance(stackName: string, instanceId: string) {
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to delete instance')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to delete instance'))
     },
   })
 }
@@ -144,8 +144,8 @@ export function useDuplicateInstance(stackName: string, instanceId: string) {
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to duplicate instance')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to duplicate instance'))
     },
   })
 }
@@ -167,8 +167,8 @@ export function useRenameInstance(stackName: string, instanceId: string) {
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to rename instance')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to rename instance'))
     },
   })
 }
@@ -185,8 +185,8 @@ export function useStopInstance(stackName: string, instanceId: string) {
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || `Failed to stop ${instanceId}`)
+    onError: (error) => {
+      toast.error(getErrorMessage(error, `Failed to stop ${instanceId}`))
     },
   })
 }
@@ -203,8 +203,8 @@ export function useStartInstance(stackName: string, instanceId: string) {
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || `Failed to start ${instanceId}`)
+    onError: (error) => {
+      toast.error(getErrorMessage(error, `Failed to start ${instanceId}`))
     },
   })
 }
@@ -221,8 +221,8 @@ export function useRestartInstance(stackName: string, instanceId: string) {
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || `Failed to restart ${instanceId}`)
+    onError: (error) => {
+      toast.error(getErrorMessage(error, `Failed to restart ${instanceId}`))
     },
   })
 }
@@ -240,8 +240,8 @@ export function useUpdateInstancePorts(stackName: string, instanceId: string) {
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to update ports')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update ports'))
     },
   })
 }
@@ -259,8 +259,8 @@ export function useUpdateInstanceVolumes(stackName: string, instanceId: string) 
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to update volumes')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update volumes'))
     },
   })
 }
@@ -278,8 +278,8 @@ export function useUpdateInstanceEnvVars(stackName: string, instanceId: string) 
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to update environment variables')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update environment variables'))
     },
   })
 }
@@ -297,8 +297,8 @@ export function useUpdateInstanceLabels(stackName: string, instanceId: string) {
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to update labels')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update labels'))
     },
   })
 }
@@ -316,8 +316,8 @@ export function useUpdateInstanceDomains(stackName: string, instanceId: string) 
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to update domains')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update domains'))
     },
   })
 }
@@ -335,8 +335,8 @@ export function useUpdateInstanceHealthcheck(stackName: string, instanceId: stri
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to update healthcheck')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update healthcheck'))
     },
   })
 }
@@ -354,8 +354,47 @@ export function useUpdateInstanceDependencies(stackName: string, instanceId: str
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to update dependencies')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update dependencies'))
+    },
+  })
+}
+
+interface SaveConfigFileRequest {
+  content: string
+  file_mode: string
+}
+
+export function useSaveConfigFile(stackName: string, instanceId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ filePath, data }: { filePath: string; data: SaveConfigFileRequest }) => {
+      const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/files/${filePath}`, data)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to save file'))
+    },
+  })
+}
+
+export function useDeleteConfigFile(stackName: string, instanceId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (filePath: string) => {
+      const response = await api.delete(`/stacks/${stackName}/instances/${instanceId}/files/${filePath}`)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to delete file'))
     },
   })
 }

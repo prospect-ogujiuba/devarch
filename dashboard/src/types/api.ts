@@ -70,6 +70,13 @@ export interface Category {
   updated_at?: string
 }
 
+export interface CategoryItem {
+  name: string
+  runningCount: number
+  serviceCount: number
+  startupOrder?: number
+}
+
 export interface Service {
   id: number
   name: string

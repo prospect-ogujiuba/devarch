@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -16,9 +16,12 @@ export function EditStackDialog({ stack, open, onOpenChange }: EditStackDialogPr
   const updateStack = useUpdateStack()
   const [description, setDescription] = useState(stack.description)
 
-  useEffect(() => {
-    setDescription(stack.description)
-  }, [stack.description, open])
+  const handleOpenChange = (newOpen: boolean) => {
+    if (newOpen) {
+      setDescription(stack.description)
+    }
+    onOpenChange(newOpen)
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,7 +36,7 @@ export function EditStackDialog({ stack, open, onOpenChange }: EditStackDialogPr
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit {stack.name}</DialogTitle>

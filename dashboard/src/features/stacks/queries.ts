@@ -1,9 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api'
+import { api, getErrorMessage } from '@/lib/api'
 import type { Stack, DeletePreview, NetworkStatus, StackCompose, StackPlan, ApplyResult, ImportResult } from '@/types/api'
 import { toast } from 'sonner'
 
-// Queries
 export function useStacks() {
   return useQuery({
     queryKey: ['stacks'],
@@ -76,7 +75,6 @@ export function useStackCompose(name: string) {
   })
 }
 
-// Mutations
 interface CreateStackRequest {
   name: string
   description: string
@@ -93,8 +91,8 @@ export function useCreateStack() {
       toast.success('Stack created')
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to create stack')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to create stack'))
     },
   })
 }
@@ -115,8 +113,8 @@ export function useUpdateStack() {
       queryClient.invalidateQueries({ queryKey: ['stacks', name] })
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to update stack')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update stack'))
     },
   })
 }
@@ -132,8 +130,8 @@ export function useDeleteStack() {
       toast.success('Stack deleted')
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to delete stack')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to delete stack'))
     },
   })
 }
@@ -149,8 +147,8 @@ export function useEnableStack() {
       toast.success(`Enabled ${name}`)
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any, name) => {
-      toast.error(error.response?.data || `Failed to enable ${name}`)
+    onError: (error, name) => {
+      toast.error(getErrorMessage(error, `Failed to enable ${name}`))
     },
   })
 }
@@ -166,8 +164,8 @@ export function useDisableStack() {
       toast.success(`Disabled ${name}`)
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any, name) => {
-      toast.error(error.response?.data || `Failed to disable ${name}`)
+    onError: (error, name) => {
+      toast.error(getErrorMessage(error, `Failed to disable ${name}`))
     },
   })
 }
@@ -186,8 +184,8 @@ export function useCloneStack() {
       queryClient.invalidateQueries({ queryKey: ['stacks', newName] })
       queryClient.invalidateQueries({ queryKey: ['stacks', newName, 'instances'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to clone stack')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to clone stack'))
     },
   })
 }
@@ -203,8 +201,8 @@ export function useRenameStack() {
       toast.success('Stack renamed')
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to rename stack')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to rename stack'))
     },
   })
 }
@@ -221,8 +219,8 @@ export function useRestoreStack() {
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', 'trash'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to restore stack')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to restore stack'))
     },
   })
 }
@@ -239,8 +237,8 @@ export function usePermanentDeleteStack() {
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', 'trash'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to permanently delete stack')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to permanently delete stack'))
     },
   })
 }
@@ -256,8 +254,8 @@ export function useStopStack() {
       toast.success(`Stopped ${name}`)
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any, name) => {
-      toast.error(error.response?.data || `Failed to stop ${name}`)
+    onError: (error, name) => {
+      toast.error(getErrorMessage(error, `Failed to stop ${name}`))
     },
   })
 }
@@ -273,8 +271,8 @@ export function useStartStack() {
       toast.success(`Started ${name}`)
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any, name) => {
-      toast.error(error.response?.data || `Failed to start ${name}`)
+    onError: (error, name) => {
+      toast.error(getErrorMessage(error, `Failed to start ${name}`))
     },
   })
 }
@@ -290,8 +288,8 @@ export function useRestartStack() {
       toast.success(`Restarted ${name}`)
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any, name) => {
-      toast.error(error.response?.data || `Failed to restart ${name}`)
+    onError: (error, name) => {
+      toast.error(getErrorMessage(error, `Failed to restart ${name}`))
     },
   })
 }
@@ -309,8 +307,8 @@ export function useCreateNetwork() {
       queryClient.invalidateQueries({ queryKey: ['stacks', name] })
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any, name) => {
-      toast.error(error.response?.data || `Failed to create network for ${name}`)
+    onError: (error, name) => {
+      toast.error(getErrorMessage(error, `Failed to create network for ${name}`))
     },
   })
 }
@@ -328,8 +326,8 @@ export function useRemoveNetwork() {
       queryClient.invalidateQueries({ queryKey: ['stacks', name] })
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
-    onError: (error: any, name) => {
-      toast.error(error.response?.data || `Failed to remove network for ${name}`)
+    onError: (error, name) => {
+      toast.error(getErrorMessage(error, `Failed to remove network for ${name}`))
     },
   })
 }
@@ -340,8 +338,8 @@ export function useGeneratePlan(name: string) {
       const response = await api.get<StackPlan>(`/stacks/${name}/plan`)
       return response
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to generate plan')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to generate plan'))
     },
   })
 }
@@ -360,12 +358,15 @@ export function useApplyPlan(name: string) {
       queryClient.invalidateQueries({ queryKey: ['stacks', name, 'compose'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', name, 'network'] })
     },
-    onError: (error: any) => {
-      if (error.response?.status === 409) {
-        toast.error('Plan is stale or another operation in progress. Regenerate plan.')
-      } else {
-        toast.error(error.response?.data || 'Apply failed')
+    onError: (error) => {
+      if ('response' in error && (error as Record<string, unknown>).response) {
+        const resp = (error as Record<string, unknown>).response as Record<string, unknown>
+        if (resp.status === 409) {
+          toast.error('Plan is stale or another operation in progress. Regenerate plan.')
+          return
+        }
       }
+      toast.error(getErrorMessage(error, 'Apply failed'))
     },
   })
 }
@@ -412,8 +413,8 @@ export function useImportStack() {
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', result.stack_name] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Import failed')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Import failed'))
     },
   })
 }

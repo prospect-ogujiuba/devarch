@@ -1,18 +1,8 @@
 import { Link } from '@tanstack/react-router'
-import { Server, LayoutGrid, FolderKanban, FolderOpen, Settings, Moon, Sun, Menu, Layers } from 'lucide-react'
+import { Server, Moon, Sun, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/lib/theme'
-
-const navItems = [
-  { to: '/' as const, icon: LayoutGrid, label: 'Overview' },
-  { to: '/stacks' as const, icon: Layers, label: 'Stacks' },
-  { to: '/services' as const, icon: Server, label: 'Services' },
-  { to: '/categories' as const, icon: FolderKanban, label: 'Categories' },
-  { to: '/projects' as const, icon: FolderOpen, label: 'Projects' },
-  { to: '/settings' as const, icon: Settings, label: 'Settings' },
-]
-
-export { navItems }
+import { navItems } from '@/lib/nav-items'
 
 export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const { resolvedTheme, setTheme } = useTheme()

@@ -31,19 +31,14 @@ function getLangExtension(lang?: string) {
   }
 }
 
-function detectLang(filePath: string): string {
-  const ext = filePath.split('.').pop()?.toLowerCase() ?? ''
-  if (['json'].includes(ext)) return 'json'
-  if (['yaml', 'yml'].includes(ext)) return 'yaml'
-  if (['xml', 'html', 'htm'].includes(ext)) return 'xml'
-  return ''
-}
-
 export function CodeEditor({ value, onChange, language, readOnly = false, className, autoHeight = false }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
-  onChangeRef.current = onChange
+
+  useEffect(() => {
+    onChangeRef.current = onChange
+  })
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -77,6 +72,7 @@ export function CodeEditor({ value, onChange, language, readOnly = false, classN
     viewRef.current = view
 
     return () => view.destroy()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language, readOnly, autoHeight])
 
   useEffect(() => {
@@ -92,5 +88,3 @@ export function CodeEditor({ value, onChange, language, readOnly = false, classN
 
   return <div ref={containerRef} className={className ?? 'rounded-md border overflow-hidden'} />
 }
-
-export { detectLang }
