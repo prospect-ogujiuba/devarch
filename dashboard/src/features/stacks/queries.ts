@@ -310,6 +310,23 @@ export function useCreateNetwork() {
   })
 }
 
+export function useRemoveNetwork() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const response = await api.delete(`/stacks/${name}/network`)
+      return response.data
+    },
+    onSuccess: (_data, name) => {
+      toast.success(`Network removed for ${name}`)
+      queryClient.invalidateQueries({ queryKey: ['stacks', name, 'network'] })
+    },
+    onError: (error: any, name) => {
+      toast.error(error.response?.data || `Failed to remove network for ${name}`)
+    },
+  })
+}
+
 export function useGeneratePlan(name: string) {
   return useMutation({
     mutationFn: async () => {

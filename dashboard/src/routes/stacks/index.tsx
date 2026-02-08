@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Loader2, Layers, Plus, CheckCircle2, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useStacks, useDeleteStack, useEnableStack, useDisableStack, useCreateNetwork } from '@/features/stacks/queries'
+import { useStacks, useDeleteStack, useEnableStack, useDisableStack, useCreateNetwork, useRemoveNetwork } from '@/features/stacks/queries'
 import { StackTable } from '@/components/stacks/stack-table'
 import { StackGrid } from '@/components/stacks/stack-grid'
 import { CreateStackDialog } from '@/components/stacks/create-stack-dialog'
@@ -54,6 +54,7 @@ function StacksPage() {
   const enableMutation = useEnableStack()
   const disableMutation = useDisableStack()
   const createNetworkMutation = useCreateNetwork()
+  const removeNetworkMutation = useRemoveNetwork()
 
   const [createOpen, setCreateOpen] = useState(false)
 
@@ -95,6 +96,10 @@ function StacksPage() {
 
   const handleCreateNetwork = (name: string) => {
     createNetworkMutation.mutate(name)
+  }
+
+  const handleRemoveNetwork = (name: string) => {
+    removeNetworkMutation.mutate(name)
   }
 
   const handleClone = (name: string) => { void name }
@@ -180,6 +185,7 @@ function StacksPage() {
           onRename={handleRename}
           onDelete={handleDelete}
           onCreateNetwork={handleCreateNetwork}
+          onRemoveNetwork={handleRemoveNetwork}
         />
       ) : (
         <StackGrid
@@ -188,6 +194,7 @@ function StacksPage() {
           onDisable={handleDisable}
           onDelete={handleDelete}
           onCreateNetwork={handleCreateNetwork}
+          onRemoveNetwork={handleRemoveNetwork}
         />
       )}
 
