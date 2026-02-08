@@ -44,16 +44,17 @@ function timeAgo(dateStr: string): string {
 interface InstanceCardProps {
   instance: Instance
   stackName: string
+  connectedContainers: string[]
   onDelete: (id: string) => void
   onDuplicate: (id: string) => void
 }
 
-function InstanceCard({ instance, stackName, onDelete, onDuplicate }: InstanceCardProps) {
+function InstanceCard({ instance, stackName, connectedContainers, onDelete, onDuplicate }: InstanceCardProps) {
   const updateInstance = useUpdateInstance(stackName, instance.instance_id)
   const stopInstance = useStopInstance(stackName, instance.instance_id)
   const startInstance = useStartInstance(stackName, instance.instance_id)
   const restartInstance = useRestartInstance(stackName, instance.instance_id)
-  const statusColor = instance.enabled ? 'bg-green-500' : 'bg-muted-foreground'
+  const isRunning = instance.container_name != null && connectedContainers.includes(instance.container_name)
 
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -63,20 +64,15 @@ function InstanceCard({ instance, stackName, onDelete, onDuplicate }: InstanceCa
   return (
     <Card className="py-3 hover:border-primary/50 transition-colors h-full group relative">
       <Link to="/stacks/$name/instances/$instance" params={{ name: stackName, instance: instance.instance_id }} className="block">
-        <CardHeader className="pb-2">
-          <div className="flex items-start gap-2">
-            <div className={cn('size-2 rounded-full mt-1.5 shrink-0', statusColor)} />
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-sm font-semibold truncate">
-                {instance.instance_id}
-              </CardTitle>
-              <p className="text-xs text-muted-foreground truncate">
-                {instance.template_name}
-              </p>
-            </div>
-          </div>
+        <CardHeader className="pb-2 px-4">
+          <CardTitle className="text-sm font-semibold truncate">
+            {instance.instance_id}
+          </CardTitle>
+          <p className="text-xs text-muted-foreground truncate">
+            {instance.template_name}
+          </p>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-2 px-4">
           {instance.container_name && (
             <div className="text-xs font-mono text-muted-foreground truncate">
               {instance.container_name}
@@ -87,11 +83,19 @@ function InstanceCard({ instance, stackName, onDelete, onDuplicate }: InstanceCa
               {instance.description}
             </p>
           )}
-          {instance.override_count > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {instance.override_count} {instance.override_count === 1 ? 'override' : 'overrides'}
-            </Badge>
-          )}
+          <div className="flex items-center justify-between">
+            {instance.override_count > 0 ? (
+              <Badge variant="secondary" className="text-xs">
+                {instance.override_count} {instance.override_count === 1 ? 'override' : 'overrides'}
+              </Badge>
+            ) : (
+              <span />
+            )}
+            <div className="flex items-center gap-2">
+              <Power className={cn('size-3', instance.enabled ? 'text-green-500' : 'text-muted-foreground/40')} title={instance.enabled ? 'Enabled' : 'Disabled'} />
+              <Play className={cn('size-3', isRunning ? 'text-blue-500' : 'text-muted-foreground/40')} title={isRunning ? 'Running' : 'Stopped'} />
+            </div>
+          </div>
         </CardContent>
       </Link>
       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -425,6 +429,7 @@ function StackDetailPage() {
                       key={instance.id}
                       instance={instance}
                       stackName={name}
+                      connectedContainers={connectedContainers}
                       onDelete={openInstanceDelete}
                       onDuplicate={openInstanceDuplicate}
                     />

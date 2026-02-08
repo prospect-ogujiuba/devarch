@@ -37,6 +37,15 @@ func (h *StackHandler) runningCount(stackName string) int {
 	return count
 }
 
+func (h *StackHandler) networkActive(networkName *string, stackName string) bool {
+	name := container.NetworkName(stackName)
+	if networkName != nil && *networkName != "" {
+		name = *networkName
+	}
+	_, err := h.containerClient.InspectNetwork(name)
+	return err == nil
+}
+
 func (h *StackHandler) stackCompose(stackName string) ([]byte, error) {
 	var networkName sql.NullString
 	err := h.db.QueryRow(`
@@ -75,15 +84,16 @@ func (h *StackHandler) stackCompose(stackName string) ([]byte, error) {
 }
 
 type stackResponse struct {
-	ID            int       `json:"id"`
-	Name          string    `json:"name"`
-	Description   string    `json:"description"`
-	NetworkName   *string   `json:"network_name"`
-	Enabled       bool      `json:"enabled"`
-	InstanceCount int       `json:"instance_count"`
-	RunningCount  int       `json:"running_count"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID             int       `json:"id"`
+	Name           string    `json:"name"`
+	Description    string    `json:"description"`
+	NetworkName    *string   `json:"network_name"`
+	Enabled        bool      `json:"enabled"`
+	InstanceCount  int       `json:"instance_count"`
+	RunningCount   int       `json:"running_count"`
+	NetworkActive  bool      `json:"network_active"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type createStackRequest struct {
@@ -201,6 +211,7 @@ func (h *StackHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 
 		stack.RunningCount = h.runningCount(stack.Name)
+		stack.NetworkActive = h.networkActive(stack.NetworkName, stack.Name)
 
 		stacks = append(stacks, stack)
 	}
@@ -254,6 +265,7 @@ func (h *StackHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stack.RunningCount = h.runningCount(stack.Name)
+	stack.NetworkActive = h.networkActive(stack.NetworkName, stack.Name)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stack)

@@ -131,11 +131,17 @@ export function StackTable({ stacks, onEnable, onDisable, onClone, onRename, onD
                             <Edit className="size-4" />
                             Rename
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onCreateNetwork(stack.name)}>
+                          <DropdownMenuItem
+                            disabled={stack.network_active}
+                            onClick={() => onCreateNetwork(stack.name)}
+                          >
                             <Network className="size-4" />
                             Create Network
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onRemoveNetwork(stack.name)}>
+                          <DropdownMenuItem
+                            disabled={!stack.network_active}
+                            onClick={() => onRemoveNetwork(stack.name)}
+                          >
                             <Unplug className="size-4" />
                             Remove Network
                           </DropdownMenuItem>

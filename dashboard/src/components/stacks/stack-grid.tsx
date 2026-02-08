@@ -104,6 +104,7 @@ export function StackGrid({ stacks, onEnable, onDisable, onDelete, onCreateNetwo
               <Button
                 variant="outline"
                 size="icon-sm"
+                disabled={stack.network_active}
                 onClick={(e) => {
                   e.preventDefault()
                   onCreateNetwork(stack.name)
@@ -115,6 +116,7 @@ export function StackGrid({ stacks, onEnable, onDisable, onDelete, onCreateNetwo
               <Button
                 variant="outline"
                 size="icon-sm"
+                disabled={!stack.network_active}
                 onClick={(e) => {
                   e.preventDefault()
                   onRemoveNetwork(stack.name)
