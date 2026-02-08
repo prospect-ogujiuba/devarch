@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createFileRoute, Link, Outlet, useMatch, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2, Play, Square, RotateCcw, Network, Unplug, Clock3 } from 'lucide-react'
+import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2, Play, Square, RotateCcw, Network, Unplug, Clock3, Upload } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useStack, useEnableStack, useDisableStack, useStopStack, useStartStack, useRestartStack, useStackNetwork, useStackCompose, useGeneratePlan, useApplyPlan, useCreateNetwork, useRemoveNetwork } from '@/features/stacks/queries'
+import { useStack, useEnableStack, useDisableStack, useStopStack, useStartStack, useRestartStack, useStackNetwork, useStackCompose, useGeneratePlan, useApplyPlan, useCreateNetwork, useRemoveNetwork, useExportStack, useImportStack } from '@/features/stacks/queries'
 import { CodeEditor } from '@/components/services/code-editor'
 import { useInstances, useUpdateInstance, useStopInstance, useStartInstance, useRestartInstance } from '@/features/instances/queries'
 import { EditStackDialog } from '@/components/stacks/edit-stack-dialog'
@@ -193,7 +193,10 @@ function StackDetailPage() {
   const applyPlan = useApplyPlan(name)
   const createNetwork = useCreateNetwork()
   const removeNetwork = useRemoveNetwork()
+  const exportStack = useExportStack(name)
+  const importStack = useImportStack()
 
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [cloneOpen, setCloneOpen] = useState(false)
@@ -238,6 +241,16 @@ function StackDetailPage() {
     a.download = `docker-compose-${name}.yml`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      importStack.mutate(file)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
   }
 
   if (isLoading) {
@@ -362,6 +375,15 @@ function StackDetailPage() {
               <DropdownMenuItem onClick={() => setRenameOpen(true)}>
                 <FileEdit className="size-4" />
                 Rename
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => exportStack.mutate()} disabled={exportStack.isPending}>
+                <Download className="size-4" />
+                Export
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => fileInputRef.current?.click()} disabled={importStack.isPending}>
+                <Upload className="size-4" />
+                Import
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
@@ -718,6 +740,14 @@ function StackDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <input
+        type="file"
+        accept=".yml,.yaml"
+        className="hidden"
+        ref={fileInputRef}
+        onChange={handleImport}
+      />
 
       {stack && (
         <>
