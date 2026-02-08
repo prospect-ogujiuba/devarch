@@ -122,12 +122,12 @@ Plans:
   3. Apply endpoint executes plan with advisory lock (one apply per stack at a time)
   4. Stale plans are rejected if stack changed since plan creation
   5. Apply flow: lock → ensure network → materialize configs → compose up
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 06-01-PLAN.md: TBD
-- [ ] 06-02-PLAN.md: TBD
-- [ ] 06-03-PLAN.md: TBD
+- [ ] 06-01-PLAN.md — Plan domain package: types, diff computation, staleness detection
+- [ ] 06-02-PLAN.md — Plan + Apply API endpoints with advisory locking and route wiring
+- [ ] 06-03-PLAN.md — Dashboard Deploy tab with diff visualization and apply execution
 
 ### Phase 7: Export/Import & Bootstrap
 **Goal**: Users export stacks to devarch.yml (with resolved specifics) for sharing, import with reconciliation, lockfile for deterministic reproduction, and one-command bootstrap + diagnostics
@@ -203,11 +203,11 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 | 3. Service Instances | 5/5 | Complete | 2026-02-04 (verified 2026-02-06) |
 | 4. Network Isolation | 2/2 | Complete | 2026-02-06 |
 | 5. Compose Generation | 2/2 | Complete | 2026-02-07 |
-| 6. Plan/Apply Workflow | 0/TBD | Not started | - |
+| 6. Plan/Apply Workflow | 0/3 | Not started | - |
 | 7. Export/Import & Bootstrap | 0/TBD | Not started | - |
 | 8. Service Wiring | 0/TBD | Not started | - |
 | 9. Secrets & Resources | 0/TBD | Not started | - |
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-07 after phase 5 completion*
+*Last updated: 2026-02-07 after phase 6 planning*
