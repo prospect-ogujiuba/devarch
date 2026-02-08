@@ -49,6 +49,7 @@ docker compose up      # postgres :5433, api :8550
 - `src/routes/` — page components (services, projects, categories, settings)
 - `src/components/services/` — service-specific UI (editors, tables, log viewer)
 - `src/types/api.ts` — API type definitions
+- `URL_SEARCH_PARAMS.md` — search param naming + URL/state sync conventions
 - `@` alias maps to `src/`
 - Vite proxies `/api` → `localhost:8550`
 
