@@ -165,13 +165,13 @@ Plans:
   6. Consumer instances receive env vars from wires (DB_HOST, DB_PORT using internal DNS)
   7. Consumer instance env overrides win over injected wire values
   8. Wires included in devarch.yml export (re-export after wiring)
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 08-01-PLAN.md: TBD
-- [ ] 08-02-PLAN.md: TBD
-- [ ] 08-03-PLAN.md: TBD
-- [ ] 08-04-PLAN.md: TBD
+- [ ] 08-01-PLAN.md — Migration 019 (wiring tables) + contract CRUD on templates + TypeScript types
+- [ ] 08-02-PLAN.md — Wiring domain package (resolver, env injector, validator) + wire management API
+- [ ] 08-03-PLAN.md — Plan/compose/export integration with wire-injected env vars
+- [ ] 08-04-PLAN.md — Dashboard Wiring tab with wire table, create/disconnect, ambiguous resolution
 
 ### Phase 9: Secrets & Resources
 **Goal**: Secrets encrypted at rest, resource limits per instance, all sensitive data redacted in outputs
@@ -206,9 +206,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 | 5. Compose Generation | 2/2 | Complete | 2026-02-07 |
 | 6. Plan/Apply Workflow | 3/3 | Complete | 2026-02-07 |
 | 7. Export/Import & Bootstrap | 4/4 | Complete | 2026-02-08 |
-| 8. Service Wiring | 0/TBD | Not started | - |
+| 8. Service Wiring | 0/4 | Planned | - |
 | 9. Secrets & Resources | 0/TBD | Not started | - |
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-08 after phase 7 completion*
+*Last updated: 2026-02-08 after phase 8 planning*
