@@ -144,12 +144,13 @@ Plans:
   8. `devarch doctor` checks runtime, permissions, port conflicts, disk, required tools
   9. devarch.lock generated from resolved state (ports, digests, template versions)
   10. Apply warns when runtime diverges from lockfile
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 07-01-PLAN.md: TBD
-- [ ] 07-02-PLAN.md: TBD
-- [ ] 07-03-PLAN.md: TBD
+- [ ] 07-01-PLAN.md — Export domain package (types, exporter, secret redaction) + HTTP endpoint
+- [ ] 07-02-PLAN.md — Import domain logic (reconciliation, template validation, advisory lock) + HTTP endpoint
+- [ ] 07-03-PLAN.md — Lockfile generation, validation, apply integration
+- [ ] 07-04-PLAN.md — Dashboard export/import UI + CLI bootstrap (devarch init/doctor)
 
 ### Phase 8: Service Wiring
 **Goal**: Services automatically discover dependencies via contracts (auto-wiring for simple cases, explicit wiring for ambiguous)
