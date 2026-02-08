@@ -1,0 +1,584 @@
+package export
+
+import (
+	"database/sql"
+	"fmt"
+	"strconv"
+
+	"github.com/priz/devarch-api/internal/container"
+	"gopkg.in/yaml.v3"
+)
+
+type Exporter struct {
+	db *sql.DB
+}
+
+type instanceRow struct {
+	id                int
+	instanceID        string
+	enabled           bool
+	templateServiceID int
+}
+
+func NewExporter(db *sql.DB) *Exporter {
+	return &Exporter{db: db}
+}
+
+func (e *Exporter) Export(stackName string) ([]byte, error) {
+	var stackID int
+	var description sql.NullString
+	var networkName sql.NullString
+
+	err := e.db.QueryRow(`
+		SELECT id, description, network_name
+		FROM stacks
+		WHERE name = $1 AND deleted_at IS NULL
+	`, stackName).Scan(&stackID, &description, &networkName)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("stack %q not found", stackName)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("query stack: %w", err)
+	}
+
+	netName := fmt.Sprintf("devarch-%s-net", stackName)
+	if networkName.Valid && networkName.String != "" {
+		netName = networkName.String
+	}
+
+	devarchFile := DevArchFile{
+		Version: 1,
+		Stack: StackConfig{
+			Name:        stackName,
+			NetworkName: netName,
+		},
+		Instances: make(map[string]InstanceDef),
+		Wires:     []interface{}{},
+	}
+
+	if description.Valid && description.String != "" {
+		devarchFile.Stack.Description = description.String
+	}
+
+	rows, err := e.db.Query(`
+		SELECT si.id, si.instance_id, si.enabled, si.template_service_id
+		FROM service_instances si
+		WHERE si.stack_id = $1 AND si.deleted_at IS NULL
+		ORDER BY si.instance_id
+	`, stackID)
+	if err != nil {
+		return nil, fmt.Errorf("query instances: %w", err)
+	}
+	defer rows.Close()
+
+	var instances []instanceRow
+	for rows.Next() {
+		var inst instanceRow
+		if err := rows.Scan(&inst.id, &inst.instanceID, &inst.enabled, &inst.templateServiceID); err != nil {
+			return nil, fmt.Errorf("scan instance: %w", err)
+		}
+		instances = append(instances, inst)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate instances: %w", err)
+	}
+
+	for _, inst := range instances {
+		instanceDef, err := e.loadInstanceDef(stackName, inst)
+		if err != nil {
+			return nil, fmt.Errorf("load instance %s: %w", inst.instanceID, err)
+		}
+		devarchFile.Instances[inst.instanceID] = instanceDef
+	}
+
+	yamlBytes, err := yaml.Marshal(devarchFile)
+	if err != nil {
+		return nil, fmt.Errorf("marshal yaml: %w", err)
+	}
+
+	return yamlBytes, nil
+}
+
+func (e *Exporter) loadInstanceDef(stackName string, inst instanceRow) (InstanceDef, error) {
+	def := InstanceDef{
+		Enabled: inst.enabled,
+	}
+
+	var templateName string
+	var imageName, imageTag string
+	var command, userSpec sql.NullString
+
+	err := e.db.QueryRow(`
+		SELECT name, image_name, image_tag, command, user_spec
+		FROM services
+		WHERE id = $1
+	`, inst.templateServiceID).Scan(&templateName, &imageName, &imageTag, &command, &userSpec)
+	if err != nil {
+		return def, fmt.Errorf("query template: %w", err)
+	}
+
+	def.Template = templateName
+	def.Image = fmt.Sprintf("%s:%s", imageName, imageTag)
+
+	if command.Valid && command.String != "" {
+		def.Command = command.String
+	}
+
+	ports, err := e.loadEffectivePorts(inst.id, inst.templateServiceID)
+	if err != nil {
+		return def, fmt.Errorf("load ports: %w", err)
+	}
+	if len(ports) > 0 {
+		def.Ports = ports
+	}
+
+	volumes, err := e.loadEffectiveVolumes(inst.id, inst.templateServiceID)
+	if err != nil {
+		return def, fmt.Errorf("load volumes: %w", err)
+	}
+	if len(volumes) > 0 {
+		def.Volumes = volumes
+	}
+
+	envVars, err := e.loadEffectiveEnvVars(inst.id, inst.templateServiceID)
+	if err != nil {
+		return def, fmt.Errorf("load env vars: %w", err)
+	}
+	if len(envVars) > 0 {
+		def.Environment = RedactSecrets(envVars)
+	}
+
+	labels, err := e.loadEffectiveLabels(inst.id, inst.templateServiceID, stackName, inst.instanceID)
+	if err != nil {
+		return def, fmt.Errorf("load labels: %w", err)
+	}
+	if len(labels) > 0 {
+		def.Labels = labels
+	}
+
+	domains, err := e.loadEffectiveDomains(inst.id, inst.templateServiceID)
+	if err != nil {
+		return def, fmt.Errorf("load domains: %w", err)
+	}
+	if len(domains) > 0 {
+		def.Domains = domains
+	}
+
+	healthcheck, err := e.loadEffectiveHealthcheck(inst.id, inst.templateServiceID)
+	if err != nil {
+		return def, fmt.Errorf("load healthcheck: %w", err)
+	}
+	if healthcheck != nil {
+		def.Healthcheck = healthcheck
+	}
+
+	deps, err := e.loadEffectiveDependencies(inst.id, inst.templateServiceID)
+	if err != nil {
+		return def, fmt.Errorf("load dependencies: %w", err)
+	}
+	if len(deps) > 0 {
+		def.Dependencies = deps
+	}
+
+	configFiles, err := e.loadEffectiveConfigFiles(inst.id, inst.templateServiceID)
+	if err != nil {
+		return def, fmt.Errorf("load config files: %w", err)
+	}
+	if len(configFiles) > 0 {
+		def.ConfigFiles = configFiles
+	}
+
+	return def, nil
+}
+
+func (e *Exporter) loadEffectivePorts(instancePK, templateServiceID int) ([]PortDef, error) {
+	rows, err := e.db.Query(`
+		SELECT host_ip, host_port, container_port, protocol
+		FROM instance_ports
+		WHERE instance_id = $1
+		ORDER BY container_port
+	`, instancePK)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ports []PortDef
+	for rows.Next() {
+		var p PortDef
+		if err := rows.Scan(&p.HostIP, &p.HostPort, &p.ContainerPort, &p.Protocol); err != nil {
+			return nil, err
+		}
+		ports = append(ports, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(ports) > 0 {
+		return ports, nil
+	}
+
+	rows, err = e.db.Query(`
+		SELECT host_ip, host_port, container_port, protocol
+		FROM service_ports
+		WHERE service_id = $1
+		ORDER BY container_port
+	`, templateServiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var p PortDef
+		if err := rows.Scan(&p.HostIP, &p.HostPort, &p.ContainerPort, &p.Protocol); err != nil {
+			return nil, err
+		}
+		ports = append(ports, p)
+	}
+	return ports, rows.Err()
+}
+
+func (e *Exporter) loadEffectiveVolumes(instancePK, templateServiceID int) ([]VolumeDef, error) {
+	rows, err := e.db.Query(`
+		SELECT source, target, read_only
+		FROM instance_volumes
+		WHERE instance_id = $1
+		ORDER BY target
+	`, instancePK)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var volumes []VolumeDef
+	for rows.Next() {
+		var v VolumeDef
+		if err := rows.Scan(&v.Source, &v.Target, &v.ReadOnly); err != nil {
+			return nil, err
+		}
+		volumes = append(volumes, v)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(volumes) > 0 {
+		return volumes, nil
+	}
+
+	rows, err = e.db.Query(`
+		SELECT source, target, read_only
+		FROM service_volumes
+		WHERE service_id = $1
+		ORDER BY target
+	`, templateServiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var v VolumeDef
+		if err := rows.Scan(&v.Source, &v.Target, &v.ReadOnly); err != nil {
+			return nil, err
+		}
+		volumes = append(volumes, v)
+	}
+	return volumes, rows.Err()
+}
+
+func (e *Exporter) loadEffectiveEnvVars(instancePK, templateServiceID int) (map[string]string, error) {
+	merged := make(map[string]string)
+
+	rows, err := e.db.Query(`
+		SELECT key, value FROM service_env_vars WHERE service_id = $1
+	`, templateServiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var k, v string
+		if err := rows.Scan(&k, &v); err != nil {
+			return nil, err
+		}
+		merged[k] = v
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	rows, err = e.db.Query(`
+		SELECT key, value FROM instance_env_vars WHERE instance_id = $1
+	`, instancePK)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var k, v string
+		if err := rows.Scan(&k, &v); err != nil {
+			return nil, err
+		}
+		merged[k] = v
+	}
+	return merged, rows.Err()
+}
+
+func (e *Exporter) loadEffectiveLabels(instancePK, templateServiceID int, stackName, instanceID string) (map[string]string, error) {
+	merged := make(map[string]string)
+
+	rows, err := e.db.Query(`
+		SELECT key, value FROM service_labels WHERE service_id = $1
+	`, templateServiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var k, v string
+		if err := rows.Scan(&k, &v); err != nil {
+			return nil, err
+		}
+		merged[k] = v
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	rows, err = e.db.Query(`
+		SELECT key, value FROM instance_labels WHERE instance_id = $1
+	`, instancePK)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var k, v string
+		if err := rows.Scan(&k, &v); err != nil {
+			return nil, err
+		}
+		merged[k] = v
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	identityLabels := container.BuildLabels(stackName, instanceID, strconv.Itoa(templateServiceID))
+	for k, v := range identityLabels {
+		if _, exists := merged[k]; !exists {
+			merged[k] = v
+		}
+	}
+
+	return merged, nil
+}
+
+func (e *Exporter) loadEffectiveDomains(instancePK, templateServiceID int) ([]DomainDef, error) {
+	rows, err := e.db.Query(`
+		SELECT domain, proxy_port
+		FROM instance_domains
+		WHERE instance_id = $1
+		ORDER BY domain
+	`, instancePK)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var domains []DomainDef
+	for rows.Next() {
+		var d DomainDef
+		if err := rows.Scan(&d.Domain, &d.ProxyPort); err != nil {
+			return nil, err
+		}
+		domains = append(domains, d)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(domains) > 0 {
+		return domains, nil
+	}
+
+	rows, err = e.db.Query(`
+		SELECT domain, proxy_port
+		FROM service_domains
+		WHERE service_id = $1
+		ORDER BY domain
+	`, templateServiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var d DomainDef
+		if err := rows.Scan(&d.Domain, &d.ProxyPort); err != nil {
+			return nil, err
+		}
+		domains = append(domains, d)
+	}
+	return domains, rows.Err()
+}
+
+func (e *Exporter) loadEffectiveHealthcheck(instancePK, templateServiceID int) (*HealthcheckDef, error) {
+	var test string
+	var interval, timeout, retries, startPeriod int
+
+	err := e.db.QueryRow(`
+		SELECT test, interval_seconds, timeout_seconds, retries, start_period_seconds
+		FROM instance_healthchecks
+		WHERE instance_id = $1
+	`, instancePK).Scan(&test, &interval, &timeout, &retries, &startPeriod)
+
+	if err == nil {
+		hc := &HealthcheckDef{
+			Test:     test,
+			Interval: fmt.Sprintf("%ds", interval),
+			Timeout:  fmt.Sprintf("%ds", timeout),
+			Retries:  retries,
+		}
+		if startPeriod > 0 {
+			hc.StartPeriod = fmt.Sprintf("%ds", startPeriod)
+		}
+		return hc, nil
+	}
+
+	if err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	err = e.db.QueryRow(`
+		SELECT test, interval_seconds, timeout_seconds, retries, start_period_seconds
+		FROM service_healthchecks
+		WHERE service_id = $1
+	`, templateServiceID).Scan(&test, &interval, &timeout, &retries, &startPeriod)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	hc := &HealthcheckDef{
+		Test:     test,
+		Interval: fmt.Sprintf("%ds", interval),
+		Timeout:  fmt.Sprintf("%ds", timeout),
+		Retries:  retries,
+	}
+	if startPeriod > 0 {
+		hc.StartPeriod = fmt.Sprintf("%ds", startPeriod)
+	}
+	return hc, nil
+}
+
+func (e *Exporter) loadEffectiveDependencies(instancePK, templateServiceID int) ([]string, error) {
+	rows, err := e.db.Query(`
+		SELECT depends_on FROM instance_dependencies WHERE instance_id = $1 ORDER BY depends_on
+	`, instancePK)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var deps []string
+	for rows.Next() {
+		var dep string
+		if err := rows.Scan(&dep); err != nil {
+			return nil, err
+		}
+		deps = append(deps, dep)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(deps) > 0 {
+		return deps, nil
+	}
+
+	rows, err = e.db.Query(`
+		SELECT s.name
+		FROM service_dependencies sd
+		JOIN services s ON s.id = sd.depends_on_service_id
+		WHERE sd.service_id = $1
+		ORDER BY s.name
+	`, templateServiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var dep string
+		if err := rows.Scan(&dep); err != nil {
+			return nil, err
+		}
+		deps = append(deps, dep)
+	}
+	return deps, rows.Err()
+}
+
+func (e *Exporter) loadEffectiveConfigFiles(instancePK, templateServiceID int) (map[string]ConfigFileDef, error) {
+	merged := make(map[string]ConfigFileDef)
+
+	rows, err := e.db.Query(`
+		SELECT file_path, content, file_mode, is_template
+		FROM service_config_files
+		WHERE service_id = $1
+	`, templateServiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var filePath, content, fileMode string
+		var isTemplate bool
+		if err := rows.Scan(&filePath, &content, &fileMode, &isTemplate); err != nil {
+			return nil, err
+		}
+		merged[filePath] = ConfigFileDef{
+			Content:    content,
+			FileMode:   fileMode,
+			IsTemplate: isTemplate,
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	rows, err = e.db.Query(`
+		SELECT file_path, content, file_mode, is_template
+		FROM instance_config_files
+		WHERE instance_id = $1
+	`, instancePK)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var filePath, content, fileMode string
+		var isTemplate bool
+		if err := rows.Scan(&filePath, &content, &fileMode, &isTemplate); err != nil {
+			return nil, err
+		}
+		merged[filePath] = ConfigFileDef{
+			Content:    content,
+			FileMode:   fileMode,
+			IsTemplate: isTemplate,
+		}
+	}
+
+	return merged, rows.Err()
+}
