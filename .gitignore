@@ -4,6 +4,7 @@ context/
 backup/
 prompts/
 # Build artifacts
+api/server
 api/tmp/
 
 # Other ignores
