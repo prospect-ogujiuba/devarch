@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 
 ## Current Position
 
-Phase: 5 of 9 (Compose Generation) -- COMPLETE
-Plan: 2 of 2 complete in Phase 5
-Status: Phase 5 complete
-Last activity: 2026-02-07 — Completed 05-02-PLAN.md
+Phase: 6 of 9 (Plan/Apply Workflow) -- IN PROGRESS
+Plan: 1 of 3 complete in Phase 6
+Status: In progress
+Last activity: 2026-02-07 — Completed 06-01-PLAN.md
 
-Progress: [██████░░░░] ~59% (16 plans complete of ~27 total)
+Progress: [██████░░░░] ~63% (17 plans complete of ~27 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
-- Average duration: 2.9 min
-- Total execution time: ~0.82 hours
+- Total plans completed: 17
+- Average duration: 2.8 min
+- Total execution time: ~0.84 hours
 
 **By Phase:**
 
@@ -32,6 +32,7 @@ Progress: [██████░░░░] ~59% (16 plans complete of ~27 total)
 | 3 | 5/5 | ~21min | ~4.2min |
 | 4 | 2/2 | 7.3min | 3.7min |
 | 5 | 2/2 | 4.0min | 2.0min |
+| 6 | 1/3 | 1.0min | 1.0min |
 
 *Updated after each plan completion*
 
@@ -143,6 +144,12 @@ Recent decisions affecting current work:
 - CodeMirror read-only with yaml language for syntax-highlighted compose preview
 - Blob download pattern for client-side YAML file save
 
+**From 06-01:**
+- Stateless ComputeDiff - caller provides desired + running inputs
+- Modifications scoped to enabled/disabled toggle only (config drift deferred)
+- Terraform-style change ordering: removes, modifies, adds
+- Deterministic staleness token via sorted instances + RFC3339Nano timestamps
+
 ### Pending Todos
 
 None yet.
@@ -154,5 +161,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 05-02-PLAN.md (dashboard compose preview). Phase 5 complete. Phase 6 next.
+Stopped at: Completed 06-01-PLAN.md (plan domain package).
 Resume file: None
