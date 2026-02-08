@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 ## Current Position
 
 Phase: 6 of 9 (Plan/Apply Workflow) -- IN PROGRESS
-Plan: 1 of 3 complete in Phase 6
+Plan: 2 of 3 complete in Phase 6
 Status: In progress
-Last activity: 2026-02-07 — Completed 06-01-PLAN.md
+Last activity: 2026-02-07 — Completed 06-02-PLAN.md
 
-Progress: [██████░░░░] ~63% (17 plans complete of ~27 total)
+Progress: [██████░░░░] ~67% (18 plans complete of ~27 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
-- Average duration: 2.8 min
-- Total execution time: ~0.84 hours
+- Total plans completed: 18
+- Average duration: 2.7 min
+- Total execution time: ~0.90 hours
 
 **By Phase:**
 
@@ -32,7 +32,7 @@ Progress: [██████░░░░] ~63% (17 plans complete of ~27 total)
 | 3 | 5/5 | ~21min | ~4.2min |
 | 4 | 2/2 | 7.3min | 3.7min |
 | 5 | 2/2 | 4.0min | 2.0min |
-| 6 | 1/3 | 1.0min | 1.0min |
+| 6 | 2/3 | 3.0min | 1.5min |
 
 *Updated after each plan completion*
 
@@ -150,6 +150,12 @@ Recent decisions affecting current work:
 - Terraform-style change ordering: removes, modifies, adds
 - Deterministic staleness token via sorted instances + RFC3339Nano timestamps
 
+**From 06-02:**
+- Advisory lock per stack via pg_try_advisory_lock(stack.id) prevents concurrent applies
+- Token validation after lock acquisition prevents TOCTOU race
+- Sequential apply flow: network -> configs -> compose up (no rollback, configs left for debugging)
+- Empty running containers gracefully handled in Plan (runtime may be down)
+
 ### Pending Todos
 
 None yet.
@@ -161,5 +167,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 06-01-PLAN.md (plan domain package).
+Stopped at: Completed 06-02-PLAN.md (plan/apply HTTP handlers).
 Resume file: None

@@ -126,7 +126,7 @@ Plans:
 
 Plans:
 - [x] 06-01-PLAN.md — Plan domain package: types, diff computation, staleness detection (COMPLETE 2026-02-07)
-- [ ] 06-02-PLAN.md — Plan + Apply API endpoints with advisory locking and route wiring
+- [x] 06-02-PLAN.md — Plan + Apply API endpoints with advisory locking and route wiring (COMPLETE 2026-02-07)
 - [ ] 06-03-PLAN.md — Dashboard Deploy tab with diff visualization and apply execution
 
 ### Phase 7: Export/Import & Bootstrap
