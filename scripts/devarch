@@ -144,6 +144,14 @@ handle_shell() {
     eval "$container_cmd exec -it $container zsh 2>/dev/null || $container_cmd exec -it $container bash 2>/dev/null || $container_cmd exec -it $container sh"
 }
 
+handle_init() {
+    "$SCRIPT_DIR/devarch-init.sh" "$@"
+}
+
+handle_doctor() {
+    "$SCRIPT_DIR/devarch-doctor.sh" "$@"
+}
+
 # =============================================================================
 # HELP & USAGE
 # =============================================================================
@@ -152,7 +160,7 @@ show_brief_usage() {
     cat << 'EOF'
 devarch <namespace> [command] [args...]
 
-Namespaces: service, wp, artisan, wordpress, laravel, socket, runtime, db, context, run, shell
+Namespaces: service, wp, artisan, wordpress, laravel, socket, runtime, db, context, run, shell, init, doctor
 
 Use -h or --help for detailed help, or <namespace> -h for namespace help
 EOF
@@ -177,6 +185,8 @@ NAMESPACES:
   context     Generate project context files
   run         Run command in any container
   shell       Open shell in container (defaults to php)
+  init        Bootstrap stack from devarch.yml (import + pull + apply)
+  doctor      Run diagnostics (runtime, API, disk, tools, ports)
 
 EXAMPLES:
   Service Management:
@@ -223,6 +233,10 @@ EXAMPLES:
     devarch run postgres psql -U postgres
     devarch shell php
     devarch shell node
+
+  Bootstrap & Diagnostics:
+    devarch init devarch.yml
+    devarch doctor
 
 ALIASES:
   After running setup-aliases.sh, you can use:
@@ -440,6 +454,48 @@ EXAMPLES:
   devarch shell postgres
 EOF
             ;;
+        init)
+            cat << 'EOF'
+devarch init - Bootstrap Stack
+
+USAGE:
+  devarch init [yml-file]
+
+Bootstraps a stack from devarch.yml:
+  1. Import stack configuration
+  2. Pull container images
+  3. Apply stack (create network + start containers)
+
+ENVIRONMENT:
+  DEVARCH_API_URL    API base URL (default: http://localhost:8550)
+  DEVARCH_API_KEY    API key (default: test)
+
+EXAMPLES:
+  devarch init
+  devarch init mystack-devarch.yml
+  DEVARCH_API_URL=http://api:8550 devarch init
+EOF
+            ;;
+        doctor)
+            cat << 'EOF'
+devarch doctor - Run Diagnostics
+
+USAGE:
+  devarch doctor
+
+Checks system health:
+  - Container runtime (podman/docker)
+  - API server connectivity
+  - Disk space
+  - Required CLI tools (curl, jq, grep)
+  - Port availability (5432, 3306, 6379, 8080)
+
+Exit code 1 on critical failures, 0 otherwise.
+
+EXAMPLES:
+  devarch doctor
+EOF
+            ;;
         *)
             echo "Unknown namespace: $ns"
             return 1
@@ -464,6 +520,8 @@ resolve_namespace() {
         context|ctx|c) echo "context" ;;
         run|r) echo "run" ;;
         shell|sh) echo "shell" ;;
+        init) echo "init" ;;
+        doctor|doc) echo "doctor" ;;
         *) echo "" ;;
     esac
 }
@@ -530,6 +588,12 @@ main() {
             ;;
         shell)
             handle_shell "$@"
+            ;;
+        init)
+            handle_init "$@"
+            ;;
+        doctor)
+            handle_doctor "$@"
             ;;
     esac
 }
