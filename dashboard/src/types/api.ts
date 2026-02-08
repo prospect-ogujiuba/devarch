@@ -488,3 +488,31 @@ export interface StackCompose {
   warnings: string[]
   instance_count: number
 }
+
+export interface PlanFieldChange {
+  old: unknown
+  new: unknown
+  source: string
+}
+
+export interface PlanChange {
+  action: 'add' | 'modify' | 'remove'
+  instance_id: string
+  template_name: string
+  container_name: string
+  fields: Record<string, PlanFieldChange> | null
+}
+
+export interface StackPlan {
+  stack_name: string
+  stack_id: number
+  changes: PlanChange[]
+  token: string
+  generated_at: string
+  warnings: string[]
+}
+
+export interface ApplyResult {
+  status: string
+  output: string
+}
