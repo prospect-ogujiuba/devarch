@@ -44,7 +44,7 @@ func (imp *Importer) Import(file *DevArchFile) (*ImportResult, error) {
 	var missingTemplates []string
 	for name := range templateNames {
 		var exists bool
-		err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM services WHERE name = $1 AND deleted_at IS NULL)`, name).Scan(&exists)
+		err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM services WHERE name = $1)`, name).Scan(&exists)
 		if err != nil {
 			return nil, fmt.Errorf("check template %q: %w", name, err)
 		}
@@ -105,7 +105,7 @@ func (imp *Importer) Import(file *DevArchFile) (*ImportResult, error) {
 
 	for instanceName, inst := range file.Instances {
 		var templateServiceID int
-		err := tx.QueryRow(`SELECT id FROM services WHERE name = $1 AND deleted_at IS NULL`, inst.Template).Scan(&templateServiceID)
+		err := tx.QueryRow(`SELECT id FROM services WHERE name = $1`, inst.Template).Scan(&templateServiceID)
 		if err != nil {
 			return nil, fmt.Errorf("get template service ID for %q: %w", inst.Template, err)
 		}
