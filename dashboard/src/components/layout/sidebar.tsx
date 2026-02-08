@@ -6,6 +6,15 @@ import { useEffect } from 'react'
 
 export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const location = useLocation()
+  const settingsItem = navItems.find((item) => item.to === '/settings')
+  const mainItems = navItems.filter((item) => item.to !== '/settings')
+  const isActiveRoute = (to: string) => (to === '/' ? location.pathname === '/' : location.pathname.startsWith(to))
+  const navLinkClass = (active: boolean) =>
+    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+      active
+        ? 'bg-accent text-accent-foreground'
+        : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+    }`
 
   useEffect(() => {
     onClose()
@@ -46,28 +55,33 @@ export function MobileSidebar({ open, onClose }: { open: boolean; onClose: () =>
           </Button>
         </div>
 
-        <nav className="flex flex-col gap-1 p-4">
-          {navItems.map(item => {
-            const isActive = item.to === '/'
-              ? location.pathname === '/'
-              : location.pathname.startsWith(item.to)
+        <div className="flex h-[calc(100vh-3.5rem)] flex-col p-4">
+          <nav className="flex flex-col gap-1">
+            {mainItems.map(item => {
+              const isActive = isActiveRoute(item.to)
 
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                }`}
-              >
-                <item.icon className="size-5" />
-                {item.label}
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={navLinkClass(isActive)}
+                >
+                  <item.icon className="size-5" />
+                  {item.label}
+                </Link>
+              )
+            })}
+          </nav>
+
+          {settingsItem && (
+            <nav className="mt-auto pt-4">
+              <Link to={settingsItem.to} className={navLinkClass(isActiveRoute(settingsItem.to))}>
+                <settingsItem.icon className="size-5" />
+                {settingsItem.label}
               </Link>
-            )
-          })}
-        </nav>
+            </nav>
+          )}
+        </div>
       </aside>
     </>
   )
