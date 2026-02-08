@@ -38,7 +38,7 @@ export function CodeEditor({ value, onChange, language, readOnly = false, classN
 
   useEffect(() => {
     onChangeRef.current = onChange
-  })
+  }, [onChange])
 
   useEffect(() => {
     if (!containerRef.current) return

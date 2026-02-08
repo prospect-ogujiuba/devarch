@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { Server, Play, Square } from 'lucide-react'
@@ -7,7 +7,10 @@ import { CategoryCard } from '@/components/categories/category-card'
 import { CategoryTable } from '@/components/categories/category-table'
 import { FilterBar, type FilterOption } from '@/components/ui/filter-bar'
 import { ListPageScaffold } from '@/components/ui/list-page-scaffold'
+import { PaginationControls } from '@/components/ui/pagination-controls'
 import { useUrlSyncedListControls } from '@/hooks/use-url-synced-list-controls'
+import { useUrlPagination } from '@/hooks/use-url-pagination'
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '@/lib/pagination'
 import type { Category, CategoryItem } from '@/types/api'
 
 export const Route = createFileRoute('/categories/')({
@@ -17,6 +20,8 @@ export const Route = createFileRoute('/categories/')({
     sort: z.enum(['name', 'services', 'running', 'order']).optional(),
     dir: z.enum(['asc', 'desc']).optional(),
     view: z.enum(['table', 'grid']).optional(),
+    page: z.string().optional(),
+    size: z.string().optional(),
   }),
   component: CategoriesPage,
 })
@@ -59,6 +64,38 @@ function CategoriesPage() {
     { storageKey: 'categories', items, searchFn, filterFns, sortFns, defaultSort: 'order', defaultView: 'grid' },
     { routeSearch, navigate, sortOptions, filterKeys: ['status'] },
   )
+  const pagination = useUrlPagination({
+    items: controls.filtered,
+    routeSearch,
+    navigate,
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+    pageSizeOptions: PAGE_SIZE_OPTIONS,
+  })
+
+  const handleSearchChange = useCallback((value: string) => {
+    pagination.resetPage()
+    controls.setSearch(value)
+  }, [controls, pagination])
+
+  const handleSortByChange = useCallback((value: string) => {
+    pagination.resetPage()
+    controls.setSortBy(value)
+  }, [controls, pagination])
+
+  const handleSortDirChange = useCallback((dir: 'asc' | 'desc') => {
+    pagination.resetPage()
+    controls.setSortDir(dir)
+  }, [controls, pagination])
+
+  const handleViewModeChange = useCallback((mode: 'table' | 'grid') => {
+    pagination.resetPage()
+    controls.setViewMode(mode)
+  }, [controls, pagination])
+
+  const handleStatusFilterChange = useCallback((value: string) => {
+    pagination.resetPage()
+    controls.setFilter('status', value)
+  }, [controls, pagination])
 
   const statusCounts = useMemo(() => {
     let running = 0
@@ -101,7 +138,13 @@ function CategoriesPage() {
         { icon: Play, label: 'Services Running', value: totalRunning, color: 'text-green-500' },
         { icon: Square, label: 'Services Stopped', value: totalServices - totalRunning, color: 'text-muted-foreground' },
       ]}
-      controls={controls}
+      controls={{
+        ...controls,
+        setSearch: handleSearchChange,
+        setSortBy: handleSortByChange,
+        setSortDir: handleSortDirChange,
+        setViewMode: handleViewModeChange,
+      }}
       sortOptions={sortOptions}
       searchPlaceholder="Search categories..."
       emptyIcon={Server}
@@ -111,17 +154,31 @@ function CategoriesPage() {
         <FilterBar
           options={statusOptions}
           value={controls.filters.status ?? 'all'}
-          onChange={(v) => controls.setFilter('status', v)}
+          onChange={handleStatusFilterChange}
         />
       }
-      tableView={(filtered) => <CategoryTable categories={filtered.map(toCategoryItem)} />}
-      gridView={(filtered) => (
+      tableView={() => <CategoryTable categories={pagination.pagedItems.map(toCategoryItem)} />}
+      gridView={() => (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((category) => (
+          {pagination.pagedItems.map((category) => (
             <CategoryCard key={category.name} category={toCategoryItem(category)} />
           ))}
         </div>
       )}
-    />
+      showCount={false}
+    >
+      {pagination.totalItems > 0 && (
+        <PaginationControls
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalItems}
+          pageSize={pagination.pageSize}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageChange={pagination.setPage}
+          onPageSizeChange={pagination.setPageSize}
+          itemLabel="categories"
+        />
+      )}
+    </ListPageScaffold>
   )
 }

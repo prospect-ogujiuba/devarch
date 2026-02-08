@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { Loader2, RefreshCw, FolderOpen, Package, Code, Globe } from 'lucide-react'
@@ -8,7 +8,10 @@ import { ProjectCard } from '@/components/projects/project-card'
 import { ProjectTable } from '@/components/projects/project-table'
 import { FilterBar, type FilterOption } from '@/components/ui/filter-bar'
 import { ListPageScaffold } from '@/components/ui/list-page-scaffold'
+import { PaginationControls } from '@/components/ui/pagination-controls'
 import { useUrlSyncedListControls } from '@/hooks/use-url-synced-list-controls'
+import { useUrlPagination } from '@/hooks/use-url-pagination'
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '@/lib/pagination'
 import type { Project } from '@/types/api'
 
 export const Route = createFileRoute('/projects/')({
@@ -19,6 +22,8 @@ export const Route = createFileRoute('/projects/')({
     sort: z.enum(['name', 'type', 'services', 'updated']).optional(),
     dir: z.enum(['asc', 'desc']).optional(),
     view: z.enum(['table', 'grid']).optional(),
+    page: z.string().optional(),
+    size: z.string().optional(),
   }),
   component: ProjectsPage,
 })
@@ -63,6 +68,38 @@ function ProjectsPage() {
     { storageKey: 'projects', items, searchFn, filterFns, sortFns, defaultSort: 'name', defaultView: 'grid' },
     { routeSearch, navigate, sortOptions, filterKeys: ['type', 'language'] },
   )
+  const pagination = useUrlPagination({
+    items: controls.filtered,
+    routeSearch,
+    navigate,
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+    pageSizeOptions: PAGE_SIZE_OPTIONS,
+  })
+
+  const handleSearchChange = useCallback((value: string) => {
+    pagination.resetPage()
+    controls.setSearch(value)
+  }, [controls, pagination])
+
+  const handleSortByChange = useCallback((value: string) => {
+    pagination.resetPage()
+    controls.setSortBy(value)
+  }, [controls, pagination])
+
+  const handleSortDirChange = useCallback((dir: 'asc' | 'desc') => {
+    pagination.resetPage()
+    controls.setSortDir(dir)
+  }, [controls, pagination])
+
+  const handleViewModeChange = useCallback((mode: 'table' | 'grid') => {
+    pagination.resetPage()
+    controls.setViewMode(mode)
+  }, [controls, pagination])
+
+  const handleFilterChange = useCallback((key: 'type' | 'language', value: string) => {
+    pagination.resetPage()
+    controls.setFilter(key, value)
+  }, [controls, pagination])
 
   const types = [...new Set(items.map((p) => p.project_type))].sort()
   const languages = [...new Set(items.map((p) => p.language).filter(Boolean))].sort() as string[]
@@ -99,7 +136,13 @@ function ProjectsPage() {
         { icon: Globe, label: 'With Domains', value: withDomains },
       ]}
       statGridClassName="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4"
-      controls={controls}
+      controls={{
+        ...controls,
+        setSearch: handleSearchChange,
+        setSortBy: handleSortByChange,
+        setSortDir: handleSortDirChange,
+        setViewMode: handleViewModeChange,
+      }}
       sortOptions={sortOptions}
       searchPlaceholder="Search projects..."
       actionButton={
@@ -127,25 +170,39 @@ function ProjectsPage() {
           <FilterBar
             options={typeOptions}
             value={controls.filters.type ?? 'all'}
-            onChange={(v) => controls.setFilter('type', v)}
+            onChange={(v) => handleFilterChange('type', v)}
           />
           {languages.length > 1 && (
             <FilterBar
               options={languageOptions}
               value={controls.filters.language ?? 'all'}
-              onChange={(v) => controls.setFilter('language', v)}
+              onChange={(v) => handleFilterChange('language', v)}
             />
           )}
         </>
       }
-      tableView={(filtered) => <ProjectTable projects={filtered} />}
-      gridView={(filtered) => (
+      tableView={() => <ProjectTable projects={pagination.pagedItems} />}
+      gridView={() => (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((project) => (
+          {pagination.pagedItems.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}
         </div>
       )}
-    />
+      showCount={false}
+    >
+      {pagination.totalItems > 0 && (
+        <PaginationControls
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalItems}
+          pageSize={pagination.pageSize}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageChange={pagination.setPage}
+          onPageSizeChange={pagination.setPageSize}
+          itemLabel="projects"
+        />
+      )}
+    </ListPageScaffold>
   )
 }

@@ -9,8 +9,11 @@ import { ServiceGrid } from '@/components/services/service-grid'
 import { BulkActionsToolbar } from '@/components/services/bulk-actions-toolbar'
 import { FilterBar, type FilterOption } from '@/components/ui/filter-bar'
 import { ListPageScaffold } from '@/components/ui/list-page-scaffold'
+import { PaginationControls } from '@/components/ui/pagination-controls'
 import { useUrlSyncedListControls } from '@/hooks/use-url-synced-list-controls'
+import { useUrlPagination } from '@/hooks/use-url-pagination'
 import { getServiceStatus } from '@/lib/service-utils'
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '@/lib/pagination'
 import { titleCase } from '@/lib/utils'
 import type { Service } from '@/types/api'
 
@@ -21,6 +24,8 @@ const servicesSearchSchema = z.object({
   view: z.enum(['table', 'grid']).optional(),
   category: z.string().optional(),
   status: z.string().optional(),
+  page: z.string().optional(),
+  size: z.string().optional(),
 })
 
 export const Route = createFileRoute('/services/')({
@@ -68,6 +73,38 @@ function ServicesPage() {
     { storageKey: 'services', items: services, searchFn, filterFns, sortFns, defaultSort: 'name', defaultView: 'table' },
     { routeSearch, navigate, sortOptions, filterKeys: ['category', 'status'] },
   )
+  const pagination = useUrlPagination({
+    items: controls.filtered,
+    routeSearch,
+    navigate,
+    defaultPageSize: DEFAULT_PAGE_SIZE,
+    pageSizeOptions: PAGE_SIZE_OPTIONS,
+  })
+
+  const handleSearchChange = useCallback((value: string) => {
+    pagination.resetPage()
+    controls.setSearch(value)
+  }, [controls, pagination])
+
+  const handleSortByChange = useCallback((value: string) => {
+    pagination.resetPage()
+    controls.setSortBy(value)
+  }, [controls, pagination])
+
+  const handleSortDirChange = useCallback((dir: 'asc' | 'desc') => {
+    pagination.resetPage()
+    controls.setSortDir(dir)
+  }, [controls, pagination])
+
+  const handleViewModeChange = useCallback((mode: 'table' | 'grid') => {
+    pagination.resetPage()
+    controls.setViewMode(mode)
+  }, [controls, pagination])
+
+  const handleFilterChange = useCallback((key: 'category' | 'status', value: string) => {
+    pagination.resetPage()
+    controls.setFilter(key, value)
+  }, [controls, pagination])
 
   const handleSelectAll = useCallback(() => {
     controls.selectAll(controls.filtered.map((s) => s.name))
@@ -134,7 +171,13 @@ function ServicesPage() {
         { icon: MemoryStick, label: 'Total Memory', value: `${stats.totalMem.toFixed(0)} MB` },
       ]}
       statGridClassName="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
-      controls={controls}
+      controls={{
+        ...controls,
+        setSearch: handleSearchChange,
+        setSortBy: handleSortByChange,
+        setSortDir: handleSortDirChange,
+        setViewMode: handleViewModeChange,
+      }}
       sortOptions={sortOptions}
       searchPlaceholder="Search services..."
       actionButton={
@@ -158,31 +201,44 @@ function ServicesPage() {
           <FilterBar
             options={statusOptions}
             value={controls.filters.status ?? 'all'}
-            onChange={(v) => controls.setFilter('status', v)}
+            onChange={(v) => handleFilterChange('status', v)}
           />
           <FilterBar
             options={categoryOptions}
             value={controls.filters.category ?? 'all'}
-            onChange={(v) => controls.setFilter('category', v)}
+            onChange={(v) => handleFilterChange('category', v)}
             variant="dropdown"
           />
         </>
       }
-      tableView={(filtered) => (
+      tableView={() => (
         <ServiceTable
-          services={filtered}
+          services={pagination.pagedItems}
           selected={controls.selected}
           onToggleSelect={controls.toggleSelect}
         />
       )}
-      gridView={(filtered) => (
+      gridView={() => (
         <ServiceGrid
-          services={filtered}
+          services={pagination.pagedItems}
           selected={controls.selected}
           onToggleSelect={controls.toggleSelect}
         />
       )}
       showCount={false}
-    />
+    >
+      {pagination.totalItems > 0 && (
+        <PaginationControls
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalItems}
+          pageSize={pagination.pageSize}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageChange={pagination.setPage}
+          onPageSizeChange={pagination.setPageSize}
+          itemLabel="services"
+        />
+      )}
+    </ListPageScaffold>
   )
 }

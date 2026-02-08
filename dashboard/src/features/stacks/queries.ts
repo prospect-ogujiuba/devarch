@@ -359,8 +359,12 @@ export function useApplyPlan(name: string) {
       queryClient.invalidateQueries({ queryKey: ['stacks', name, 'network'] })
     },
     onError: (error) => {
-      if ('response' in error && (error as Record<string, unknown>).response) {
-        const resp = (error as Record<string, unknown>).response as Record<string, unknown>
+      if (error && typeof error === 'object' && 'response' in error) {
+        const resp = (error as Record<string, unknown>).response as Record<string, unknown> | undefined
+        if (!resp) {
+          toast.error(getErrorMessage(error, 'Apply failed'))
+          return
+        }
         if (resp.status === 409) {
           toast.error('Plan is stale or another operation in progress. Regenerate plan.')
           return
