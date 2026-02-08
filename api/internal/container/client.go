@@ -377,6 +377,22 @@ func (c *Client) ListContainersWithLabels(labels map[string]string) ([]string, e
 	return c.parseNamesList(output)
 }
 
+func (c *Client) CountRunningWithLabels(labels map[string]string) (int, error) {
+	args := []string{"ps", "--format", "{{.Names}}", "--filter", "status=running"}
+	for k, v := range labels {
+		args = append(args, "--filter", fmt.Sprintf("label=%s=%s", k, v))
+	}
+	output, err := c.execCommand(args...)
+	if err != nil {
+		return 0, err
+	}
+	names, err := c.parseNamesList(output)
+	if err != nil {
+		return 0, err
+	}
+	return len(names), nil
+}
+
 func (c *Client) Exec(containerName string, command []string) (string, error) {
 	args := append([]string{"exec", containerName}, command...)
 	return c.execCommand(args...)
