@@ -13,6 +13,7 @@ interface Props {
   language?: string
   readOnly?: boolean
   className?: string
+  autoHeight?: boolean
 }
 
 function getLangExtension(lang?: string) {
@@ -38,7 +39,7 @@ function detectLang(filePath: string): string {
   return ''
 }
 
-export function CodeEditor({ value, onChange, language, readOnly = false, className }: Props) {
+export function CodeEditor({ value, onChange, language, readOnly = false, className, autoHeight = false }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
@@ -66,8 +67,8 @@ export function CodeEditor({ value, onChange, language, readOnly = false, classN
         }),
         ...(readOnly ? [EditorState.readOnly.of(true)] : []),
         EditorView.theme({
-          '&': { height: '400px', fontSize: '13px' },
-          '.cm-scroller': { overflow: 'auto' },
+          '&': { fontSize: '13px', ...(autoHeight ? {} : { height: '400px' }) },
+          '.cm-scroller': { overflow: autoHeight ? 'visible' : 'auto' },
         }),
       ],
     })
@@ -76,7 +77,7 @@ export function CodeEditor({ value, onChange, language, readOnly = false, classN
     viewRef.current = view
 
     return () => view.destroy()
-  }, [language, readOnly])
+  }, [language, readOnly, autoHeight])
 
   useEffect(() => {
     const view = viewRef.current

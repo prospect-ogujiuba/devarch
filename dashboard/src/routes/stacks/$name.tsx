@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link, Outlet, useMatch, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -153,6 +153,7 @@ function StackDetailPage() {
   const [addInstanceOpen, setAddInstanceOpen] = useState(false)
   const [instanceDeleteOpen, setInstanceDeleteOpen] = useState(false)
   const [instanceDuplicateOpen, setInstanceDuplicateOpen] = useState(false)
+  const [composeExpanded, setComposeExpanded] = useState(false)
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null)
 
   const handleToggleEnabled = () => {
@@ -433,10 +434,16 @@ function StackDetailPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Generated Compose YAML</CardTitle>
-                <Button size="sm" variant="outline" onClick={handleDownload} disabled={!composeData?.yaml}>
-                  <Download className="size-4" />
-                  Download
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setComposeExpanded(!composeExpanded)} disabled={!composeData?.yaml}>
+                    {composeExpanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+                    {composeExpanded ? 'Collapse' : 'Expand'}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={handleDownload} disabled={!composeData?.yaml}>
+                    <Download className="size-4" />
+                    Download
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -445,7 +452,7 @@ function StackDetailPage() {
                   <Loader2 className="size-6 animate-spin text-muted-foreground" />
                 </div>
               ) : composeData?.yaml ? (
-                <CodeEditor value={composeData.yaml} onChange={() => {}} language="yaml" readOnly />
+                <CodeEditor value={composeData.yaml} onChange={() => {}} language="yaml" readOnly autoHeight={composeExpanded} />
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>No compose YAML available</p>
