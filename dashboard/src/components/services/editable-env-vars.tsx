@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { Pencil, Plus, Trash2, X, Check, Eye, EyeOff } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardAction } from '@/components/ui/card'
+import { Trash2, Eye, EyeOff } from 'lucide-react'
+import { CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
+import { EditableCard } from '@/components/ui/editable-card'
+import { useEditableSection } from '@/hooks/use-editable-section'
 import { useUpdateEnvVars } from '@/features/services/queries'
 import type { ServiceEnvVar } from '@/types/api'
 
@@ -19,8 +21,9 @@ interface EnvDraft {
 }
 
 export function EditableEnvVars({ name, envVars }: Props) {
-  const [editing, setEditing] = useState(false)
-  const [drafts, setDrafts] = useState<EnvDraft[]>([])
+  const section = useEditableSection<EnvDraft>(() =>
+    envVars.map((e) => ({ key: e.key, value: e.value ?? '', is_secret: e.is_secret })),
+  )
   const [revealedSecrets, setRevealedSecrets] = useState<Set<number>>(new Set())
   const mutation = useUpdateEnvVars()
 
@@ -33,75 +36,59 @@ export function EditableEnvVars({ name, envVars }: Props) {
     })
   }
 
-  const startEdit = () => {
-    setDrafts(envVars.map((e) => ({ key: e.key, value: e.value ?? '', is_secret: e.is_secret })))
-    setEditing(true)
-  }
-
   const save = () => {
-    mutation.mutate({ name, data: { env_vars: drafts } }, { onSuccess: () => setEditing(false) })
-  }
-
-  const add = () => setDrafts([...drafts, { key: '', value: '', is_secret: false }])
-  const remove = (i: number) => setDrafts(drafts.filter((_, idx) => idx !== i))
-
-  if (editing) {
-    return (
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-          <CardTitle className="text-base">Environment Variables</CardTitle>
-          <div className="flex flex-wrap gap-1">
-            <Button variant="outline" size="sm" onClick={add}><Plus className="size-4" /> Add</Button>
-            <Button variant="ghost" size="icon-sm" onClick={() => setEditing(false)}><X className="size-4" /></Button>
-            <Button variant="default" size="icon-sm" onClick={save} disabled={mutation.isPending}><Check className="size-4" /></Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {drafts.map((d, i) => (
-            <div key={i} className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
-              <Input className="w-full sm:w-48" value={d.key} onChange={(e) => { const next = [...drafts]; next[i] = { ...d, key: e.target.value }; setDrafts(next) }} placeholder="KEY" />
-              <span className="text-muted-foreground">=</span>
-              <Input className="flex-1" value={d.value} type={d.is_secret ? 'password' : 'text'} onChange={(e) => { const next = [...drafts]; next[i] = { ...d, value: e.target.value }; setDrafts(next) }} placeholder="value" />
-              <div className="flex items-center gap-1 sm:ml-2">
-                <Checkbox checked={d.is_secret} onCheckedChange={(v) => { const next = [...drafts]; next[i] = { ...d, is_secret: !!v }; setDrafts(next) }} />
-                <span className="text-xs">Secret</span>
-              </div>
-              <Button variant="ghost" size="icon-sm" onClick={() => remove(i)}><Trash2 className="size-4 text-destructive" /></Button>
-            </div>
-          ))}
-          {drafts.length === 0 && <p className="text-muted-foreground text-sm">No environment variables</p>}
-        </CardContent>
-      </Card>
-    )
+    mutation.mutate({ name, data: { env_vars: section.drafts } }, { onSuccess: () => section.setEditing(false) })
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Environment Variables</CardTitle>
-        <CardAction>
-          <Button variant="ghost" size="icon-sm" onClick={startEdit}><Pencil className="size-4" /></Button>
-        </CardAction>
-      </CardHeader>
-      <CardContent>
-        {envVars.length > 0 ? (
-          <div className="space-y-1">
-            {envVars.map((env, i) => (
-              <div key={i} className="text-sm font-mono flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-                <span className="text-muted-foreground sm:min-w-[200px]">{env.key}:</span>
-                <span className="break-all">{env.is_secret && !revealedSecrets.has(i) ? '********' : env.value}</span>
-                {env.is_secret && (
-                  <Button variant="ghost" size="icon-sm" className="size-6 sm:ml-1" onClick={() => toggleSecret(i)}>
-                    {revealedSecrets.has(i) ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
-                  </Button>
-                )}
+    <EditableCard
+      title="Environment Variables"
+      editing={section.editing}
+      onEdit={section.startEdit}
+      onCancel={section.cancel}
+      onSave={save}
+      onAdd={() => section.add({ key: '', value: '', is_secret: false })}
+      isPending={mutation.isPending}
+    >
+      <CardContent className={section.editing ? 'space-y-2' : undefined}>
+        {section.editing ? (
+          <>
+            {section.drafts.map((d, i) => (
+              <div key={i} className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+                <Input className="w-full sm:w-48" value={d.key} onChange={(e) => section.update(i, { key: e.target.value })} placeholder="KEY" />
+                <span className="text-muted-foreground">=</span>
+                <Input className="flex-1" value={d.value} type={d.is_secret ? 'password' : 'text'} onChange={(e) => section.update(i, { value: e.target.value })} placeholder="value" />
+                <div className="flex items-center gap-1 sm:ml-2">
+                  <Checkbox checked={d.is_secret} onCheckedChange={(v) => section.update(i, { is_secret: !!v })} />
+                  <span className="text-xs">Secret</span>
+                </div>
+                <Button variant="ghost" size="icon-sm" onClick={() => section.remove(i)}><Trash2 className="size-4 text-destructive" /></Button>
               </div>
             ))}
-          </div>
+            {section.drafts.length === 0 && <p className="text-muted-foreground text-sm">No environment variables</p>}
+          </>
         ) : (
-          <p className="text-muted-foreground">No environment variables</p>
+          <>
+            {envVars.length > 0 ? (
+              <div className="space-y-1">
+                {envVars.map((env, i) => (
+                  <div key={i} className="text-sm font-mono flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+                    <span className="text-muted-foreground sm:min-w-[200px]">{env.key}:</span>
+                    <span className="break-all">{env.is_secret && !revealedSecrets.has(i) ? '********' : env.value}</span>
+                    {env.is_secret && (
+                      <Button variant="ghost" size="icon-sm" className="size-6 sm:ml-1" onClick={() => toggleSecret(i)}>
+                        {revealedSecrets.has(i) ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">No environment variables</p>
+            )}
+          </>
         )}
       </CardContent>
-    </Card>
+    </EditableCard>
   )
 }

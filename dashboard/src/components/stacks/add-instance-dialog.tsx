@@ -26,7 +26,7 @@ export function AddInstanceDialog({ stackName, open, onOpenChange }: AddInstance
   const [description, setDescription] = useState('')
   const [nameError, setNameError] = useState('')
 
-  const services = servicesResult?.services ?? []
+  const services = useMemo(() => servicesResult?.services ?? [], [servicesResult])
 
   const filteredServices = useMemo(() => {
     if (!searchQuery) return services

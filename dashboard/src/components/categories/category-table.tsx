@@ -12,36 +12,37 @@ import { Button } from '@/components/ui/button'
 import { Play, Square, Loader2 } from 'lucide-react'
 import { useStartCategory, useStopCategory } from '@/features/categories/queries'
 import { titleCase } from '@/lib/utils'
-import type { Category } from '@/types/api'
+import type { CategoryItem } from '@/types/api'
 
 interface CategoryTableProps {
-  categories: Category[]
+  categories: CategoryItem[]
+  compact?: boolean
 }
 
-export function CategoryTable({ categories }: CategoryTableProps) {
+export function CategoryTable({ categories, compact }: CategoryTableProps) {
   return (
     <div className="rounded-lg border">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
-            <TableHead>Services</TableHead>
+            {!compact && <TableHead>Services</TableHead>}
             <TableHead>Running</TableHead>
             <TableHead>Progress</TableHead>
-            <TableHead>Order</TableHead>
+            {!compact && <TableHead>Order</TableHead>}
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {categories.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+              <TableCell colSpan={compact ? 4 : 6} className="text-center text-muted-foreground py-8">
                 No categories found
               </TableCell>
             </TableRow>
           ) : (
             categories.map((cat) => (
-              <CategoryTableRow key={cat.name} category={cat} />
+              <CategoryTableRow key={cat.name} category={cat} compact={compact} />
             ))
           )}
         </TableBody>
@@ -50,50 +51,35 @@ export function CategoryTable({ categories }: CategoryTableProps) {
   )
 }
 
-function CategoryTableRow({ category }: { category: Category }) {
+function CategoryTableRow({ category, compact }: { category: CategoryItem; compact?: boolean }) {
   const startMutation = useStartCategory()
   const stopMutation = useStopCategory()
   const isLoading = startMutation.isPending || stopMutation.isPending
-  const running = category.runningCount ?? 0
-  const total = category.service_count ?? 0
-  const pct = total > 0 ? (running / total) * 100 : 0
+  const { name, runningCount, serviceCount, startupOrder } = category
+  const pct = serviceCount > 0 ? (runningCount / serviceCount) * 100 : 0
 
   return (
     <TableRow>
       <TableCell>
-        <Link
-          to="/services"
-          search={{ category: category.name }}
-          className="font-medium hover:underline"
-        >
-          {titleCase(category.name)}
+        <Link to="/services" search={{ category: name }} className="font-medium hover:underline">
+          {titleCase(name)}
         </Link>
       </TableCell>
-      <TableCell>{total}</TableCell>
-      <TableCell>{running}</TableCell>
+      {!compact && <TableCell>{serviceCount}</TableCell>}
+      <TableCell>{runningCount}/{serviceCount}</TableCell>
       <TableCell>
         <ResourceBar value={pct} className="w-24" />
       </TableCell>
-      <TableCell className="text-muted-foreground">{category.startup_order}</TableCell>
+      {!compact && <TableCell className="text-muted-foreground">{startupOrder}</TableCell>}
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-1">
-          {running < total && (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => startMutation.mutate(category.name)}
-              disabled={isLoading}
-            >
+          {runningCount < serviceCount && (
+            <Button variant="ghost" size="icon-sm" onClick={() => startMutation.mutate(name)} disabled={isLoading}>
               {startMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
             </Button>
           )}
-          {running > 0 && (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => stopMutation.mutate(category.name)}
-              disabled={isLoading}
-            >
+          {runningCount > 0 && (
+            <Button variant="ghost" size="icon-sm" onClick={() => stopMutation.mutate(name)} disabled={isLoading}>
               {stopMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Square className="size-4" />}
             </Button>
           )}

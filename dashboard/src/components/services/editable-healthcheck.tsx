@@ -39,7 +39,7 @@ export function EditableHealthcheck({ name, healthcheck }: Props) {
 
   const save = () => {
     mutation.mutate(
-      { name, data: draft.test ? draft as any : null },
+      { name, data: draft.test ? draft : null },
       { onSuccess: () => setEditing(false) },
     )
   }

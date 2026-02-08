@@ -1,16 +1,14 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
-import { Loader2, Server, Play, Square } from 'lucide-react'
+import { Server, Play, Square } from 'lucide-react'
 import { useCategories } from '@/features/categories/queries'
 import { CategoryCard } from '@/components/categories/category-card'
 import { CategoryTable } from '@/components/categories/category-table'
-import { ListToolbar } from '@/components/ui/list-toolbar'
 import { FilterBar, type FilterOption } from '@/components/ui/filter-bar'
-import { StatCard } from '@/components/ui/stat-card'
-import { EmptyState } from '@/components/ui/empty-state'
-import { useListControls } from '@/hooks/use-list-controls'
-import type { Category } from '@/types/api'
+import { ListPageScaffold } from '@/components/ui/list-page-scaffold'
+import { useUrlSyncedListControls } from '@/hooks/use-url-synced-list-controls'
+import type { Category, CategoryItem } from '@/types/api'
 
 export const Route = createFileRoute('/categories/')({
   validateSearch: z.object({
@@ -57,99 +55,10 @@ function CategoriesPage() {
   const navigate = Route.useNavigate()
   const items = useMemo(() => categories ?? [], [categories])
 
-  const controls = useListControls({
-    storageKey: 'categories',
-    items,
-    searchFn,
-    filterFns,
-    sortFns,
-    defaultSort: 'order',
-    defaultView: 'grid',
-  })
-
-  const {
-    search,
-    setSearch,
-    filters,
-    setFilter,
-    sortBy,
-    setSortBy,
-    sortDir,
-    setSortDir,
-    viewMode,
-    setViewMode,
-  } = controls
-  const syncingFromUrlRef = useRef(false)
-
-  useEffect(() => {
-    syncingFromUrlRef.current = true
-    setSearch(routeSearch.q ?? '')
-    setFilter('status', routeSearch.status ?? 'all')
-    setSortBy(routeSearch.sort ?? 'order')
-    setSortDir(routeSearch.dir ?? 'asc')
-    setViewMode(routeSearch.view ?? 'grid')
-  }, [
-    routeSearch.q,
-    routeSearch.status,
-    routeSearch.sort,
-    routeSearch.dir,
-    routeSearch.view,
-    setSearch,
-    setFilter,
-    setSortBy,
-    setSortDir,
-    setViewMode,
-  ])
-
-  useEffect(() => {
-    if (syncingFromUrlRef.current) {
-      syncingFromUrlRef.current = false
-      return
-    }
-
-    const nextQ = search || undefined
-    const nextStatus = filters.status && filters.status !== 'all' ? filters.status : undefined
-    const nextSort =
-      sortBy !== 'order' && sortOptions.some((option) => option.value === sortBy)
-        ? (sortBy as typeof routeSearch.sort)
-        : undefined
-    const nextDir = sortDir === 'asc' ? undefined : sortDir
-    const nextView = viewMode === 'grid' ? undefined : viewMode
-
-    if (
-      routeSearch.q === nextQ
-      && routeSearch.status === nextStatus
-      && routeSearch.sort === nextSort
-      && routeSearch.dir === nextDir
-      && routeSearch.view === nextView
-    ) {
-      return
-    }
-
-    navigate({
-      search: (prev) => ({
-        ...prev,
-        q: nextQ,
-        status: nextStatus,
-        sort: nextSort,
-        dir: nextDir,
-        view: nextView,
-      }),
-      replace: true,
-    })
-  }, [
-    search,
-    filters.status,
-    sortBy,
-    sortDir,
-    viewMode,
-    routeSearch.q,
-    routeSearch.status,
-    routeSearch.sort,
-    routeSearch.dir,
-    routeSearch.view,
-    navigate,
-  ])
+  const controls = useUrlSyncedListControls(
+    { storageKey: 'categories', items, searchFn, filterFns, sortFns, defaultSort: 'order', defaultView: 'grid' },
+    { routeSearch, navigate, sortOptions, filterKeys: ['status'] },
+  )
 
   const statusCounts = useMemo(() => {
     let running = 0
@@ -165,14 +74,6 @@ function CategoriesPage() {
     return { all: items.length, running, partial, stopped }
   }, [items])
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="size-8 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
   const totalServices = items.reduce((acc, cat) => acc + (cat.service_count ?? 0), 0)
   const totalRunning = items.reduce((acc, cat) => acc + (cat.runningCount ?? 0), 0)
 
@@ -183,55 +84,44 @@ function CategoriesPage() {
     { value: 'stopped', label: 'Stopped', count: statusCounts.stopped },
   ]
 
+  const toCategoryItem = (cat: Category): CategoryItem => ({
+    name: cat.name,
+    runningCount: cat.runningCount ?? 0,
+    serviceCount: cat.service_count ?? 0,
+    startupOrder: cat.startup_order,
+  })
+
   return (
-    <div className="space-y-5 sm:space-y-6">
-      <div>
-        <h1 className="text-xl font-bold sm:text-2xl">Categories</h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
-          {totalRunning} of {totalServices} services running across {items.length} categories
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <StatCard icon={Server} label="Categories" value={items.length} />
-        <StatCard icon={Play} label="Services Running" value={totalRunning} color="text-green-500" />
-        <StatCard icon={Square} label="Services Stopped" value={totalServices - totalRunning} color="text-muted-foreground" />
-      </div>
-
-      <ListToolbar
-        search={controls.search}
-        onSearchChange={controls.setSearch}
-        searchPlaceholder="Search categories..."
-        sortOptions={sortOptions}
-        sortBy={controls.sortBy}
-        sortDir={controls.sortDir}
-        onSortByChange={controls.setSortBy}
-        onSortDirChange={controls.setSortDir}
-        viewMode={controls.viewMode}
-        onViewModeChange={controls.setViewMode}
-      >
+    <ListPageScaffold
+      title="Categories"
+      subtitle={`${totalRunning} of ${totalServices} services running across ${items.length} categories`}
+      isLoading={isLoading}
+      statCards={[
+        { icon: Server, label: 'Categories', value: items.length },
+        { icon: Play, label: 'Services Running', value: totalRunning, color: 'text-green-500' },
+        { icon: Square, label: 'Services Stopped', value: totalServices - totalRunning, color: 'text-muted-foreground' },
+      ]}
+      controls={controls}
+      sortOptions={sortOptions}
+      searchPlaceholder="Search categories..."
+      emptyIcon={Server}
+      emptyMessage="No categories match your filters"
+      items={controls.filtered}
+      filterChildren={
         <FilterBar
           options={statusOptions}
           value={controls.filters.status ?? 'all'}
           onChange={(v) => controls.setFilter('status', v)}
         />
-      </ListToolbar>
-
-      {controls.filtered.length === 0 ? (
-        <EmptyState icon={Server} message="No categories match your filters" />
-      ) : controls.viewMode === 'table' ? (
-        <CategoryTable categories={controls.filtered} />
-      ) : (
+      }
+      tableView={(filtered) => <CategoryTable categories={filtered.map(toCategoryItem)} />}
+      gridView={(filtered) => (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {controls.filtered.map((category) => (
-            <CategoryCard key={category.name} category={category} />
+          {filtered.map((category) => (
+            <CategoryCard key={category.name} category={toCategoryItem(category)} />
           ))}
         </div>
       )}
-
-      <div className="text-sm text-muted-foreground">
-        Showing {controls.filtered.length} of {items.length} categories
-      </div>
-    </div>
+    />
   )
 }

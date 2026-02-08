@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api'
+import { api, getErrorMessage } from '@/lib/api'
 import type { Service, ServicePort, ServiceVolume, ServiceEnvVar, ServiceHealthcheck, ServiceLabel, ServiceDomain, ServiceConfigFile } from '@/types/api'
 import { toast } from 'sonner'
 
@@ -179,8 +179,8 @@ export function useCreateService() {
       toast.success('Service created')
       queryClient.invalidateQueries({ queryKey: ['services'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to create service')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to create service'))
     },
   })
 }
@@ -205,8 +205,8 @@ export function useUpdateService() {
       queryClient.invalidateQueries({ queryKey: ['services', name] })
       queryClient.invalidateQueries({ queryKey: ['services'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to update service')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update service'))
     },
   })
 }
@@ -222,8 +222,8 @@ export function useDeleteService() {
       toast.success('Service deleted')
       queryClient.invalidateQueries({ queryKey: ['services'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to delete service')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to delete service'))
     },
   })
 }
@@ -240,8 +240,8 @@ function makeSubResourceMutation<T>(resource: string, label: string) {
         toast.success(`${label} updated`)
         queryClient.invalidateQueries({ queryKey: ['services', name] })
       },
-      onError: (error: any) => {
-        toast.error(error.response?.data || `Failed to update ${label.toLowerCase()}`)
+      onError: (error) => {
+        toast.error(getErrorMessage(error, `Failed to update ${label.toLowerCase()}`))
       },
     })
   }
@@ -251,7 +251,7 @@ export const useUpdatePorts = makeSubResourceMutation<{ ports: Omit<ServicePort,
 export const useUpdateVolumes = makeSubResourceMutation<{ volumes: Omit<ServiceVolume, 'id' | 'service_id'>[] }>('volumes', 'Volumes')
 export const useUpdateEnvVars = makeSubResourceMutation<{ env_vars: Omit<ServiceEnvVar, 'id' | 'service_id'>[] }>('env-vars', 'Environment variables')
 export const useUpdateDependencies = makeSubResourceMutation<{ dependencies: string[] }>('dependencies', 'Dependencies')
-export const useUpdateHealthcheck = makeSubResourceMutation<ServiceHealthcheck | null>('healthcheck', 'Healthcheck')
+export const useUpdateHealthcheck = makeSubResourceMutation<Omit<ServiceHealthcheck, 'id' | 'service_id'> | null>('healthcheck', 'Healthcheck')
 export const useUpdateLabels = makeSubResourceMutation<{ labels: Omit<ServiceLabel, 'id' | 'service_id'>[] }>('labels', 'Labels')
 export const useUpdateDomains = makeSubResourceMutation<{ domains: Omit<ServiceDomain, 'id' | 'service_id'>[] }>('domains', 'Domains')
 
@@ -288,8 +288,8 @@ export function useSaveConfigFile() {
       toast.success('File saved')
       queryClient.invalidateQueries({ queryKey: ['services', name, 'files'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to save file')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to save file'))
     },
   })
 }
@@ -305,8 +305,8 @@ export function useDeleteConfigFile() {
       toast.success('File deleted')
       queryClient.invalidateQueries({ queryKey: ['services', name, 'files'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data || 'Failed to delete file')
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to delete file'))
     },
   })
 }

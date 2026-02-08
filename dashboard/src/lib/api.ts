@@ -1,4 +1,11 @@
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
+
+export function getErrorMessage(error: Error, fallback: string): string {
+  if (isAxiosError(error) && typeof error.response?.data === 'string') {
+    return error.response.data
+  }
+  return error.message || fallback
+}
 
 const apiKey = localStorage.getItem('devarch-api-key') ?? ''
 

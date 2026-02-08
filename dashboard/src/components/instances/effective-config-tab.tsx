@@ -346,50 +346,57 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
   )
 }
 
-function toYAML(config: any): string {
-  const doc: any = {
-    version: '3.8',
-    services: {
-      [config.instance_id]: {
-        image: `${config.image_name}:${config.image_tag}`,
-        container_name: config.container_name,
-        restart: config.restart_policy,
-      },
-    },
-  }
+interface NormalizedConfig {
+  instance_id: string
+  image_name: string
+  image_tag: string
+  container_name: string
+  restart_policy: string
+  command?: string
+  ports: { host_ip: string; host_port: number; container_port: number; protocol: string }[]
+  volumes: { source: string; target: string; read_only: boolean }[]
+  env_vars: { key: string; value?: string; is_secret: boolean }[]
+  labels: { key: string; value: string }[]
+  dependencies: string[]
+  healthcheck?: { test: string; interval_seconds: number; timeout_seconds: number; retries: number; start_period_seconds: number } | null
+  config_files: { file_path: string; content: string; file_mode: string }[]
+}
 
-  const svc = doc.services[config.instance_id]
+function toYAML(config: NormalizedConfig): string {
+  const svc: Record<string, unknown> = {
+    image: `${config.image_name}:${config.image_tag}`,
+    container_name: config.container_name,
+    restart: config.restart_policy,
+  }
 
   if (config.command) {
     svc.command = config.command
   }
 
-  if (config.ports?.length > 0) {
-    svc.ports = config.ports.map((p: any) => `${p.host_ip}:${p.host_port}:${p.container_port}/${p.protocol}`)
+  if (config.ports.length > 0) {
+    svc.ports = config.ports.map((p) => `${p.host_ip}:${p.host_port}:${p.container_port}/${p.protocol}`)
   }
 
-  if (config.volumes?.length > 0) {
-    svc.volumes = config.volumes.map((v: any) => {
+  if (config.volumes.length > 0) {
+    svc.volumes = config.volumes.map((v) => {
       const vol = `${v.source}:${v.target}`
       return v.read_only ? `${vol}:ro` : vol
     })
   }
 
-  if (config.env_vars?.length > 0) {
-    svc.environment = config.env_vars.reduce((acc: any, e: any) => {
-      acc[e.key] = e.is_secret ? '***' : (e.value ?? '')
-      return acc
-    }, {})
+  if (config.env_vars.length > 0) {
+    svc.environment = Object.fromEntries(
+      config.env_vars.map((e) => [e.key, e.is_secret ? '***' : (e.value ?? '')])
+    )
   }
 
-  if (config.labels?.length > 0) {
-    svc.labels = config.labels.reduce((acc: any, l: any) => {
-      acc[l.key] = l.value
-      return acc
-    }, {})
+  if (config.labels.length > 0) {
+    svc.labels = Object.fromEntries(
+      config.labels.map((l) => [l.key, l.value])
+    )
   }
 
-  if (config.dependencies?.length > 0) {
+  if (config.dependencies.length > 0) {
     svc.depends_on = config.dependencies
   }
 
@@ -401,6 +408,11 @@ function toYAML(config: any): string {
       retries: config.healthcheck.retries,
       start_period: `${config.healthcheck.start_period_seconds}s`,
     }
+  }
+
+  const doc = {
+    version: '3.8',
+    services: { [config.instance_id]: svc },
   }
 
   return YAML.stringify(doc)

@@ -5,9 +5,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { CodeEditor, detectLang } from '@/components/services/code-editor'
-import { api } from '@/lib/api'
+import { CodeEditor } from '@/components/services/code-editor'
+import { detectLang } from '@/lib/detect-lang'
 import { toast } from 'sonner'
+import { useSaveConfigFile, useDeleteConfigFile } from '@/features/instances/queries'
 import type { InstanceDetail, Service, InstanceConfigFile } from '@/types/api'
 
 interface Props {
@@ -28,7 +29,9 @@ export function OverrideConfigFiles({ instance, stackName, instanceId }: Props) 
   const [fileMode, setFileMode] = useState('0644')
   const [newFileName, setNewFileName] = useState('')
   const [newFileOpen, setNewFileOpen] = useState(false)
-  const [saving, setSaving] = useState(false)
+
+  const saveMutation = useSaveConfigFile(stackName, instanceId)
+  const deleteMutation = useDeleteConfigFile(stackName, instanceId)
 
   const templateConfigFiles: TemplateConfigFile[] = []
   const overrideConfigFiles = instance.config_files ?? []
@@ -49,7 +52,7 @@ export function OverrideConfigFiles({ instance, stackName, instanceId }: Props) 
     }
   }
 
-  const openFile = async (path: string) => {
+  const openFile = (path: string) => {
     const info = getFileInfo(path)
     if (info.hasOverride) {
       setFileContent(info.overrideFile?.content ?? '')
@@ -69,61 +72,43 @@ export function OverrideConfigFiles({ instance, stackName, instanceId }: Props) 
     setFileContent('')
   }
 
-  const saveFile = async () => {
+  const saveFile = () => {
     if (!selectedFile) return
-    setSaving(true)
-    try {
-      await api.put(`/stacks/${stackName}/instances/${instanceId}/files/${selectedFile}`, {
-        content: fileContent,
-        file_mode: fileMode,
-      })
-      toast.success('File saved')
-      closeFile()
-      window.location.reload()
-    } catch (error: any) {
-      toast.error(error.response?.data || 'Failed to save file')
-    } finally {
-      setSaving(false)
-    }
+    saveMutation.mutate(
+      { filePath: selectedFile, data: { content: fileContent, file_mode: fileMode } },
+      {
+        onSuccess: () => {
+          toast.success('File saved')
+          closeFile()
+        },
+      },
+    )
   }
 
-  const deleteFile = async (path: string) => {
-    try {
-      await api.delete(`/stacks/${stackName}/instances/${instanceId}/files/${path}`)
-      toast.success('File deleted')
-      window.location.reload()
-    } catch (error: any) {
-      toast.error(error.response?.data || 'Failed to delete file')
-    }
+  const deleteFile = (path: string) => {
+    deleteMutation.mutate(path, {
+      onSuccess: () => toast.success('File deleted'),
+    })
   }
 
-  const resetFile = async (path: string) => {
-    try {
-      await api.delete(`/stacks/${stackName}/instances/${instanceId}/files/${path}`)
-      toast.success('File reset to template')
-      window.location.reload()
-    } catch (error: any) {
-      toast.error(error.response?.data || 'Failed to reset file')
-    }
+  const resetFile = (path: string) => {
+    deleteMutation.mutate(path, {
+      onSuccess: () => toast.success('File reset to template'),
+    })
   }
 
-  const createNewFile = async () => {
+  const createNewFile = () => {
     if (!newFileName) return
-    setSaving(true)
-    try {
-      await api.put(`/stacks/${stackName}/instances/${instanceId}/files/${newFileName}`, {
-        content: '',
-        file_mode: '0644',
-      })
-      toast.success('File created')
-      setNewFileOpen(false)
-      setNewFileName('')
-      window.location.reload()
-    } catch (error: any) {
-      toast.error(error.response?.data || 'Failed to create file')
-    } finally {
-      setSaving(false)
-    }
+    saveMutation.mutate(
+      { filePath: newFileName, data: { content: '', file_mode: '0644' } },
+      {
+        onSuccess: () => {
+          toast.success('File created')
+          setNewFileOpen(false)
+          setNewFileName('')
+        },
+      },
+    )
   }
 
   return (
@@ -238,8 +223,8 @@ export function OverrideConfigFiles({ instance, stackName, instanceId }: Props) 
                 </Button>
               )}
               <Button variant="outline" onClick={closeFile}>Cancel</Button>
-              <Button onClick={saveFile} disabled={saving}>
-                {saving ? <X className="size-4 animate-spin" /> : <Check className="size-4" />}
+              <Button onClick={saveFile} disabled={saveMutation.isPending}>
+                {saveMutation.isPending ? <X className="size-4 animate-spin" /> : <Check className="size-4" />}
                 Save
               </Button>
             </DialogFooter>
@@ -264,8 +249,8 @@ export function OverrideConfigFiles({ instance, stackName, instanceId }: Props) 
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewFileOpen(false)}>Cancel</Button>
-            <Button onClick={createNewFile} disabled={saving || !newFileName}>
-              {saving ? <X className="size-4 animate-spin" /> : 'Create'}
+            <Button onClick={createNewFile} disabled={saveMutation.isPending || !newFileName}>
+              {saveMutation.isPending ? <X className="size-4 animate-spin" /> : 'Create'}
             </Button>
           </DialogFooter>
         </DialogContent>
