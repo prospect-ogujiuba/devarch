@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 ## Current Position
 
 Phase: 7 of 9 (Export/Import Bootstrap)
-Plan: 2 of 4 complete in Phase 7
+Plan: 3 of 4 complete in Phase 7
 Status: In progress
-Last activity: 2026-02-08 — Completed 07-02-PLAN.md
+Last activity: 2026-02-08 — Completed 07-03-PLAN.md
 
-Progress: [███████░░░] ~78% (21 plans complete of ~27 total)
+Progress: [███████░░░] ~81% (22 plans complete of ~27 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21
-- Average duration: 2.6 min
-- Total execution time: ~0.99 hours
+- Total plans completed: 22
+- Average duration: 2.7 min
+- Total execution time: ~1.02 hours
 
 **By Phase:**
 
@@ -33,11 +33,12 @@ Progress: [███████░░░] ~78% (21 plans complete of ~27 total)
 | 4 | 2/2 | 7.3min | 3.7min |
 | 5 | 2/2 | 4.0min | 2.0min |
 | 6 | 3/3 | 5.0min | 1.7min |
-| 7 | 2/4 | 4.6min | 2.3min |
+| 7 | 3/4 | 7.5min | 2.5min |
 
 *Updated after each plan completion*
 | Phase 07 P01 | 160 | 2 tasks | 5 files |
 | Phase 07 P02 | 116 | 2 tasks | 3 files |
+| Phase 07 P03 | 173 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -172,6 +173,13 @@ Recent decisions affecting current work:
 - [Phase 07]: Export includes all instances (enabled and disabled) with Enabled boolean
 - [Phase 07]: Identity labels included in export (single source of truth)
 
+**From 07-03:**
+- Lockfile format is JSON (not YAML) for consistency with export/import workflow
+- Image digests resolved via container runtime inspect (podman/docker) not registry for offline reproducibility
+- Template version hash: SHA256(name + created_at) truncated to 16 hex chars for drift detection
+- Lock validation integrated into apply as optional warn-only feature (never blocks operations)
+- Empty image digest tolerated (non-fatal) when image not yet pulled locally
+
 ### Pending Todos
 
 None yet.
@@ -183,5 +191,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 07-01-PLAN.md (export domain package). Phase 7 in progress.
+Stopped at: Completed 07-03-PLAN.md (lockfile domain package). Phase 7 in progress.
 Resume file: None
