@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Globe, GitBranch, Package, Code2, ExternalLink, Puzzle, Palette, Play, Square, RotateCcw, Server } from 'lucide-react'
+import { ArrowLeft, Loader2, GitBranch, Package, Code2, ExternalLink, Puzzle, Palette, Play, Square, RotateCcw, Server } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -274,8 +274,8 @@ function ProjectDetailPage() {
                 {project.proxy_port && <Row label="Proxy Port" value={String(project.proxy_port)} />}
                 {project.compose_path && <Row label="Compose" value={project.compose_path} mono />}
                 {project.service_count > 0 && <Row label="Services" value={String(project.service_count)} />}
-                {isWordPress && deps.db_name && <Row label="Database" value={String(deps.db_name)} />}
-                {isWordPress && deps.table_prefix && <Row label="Table Prefix" value={String(deps.table_prefix)} mono />}
+                {isWordPress && Boolean(deps.db_name) && <Row label="Database" value={String(deps.db_name)} />}
+                {isWordPress && Boolean(deps.table_prefix) && <Row label="Table Prefix" value={String(deps.table_prefix)} mono />}
                 {project.last_scanned_at && (
                   <Row label="Last Scanned" value={new Date(project.last_scanned_at).toLocaleString()} />
                 )}

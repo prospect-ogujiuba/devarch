@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { Loader2, Layers, Plus, CheckCircle2, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useStacks, useDeleteStack, useEnableStack, useDisableStack } from '@/features/stacks/queries'
@@ -47,7 +47,6 @@ const sortOptions = [
 ]
 
 function StacksPage() {
-  const navigate = useNavigate()
   const { data, isLoading } = useStacks()
   const stacks = useMemo(() => data ?? [], [data])
 
@@ -56,8 +55,6 @@ function StacksPage() {
   const disableMutation = useDisableStack()
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [cloneDialogStack, setCloneDialogStack] = useState<string | null>(null)
-  const [renameDialogStack, setRenameDialogStack] = useState<string | null>(null)
 
   const controls = useListControls({
     storageKey: 'stacks',
@@ -95,15 +92,9 @@ function StacksPage() {
     }
   }
 
-  const handleClone = (name: string) => {
-    setCloneDialogStack(name)
-    // TODO: Open clone dialog when form components ready
-  }
+  const handleClone = (name: string) => { void name }
 
-  const handleRename = (name: string) => {
-    setRenameDialogStack(name)
-    // TODO: Open rename dialog when form components ready
-  }
+  const handleRename = (name: string) => { void name }
 
   const handleCreateStack = () => {
     setCreateOpen(true)
