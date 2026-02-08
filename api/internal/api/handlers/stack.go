@@ -24,6 +24,16 @@ func NewStackHandler(db *sql.DB, cc *container.Client) *StackHandler {
 	}
 }
 
+func (h *StackHandler) runningCount(stackName string) int {
+	count, err := h.containerClient.CountRunningWithLabels(map[string]string{
+		container.LabelStackID: stackName,
+	})
+	if err != nil {
+		return 0
+	}
+	return count
+}
+
 type stackResponse struct {
 	ID            int       `json:"id"`
 	Name          string    `json:"name"`
@@ -150,8 +160,7 @@ func (h *StackHandler) List(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Running count placeholder (Phase 3+ will wire container client queries)
-		stack.RunningCount = 0
+		stack.RunningCount = h.runningCount(stack.Name)
 
 		stacks = append(stacks, stack)
 	}
@@ -204,8 +213,7 @@ func (h *StackHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Running count placeholder (Phase 3+ will wire container client queries)
-	stack.RunningCount = 0
+	stack.RunningCount = h.runningCount(stack.Name)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stack)
@@ -255,7 +263,7 @@ func (h *StackHandler) Update(w http.ResponseWriter, r *http.Request) {
 		stack.InstanceCount = 0
 	}
 
-	stack.RunningCount = 0
+	stack.RunningCount = h.runningCount(stack.Name)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stack)
@@ -360,7 +368,7 @@ func (h *StackHandler) Enable(w http.ResponseWriter, r *http.Request) {
 		stack.InstanceCount = 0
 	}
 
-	stack.RunningCount = 0
+	stack.RunningCount = h.runningCount(stack.Name)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stack)
@@ -501,7 +509,7 @@ func (h *StackHandler) Disable(w http.ResponseWriter, r *http.Request) {
 		stack.InstanceCount = 0
 	}
 
-	stack.RunningCount = 0
+	stack.RunningCount = h.runningCount(stack.Name)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(disableResponse{
@@ -892,7 +900,7 @@ func (h *StackHandler) Restore(w http.ResponseWriter, r *http.Request) {
 		stack.InstanceCount = 0
 	}
 
-	stack.RunningCount = 0
+	stack.RunningCount = h.runningCount(stack.Name)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stack)

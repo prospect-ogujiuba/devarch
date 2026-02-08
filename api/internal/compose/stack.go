@@ -119,7 +119,7 @@ func (g *Generator) GenerateStack(stackName string) ([]byte, []string, error) {
 		if !inst.enabled {
 			continue
 		}
-		cfg, err := g.loadInstanceEffectiveConfig(inst)
+		cfg, err := g.loadInstanceEffectiveConfig(stackName, inst)
 		if err != nil {
 			return nil, nil, fmt.Errorf("load config for %s: %w", inst.instanceID, err)
 		}
@@ -306,7 +306,7 @@ func (g *Generator) loadStackInstances(stackName string) ([]stackInstance, error
 	return instances, rows.Err()
 }
 
-func (g *Generator) loadInstanceEffectiveConfig(inst stackInstance) (*stackInstanceConfig, error) {
+func (g *Generator) loadInstanceEffectiveConfig(stackName string, inst stackInstance) (*stackInstanceConfig, error) {
 	cfg := &stackInstanceConfig{
 		envVars: make(map[string]string),
 		labels:  make(map[string]string),
@@ -342,7 +342,7 @@ func (g *Generator) loadInstanceEffectiveConfig(inst stackInstance) (*stackInsta
 		return nil, fmt.Errorf("env vars: %w", err)
 	}
 
-	cfg.labels, err = g.loadEffectiveLabels(inst.id, inst.templateServiceID, inst.instanceID)
+	cfg.labels, err = g.loadEffectiveLabels(inst.id, inst.templateServiceID, stackName, inst.instanceID)
 	if err != nil {
 		return nil, fmt.Errorf("labels: %w", err)
 	}
@@ -495,7 +495,7 @@ func (g *Generator) loadEffectiveEnvVars(instancePK, templateServiceID int) (map
 	return merged, rows.Err()
 }
 
-func (g *Generator) loadEffectiveLabels(instancePK, templateServiceID int, instanceID string) (map[string]string, error) {
+func (g *Generator) loadEffectiveLabels(instancePK, templateServiceID int, stackName, instanceID string) (map[string]string, error) {
 	merged := make(map[string]string)
 
 	rows, err := g.db.Query(`
@@ -536,7 +536,7 @@ func (g *Generator) loadEffectiveLabels(instancePK, templateServiceID int, insta
 		return nil, err
 	}
 
-	identityLabels := container.BuildLabels(g.networkName, instanceID, strconv.Itoa(templateServiceID))
+	identityLabels := container.BuildLabels(stackName, instanceID, strconv.Itoa(templateServiceID))
 	for k, v := range identityLabels {
 		if _, exists := merged[k]; !exists {
 			merged[k] = v
