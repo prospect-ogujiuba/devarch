@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link, Outlet, useMatch, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2, Play, Square, RotateCcw, Network } from 'lucide-react'
+import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2, Play, Square, RotateCcw, Network, Unplug } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useStack, useEnableStack, useDisableStack, useStopStack, useStartStack, useRestartStack, useStackNetwork, useStackCompose, useGeneratePlan, useApplyPlan, useCreateNetwork } from '@/features/stacks/queries'
+import { useStack, useEnableStack, useDisableStack, useStopStack, useStartStack, useRestartStack, useStackNetwork, useStackCompose, useGeneratePlan, useApplyPlan, useCreateNetwork, useRemoveNetwork } from '@/features/stacks/queries'
 import { CodeEditor } from '@/components/services/code-editor'
 import { useInstances, useUpdateInstance, useStopInstance, useStartInstance, useRestartInstance } from '@/features/instances/queries'
 import { EditStackDialog } from '@/components/stacks/edit-stack-dialog'
@@ -167,6 +167,7 @@ function StackDetailPage() {
   const generatePlan = useGeneratePlan(name)
   const applyPlan = useApplyPlan(name)
   const createNetwork = useCreateNetwork()
+  const removeNetwork = useRemoveNetwork()
 
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -449,6 +450,17 @@ function StackDetailPage() {
                   >
                     {createNetwork.isPending ? <Loader2 className="size-4 animate-spin" /> : <Network className="size-4" />}
                     Create Network
+                  </Button>
+                )}
+                {networkStatus?.status === 'active' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => removeNetwork.mutate(name)}
+                    disabled={removeNetwork.isPending}
+                  >
+                    {removeNetwork.isPending ? <Loader2 className="size-4 animate-spin" /> : <Unplug className="size-4" />}
+                    Remove Network
                   </Button>
                 )}
               </div>

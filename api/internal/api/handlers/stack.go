@@ -485,6 +485,36 @@ func (h *StackHandler) CreateNetwork(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "created", "network": netName})
 }
 
+func (h *StackHandler) RemoveNetwork(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	var networkName *string
+	err := h.db.QueryRow(`
+		SELECT network_name FROM stacks WHERE name = $1 AND deleted_at IS NULL
+	`, name).Scan(&networkName)
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	netName := container.NetworkName(name)
+	if networkName != nil && *networkName != "" {
+		netName = *networkName
+	}
+
+	if err := h.containerClient.RemoveNetwork(netName); err != nil {
+		http.Error(w, fmt.Sprintf("failed to remove network: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "removed", "network": netName})
+}
+
 type disableResponse struct {
 	Stack             stackResponse `json:"stack"`
 	StoppedContainers []string      `json:"stopped_containers"`

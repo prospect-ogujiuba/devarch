@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { MoreHorizontal, Power, PowerOff, Copy, Edit, Trash2, Globe, Network } from 'lucide-react'
+import { MoreHorizontal, Power, PowerOff, Copy, Edit, Trash2, Globe, Network, Unplug } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -28,9 +28,10 @@ interface StackTableProps {
   onRename: (name: string) => void
   onDelete: (name: string) => void
   onCreateNetwork: (name: string) => void
+  onRemoveNetwork: (name: string) => void
 }
 
-export function StackTable({ stacks, onEnable, onDisable, onClone, onRename, onDelete, onCreateNetwork }: StackTableProps) {
+export function StackTable({ stacks, onEnable, onDisable, onClone, onRename, onDelete, onCreateNetwork, onRemoveNetwork }: StackTableProps) {
   return (
     <div className="space-y-4">
       <div className="rounded-lg border">
@@ -133,6 +134,10 @@ export function StackTable({ stacks, onEnable, onDisable, onClone, onRename, onD
                           <DropdownMenuItem onClick={() => onCreateNetwork(stack.name)}>
                             <Network className="size-4" />
                             Create Network
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onRemoveNetwork(stack.name)}>
+                            <Unplug className="size-4" />
+                            Remove Network
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => onDelete(stack.name)} className="text-destructive">
