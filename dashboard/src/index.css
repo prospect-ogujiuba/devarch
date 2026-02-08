@@ -110,3 +110,12 @@
   white-space: pre-wrap;
   word-break: break-all;
 }
+
+[data-slot="table-container"] {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+[data-slot="table-container"]::-webkit-scrollbar {
+  display: none;
+}
