@@ -98,6 +98,9 @@ func (h *StackHandler) Plan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	changes := plan.ComputeDiff(desired, running)
+	if changes == nil {
+		changes = []plan.Change{}
+	}
 	token := plan.GenerateToken(stackUpdatedAt, timestamps)
 
 	planResp := plan.Plan{

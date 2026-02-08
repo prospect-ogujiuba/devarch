@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { MoreHorizontal, Power, PowerOff, Copy, Edit, Trash2, Globe, Network, Unplug } from 'lucide-react'
+import { MoreHorizontal, Power, PowerOff, Play, Square, RotateCcw, Copy, Edit, Trash2, Globe, Network, Unplug } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -26,12 +26,27 @@ interface StackTableProps {
   onDisable: (name: string) => void
   onClone: (name: string) => void
   onRename: (name: string) => void
+  onStart: (name: string) => void
+  onStop: (name: string) => void
+  onRestart: (name: string) => void
   onDelete: (name: string) => void
   onCreateNetwork: (name: string) => void
   onRemoveNetwork: (name: string) => void
 }
 
-export function StackTable({ stacks, onEnable, onDisable, onClone, onRename, onDelete, onCreateNetwork, onRemoveNetwork }: StackTableProps) {
+export function StackTable({
+  stacks,
+  onEnable,
+  onDisable,
+  onClone,
+  onRename,
+  onStart,
+  onStop,
+  onRestart,
+  onDelete,
+  onCreateNetwork,
+  onRemoveNetwork,
+}: StackTableProps) {
   return (
     <div className="space-y-4">
       <div className="rounded-lg border">
@@ -121,6 +136,24 @@ export function StackTable({ stacks, onEnable, onDisable, onClone, onRename, onD
                             <DropdownMenuItem onClick={() => onEnable(stack.name)}>
                               <Power className="size-4" />
                               Enable
+                            </DropdownMenuItem>
+                          )}
+                          {stack.enabled && stack.running_count === 0 && stack.instance_count > 0 && (
+                            <DropdownMenuItem onClick={() => onStart(stack.name)}>
+                              <Play className="size-4" />
+                              Start
+                            </DropdownMenuItem>
+                          )}
+                          {stack.enabled && stack.running_count > 0 && (
+                            <DropdownMenuItem onClick={() => onStop(stack.name)}>
+                              <Square className="size-4" />
+                              Stop
+                            </DropdownMenuItem>
+                          )}
+                          {stack.enabled && stack.running_count > 0 && (
+                            <DropdownMenuItem onClick={() => onRestart(stack.name)}>
+                              <RotateCcw className="size-4" />
+                              Restart
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem onClick={() => onClone(stack.name)}>

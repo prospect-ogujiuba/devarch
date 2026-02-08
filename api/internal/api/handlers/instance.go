@@ -58,10 +58,10 @@ type renameInstanceRequest struct {
 }
 
 type instanceDeletePreviewResponse struct {
-	InstanceName   string `json:"instance_name"`
-	TemplateName   string `json:"template_name"`
-	OverrideCount  int    `json:"override_count"`
-	ContainerName  string `json:"container_name"`
+	InstanceName  string `json:"instance_name"`
+	TemplateName  string `json:"template_name"`
+	OverrideCount int    `json:"override_count"`
+	ContainerName string `json:"container_name"`
 }
 
 func (h *InstanceHandler) getStackByName(stackName string) (int, string, error) {
@@ -399,6 +399,13 @@ func (h *InstanceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to update instance: %v", err), http.StatusInternalServerError)
 		return
+	}
+
+	if req.Enabled != nil && !*req.Enabled {
+		if err := h.containerClient.StopContainer(instance.ContainerName); err != nil {
+			http.Error(w, fmt.Sprintf("failed to stop instance: %v", err), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	err = h.db.QueryRow(`SELECT name FROM services WHERE id = $1`, instance.TemplateServiceID).Scan(&instance.TemplateName)

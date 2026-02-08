@@ -84,16 +84,16 @@ func (h *StackHandler) stackCompose(stackName string) ([]byte, error) {
 }
 
 type stackResponse struct {
-	ID             int       `json:"id"`
-	Name           string    `json:"name"`
-	Description    string    `json:"description"`
-	NetworkName    *string   `json:"network_name"`
-	Enabled        bool      `json:"enabled"`
-	InstanceCount  int       `json:"instance_count"`
-	RunningCount   int       `json:"running_count"`
-	NetworkActive  bool      `json:"network_active"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID            int       `json:"id"`
+	Name          string    `json:"name"`
+	Description   string    `json:"description"`
+	NetworkName   *string   `json:"network_name"`
+	Enabled       bool      `json:"enabled"`
+	InstanceCount int       `json:"instance_count"`
+	RunningCount  int       `json:"running_count"`
+	NetworkActive bool      `json:"network_active"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 type createStackRequest struct {
@@ -549,20 +549,19 @@ func (h *StackHandler) Disable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var stoppedContainers []string
-	yamlBytes, err := h.stackCompose(name)
+	running, err := h.containerClient.ListRunningContainersWithLabels(map[string]string{
+		container.LabelStackID: name,
+	})
 	if err != nil {
-		log.Printf("warning: could not generate compose for stack %q: %v", name, err)
-	} else {
-		running, _ := h.containerClient.ListContainersWithLabels(map[string]string{
-			container.LabelStackID: name,
-		})
-		stoppedContainers = running
-
-		if err := h.containerClient.StopStack("devarch-"+name, yamlBytes); err != nil {
-			log.Printf("warning: failed to stop containers for stack %q: %v", name, err)
-		}
+		log.Printf("warning: failed to list running containers for stack %q: %v", name, err)
+		running = []string{}
 	}
+
+	if err := h.containerClient.StopContainers(running); err != nil {
+		log.Printf("warning: failed to stop containers for stack %q: %v", name, err)
+	}
+
+	stoppedContainers := running
 
 	var stack stackResponse
 	err = h.db.QueryRow(`
@@ -605,6 +604,89 @@ type cloneRequest struct {
 	Name string `json:"name"`
 }
 
+func (h *StackHandler) cloneInstancesWithOverrides(tx *sql.Tx, sourceStackName string, targetStackID int) error {
+	_, err := tx.Exec(`
+		CREATE TEMP TABLE tmp_instance_map (
+			old_id INTEGER NOT NULL,
+			new_id INTEGER NOT NULL
+		) ON COMMIT DROP
+	`)
+	if err != nil {
+		return fmt.Errorf("create instance map: %w", err)
+	}
+
+	_, err = tx.Exec(`
+		WITH source_instances AS (
+			SELECT
+				si.id AS old_id,
+				si.instance_id,
+				si.template_service_id,
+				si.container_name,
+				si.description,
+				si.enabled
+			FROM service_instances si
+			JOIN stacks s ON s.id = si.stack_id
+			WHERE s.name = $2 AND s.deleted_at IS NULL AND si.deleted_at IS NULL
+		),
+		inserted AS (
+			INSERT INTO service_instances (stack_id, instance_id, template_service_id, container_name, description, enabled)
+			SELECT $1, instance_id, template_service_id, container_name, description, enabled
+			FROM source_instances
+			RETURNING id, instance_id
+		)
+		INSERT INTO tmp_instance_map (old_id, new_id)
+		SELECT src.old_id, ins.id
+		FROM source_instances src
+		JOIN inserted ins ON ins.instance_id = src.instance_id
+	`, targetStackID, sourceStackName)
+	if err != nil {
+		return fmt.Errorf("clone instances: %w", err)
+	}
+
+	copyStatements := []string{
+		`INSERT INTO instance_ports (instance_id, host_ip, host_port, container_port, protocol)
+		 SELECT m.new_id, p.host_ip, p.host_port, p.container_port, p.protocol
+		 FROM instance_ports p
+		 JOIN tmp_instance_map m ON m.old_id = p.instance_id`,
+		`INSERT INTO instance_volumes (instance_id, volume_type, source, target, read_only, is_external)
+		 SELECT m.new_id, v.volume_type, v.source, v.target, v.read_only, v.is_external
+		 FROM instance_volumes v
+		 JOIN tmp_instance_map m ON m.old_id = v.instance_id`,
+		`INSERT INTO instance_env_vars (instance_id, key, value, is_secret)
+		 SELECT m.new_id, e.key, e.value, e.is_secret
+		 FROM instance_env_vars e
+		 JOIN tmp_instance_map m ON m.old_id = e.instance_id`,
+		`INSERT INTO instance_labels (instance_id, key, value)
+		 SELECT m.new_id, l.key, l.value
+		 FROM instance_labels l
+		 JOIN tmp_instance_map m ON m.old_id = l.instance_id`,
+		`INSERT INTO instance_domains (instance_id, domain, proxy_port)
+		 SELECT m.new_id, d.domain, d.proxy_port
+		 FROM instance_domains d
+		 JOIN tmp_instance_map m ON m.old_id = d.instance_id`,
+		`INSERT INTO instance_healthchecks (instance_id, test, interval_seconds, timeout_seconds, retries, start_period_seconds)
+		 SELECT m.new_id, h.test, h.interval_seconds, h.timeout_seconds, h.retries, h.start_period_seconds
+		 FROM instance_healthchecks h
+		 JOIN tmp_instance_map m ON m.old_id = h.instance_id`,
+		`INSERT INTO instance_dependencies (instance_id, depends_on, condition)
+		 SELECT m.new_id, d.depends_on, d.condition
+		 FROM instance_dependencies d
+		 JOIN tmp_instance_map m ON m.old_id = d.instance_id`,
+		`INSERT INTO instance_config_files (instance_id, file_path, content, file_mode, is_template)
+		 SELECT m.new_id, c.file_path, c.content, c.file_mode, c.is_template
+		 FROM instance_config_files c
+		 JOIN tmp_instance_map m ON m.old_id = c.instance_id`,
+	}
+
+	for _, stmt := range copyStatements {
+		if _, err := tx.Exec(stmt); err != nil {
+			return fmt.Errorf("clone instance overrides: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // Clone handles POST /stacks/{name}/clone
 func (h *StackHandler) Clone(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
@@ -636,7 +718,7 @@ func (h *StackHandler) Clone(w http.ResponseWriter, r *http.Request) {
 	var newStack stackResponse
 	err = tx.QueryRow(`
 		INSERT INTO stacks (name, description, network_name, enabled)
-		SELECT $1, description, $3, true
+		SELECT $1, description, $3, enabled
 		FROM stacks
 		WHERE name = $2 AND deleted_at IS NULL
 		RETURNING id, name, description, network_name, enabled, created_at, updated_at
@@ -663,16 +745,7 @@ func (h *StackHandler) Clone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Copy all service_instances from source to new stack
-	_, err = tx.Exec(`
-		INSERT INTO service_instances (stack_id, instance_id, template_service_id)
-		SELECT $1, instance_id, template_service_id
-		FROM service_instances si
-		JOIN stacks s ON s.id = si.stack_id
-		WHERE s.name = $2 AND s.deleted_at IS NULL
-	`, newStack.ID, name)
-
-	if err != nil {
+	if err := h.cloneInstancesWithOverrides(tx, name, newStack.ID); err != nil {
 		http.Error(w, fmt.Sprintf("failed to clone instances: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -760,16 +833,7 @@ func (h *StackHandler) Rename(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Copy all service_instances from source to new stack
-	_, err = tx.Exec(`
-		INSERT INTO service_instances (stack_id, instance_id, template_service_id)
-		SELECT $1, instance_id, template_service_id
-		FROM service_instances si
-		JOIN stacks s ON s.id = si.stack_id
-		WHERE s.name = $2 AND s.deleted_at IS NULL
-	`, newStack.ID, name)
-
-	if err != nil {
+	if err := h.cloneInstancesWithOverrides(tx, name, newStack.ID); err != nil {
 		http.Error(w, fmt.Sprintf("failed to copy instances: %v", err), http.StatusInternalServerError)
 		return
 	}

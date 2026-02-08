@@ -44,17 +44,20 @@ function timeAgo(dateStr: string): string {
 interface InstanceCardProps {
   instance: Instance
   stackName: string
-  connectedContainers: string[]
+  runningContainerNames: Set<string>
   onDelete: (id: string) => void
   onDuplicate: (id: string) => void
 }
 
-function InstanceCard({ instance, stackName, connectedContainers, onDelete, onDuplicate }: InstanceCardProps) {
+function InstanceCard({ instance, stackName, runningContainerNames, onDelete, onDuplicate }: InstanceCardProps) {
   const updateInstance = useUpdateInstance(stackName, instance.instance_id)
   const stopInstance = useStopInstance(stackName, instance.instance_id)
   const startInstance = useStartInstance(stackName, instance.instance_id)
   const restartInstance = useRestartInstance(stackName, instance.instance_id)
-  const isRunning = instance.container_name != null && connectedContainers.includes(instance.container_name)
+  const isRunning = Boolean(instance.container_name && runningContainerNames.has(instance.container_name))
+  const canStart = instance.enabled && !isRunning && !startInstance.isPending
+  const canStop = isRunning && !stopInstance.isPending
+  const canRestart = isRunning && !restartInstance.isPending
 
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -92,8 +95,8 @@ function InstanceCard({ instance, stackName, connectedContainers, onDelete, onDu
               <span />
             )}
             <div className="flex items-center gap-2">
-              <Power className={cn('size-3', instance.enabled ? 'text-green-500' : 'text-muted-foreground/40')} title={instance.enabled ? 'Enabled' : 'Disabled'} />
-              <Play className={cn('size-3', isRunning ? 'text-blue-500' : 'text-muted-foreground/40')} title={isRunning ? 'Running' : 'Stopped'} />
+              <Power className={cn('size-3', instance.enabled ? 'text-green-500' : 'text-muted-foreground/40')} />
+              <Play className={cn('size-3', isRunning ? 'text-green-500' : 'text-muted-foreground/40')} />
             </div>
           </div>
         </CardContent>
@@ -106,15 +109,15 @@ function InstanceCard({ instance, stackName, connectedContainers, onDelete, onDu
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-            <DropdownMenuItem onClick={(e) => { e.preventDefault(); stopInstance.mutate() }}>
+            <DropdownMenuItem disabled={!canStop} onClick={(e) => { e.preventDefault(); if (canStop) stopInstance.mutate() }}>
               <Square className="size-4" />
               Stop
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => { e.preventDefault(); startInstance.mutate() }}>
+            <DropdownMenuItem disabled={!canStart} onClick={(e) => { e.preventDefault(); if (canStart) startInstance.mutate() }}>
               <Play className="size-4" />
               Start
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => { e.preventDefault(); restartInstance.mutate() }}>
+            <DropdownMenuItem disabled={!canRestart} onClick={(e) => { e.preventDefault(); if (canRestart) restartInstance.mutate() }}>
               <RotateCcw className="size-4" />
               Restart
             </DropdownMenuItem>
@@ -163,6 +166,7 @@ function StackDetailPage() {
   const { data: networkStatus } = useStackNetwork(name)
   const { data: composeData, isLoading: composeLoading } = useStackCompose(name)
   const connectedContainers = networkStatus?.containers ?? []
+  const runningContainerNames = new Set(connectedContainers)
   const enableStack = useEnableStack()
   const disableStack = useDisableStack()
   const stopStack = useStopStack()
@@ -429,7 +433,7 @@ function StackDetailPage() {
                       key={instance.id}
                       instance={instance}
                       stackName={name}
-                      connectedContainers={connectedContainers}
+                      runningContainerNames={runningContainerNames}
                       onDelete={openInstanceDelete}
                       onDuplicate={openInstanceDuplicate}
                     />
@@ -593,7 +597,7 @@ function StackDetailPage() {
                     Compare running state against desired configuration
                   </p>
                 </div>
-              ) : currentPlan.changes.length === 0 ? (
+              ) : (currentPlan.changes ?? []).length === 0 ? (
                 <div className="flex items-center gap-2 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/20 px-4 py-3 rounded-md">
                   <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -603,10 +607,10 @@ function StackDetailPage() {
               ) : (
                 <>
                   <div className="text-sm font-medium">
-                    {currentPlan.changes.length} change(s): {currentPlan.changes.filter(c => c.action === 'add').length} to add, {currentPlan.changes.filter(c => c.action === 'modify').length} to modify, {currentPlan.changes.filter(c => c.action === 'remove').length} to remove
+                    {(currentPlan.changes ?? []).length} change(s): {(currentPlan.changes ?? []).filter(c => c.action === 'add').length} to add, {(currentPlan.changes ?? []).filter(c => c.action === 'modify').length} to modify, {(currentPlan.changes ?? []).filter(c => c.action === 'remove').length} to remove
                   </div>
                   <div className="space-y-2">
-                    {currentPlan.changes.map((change, i) => (
+                    {(currentPlan.changes ?? []).map((change, i) => (
                       <div
                         key={i}
                         className={cn(

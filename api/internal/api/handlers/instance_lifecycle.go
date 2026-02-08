@@ -11,6 +11,16 @@ import (
 	"github.com/priz/devarch-api/internal/compose"
 )
 
+func (h *InstanceHandler) getInstanceRuntimeInfo(stackName string, instanceName string) (enabled bool, containerName string, err error) {
+	err = h.db.QueryRow(`
+		SELECT si.enabled, COALESCE(si.container_name, '')
+		FROM service_instances si
+		JOIN stacks st ON st.id = si.stack_id
+		WHERE st.name = $1 AND si.instance_id = $2 AND si.deleted_at IS NULL AND st.deleted_at IS NULL
+	`, stackName, instanceName).Scan(&enabled, &containerName)
+	return
+}
+
 func (h *InstanceHandler) instanceCompose(stackName string) (projectName string, yamlBytes []byte, err error) {
 	var networkName sql.NullString
 	err = h.db.QueryRow(`
@@ -52,13 +62,17 @@ func (h *InstanceHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
 
-	projectName, yamlBytes, err := h.instanceCompose(stackName)
+	_, containerName, err := h.getInstanceRuntimeInfo(stackName, instanceName)
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		return
+	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to generate compose: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("failed to query instance: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	if err := h.containerClient.StopComposeService(projectName, yamlBytes, instanceName); err != nil {
+	if err := h.containerClient.StopContainer(containerName); err != nil {
 		http.Error(w, fmt.Sprintf("failed to stop instance: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -70,6 +84,20 @@ func (h *InstanceHandler) Stop(w http.ResponseWriter, r *http.Request) {
 func (h *InstanceHandler) Start(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
+
+	enabled, _, err := h.getInstanceRuntimeInfo(stackName, instanceName)
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to query instance: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !enabled {
+		http.Error(w, "instance is disabled — enable it first", http.StatusConflict)
+		return
+	}
 
 	projectName, yamlBytes, err := h.instanceCompose(stackName)
 	if err != nil {
@@ -89,6 +117,20 @@ func (h *InstanceHandler) Start(w http.ResponseWriter, r *http.Request) {
 func (h *InstanceHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
+
+	enabled, _, err := h.getInstanceRuntimeInfo(stackName, instanceName)
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to query instance: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !enabled {
+		http.Error(w, "instance is disabled — enable it first", http.StatusConflict)
+		return
+	}
 
 	projectName, yamlBytes, err := h.instanceCompose(stackName)
 	if err != nil {
