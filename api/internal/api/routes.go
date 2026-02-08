@@ -163,6 +163,10 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 				r.Post("/apply", stackHandler.Apply)
 				r.Get("/export", stackHandler.ExportStack)
 
+				r.Post("/lock", stackHandler.GenerateLock)
+				r.Post("/lock/validate", stackHandler.ValidateLock)
+				r.Post("/lock/refresh", stackHandler.RefreshLock)
+
 				r.Route("/instances", func(r chi.Router) {
 					r.Get("/", instanceHandler.List)
 					r.Post("/", instanceHandler.Create)
