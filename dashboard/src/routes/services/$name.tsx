@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Clock, RefreshCw, Cpu, MemoryStick, Network, Eye, EyeOff, ExternalLink, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Clock, RefreshCw, Cpu, MemoryStick, Network, Eye, EyeOff, ExternalLink, Pencil, Trash2, Download, Maximize2, Minimize2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -24,6 +24,7 @@ import { EditableHealthcheck } from '@/components/services/editable-healthcheck'
 import { EditableLabels } from '@/components/services/editable-labels'
 import { EditableDomains } from '@/components/services/editable-domains'
 import { ConfigFilesPanel } from '@/components/services/config-files-panel'
+import { CodeEditor } from '@/components/services/code-editor'
 import { formatUptime, formatBytes, computeUptime } from '@/lib/format'
 
 export const Route = createFileRoute('/services/$name')({
@@ -40,6 +41,7 @@ function ServiceDetailPage() {
   const updateService = useUpdateService()
 
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [composeExpanded, setComposeExpanded] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [editForm, setEditForm] = useState({
     image_name: '',
@@ -256,7 +258,28 @@ function ServiceDetailPage() {
         <TabsContent value="compose">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Generated Compose YAML</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Generated Compose YAML</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setComposeExpanded(!composeExpanded)} disabled={!composeYaml}>
+                    {composeExpanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+                    {composeExpanded ? 'Collapse' : 'Expand'}
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={!composeYaml} onClick={() => {
+                    if (!composeYaml) return
+                    const blob = new Blob([composeYaml], { type: 'text/yaml' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `docker-compose-${name}.yml`
+                    a.click()
+                    URL.revokeObjectURL(url)
+                  }}>
+                    <Download className="size-4" />
+                    Download
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {composeLoading ? (
@@ -264,9 +287,7 @@ function ServiceDetailPage() {
                   <Loader2 className="size-6 animate-spin text-muted-foreground" />
                 </div>
               ) : composeYaml ? (
-                <pre className="text-sm font-mono bg-muted/50 p-4 rounded-lg overflow-auto max-h-[500px]">
-                  {composeYaml}
-                </pre>
+                <CodeEditor value={composeYaml} onChange={() => {}} language="yaml" readOnly autoHeight={composeExpanded} />
               ) : (
                 <p className="text-muted-foreground">Compose YAML not available</p>
               )}
