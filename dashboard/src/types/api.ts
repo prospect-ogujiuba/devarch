@@ -163,6 +163,61 @@ export interface ServiceConfigFile {
   updated_at: string
 }
 
+export interface ServiceExport {
+  id: number
+  service_id: number
+  name: string
+  type: string
+  port: number
+  protocol: string
+}
+
+export interface ServiceImportContract {
+  id: number
+  service_id: number
+  name: string
+  type: string
+  required: boolean
+  env_vars: Record<string, string>
+}
+
+export interface Wire {
+  id: number
+  stack_id: number
+  consumer_instance_id: number
+  provider_instance_id: number
+  import_contract_id: number
+  export_contract_id: number
+  source: 'auto' | 'explicit'
+  provider_contract_type: string
+  consumer_contract_type: string
+  created_at: string
+  consumer_instance_name?: string
+  provider_instance_name?: string
+  contract_name?: string
+}
+
+export interface WiringSection {
+  active_wires: WirePlanEntry[]
+  warnings: WiringWarning[]
+}
+
+export interface WirePlanEntry {
+  consumer_instance: string
+  provider_instance: string
+  contract_name: string
+  contract_type: string
+  source: 'auto' | 'explicit'
+  injected_env_vars: Record<string, string>
+}
+
+export interface WiringWarning {
+  severity: 'warning' | 'error'
+  message: string
+  instance: string
+  contract?: string
+}
+
 export interface ContainerState {
   id?: number
   service_id?: number

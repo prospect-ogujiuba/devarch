@@ -1455,3 +1455,207 @@ func (h *ServiceHandler) DeleteConfigFile(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
 }
+
+// ListExports returns export contracts for a service template
+func (h *ServiceHandler) ListExports(w http.ResponseWriter, r *http.Request) {
+	serviceID, ok := h.lookupServiceID(w, r)
+	if !ok {
+		return
+	}
+
+	rows, err := h.db.Query(`
+		SELECT id, name, type, port, protocol
+		FROM service_exports
+		WHERE service_id = $1
+		ORDER BY name
+	`, serviceID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type Export struct {
+		ID       int    `json:"id"`
+		Name     string `json:"name"`
+		Type     string `json:"type"`
+		Port     int    `json:"port"`
+		Protocol string `json:"protocol"`
+	}
+
+	var exports []Export
+	for rows.Next() {
+		var e Export
+		if err := rows.Scan(&e.ID, &e.Name, &e.Type, &e.Port, &e.Protocol); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		exports = append(exports, e)
+	}
+
+	if exports == nil {
+		exports = []Export{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(exports)
+}
+
+// UpdateExports replaces all export contracts for a service template
+func (h *ServiceHandler) UpdateExports(w http.ResponseWriter, r *http.Request) {
+	serviceID, ok := h.lookupServiceID(w, r)
+	if !ok {
+		return
+	}
+
+	type Export struct {
+		Name     string `json:"name"`
+		Type     string `json:"type"`
+		Port     int    `json:"port"`
+		Protocol string `json:"protocol"`
+	}
+
+	var req struct {
+		Exports []Export `json:"exports"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	tx.Exec("DELETE FROM service_exports WHERE service_id = $1", serviceID)
+	for _, e := range req.Exports {
+		protocol := e.Protocol
+		if protocol == "" {
+			protocol = "tcp"
+		}
+		_, err = tx.Exec(
+			`INSERT INTO service_exports (service_id, name, type, port, protocol) VALUES ($1, $2, $3, $4, $5)`,
+			serviceID, e.Name, e.Type, e.Port, protocol,
+		)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+// ListImports returns import contracts for a service template
+func (h *ServiceHandler) ListImports(w http.ResponseWriter, r *http.Request) {
+	serviceID, ok := h.lookupServiceID(w, r)
+	if !ok {
+		return
+	}
+
+	rows, err := h.db.Query(`
+		SELECT id, name, type, required, COALESCE(env_vars, '{}')
+		FROM service_import_contracts
+		WHERE service_id = $1
+		ORDER BY name
+	`, serviceID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type Import struct {
+		ID       int               `json:"id"`
+		Name     string            `json:"name"`
+		Type     string            `json:"type"`
+		Required bool              `json:"required"`
+		EnvVars  map[string]string `json:"env_vars"`
+	}
+
+	var imports []Import
+	for rows.Next() {
+		var i Import
+		var envVarsJSON []byte
+		if err := rows.Scan(&i.ID, &i.Name, &i.Type, &i.Required, &envVarsJSON); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err := json.Unmarshal(envVarsJSON, &i.EnvVars); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		imports = append(imports, i)
+	}
+
+	if imports == nil {
+		imports = []Import{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(imports)
+}
+
+// UpdateImports replaces all import contracts for a service template
+func (h *ServiceHandler) UpdateImports(w http.ResponseWriter, r *http.Request) {
+	serviceID, ok := h.lookupServiceID(w, r)
+	if !ok {
+		return
+	}
+
+	type Import struct {
+		Name     string            `json:"name"`
+		Type     string            `json:"type"`
+		Required bool              `json:"required"`
+		EnvVars  map[string]string `json:"env_vars"`
+	}
+
+	var req struct {
+		Imports []Import `json:"imports"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	tx.Exec("DELETE FROM service_import_contracts WHERE service_id = $1", serviceID)
+	for _, i := range req.Imports {
+		envVarsJSON, err := json.Marshal(i.EnvVars)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		_, err = tx.Exec(
+			`INSERT INTO service_import_contracts (service_id, name, type, required, env_vars) VALUES ($1, $2, $3, $4, $5)`,
+			serviceID, i.Name, i.Type, i.Required, envVarsJSON,
+		)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}

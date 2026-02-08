@@ -86,6 +86,11 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 				r.Put("/files/*", serviceHandler.PutConfigFile)
 				r.Delete("/files/*", serviceHandler.DeleteConfigFile)
 
+				r.Get("/exports", serviceHandler.ListExports)
+				r.Put("/exports", serviceHandler.UpdateExports)
+				r.Get("/imports", serviceHandler.ListImports)
+				r.Put("/imports", serviceHandler.UpdateImports)
+
 				r.Get("/image", registryHandler.GetImage)
 				r.Get("/tags", registryHandler.GetTags)
 				r.Get("/vulnerabilities", registryHandler.GetVulnerabilities)
