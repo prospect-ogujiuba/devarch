@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link, Outlet, useMatch, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2, Play, Square, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Loader2, Layers, Power, PowerOff, MoreVertical, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2, Play, Square, RotateCcw, Network } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useStack, useEnableStack, useDisableStack, useStopStack, useStartStack, useRestartStack, useStackNetwork, useStackCompose, useGeneratePlan, useApplyPlan } from '@/features/stacks/queries'
+import { useStack, useEnableStack, useDisableStack, useStopStack, useStartStack, useRestartStack, useStackNetwork, useStackCompose, useGeneratePlan, useApplyPlan, useCreateNetwork } from '@/features/stacks/queries'
 import { CodeEditor } from '@/components/services/code-editor'
 import { useInstances, useUpdateInstance, useStopInstance, useStartInstance, useRestartInstance } from '@/features/instances/queries'
 import { EditStackDialog } from '@/components/stacks/edit-stack-dialog'
@@ -158,6 +158,7 @@ function StackDetailPage() {
   const { data: instances = [] } = useInstances(name)
   const { data: networkStatus } = useStackNetwork(name)
   const { data: composeData, isLoading: composeLoading } = useStackCompose(name)
+  const connectedContainers = networkStatus?.containers ?? []
   const enableStack = useEnableStack()
   const disableStack = useDisableStack()
   const stopStack = useStopStack()
@@ -165,6 +166,7 @@ function StackDetailPage() {
   const restartStack = useRestartStack()
   const generatePlan = useGeneratePlan(name)
   const applyPlan = useApplyPlan(name)
+  const createNetwork = useCreateNetwork()
 
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -433,9 +435,22 @@ function StackDetailPage() {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-2">
-                <Globe className="size-4 text-blue-500" />
-                <CardTitle className="text-base">Network</CardTitle>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Globe className="size-4 text-blue-500" />
+                  <CardTitle className="text-base">Network</CardTitle>
+                </div>
+                {networkStatus?.status === 'not_created' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => createNetwork.mutate(name)}
+                    disabled={createNetwork.isPending}
+                  >
+                    {createNetwork.isPending ? <Loader2 className="size-4 animate-spin" /> : <Network className="size-4" />}
+                    Create Network
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -457,11 +472,11 @@ function StackDetailPage() {
                         <span className="text-sm text-muted-foreground">Driver:</span>
                         <span className="text-sm">{networkStatus.driver}</span>
                       </div>
-                      {networkStatus.containers.length > 0 && (
+                      {connectedContainers.length > 0 && (
                         <div>
                           <div className="text-sm text-muted-foreground mb-1">Connected containers:</div>
                           <div className="flex flex-wrap gap-1">
-                            {networkStatus.containers.map((container) => (
+                            {connectedContainers.map((container) => (
                               <code key={container} className="bg-muted px-2 py-0.5 rounded text-xs font-mono">
                                 {container}
                               </code>

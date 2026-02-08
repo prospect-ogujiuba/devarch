@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Layers, Trash2, Power, PowerOff, Globe } from 'lucide-react'
+import { Layers, Trash2, Power, PowerOff, Globe, Network } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,9 +12,10 @@ interface StackGridProps {
   onEnable: (name: string) => void
   onDisable: (name: string) => void
   onDelete: (name: string) => void
+  onCreateNetwork: (name: string) => void
 }
 
-export function StackGrid({ stacks, onEnable, onDisable, onDelete }: StackGridProps) {
+export function StackGrid({ stacks, onEnable, onDisable, onDelete, onCreateNetwork }: StackGridProps) {
   if (stacks.length === 0) {
     return <EmptyState icon={Layers} message="No stacks match your filters" />
   }
@@ -99,6 +100,17 @@ export function StackGrid({ stacks, onEnable, onDisable, onDelete }: StackGridPr
                   Enable
                 </Button>
               )}
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={(e) => {
+                  e.preventDefault()
+                  onCreateNetwork(stack.name)
+                }}
+                title="Create network"
+              >
+                <Network className="size-3" />
+              </Button>
               <Button
                 variant="outline"
                 size="icon-sm"
