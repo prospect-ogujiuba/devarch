@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { Stack, DeletePreview, NetworkStatus, StackCompose, StackPlan, ApplyResult } from '@/types/api'
+import type { Stack, DeletePreview, NetworkStatus, StackCompose, StackPlan, ApplyResult, ImportResult } from '@/types/api'
 import { toast } from 'sonner'
 
 // Queries
@@ -366,6 +366,54 @@ export function useApplyPlan(name: string) {
       } else {
         toast.error(error.response?.data || 'Apply failed')
       }
+    },
+  })
+}
+
+export function useExportStack(name: string) {
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.get(`/stacks/${name}/export`, {
+        responseType: 'blob',
+      })
+      return response.data
+    },
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${name}-devarch.yml`
+      a.click()
+      URL.revokeObjectURL(url)
+    },
+    onError: () => {
+      toast.error('Export failed')
+    },
+  })
+}
+
+export function useImportStack() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      const response = await api.post<ImportResult>('/stacks/import', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      return response.data
+    },
+    onSuccess: (result) => {
+      const createdCount = result.created.length
+      const updatedCount = result.updated.length
+      toast.success(`Imported stack. Created: ${createdCount}, Updated: ${updatedCount}`)
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', result.stack_name] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data || 'Import failed')
     },
   })
 }

@@ -517,3 +517,11 @@ export interface ApplyResult {
   status: string
   output: string
 }
+
+export interface ImportResult {
+  stack_name: string
+  stack_created: boolean
+  created: string[]
+  updated: string[]
+  errors?: string[]
+}
