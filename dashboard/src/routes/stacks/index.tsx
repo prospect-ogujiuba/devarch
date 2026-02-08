@@ -2,10 +2,22 @@ import { useMemo, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Loader2, Layers, Plus, CheckCircle2, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useStacks, useDeleteStack, useEnableStack, useDisableStack, useCreateNetwork, useRemoveNetwork } from '@/features/stacks/queries'
+import {
+  useStacks,
+  useDeleteStack,
+  useEnableStack,
+  useDisableStack,
+  useCreateNetwork,
+  useRemoveNetwork,
+  useStartStack,
+  useStopStack,
+  useRestartStack,
+} from '@/features/stacks/queries'
 import { StackTable } from '@/components/stacks/stack-table'
 import { StackGrid } from '@/components/stacks/stack-grid'
 import { CreateStackDialog } from '@/components/stacks/create-stack-dialog'
+import { CloneStackDialog } from '@/components/stacks/clone-stack-dialog'
+import { RenameStackDialog } from '@/components/stacks/rename-stack-dialog'
 import { ListToolbar } from '@/components/ui/list-toolbar'
 import { StatCard } from '@/components/ui/stat-card'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -55,8 +67,13 @@ function StacksPage() {
   const disableMutation = useDisableStack()
   const createNetworkMutation = useCreateNetwork()
   const removeNetworkMutation = useRemoveNetwork()
+  const startMutation = useStartStack()
+  const stopMutation = useStopStack()
+  const restartMutation = useRestartStack()
 
   const [createOpen, setCreateOpen] = useState(false)
+  const [cloneTarget, setCloneTarget] = useState<Stack | null>(null)
+  const [renameTarget, setRenameTarget] = useState<Stack | null>(null)
 
   const controls = useListControls({
     storageKey: 'stacks',
@@ -102,9 +119,29 @@ function StacksPage() {
     removeNetworkMutation.mutate(name)
   }
 
-  const handleClone = (name: string) => { void name }
+  const handleStart = (name: string) => {
+    startMutation.mutate(name)
+  }
 
-  const handleRename = (name: string) => { void name }
+  const handleStop = (name: string) => {
+    stopMutation.mutate(name)
+  }
+
+  const handleRestart = (name: string) => {
+    restartMutation.mutate(name)
+  }
+
+  const handleClone = (name: string) => {
+    const stack = stacks.find((s) => s.name === name)
+    if (!stack) return
+    setCloneTarget(stack)
+  }
+
+  const handleRename = (name: string) => {
+    const stack = stacks.find((s) => s.name === name)
+    if (!stack) return
+    setRenameTarget(stack)
+  }
 
   const handleCreateStack = () => {
     setCreateOpen(true)
@@ -183,6 +220,9 @@ function StacksPage() {
           onDisable={handleDisable}
           onClone={handleClone}
           onRename={handleRename}
+          onStart={handleStart}
+          onStop={handleStop}
+          onRestart={handleRestart}
           onDelete={handleDelete}
           onCreateNetwork={handleCreateNetwork}
           onRemoveNetwork={handleRemoveNetwork}
@@ -199,6 +239,24 @@ function StacksPage() {
       )}
 
       <CreateStackDialog open={createOpen} onOpenChange={setCreateOpen} />
+      {cloneTarget && (
+        <CloneStackDialog
+          stack={cloneTarget}
+          open={Boolean(cloneTarget)}
+          onOpenChange={(open) => {
+            if (!open) setCloneTarget(null)
+          }}
+        />
+      )}
+      {renameTarget && (
+        <RenameStackDialog
+          stack={renameTarget}
+          open={Boolean(renameTarget)}
+          onOpenChange={(open) => {
+            if (!open) setRenameTarget(null)
+          }}
+        />
+      )}
     </div>
   )
 }

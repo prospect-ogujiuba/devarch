@@ -393,6 +393,51 @@ func (c *Client) ListContainersWithLabels(labels map[string]string) ([]string, e
 	return c.parseNamesList(output)
 }
 
+func (c *Client) ListRunningContainersWithLabels(labels map[string]string) ([]string, error) {
+	args := []string{"ps", "--format", "{{.Names}}"}
+	for k, v := range labels {
+		args = append(args, "--filter", fmt.Sprintf("label=%s=%s", k, v))
+	}
+	output, err := c.execCommand(args...)
+	if err != nil {
+		return nil, err
+	}
+	return c.parseNamesList(output)
+}
+
+func (c *Client) StopContainers(containers []string) error {
+	if len(containers) == 0 {
+		return nil
+	}
+
+	args := append([]string{"stop"}, containers...)
+	_, err := c.execCommand(args...)
+	if err != nil {
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "is not running") || strings.Contains(errStr, "no such container") {
+			return nil
+		}
+	}
+
+	return err
+}
+
+func (c *Client) StopContainer(containerName string) error {
+	if containerName == "" {
+		return nil
+	}
+
+	_, err := c.execCommand("stop", containerName)
+	if err != nil {
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "is not running") || strings.Contains(errStr, "no such container") {
+			return nil
+		}
+	}
+
+	return err
+}
+
 func (c *Client) CountRunningWithLabels(labels map[string]string) (int, error) {
 	args := []string{"ps", "--format", "{{.Names}}", "--filter", "status=running"}
 	for k, v := range labels {
@@ -539,12 +584,14 @@ func (c *Client) InspectNetwork(name string) (*NetworkInfo, error) {
 
 	// Both Docker and Podman return JSON array with one element
 	var networks []struct {
-		Name    string            `json:"Name"`
-		Id      string            `json:"Id"`
-		Driver  string            `json:"Driver"`
-		Labels  map[string]string `json:"Labels"`
-		Created string            `json:"Created"`
-		Containers map[string]interface{} `json:"Containers"`
+		Name       string            `json:"Name"`
+		Id         string            `json:"Id"`
+		Driver     string            `json:"Driver"`
+		Labels     map[string]string `json:"Labels"`
+		Created    string            `json:"Created"`
+		Containers map[string]struct {
+			Name string `json:"Name"`
+		} `json:"Containers"`
 	}
 
 	if err := json.Unmarshal([]byte(output), &networks); err != nil {
@@ -571,8 +618,12 @@ func (c *Client) InspectNetwork(name string) (*NetworkInfo, error) {
 	}
 
 	// Extract container names from Containers map
-	for containerName := range net.Containers {
-		info.Containers = append(info.Containers, containerName)
+	for containerID, containerInfo := range net.Containers {
+		if containerInfo.Name != "" {
+			info.Containers = append(info.Containers, containerInfo.Name)
+			continue
+		}
+		info.Containers = append(info.Containers, containerID)
 	}
 
 	return info, nil

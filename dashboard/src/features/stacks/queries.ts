@@ -179,9 +179,12 @@ export function useCloneStack() {
       const response = await api.post(`/stacks/${name}/clone`, { name: newName })
       return response.data
     },
-    onSuccess: () => {
+    onSuccess: (_data, { name, newName }) => {
       toast.success('Stack cloned')
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', name] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', newName] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', newName, 'instances'] })
     },
     onError: (error: any) => {
       toast.error(error.response?.data || 'Failed to clone stack')
@@ -303,6 +306,8 @@ export function useCreateNetwork() {
     onSuccess: (_data, name) => {
       toast.success(`Network created for ${name}`)
       queryClient.invalidateQueries({ queryKey: ['stacks', name, 'network'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', name] })
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
     onError: (error: any, name) => {
       toast.error(error.response?.data || `Failed to create network for ${name}`)
@@ -320,6 +325,8 @@ export function useRemoveNetwork() {
     onSuccess: (_data, name) => {
       toast.success(`Network removed for ${name}`)
       queryClient.invalidateQueries({ queryKey: ['stacks', name, 'network'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', name] })
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
     onError: (error: any, name) => {
       toast.error(error.response?.data || `Failed to remove network for ${name}`)

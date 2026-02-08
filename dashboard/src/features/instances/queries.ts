@@ -78,6 +78,7 @@ export function useCreateInstance(stackName: string) {
       toast.success('Instance created')
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
     onError: (error: any) => {
       toast.error(error.response?.data || 'Failed to create instance')
@@ -120,6 +121,7 @@ export function useDeleteInstance(stackName: string, instanceId: string) {
       toast.success('Instance deleted')
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
     onError: (error: any) => {
       toast.error(error.response?.data || 'Failed to delete instance')
@@ -140,6 +142,7 @@ export function useDuplicateInstance(stackName: string, instanceId: string) {
       toast.success('Instance duplicated')
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
     onError: (error: any) => {
       toast.error(error.response?.data || 'Failed to duplicate instance')
@@ -162,6 +165,7 @@ export function useRenameInstance(stackName: string, instanceId: string) {
       toast.success('Instance renamed')
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
     },
     onError: (error: any) => {
       toast.error(error.response?.data || 'Failed to rename instance')
