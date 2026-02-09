@@ -21,6 +21,7 @@ import { CloneStackDialog } from '@/components/stacks/clone-stack-dialog'
 import { RenameStackDialog } from '@/components/stacks/rename-stack-dialog'
 import { DisableStackDialog } from '@/components/stacks/disable-stack-dialog'
 import { AddInstanceDialog } from '@/components/stacks/add-instance-dialog'
+import { WiringTab } from '@/components/stacks/wiring-tab'
 import {
   DeleteInstanceDialog,
   DuplicateInstanceDialog,
@@ -150,12 +151,12 @@ function InstanceCard({ instance, stackName, runningContainerNames, onDelete, on
 
 export const Route = createFileRoute('/stacks/$name')({
   validateSearch: z.object({
-    tab: z.enum(['instances', 'compose', 'deploy']).optional(),
+    tab: z.enum(['instances', 'compose', 'wiring', 'deploy']).optional(),
   }),
   component: StackDetailLayout,
 })
 
-const stackTabs = ['instances', 'compose', 'deploy'] as const
+const stackTabs = ['instances', 'compose', 'wiring', 'deploy'] as const
 type StackTab = (typeof stackTabs)[number]
 
 function StackDetailLayout() {
@@ -271,6 +272,7 @@ function StackDetailPage() {
   const stackTabItems = [
     { value: 'instances', label: `Instances (${instances.length})` },
     { value: 'compose', label: 'Compose' },
+    { value: 'wiring', label: 'Wiring' },
     { value: 'deploy', label: 'Deploy' },
   ]
 
@@ -551,6 +553,10 @@ function StackDetailPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="wiring">
+          <WiringTab stackName={name} />
         </TabsContent>
 
         <TabsContent value="deploy">
