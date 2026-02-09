@@ -94,6 +94,9 @@ export interface Service {
   volumes?: ServiceVolume[]
   env_vars?: ServiceEnvVar[]
   dependencies?: string[]
+  env_files?: string[]
+  networks?: string[]
+  config_mounts?: ServiceConfigMount[]
   healthcheck?: ServiceHealthcheck
   labels?: ServiceLabel[]
   domains?: ServiceDomain[]
@@ -150,6 +153,15 @@ export interface ServiceDomain {
   service_id: number
   domain: string
   proxy_port?: number
+}
+
+export interface ServiceConfigMount {
+  id: number
+  service_id: number
+  config_file_id?: number | null
+  source_path: string
+  target_path: string
+  readonly: boolean
 }
 
 export interface ServiceConfigFile {
@@ -432,6 +444,9 @@ export interface InstanceDetail extends Instance {
   ports: InstancePort[]
   volumes: InstanceVolume[]
   env_vars: InstanceEnvVar[]
+  env_files: string[]
+  networks: string[]
+  config_mounts: ServiceConfigMount[]
   labels: InstanceLabel[]
   domains: InstanceDomain[]
   healthcheck: InstanceHealthcheck | null
@@ -519,6 +534,9 @@ export interface EffectiveConfig {
   ports: ServicePort[]
   volumes: ServiceVolume[]
   env_vars: ServiceEnvVar[]
+  env_files: string[]
+  networks: string[]
+  config_mounts: ServiceConfigMount[]
   dependencies: string[]
   labels: ServiceLabel[]
   domains: ServiceDomain[]
@@ -531,9 +549,13 @@ export interface OverridesApplied {
   ports: boolean
   volumes: boolean
   env_vars: boolean | string[]
+  env_files: boolean
+  networks: boolean
+  config_mounts: boolean
   labels: boolean | string[]
   domains: boolean
   healthcheck: boolean
+  dependencies: boolean
   config_files: boolean | string[]
 }
 
