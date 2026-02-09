@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StacksIndexRouteImport } from './routes/stacks/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
@@ -24,6 +25,11 @@ import { Route as ProjectsNameRouteImport } from './routes/projects/$name'
 import { Route as RegistriesRegistrySplatRouteImport } from './routes/registries/$registry.$'
 import { Route as StacksNameInstancesInstanceRouteImport } from './routes/stacks/$name.instances.$instance'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -98,6 +104,7 @@ const StacksNameInstancesInstanceRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/projects/$name': typeof ProjectsNameRoute
   '/services/$name': typeof ServicesNameRoute
   '/services/new': typeof ServicesNewRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/projects/$name': typeof ProjectsNameRoute
   '/services/$name': typeof ServicesNameRoute
   '/services/new': typeof ServicesNewRoute
@@ -131,6 +139,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/projects/$name': typeof ProjectsNameRoute
   '/services/$name': typeof ServicesNameRoute
   '/services/new': typeof ServicesNewRoute
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/projects/$name'
     | '/services/$name'
     | '/services/new'
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
     | '/projects/$name'
     | '/services/$name'
     | '/services/new'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/login'
     | '/projects/$name'
     | '/services/$name'
     | '/services/new'
@@ -198,6 +210,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
   ProjectsNameRoute: typeof ProjectsNameRoute
   ServicesNameRoute: typeof ServicesNameRoute
   ServicesNewRoute: typeof ServicesNewRoute
@@ -214,6 +227,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -329,6 +349,7 @@ const StacksNameRouteWithChildren = StacksNameRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
   ProjectsNameRoute: ProjectsNameRoute,
   ServicesNameRoute: ServicesNameRoute,
   ServicesNewRoute: ServicesNewRoute,

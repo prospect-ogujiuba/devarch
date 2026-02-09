@@ -50,6 +50,9 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	networkHandler := handlers.NewNetworkHandler(db, containerClient)
 	proxyGenerator := proxy.NewGenerator(db)
 	proxyHandler := handlers.NewProxyHandler(proxyGenerator)
+	authHandler := handlers.NewAuthHandler()
+
+	r.Post("/api/v1/auth/validate", authHandler.Validate)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(mw.APIKeyAuth)

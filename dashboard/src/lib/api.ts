@@ -65,3 +65,19 @@ export function setApiKey(key: string) {
 export function getApiKey(): string {
   return localStorage.getItem('devarch-api-key') ?? ''
 }
+
+export function clearApiKey() {
+  localStorage.removeItem('devarch-api-key')
+  delete api.defaults.headers.common['X-API-Key']
+}
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (isAxiosError(error) && error.response?.status === 401) {
+      clearApiKey()
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  },
+)
