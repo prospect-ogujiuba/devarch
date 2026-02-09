@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, getErrorMessage } from '@/lib/api'
-import type { Service, ServicePort, ServiceVolume, ServiceEnvVar, ServiceHealthcheck, ServiceLabel, ServiceDomain, ServiceConfigFile } from '@/types/api'
+import type { Service, ServicePort, ServiceVolume, ServiceEnvVar, ServiceHealthcheck, ServiceLabel, ServiceDomain, ServiceConfigFile, ServiceConfigMount } from '@/types/api'
 import { toast } from 'sonner'
 
 interface ServicesResult {
@@ -254,6 +254,9 @@ export const useUpdatePorts = makeSubResourceMutation<{ ports: Omit<ServicePort,
 export const useUpdateVolumes = makeSubResourceMutation<{ volumes: Omit<ServiceVolume, 'id' | 'service_id'>[] }>('volumes', 'Volumes')
 export const useUpdateEnvVars = makeSubResourceMutation<{ env_vars: Omit<ServiceEnvVar, 'id' | 'service_id'>[] }>('env-vars', 'Environment variables')
 export const useUpdateDependencies = makeSubResourceMutation<{ dependencies: string[] }>('dependencies', 'Dependencies')
+export const useUpdateEnvFiles = makeSubResourceMutation<{ env_files: string[] }>('env-files', 'Env files')
+export const useUpdateNetworks = makeSubResourceMutation<{ networks: string[] }>('networks', 'Networks')
+export const useUpdateConfigMounts = makeSubResourceMutation<{ config_mounts: Omit<ServiceConfigMount, 'id' | 'service_id'>[] }>('config-mounts', 'Config mounts')
 export const useUpdateHealthcheck = makeSubResourceMutation<Omit<ServiceHealthcheck, 'id' | 'service_id'> | null>('healthcheck', 'Healthcheck')
 export const useUpdateLabels = makeSubResourceMutation<{ labels: Omit<ServiceLabel, 'id' | 'service_id'>[] }>('labels', 'Labels')
 export const useUpdateDomains = makeSubResourceMutation<{ domains: Omit<ServiceDomain, 'id' | 'service_id'>[] }>('domains', 'Domains')
