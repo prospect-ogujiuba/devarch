@@ -225,7 +225,6 @@ function ServicesPage() {
           onToggleSelect={controls.toggleSelect}
         />
       )}
-      showCount={false}
     >
       {pagination.totalItems > 0 && (
         <PaginationControls

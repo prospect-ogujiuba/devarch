@@ -216,10 +216,6 @@ function OverviewPage() {
             itemLabel="categories"
           />
         )}
-
-        <div className="text-sm text-muted-foreground">
-          Showing {controls.filtered.length} of {categories.length} categories
-        </div>
       </div>
     </div>
   )

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { z } from 'zod'
 import { Package, Star, Download, Search, BadgeCheck } from 'lucide-react'
@@ -6,7 +6,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { PaginationControls } from '@/components/ui/pagination-controls'
 import { useRegistries, useSearchImages } from '@/features/registry/queries'
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '@/lib/pagination'
 
 export const Route = createFileRoute('/registries/')({
   validateSearch: z.object({
@@ -49,6 +51,17 @@ function RegistriesPage() {
   }, [debouncedQuery, selectedRegistry, routeNavigate])
 
   const { data: results, isLoading } = useSearchImages(selectedRegistry, debouncedQuery)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+
+  useEffect(() => setPage(1), [debouncedQuery, selectedRegistry])
+
+  const totalItems = results?.length ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
+  const pagedResults = useMemo(
+    () => (results ?? []).slice((page - 1) * pageSize, page * pageSize),
+    [results, page, pageSize],
+  )
 
   return (
     <div className="space-y-6">
@@ -110,41 +123,53 @@ function RegistriesPage() {
       )}
 
       {results && results.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {results.map((img) => (
-            <Link
-              key={img.name}
-              to="/registries/$registry/$"
-              params={{ registry: selectedRegistry, _splat: img.name }}
-              className="block"
-            >
-              <Card className="transition-colors hover:border-primary/50">
-                <CardContent className="space-y-2 pt-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="truncate font-semibold">{img.name}</h3>
-                    {img.is_official && (
-                      <Badge variant="secondary" className="shrink-0">
-                        <BadgeCheck className="mr-1 size-3" />
-                        Official
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="line-clamp-2 text-sm text-muted-foreground">
-                    {img.description || 'No description'}
-                  </p>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Star className="size-3" /> {formatCount(img.star_count)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Download className="size-3" /> {formatCount(img.pull_count)}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {pagedResults.map((img) => (
+              <Link
+                key={img.name}
+                to="/registries/$registry/$"
+                params={{ registry: selectedRegistry, _splat: img.name }}
+                className="block"
+              >
+                <Card className="transition-colors hover:border-primary/50">
+                  <CardContent className="space-y-2 pt-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="truncate font-semibold">{img.name}</h3>
+                      {img.is_official && (
+                        <Badge variant="secondary" className="shrink-0">
+                          <BadgeCheck className="mr-1 size-3" />
+                          Official
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="line-clamp-2 text-sm text-muted-foreground">
+                      {img.description || 'No description'}
+                    </p>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Star className="size-3" /> {formatCount(img.star_count)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Download className="size-3" /> {formatCount(img.pull_count)}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+          <PaginationControls
+            page={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+            itemLabel="images"
+          />
+        </>
       )}
     </div>
   )
