@@ -60,18 +60,19 @@ type stackInstance struct {
 }
 
 type stackInstanceConfig struct {
-	imageName     string
-	imageTag      string
-	restartPolicy string
-	command       sql.NullString
-	userSpec      sql.NullString
-	ports         []portEntry
-	volumes       []volumeEntry
-	envVars       map[string]string
-	labels        map[string]string
-	healthcheck   *healthcheckConfig
-	dependencies  []string
-	configFiles   []configFileEntry
+	imageName        string
+	imageTag         string
+	restartPolicy    string
+	command          sql.NullString
+	userSpec         sql.NullString
+	ports            []portEntry
+	volumes          []volumeEntry
+	envVars          map[string]string
+	labels           map[string]string
+	healthcheck      *healthcheckConfig
+	dependencies     []string
+	configFiles      []configFileEntry
+	composeOverrides map[string]interface{}
 }
 
 type portEntry struct {
@@ -261,11 +262,76 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 		compose.Volumes = namedVolumes
 	}
 
-	yamlBytes, err := yaml.Marshal(compose)
+	hasOverrides := false
+	for _, inst := range instances {
+		if inst.enabled && len(configs[inst.instanceID].composeOverrides) > 0 {
+			hasOverrides = true
+			break
+		}
+	}
+
+	if !hasOverrides {
+		yamlBytes, err := yaml.Marshal(compose)
+		if err != nil {
+			return nil, nil, fmt.Errorf("marshal yaml: %w", err)
+		}
+		return yamlBytes, warnings, nil
+	}
+
+	rawServices := make(map[string]interface{})
+	for id, svc := range compose.Services {
+		cfg := configs[id]
+		if len(cfg.composeOverrides) == 0 {
+			rawServices[id] = svc
+			continue
+		}
+
+		svcBytes, _ := yaml.Marshal(svc)
+		var svcMap map[string]interface{}
+		yaml.Unmarshal(svcBytes, &svcMap)
+
+		overrides := cfg.composeOverrides
+		if volumes, ok := overrides["volumes"]; ok {
+			if volList, ok := volumes.([]interface{}); ok {
+				for i, v := range volList {
+					if volStr, ok := v.(string); ok {
+						volName := extractNamedVolume(volStr)
+						if volName != "" && namedVolumes[volName] == nil {
+							namedVolumes[volName] = nil
+						}
+						volList[i] = g.resolveStackVolumePath(volStr, stackName, id)
+					}
+				}
+			}
+		}
+		if build, ok := overrides["build"]; ok {
+			if buildMap, ok := build.(map[string]interface{}); ok {
+				if ctx, ok := buildMap["context"].(string); ok {
+					buildMap["context"] = g.resolveRelativePath(ctx, "")
+				}
+			} else if ctx, ok := build.(string); ok {
+				overrides["build"] = g.resolveRelativePath(ctx, "")
+			}
+		}
+
+		for k, v := range overrides {
+			svcMap[k] = v
+		}
+		rawServices[id] = svcMap
+	}
+
+	rawCompose := map[string]interface{}{
+		"networks": compose.Networks,
+		"services": rawServices,
+	}
+	if len(namedVolumes) > 0 {
+		rawCompose["volumes"] = namedVolumes
+	}
+
+	yamlBytes, err := yaml.Marshal(rawCompose)
 	if err != nil {
 		return nil, nil, fmt.Errorf("marshal yaml: %w", err)
 	}
-
 	return yamlBytes, warnings, nil
 }
 
@@ -360,8 +426,9 @@ func (g *Generator) loadInstanceEffectiveConfigWithSecrets(stackName string, ins
 		labels:  make(map[string]string),
 	}
 
+	var overridesJSON []byte
 	err := g.db.QueryRow(`
-		SELECT name, image_name, image_tag, restart_policy, command, user_spec
+		SELECT name, image_name, image_tag, restart_policy, command, user_spec, compose_overrides
 		FROM services WHERE id = $1
 	`, inst.templateServiceID).Scan(
 		new(string),
@@ -370,9 +437,13 @@ func (g *Generator) loadInstanceEffectiveConfigWithSecrets(stackName string, ins
 		&cfg.restartPolicy,
 		&cfg.command,
 		&cfg.userSpec,
+		&overridesJSON,
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("template service: %w", err)
+	}
+	if len(overridesJSON) > 2 {
+		json.Unmarshal(overridesJSON, &cfg.composeOverrides)
 	}
 
 	cfg.ports, err = g.loadEffectivePorts(inst.id, inst.templateServiceID)

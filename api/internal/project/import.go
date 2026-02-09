@@ -3,6 +3,8 @@ package project
 import (
 	"database/sql"
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	"github.com/priz/devarch-api/internal/compose"
 )
@@ -27,6 +29,11 @@ func (c *Controller) ensureStack(projectName string) (*stackInfo, error) {
 	}
 	if len(services) == 0 {
 		return nil, fmt.Errorf("no services in compose file for %s", projectName)
+	}
+
+	composeDir := filepath.Dir(composePath)
+	for _, svc := range services {
+		resolveServicePaths(svc, composeDir)
 	}
 
 	tx, err := c.db.Begin()
@@ -228,4 +235,44 @@ func importTemplate(tx *sql.Tx, name string, categoryID int, parsed *compose.Par
 	}
 
 	return serviceID, nil
+}
+
+func resolveServicePaths(svc *compose.ParsedService, composeDir string) {
+	for i := range svc.Volumes {
+		v := &svc.Volumes[i]
+		if v.VolumeType == "bind" && !filepath.IsAbs(v.Source) {
+			v.Source = filepath.Clean(filepath.Join(composeDir, v.Source))
+		}
+	}
+
+	if svc.Overrides == nil {
+		return
+	}
+
+	if build, ok := svc.Overrides["build"]; ok {
+		switch b := build.(type) {
+		case string:
+			if !filepath.IsAbs(b) {
+				svc.Overrides["build"] = filepath.Clean(filepath.Join(composeDir, b))
+			}
+		case map[string]interface{}:
+			if ctx, ok := b["context"].(string); ok && !filepath.IsAbs(ctx) {
+				b["context"] = filepath.Clean(filepath.Join(composeDir, ctx))
+			}
+		}
+	}
+
+	if volumes, ok := svc.Overrides["volumes"]; ok {
+		if volList, ok := volumes.([]interface{}); ok {
+			for i, v := range volList {
+				if volStr, ok := v.(string); ok {
+					parts := strings.SplitN(volStr, ":", 3)
+					if len(parts) >= 2 && !filepath.IsAbs(parts[0]) && (strings.HasPrefix(parts[0], ".") || strings.Contains(parts[0], "/")) {
+						parts[0] = filepath.Clean(filepath.Join(composeDir, parts[0]))
+						volList[i] = strings.Join(parts, ":")
+					}
+				}
+			}
+		}
+	}
 }
