@@ -61,8 +61,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Parse env_file, container_name, networks + write to DB tables
-- [ ] 11-02-PLAN.md — Provenance-aware config mount classification replacing rewriteConfigPaths
+- [x] 11-01-PLAN.md — Parse env_file, container_name, networks + write to DB tables
+- [x] 11-02-PLAN.md — Provenance-aware config mount classification replacing rewriteConfigPaths
 
 #### Phase 12: Compose Generator Parity
 
@@ -133,7 +133,7 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 10. Fresh Baseline Migrations | v1.1 | 3/3 | ✓ Complete | 2026-02-09 |
-| 11. Parser & Importer Updates | v1.1 | 0/2 | Planning complete | - |
+| 11. Parser & Importer Updates | v1.1 | 2/2 | ✓ Complete | 2026-02-09 |
 | 12. Compose Generator Parity | v1.1 | 0/? | Not started | - |
 | 13. Import Scalability | v1.1 | 0/? | Not started | - |
 | 14. Dashboard Updates | v1.1 | 0/? | Not started | - |
@@ -141,4 +141,4 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-09 — Phase 11 planned*
+*Last updated: 2026-02-09 — Phase 11 complete*
