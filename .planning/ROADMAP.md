@@ -39,10 +39,12 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
   3. Each migration has matching down file that drops its objects in reverse dependency order
   4. Old migrations (001-023) deleted from repository
   5. Schema includes new columns (container_name_template, service_config_mounts table, service_env_files, service_networks)
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 10-01: [TBD during planning]
+- [ ] 10-01-PLAN.md — Write fresh migrations 001-005 (categories, services, runtime, config, registry, projects)
+- [ ] 10-02-PLAN.md — Write fresh migrations 006-009 (stacks, instance overrides, wiring/sync, indexes)
+- [ ] 10-03-PLAN.md — Verify migrate-up, delete old 23 migrations, rename, re-verify
 
 #### Phase 11: Parser & Importer Updates
 
