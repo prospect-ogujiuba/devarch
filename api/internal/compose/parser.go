@@ -49,6 +49,14 @@ type ComposeHealthcheck struct {
 	StartPeriod string      `yaml:"start_period"`
 }
 
+type ParsedConfigMount struct {
+	SourcePath    string // original relative path from compose (e.g., "../../config/nginx/custom/http.conf")
+	TargetPath    string // container target (e.g., "/var/www/config/nginx/custom/http.conf")
+	ReadOnly      bool   // from :ro suffix
+	ConfigOwner   string // derived service name that owns the config dir (e.g., "nginx")
+	ConfigRelPath string // normalized path within config dir (e.g., "custom/http.conf")
+}
+
 type ParsedService struct {
 	Name          string
 	Category      string
@@ -66,6 +74,7 @@ type ParsedService struct {
 	Healthcheck   *ParsedHealthcheck
 	ContainerName string
 	Networks      []string
+	ConfigMounts  []ParsedConfigMount
 	Overrides     map[string]interface{}
 }
 
@@ -161,6 +170,9 @@ func ParseFileAll(path string) ([]*ParsedService, error) {
 		parsed.ContainerName = svc.ContainerName
 		parsed.Networks = parseNetworks(svc.Networks)
 		parsed.Overrides = extractOverrides(rawCompose.Services[name])
+
+		// Classify config mounts from volumes
+		classifyConfigMounts(parsed)
 
 		services = append(services, parsed)
 	}
@@ -498,4 +510,54 @@ func parseNetworks(networks interface{}) []string {
 	}
 
 	return nil
+}
+
+// classifyConfigMounts extracts config mounts from volumes based on config/ prefix in source path.
+// Config volumes are removed from Volumes slice and tracked in ConfigMounts instead.
+func classifyConfigMounts(parsed *ParsedService) {
+	var remainingVolumes []ParsedVolume
+
+	for _, v := range parsed.Volumes {
+		if v.VolumeType != "bind" {
+			remainingVolumes = append(remainingVolumes, v)
+			continue
+		}
+
+		// Strip leading ../ prefixes to normalize the path
+		cleaned := v.Source
+		for strings.HasPrefix(cleaned, "../") {
+			cleaned = strings.TrimPrefix(cleaned, "../")
+		}
+
+		// Check if this is a config volume
+		if !strings.HasPrefix(cleaned, "config/") {
+			remainingVolumes = append(remainingVolumes, v)
+			continue
+		}
+
+		// Extract config owner and relative path
+		// Format: config/{owner}/{relpath...}
+		rest := strings.TrimPrefix(cleaned, "config/")
+
+		var configOwner, configRelPath string
+		if idx := strings.Index(rest, "/"); idx >= 0 {
+			configOwner = rest[:idx]
+			configRelPath = rest[idx+1:] // strip leading /
+		} else {
+			// Exact match: config/{owner} with no trailing path
+			configOwner = rest
+			configRelPath = ""
+		}
+
+		// Create config mount
+		parsed.ConfigMounts = append(parsed.ConfigMounts, ParsedConfigMount{
+			SourcePath:    v.Source,
+			TargetPath:    v.Target,
+			ReadOnly:      v.ReadOnly,
+			ConfigOwner:   configOwner,
+			ConfigRelPath: configRelPath,
+		})
+	}
+
+	parsed.Volumes = remainingVolumes
 }
