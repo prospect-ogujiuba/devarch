@@ -81,6 +81,10 @@ type configFileEntry struct {
 }
 
 func (g *Generator) GenerateStack(stackName string) ([]byte, []string, error) {
+	return g.GenerateStackWithRedaction(stackName, false)
+}
+
+func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets bool) ([]byte, []string, error) {
 	var warnings []string
 
 	var networkName sql.NullString
@@ -117,15 +121,17 @@ func (g *Generator) GenerateStack(stackName string) ([]byte, []string, error) {
 	}
 
 	configs := make(map[string]*stackInstanceConfig)
+	secretKeys := make(map[string]map[string]bool)
 	for _, inst := range instances {
 		if !inst.enabled {
 			continue
 		}
-		cfg, err := g.loadInstanceEffectiveConfig(stackName, inst)
+		cfg, secrets, err := g.loadInstanceEffectiveConfigWithSecrets(stackName, inst)
 		if err != nil {
 			return nil, nil, fmt.Errorf("load config for %s: %w", inst.instanceID, err)
 		}
 		configs[inst.instanceID] = cfg
+		secretKeys[inst.instanceID] = secrets
 	}
 
 	compose := stackCompose{
@@ -191,7 +197,19 @@ func (g *Generator) GenerateStack(stackName string) ([]byte, []string, error) {
 		}
 
 		if len(cfg.envVars) > 0 {
-			svc.Environment = cfg.envVars
+			if redactSecrets && secretKeys[inst.instanceID] != nil {
+				envCopy := make(map[string]string, len(cfg.envVars))
+				for k, v := range cfg.envVars {
+					if secretKeys[inst.instanceID][k] {
+						envCopy[k] = "***"
+					} else {
+						envCopy[k] = v
+					}
+				}
+				svc.Environment = envCopy
+			} else {
+				svc.Environment = cfg.envVars
+			}
 		}
 
 		labelKeys := make([]string, 0, len(cfg.labels))
@@ -309,6 +327,11 @@ func (g *Generator) loadStackInstances(stackName string) ([]stackInstance, error
 }
 
 func (g *Generator) loadInstanceEffectiveConfig(stackName string, inst stackInstance) (*stackInstanceConfig, error) {
+	cfg, _, err := g.loadInstanceEffectiveConfigWithSecrets(stackName, inst)
+	return cfg, err
+}
+
+func (g *Generator) loadInstanceEffectiveConfigWithSecrets(stackName string, inst stackInstance) (*stackInstanceConfig, map[string]bool, error) {
 	cfg := &stackInstanceConfig{
 		envVars: make(map[string]string),
 		labels:  make(map[string]string),
@@ -326,51 +349,52 @@ func (g *Generator) loadInstanceEffectiveConfig(stackName string, inst stackInst
 		&cfg.userSpec,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("template service: %w", err)
+		return nil, nil, fmt.Errorf("template service: %w", err)
 	}
 
 	cfg.ports, err = g.loadEffectivePorts(inst.id, inst.templateServiceID)
 	if err != nil {
-		return nil, fmt.Errorf("ports: %w", err)
+		return nil, nil, fmt.Errorf("ports: %w", err)
 	}
 
 	cfg.volumes, err = g.loadEffectiveVolumes(inst.id, inst.templateServiceID)
 	if err != nil {
-		return nil, fmt.Errorf("volumes: %w", err)
+		return nil, nil, fmt.Errorf("volumes: %w", err)
 	}
 
-	cfg.envVars, err = g.loadEffectiveEnvVars(inst.id, inst.templateServiceID)
+	var secretKeys map[string]bool
+	cfg.envVars, secretKeys, err = g.loadEffectiveEnvVarsWithSecrets(inst.id, inst.templateServiceID)
 	if err != nil {
-		return nil, fmt.Errorf("env vars: %w", err)
+		return nil, nil, fmt.Errorf("env vars: %w", err)
 	}
 
 	cfg.labels, err = g.loadEffectiveLabels(inst.id, inst.templateServiceID, stackName, inst.instanceID)
 	if err != nil {
-		return nil, fmt.Errorf("labels: %w", err)
+		return nil, nil, fmt.Errorf("labels: %w", err)
 	}
 
 	cfg.healthcheck, err = g.loadEffectiveHealthcheck(inst.id, inst.templateServiceID)
 	if err != nil {
-		return nil, fmt.Errorf("healthcheck: %w", err)
+		return nil, nil, fmt.Errorf("healthcheck: %w", err)
 	}
 
 	cfg.dependencies, err = g.loadEffectiveDependencies(inst.id, inst.templateServiceID)
 	if err != nil {
-		return nil, fmt.Errorf("dependencies: %w", err)
+		return nil, nil, fmt.Errorf("dependencies: %w", err)
 	}
 
 	wireDeps, err := g.loadWireDependencies(inst.id)
 	if err != nil {
-		return nil, fmt.Errorf("wire dependencies: %w", err)
+		return nil, nil, fmt.Errorf("wire dependencies: %w", err)
 	}
 	cfg.dependencies = append(cfg.dependencies, wireDeps...)
 
 	cfg.configFiles, err = g.loadEffectiveConfigFiles(inst.id, inst.templateServiceID)
 	if err != nil {
-		return nil, fmt.Errorf("config files: %w", err)
+		return nil, nil, fmt.Errorf("config files: %w", err)
 	}
 
-	return cfg, nil
+	return cfg, secretKeys, nil
 }
 
 func (g *Generator) loadEffectivePorts(instancePK, templateServiceID int) ([]portEntry, error) {
@@ -464,51 +488,65 @@ func (g *Generator) loadEffectiveVolumes(instancePK, templateServiceID int) ([]v
 }
 
 func (g *Generator) loadEffectiveEnvVars(instancePK, templateServiceID int) (map[string]string, error) {
+	merged, _, err := g.loadEffectiveEnvVarsWithSecrets(instancePK, templateServiceID)
+	return merged, err
+}
+
+func (g *Generator) loadEffectiveEnvVarsWithSecrets(instancePK, templateServiceID int) (map[string]string, map[string]bool, error) {
 	merged := make(map[string]string)
+	secretKeys := make(map[string]bool)
 
 	rows, err := g.db.Query(`
-		SELECT key, value FROM service_env_vars WHERE service_id = $1
+		SELECT key, value, is_secret FROM service_env_vars WHERE service_id = $1
 	`, templateServiceID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var k, v string
-		if err := rows.Scan(&k, &v); err != nil {
-			return nil, err
+		var isSecret bool
+		if err := rows.Scan(&k, &v, &isSecret); err != nil {
+			return nil, nil, err
 		}
 		merged[k] = v
+		if isSecret {
+			secretKeys[k] = true
+		}
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	wiredEnvVars, err := g.loadWiredEnvVarsForInstance(instancePK)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for k, v := range wiredEnvVars {
 		merged[k] = v
 	}
 
 	rows, err = g.db.Query(`
-		SELECT key, value FROM instance_env_vars WHERE instance_id = $1
+		SELECT key, value, is_secret FROM instance_env_vars WHERE instance_id = $1
 	`, instancePK)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var k, v string
-		if err := rows.Scan(&k, &v); err != nil {
-			return nil, err
+		var isSecret bool
+		if err := rows.Scan(&k, &v, &isSecret); err != nil {
+			return nil, nil, err
 		}
 		merged[k] = v
+		if isSecret {
+			secretKeys[k] = true
+		}
 	}
-	return merged, rows.Err()
+	return merged, secretKeys, rows.Err()
 }
 
 func (g *Generator) loadWiredEnvVarsForInstance(instancePK int) (map[string]string, error) {

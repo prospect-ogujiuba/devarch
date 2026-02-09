@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/export"
 	"github.com/priz/devarch-api/internal/plan"
 	"github.com/priz/devarch-api/internal/wiring"
 )
@@ -334,7 +335,16 @@ func (h *StackHandler) loadAllWires(stackID int, stackName string) ([]plan.WireP
 			EnvVars: envVars,
 		}
 
-		entry.InjectedEnvVars = wiring.InjectEnvVars(stackName, provider, consumer)
+		injected := wiring.InjectEnvVars(stackName, provider, consumer)
+		redacted := make(map[string]string, len(injected))
+		for k, v := range injected {
+			if export.IsSecretKey(k) {
+				redacted[k] = "***"
+			} else {
+				redacted[k] = v
+			}
+		}
+		entry.InjectedEnvVars = redacted
 		entries = append(entries, entry)
 	}
 	return entries, rows.Err()

@@ -52,7 +52,7 @@ func (h *StackHandler) Compose(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	yamlBytes, warnings, err := gen.GenerateStack(stackName)
+	yamlBytes, warnings, err := gen.GenerateStackWithRedaction(stackName, true)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to generate compose: %v", err), http.StatusInternalServerError)
 		return
