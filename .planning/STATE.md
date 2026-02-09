@@ -5,13 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Planning next milestone
+**Current focus:** v1.1 Schema Reconciliation
 
 ## Current Position
 
-Milestone: v1.0 Stacks & Instances — SHIPPED 2026-02-09
-Status: Between milestones
-Next: `/gsd:new-milestone` to define next feature set
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-09 — Milestone v1.1 started
 
 ## v1.0 Performance Summary
 
@@ -24,6 +25,7 @@ Next: `/gsd:new-milestone` to define next feature set
 ### Decisions
 
 All v1.0 decisions logged in PROJECT.md Key Decisions table.
+v1.1 decisions: fresh baseline (no compat migration), domain-separated DDL, dedicated config_mounts table, streaming multipart.
 
 ### Pending Todos
 
@@ -36,5 +38,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: v1.0 milestone archived. Ready for next milestone.
+Stopped at: Defining v1.1 requirements
 Resume file: None

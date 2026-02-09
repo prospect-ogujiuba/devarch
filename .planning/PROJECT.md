@@ -54,7 +54,16 @@ Two stacks using the same service template must never collide. Isolation (naming
 
 ### Active
 
-(Next milestone TBD — run `/gsd:new-milestone`)
+**Current Milestone: v1.1 Schema Reconciliation**
+
+**Goal:** Replace fragmented 23-migration chain with clean, domain-separated fresh baseline — 1:1 legacy parity, no seeds, no patch artifacts.
+
+**Target features:**
+- Fresh baseline migrations (9 domain-separated files, final-form DDL)
+- Parser/importer fixes (env_file, container_name, networks, config provenance)
+- Compose generator parity (faithful env_files/networks/config mounts output)
+- Large import scalability (streaming multipart, 256MB cap, batched upserts)
+- Golden service parity verification (php, python, nginx-proxy-manager, blackbox-exporter, rabbitmq, traefik, devarch-api)
 
 ### Out of Scope
 
@@ -69,7 +78,7 @@ Two stacks using the same service template must never collide. Isolation (naming
 
 - **API**: Go 1.22, chi router, lib/pq, gorilla/websocket, yaml.v3
 - **Dashboard**: React 19, Vite, TanStack Router + Query, Tailwind 4, Radix UI, Zod, CodeMirror
-- **DB**: PostgreSQL, 19+ migrations
+- **DB**: PostgreSQL, 23 migrations (v1.0) → being replaced with fresh baseline (v1.1)
 - **Runtime**: Podman or Docker via container.Client abstraction
 - **Scripts**: bash CLI wrapper (devarch), service manager, runtime switcher
 
@@ -98,5 +107,10 @@ Two stacks using the same service template must never collide. Isolation (naming
 | Lockfile as JSON (not YAML) | Consistency with export/import workflow | ✓ Good |
 | Three-layer env merge: template → wired → overrides | WIRE-08 compliance, user always wins | ✓ Good |
 
+| Fresh baseline over incremental migration | 23 patch migrations create fragility; clean slate is simpler to maintain | — Pending |
+| Domain-separated DDL files | Clean boundaries, each table created once in final form | — Pending |
+| Dedicated service_config_mounts table | Config provenance needs its own model, not overloaded config_files | — Pending |
+| Streaming multipart for large imports | ParseMultipartForm buffers entire body; streaming avoids OOM | — Pending |
+
 ---
-*Last updated: 2026-02-09 after v1.0 milestone*
+*Last updated: 2026-02-09 after v1.1 milestone start*
