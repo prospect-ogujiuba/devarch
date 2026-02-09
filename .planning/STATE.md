@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Phase 11 - Parser & Importer Updates
+**Current focus:** Phase 12 - Compose Generator Parity
 
 ## Current Position
 
-Phase: 11 of 15 (Parser & Importer Updates)
-Plan: 2 of 2 (phase 11 complete)
+Phase: 12 of 15 (Compose Generator Parity)
+Plan: 1 of 1 (phase 12 complete)
 Status: Phase complete
-Last activity: 2026-02-09 — Completed 11-02-PLAN.md
+Last activity: 2026-02-09 — Completed 12-01-PLAN.md
 
-Progress: [████████░░] 73% (11/15 phases complete, 32/TBD plans total)
+Progress: [████████░░] 80% (12/15 phases complete, 33/TBD plans total)
 
 ## Performance Metrics
 
@@ -28,11 +28,12 @@ Progress: [████████░░] 73% (11/15 phases complete, 32/TBD pl
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | v1.0 (1-9) | 30 | ~1.6h | ~3.2min |
-| v1.1 (10-15) | 4 | ~58min | ~15min |
+| v1.1 (10-15) | 5 | ~61min | ~12min |
 
 **Recent Trend:**
 - Phase 10 complete (3 plans, 53min total)
 - Phase 11 complete (2 plans, 9min total)
+- Phase 12 complete (1 plan, 3min total)
 - v1.0 shipped successfully on 2026-02-09
 
 *Updated after each plan completion*
@@ -60,6 +61,9 @@ Recent decisions affecting current work:
 - 11-02: Config volumes classified by config/ prefix — Parse-time classification replaces runtime guessing
 - 11-02: NULL config_file_id for missing files — Warnings logged, FKs resolved in post-import pass
 - 11-02: ResolveConfigMountLinks() post-import — Called after ImportAllConfigFiles() completes
+- 12-01: DB-sourced networks only — Generator emits exactly what's in service_networks; no hardcoded fallback maintains single source of truth
+- 12-01: Config mount materialized paths — Mounts with resolved config_file_id use compose/{category}/{service}/{file_path}; NULL uses raw source_path
+- 12-01: env_file always YAML list — Simpler code path, semantically identical, consistent Dashboard rendering
 
 ### Pending Todos
 
@@ -72,6 +76,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 11-02-PLAN.md (phase 11 complete)
+Stopped at: Completed 12-01-PLAN.md (phase 12 complete)
 Resume file: None
-Next: Phase 12 - Generator Updates
+Next: Phase 13 - Nginx Subdomain Routing
