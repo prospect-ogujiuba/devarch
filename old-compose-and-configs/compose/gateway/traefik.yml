@@ -1,0 +1,26 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  traefik:
+    image: traefik:v3.6.4
+    container_name: traefik
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+    volumes:
+      - ../../config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ../../config/traefik/dynamic:/etc/traefik/dynamic:ro
+      - /run/user/1000/podman/podman.sock:/run/podman/podman.sock:ro
+    ports:
+      - "127.0.0.1:4001:8082"
+      - "127.0.0.1:4080:80"
+      - "127.0.0.1:4443:443"
+      - "127.0.0.1:4880:8080"
+    networks:
+      - microservices-net

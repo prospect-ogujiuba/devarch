@@ -1,0 +1,17 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  temporal-ui:
+    container_name: temporal-ui
+    image: temporalio/ui:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:9930
+    ports:
+      - "127.0.0.1:9930:8080"
+    networks:
+      - microservices-net

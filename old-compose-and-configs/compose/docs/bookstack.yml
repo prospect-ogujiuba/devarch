@@ -1,0 +1,28 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  bookstack_data:
+
+services:
+  bookstack:
+    container_name: bookstack
+    image: lscr.io/linuxserver/bookstack:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - APP_URL=http://localhost:10010
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASS=admin1234567
+      - DB_DATABASE=bookstack
+    ports:
+      - "127.0.0.1:10010:80"
+    volumes:
+      - bookstack_data:/config
+    networks:
+      - microservices-net

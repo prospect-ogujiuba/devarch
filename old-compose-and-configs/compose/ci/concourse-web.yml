@@ -1,0 +1,32 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  concourse_keys:
+
+services:
+  concourse-web:
+    container_name: concourse-web
+    image: concourse/concourse:latest
+    restart: unless-stopped
+    command: web
+    env_file: ../../.env
+    environment:
+      - CONCOURSE_POSTGRES_HOST=postgres
+      - CONCOURSE_POSTGRES_USER=postgres
+      - CONCOURSE_POSTGRES_PASSWORD=admin1234567
+      - CONCOURSE_POSTGRES_DATABASE=concourse
+      - CONCOURSE_EXTERNAL_URL=http://localhost:9640
+      - CONCOURSE_ADD_LOCAL_USER=admin:admin
+      - CONCOURSE_MAIN_TEAM_LOCAL_USER=admin
+      - CONCOURSE_SESSION_SIGNING_KEY=/concourse-keys/session_signing_key
+      - CONCOURSE_TSA_HOST_KEY=/concourse-keys/tsa_host_key
+      - CONCOURSE_TSA_AUTHORIZED_KEYS=/concourse-keys/authorized_worker_keys
+    ports:
+      - "127.0.0.1:9640:8080"
+      - "127.0.0.1:9641:2222"
+    volumes:
+      - concourse_keys:/concourse-keys
+    networks:
+      - microservices-net

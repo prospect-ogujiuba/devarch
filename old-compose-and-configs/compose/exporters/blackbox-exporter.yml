@@ -1,0 +1,17 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  blackbox-exporter:
+    container_name: blackbox-exporter
+    image: prom/blackbox-exporter:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9115:9115"
+    volumes:
+      - ../../config/prometheus/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    networks:
+      - microservices-net
+    command:
+      - "--config.file=/etc/blackbox_exporter/config.yml"

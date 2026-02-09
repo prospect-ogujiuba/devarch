@@ -1,0 +1,25 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  erpnext_sites:
+    external: true
+  erpnext_logs:
+    external: true
+
+services:
+  erpnext-backend:
+    container_name: erpnext-backend
+    image: frappe/erpnext:latest
+    restart: unless-stopped
+    networks:
+      - microservices-net
+    volumes:
+      - erpnext_sites:/home/frappe/frappe-bench/sites
+      - erpnext_logs:/home/frappe/frappe-bench/logs
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      MYSQL_ROOT_PASSWORD: root
+      MARIADB_ROOT_PASSWORD: admin1234567

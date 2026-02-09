@@ -1,0 +1,25 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  qdrant_data:
+
+services:
+  qdrant:
+    container_name: qdrant
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

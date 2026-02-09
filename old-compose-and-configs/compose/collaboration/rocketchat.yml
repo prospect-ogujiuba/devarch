@@ -1,0 +1,32 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  rocketchat_data:
+  rocketchat_uploads:
+
+services:
+  rocketchat:
+    container_name: rocketchat
+    image: rocket.chat:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017/rocketchat?replicaSet=rs0
+      - MONGO_OPLOG_URL=mongodb://mongodb:27017/local?replicaSet=rs0
+      - ROOT_URL=http://localhost:10210
+      - PORT=3000
+      - DEPLOY_METHOD=docker
+    ports:
+      - "127.0.0.1:10210:3000"
+    volumes:
+      - rocketchat_data:/app/data
+      - rocketchat_uploads:/app/uploads
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

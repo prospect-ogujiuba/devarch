@@ -1,0 +1,20 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  sonic_data:
+
+services:
+  sonic:
+    container_name: sonic
+    image: valeriansaliou/sonic:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:1491:1491"
+    volumes:
+      - sonic_data:/var/lib/sonic/store
+      - ../../config/sonic/config.cfg:/etc/sonic.cfg:ro
+    networks:
+      - microservices-net

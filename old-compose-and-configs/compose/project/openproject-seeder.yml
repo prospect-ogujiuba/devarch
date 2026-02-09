@@ -1,0 +1,37 @@
+# compose/project/openproject-seeder.yml
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  openproject_data:
+    external: true
+
+services:
+  openproject-seeder:
+    container_name: openproject-seeder
+    image: openproject/openproject:16-slim
+    restart: on-failure
+    env_file: ../../.env
+    environment:
+      # Basic Configuration
+      - OPENPROJECT_HTTPS=true
+      - OPENPROJECT_HOST__NAME=openproject.test
+
+      # Database Configuration
+      - DATABASE_URL=postgres://postgres:${SHARED_DB_PASSWORD}@postgres:5432/openproject?pool=20&encoding=unicode&reconnect=true
+
+      # Cache Configuration
+      - RAILS_CACHE_STORE=redis_cache_store
+      - OPENPROJECT_CACHE__REDIS__URL=redis://redis:6379/2
+
+      # Admin User Creation (Primary location for seed variables)
+      - OPENPROJECT_SEED__ADMIN__USER__NAME=${ADMIN_USER}
+      - OPENPROJECT_SEED__ADMIN__USER__MAIL=${ADMIN_EMAIL}
+      - OPENPROJECT_SEED__ADMIN__USER__PASSWORD=${ADMIN_PASSWORD}
+      - OPENPROJECT_SEED__ADMIN__USER__PASSWORD__RESET=false
+    command: "./docker/prod/seeder"
+    volumes:
+      - openproject_data:/var/openproject/assets
+    networks:
+      - microservices-net

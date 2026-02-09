@@ -1,0 +1,26 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  airflow_dags:
+  airflow_logs:
+  airflow_plugins:
+
+services:
+  airflow-scheduler:
+    container_name: airflow-scheduler
+    image: apache/airflow:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://postgres:admin1234567@postgres/airflow
+      - AIRFLOW__CORE__FERNET_KEY=${AIRFLOW_FERNET_KEY:-fb_key_change_me}
+    command: scheduler
+    volumes:
+      - airflow_dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+      - airflow_plugins:/opt/airflow/plugins
+    networks:
+      - microservices-net

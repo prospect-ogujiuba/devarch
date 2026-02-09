@@ -1,0 +1,24 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  trivy_cache:
+
+services:
+  trivy:
+    container_name: trivy
+    image: aquasec/trivy:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - TRIVY_LISTEN=0.0.0.0:9740
+      - TRIVY_CACHE_DIR=/var/lib/trivy
+    ports:
+      - "127.0.0.1:9740:9740"
+    volumes:
+      - trivy_cache:/var/lib/trivy
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: server --listen 0.0.0.0:9740
+    networks:
+      - microservices-net

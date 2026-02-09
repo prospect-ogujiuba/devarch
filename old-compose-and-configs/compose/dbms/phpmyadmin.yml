@@ -1,0 +1,19 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  phpmyadmin:
+    container_name: phpmyadmin
+    image: phpmyadmin:latest
+    env_file: ../../.env
+    environment:
+      - PMA_HOST=mariadb
+      - PMA_USER=mariadb_user
+      - PMA_PASSWORD=${SHARED_DB_PASSWORD}
+    ports:
+      - "127.0.0.1:8083:80"
+    networks:
+      - microservices-net
+    volumes:
+      - ../../config/phpmyadmin/config.inc.php:/etc/phpmyadmin/config.user.inc.php:ro

@@ -1,0 +1,25 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  seaweedfs-s3:
+    container_name: seaweedfs-s3
+    image: chrislusf/seaweedfs:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - S3_ADMIN_ACCESS_KEY_ID=admin
+      - S3_ADMIN_SECRET_ACCESS_KEY=admin123
+    command: s3 -filer=seaweedfs-filer:8888 -ip=seaweedfs-s3
+    ports:
+      - "127.0.0.1:9513:8333"
+    networks:
+      - microservices-net
+    depends_on:
+      - seaweedfs-filer
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8333/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

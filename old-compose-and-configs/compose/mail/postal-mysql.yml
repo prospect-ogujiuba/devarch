@@ -1,0 +1,22 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  postal_mysql:
+
+services:
+  postal-mysql:
+    container_name: postal-mysql
+    image: mariadb:10.6
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - MYSQL_ROOT_PASSWORD=admin1234567
+      - MYSQL_DATABASE=postal
+      - MYSQL_USER=postal
+      - MYSQL_PASSWORD=admin1234567
+    volumes:
+      - postal_mysql:/var/lib/mysql
+    networks:
+      - microservices-net

@@ -1,0 +1,24 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  rabbitmq-exporter:
+    container_name: rabbitmq-exporter
+    image: kbudde/rabbitmq-exporter:latest
+    restart: unless-stopped
+    environment:
+      - RABBIT_URL=http://rabbitmq:15672
+      - RABBIT_USER=${ADMIN_USER}
+      - RABBIT_PASSWORD=${ADMIN_PASSWORD}
+      - PUBLISH_PORT=9419
+      - RABBIT_CAPABILITIES=bert,no_sort
+      - INCLUDE_QUEUES=.*
+      - INCLUDE_VHOST=.*
+      - SKIP_VERIFY=true
+    ports:
+      - "127.0.0.1:9419:9419"
+    networks:
+      - microservices-net
+    depends_on:
+      - rabbitmq

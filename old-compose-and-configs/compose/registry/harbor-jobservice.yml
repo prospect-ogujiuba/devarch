@@ -1,0 +1,24 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  harbor_jobservice:
+
+services:
+  harbor-jobservice:
+    container_name: harbor-jobservice
+    image: goharbor/harbor-jobservice:v2.11.0
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - CORE_SECRET=${HARBOR_CORE_SECRET:-secret123}
+      - JOBSERVICE_SECRET=${HARBOR_JOBSERVICE_SECRET:-secret123}
+      - CORE_URL=http://harbor-core:8080
+      - REGISTRY_URL=http://harbor-registry:5000
+    volumes:
+      - harbor_jobservice:/var/log/jobs
+    networks:
+      - microservices-net
+    depends_on:
+      - harbor-core

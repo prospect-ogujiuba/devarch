@@ -1,0 +1,19 @@
+log:
+  level: INFO
+
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+  traefik:
+    address: ":8082"
+
+providers:
+  file:
+    directory: "/etc/traefik/dynamic"
+    watch: false

@@ -1,0 +1,30 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  cassandra_data:
+
+services:
+  cassandra:
+    container_name: cassandra
+    image: cassandra:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - CASSANDRA_CLUSTER_NAME=DevCluster
+      - CASSANDRA_DC=DC1
+      - CASSANDRA_RACK=RAC1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+    ports:
+      - "127.0.0.1:9042:9042"
+      - "127.0.0.1:7000:7000"
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "describe keyspaces"]
+      interval: 30s
+      timeout: 10s
+      retries: 5

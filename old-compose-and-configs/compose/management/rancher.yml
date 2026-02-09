@@ -1,0 +1,26 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  rancher_data:
+
+services:
+  rancher:
+    container_name: rancher
+    image: rancher/rancher:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    privileged: true
+    ports:
+      - "127.0.0.1:9006:80"
+      - "127.0.0.1:9446:443"
+    volumes:
+      - rancher_data:/var/lib/rancher
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

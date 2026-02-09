@@ -1,0 +1,27 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  seaweedfs_volume:
+
+services:
+  seaweedfs-volume:
+    container_name: seaweedfs-volume
+    image: chrislusf/seaweedfs:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    command: volume -mserver=seaweedfs-master:9333 -port=8080 -ip=seaweedfs-volume
+    ports:
+      - "127.0.0.1:9511:8080"
+    volumes:
+      - seaweedfs_volume:/data
+    networks:
+      - microservices-net
+    depends_on:
+      - seaweedfs-master
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

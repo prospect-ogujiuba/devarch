@@ -1,0 +1,19 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  harbor_registry:
+
+services:
+  harbor-registry:
+    container_name: harbor-registry
+    image: goharbor/registry-photon:v2.11.0
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:9801:5000"
+    volumes:
+      - harbor_registry:/storage
+    networks:
+      - microservices-net

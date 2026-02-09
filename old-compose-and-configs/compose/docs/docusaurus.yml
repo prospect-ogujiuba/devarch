@@ -1,0 +1,21 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  docusaurus_data:
+
+services:
+  docusaurus:
+    container_name: docusaurus
+    image: node:18-alpine
+    restart: unless-stopped
+    env_file: ../../.env
+    working_dir: /app
+    command: sh -c "npx @docusaurus/init@latest init docs classic && cd docs && npm start -- --host 0.0.0.0"
+    ports:
+      - "127.0.0.1:10030:3000"
+    volumes:
+      - docusaurus_data:/app
+    networks:
+      - microservices-net

@@ -1,0 +1,24 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  cloudbeaver_data:
+
+services:
+  cloudbeaver:
+    container_name: cloudbeaver
+    image: dbeaver/cloudbeaver:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - CB_ADMIN_NAME=admin
+      - CB_ADMIN_PASSWORD=Admin1234567
+      - CB_SERVER_NAME=CloudBeaver
+      - CB_SERVER_URL=http://localhost:8090
+    ports:
+      - "127.0.0.1:8090:8978"
+    volumes:
+      - cloudbeaver_data:/opt/cloudbeaver/workspace
+    networks:
+      - microservices-net

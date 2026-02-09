@@ -1,0 +1,22 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  pgadmin_data:
+
+services:
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@devarch.test
+      - PGADMIN_DEFAULT_PASSWORD=admin1234567
+    ports:
+      - "127.0.0.1:8087:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - microservices-net

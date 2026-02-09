@@ -1,0 +1,36 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  nextcloud_data:
+  nextcloud_apps:
+  nextcloud_config:
+
+services:
+  nextcloud:
+    container_name: nextcloud
+    image: nextcloud:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=nextcloud
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=admin1234567
+      - NEXTCLOUD_ADMIN_USER=admin
+      - NEXTCLOUD_ADMIN_PASSWORD=admin1234567
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost
+    ports:
+      - "127.0.0.1:10220:80"
+    volumes:
+      - nextcloud_data:/var/www/html/data
+      - nextcloud_apps:/var/www/html/custom_apps
+      - nextcloud_config:/var/www/html/config
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/status.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

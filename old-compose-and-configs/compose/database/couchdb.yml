@@ -1,0 +1,27 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  couchdb_data:
+
+services:
+  couchdb:
+    container_name: couchdb
+    image: couchdb:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=admin1234567
+    ports:
+      - "127.0.0.1:5984:5984"
+    volumes:
+      - couchdb_data:/opt/couchdb/data
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5984/_up"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
