@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 ## Current Position
 
-Phase: 13 of 15 (Import Scalability)
-Plan: 2 of 2 (phase 13 complete)
-Status: Phase complete
-Last activity: 2026-02-09 — Phase 13 verified and complete
+Phase: 14 of 15 (Dashboard Updates)
+Plan: 1 of 3
+Status: In progress
+Last activity: 2026-02-09 — Completed 14-01-PLAN.md
 
-Progress: [████████░░] 87% (13/15 phases complete, 36/TBD plans total)
+Progress: [████████░░] 87% (13/15 phases complete, 37/TBD plans total)
 
 ## Performance Metrics
 
@@ -28,13 +28,14 @@ Progress: [████████░░] 87% (13/15 phases complete, 36/TBD pl
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | v1.0 (1-9) | 30 | ~1.6h | ~3.2min |
-| v1.1 (10-15) | 7 | ~66min | ~9min |
+| v1.1 (10-15) | 8 | ~69min | ~8.6min |
 
 **Recent Trend:**
 - Phase 10 complete (3 plans, 53min total)
 - Phase 11 complete (2 plans, 9min total)
 - Phase 12 complete (2 plans, 6min total)
 - Phase 13 complete (2 plans, 5min total)
+- Phase 14 in progress (1 plan, 3m19s)
 - v1.0 shipped successfully on 2026-02-09
 
 *Updated after each plan completion*
@@ -43,6 +44,7 @@ Progress: [████████░░] 87% (13/15 phases complete, 36/TBD pl
 |------|----------|-------|-------|
 | Phase 13 P01 | 2m22s | 2 | 3 |
 | Phase 13 P02 | 2m47s | 1 | 1 |
+| Phase 14 P01 | 3m19s | 2 | 8 |
 
 ## Accumulated Context
 
@@ -77,6 +79,9 @@ Recent decisions affecting current work:
 - [Phase 13]: Route-level MaxBodySize(256MB) overrides global 10MB via r.With()
 - [Phase 13-02]: Use xmax = 0 for insert detection — PostgreSQL xmax indicates transaction ID of deleting/updating transaction; 0 means row was inserted
 - [Phase 13-02]: Delete-then-reinsert for override tables — Lack natural unique keys; atomic within transaction, simpler than complex upserts
+- [Phase 14-01]: Instance override tables mirror service tables — Created instance_env_files, instance_networks, instance_config_mounts following established override pattern
+- [Phase 14-01]: ServiceConfigMount with optional config_file_id — Flexible model supports both DB-managed and external config paths
+- [Phase 14-01]: Override detection in effective config — Boolean flags per field let dashboard highlight instance-specific overrides
 
 ### Pending Todos
 
@@ -89,6 +94,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Phase 13 complete, verified
+Stopped at: Completed 14-01-PLAN.md
 Resume file: None
-Next: Phase 14 - Dashboard Updates
+Next: Phase 14-02 - Dashboard env_files/networks/config_mounts components
