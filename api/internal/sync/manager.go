@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/priz/devarch-api/internal/podman"
+	"github.com/priz/devarch-api/pkg/registry"
 )
 
 const (
@@ -70,7 +71,7 @@ type StatusUpdate struct {
 	Data      map[string]interface{} `json:"data"`
 }
 
-func NewManager(db *sql.DB, pc *podman.Client) *Manager {
+func NewManager(db *sql.DB, pc *podman.Client, regMgr *registry.Manager) *Manager {
 	metricsInterval := mustParseDurationEnv("DEVARCH_METRICS_INTERVAL", "30s")
 	if metricsInterval < 5*time.Second {
 		metricsInterval = 5 * time.Second
@@ -108,7 +109,7 @@ func NewManager(db *sql.DB, pc *podman.Client) *Manager {
 		db:           db,
 		podman:       pc,
 		jobs:         make(map[string]*Job),
-		registrySync: NewRegistrySync(db),
+		registrySync: NewRegistrySync(db, regMgr),
 		trivyScanner: NewTrivyScanner(db),
 		statusCache: &StatusCache{
 			data:       make(map[string]interface{}),

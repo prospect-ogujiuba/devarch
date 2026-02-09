@@ -71,6 +71,10 @@ func (c *Client) getToken(ctx context.Context, repository string) (string, error
 	return tokenResp.Token, nil
 }
 
+func (c *Client) SearchImages(ctx context.Context, query string, opts registry.SearchOptions) ([]registry.SearchResult, error) {
+	return nil, registry.ErrSearchNotSupported
+}
+
 func (c *Client) GetImageInfo(ctx context.Context, repository string) (*registry.ImageInfo, error) {
 	return &registry.ImageInfo{
 		Repository: repository,

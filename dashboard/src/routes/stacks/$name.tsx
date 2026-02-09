@@ -296,7 +296,7 @@ function StackDetailPage() {
               {stack.description || `Manage ${stack.instance_count} instance${stack.instance_count === 1 ? '' : 's'} in this stack`}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
           {stack.enabled && (
             <LifecycleButtons
               isRunning={stack.running_count > 0}
@@ -307,14 +307,17 @@ function StackDetailPage() {
               isStopPending={stopStack.isPending}
               isRestartPending={restartStack.isPending}
               showRestart
+              className="col-span-2"
+              buttonClassName="w-full sm:w-auto"
             />
           )}
           <EnableToggle
             enabled={stack.enabled}
             onToggle={handleToggleEnabled}
             isPending={enableStack.isPending || disableStack.isPending}
+            className="w-full sm:w-auto"
           />
-          <MoreActionsMenu>
+          <MoreActionsMenu triggerClassName="w-full sm:w-auto" mobileLabel="Actions">
             <DropdownMenuItem onClick={() => setEditOpen(true)}>
               <Edit className="size-4" />
               Edit Description

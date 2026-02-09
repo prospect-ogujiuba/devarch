@@ -186,14 +186,14 @@ function ApiKeySection() {
         <p className="text-sm text-muted-foreground">
           Set the API key for authenticating with the Go API backend. Leave empty if auth is disabled.
         </p>
-        <div className="flex gap-2 max-w-md">
+        <div className="flex max-w-md flex-col gap-2 sm:flex-row">
           <Input
             type="password"
             placeholder="Enter API key..."
             value={key}
             onChange={(e) => setKey(e.target.value)}
           />
-          <Button onClick={handleSave} variant={saved ? 'success' : 'default'}>
+          <Button onClick={handleSave} variant={saved ? 'success' : 'default'} className="w-full sm:w-auto">
             {saved ? 'Saved' : 'Save'}
           </Button>
         </div>

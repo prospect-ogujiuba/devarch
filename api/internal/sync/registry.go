@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/priz/devarch-api/pkg/registry"
-	"github.com/priz/devarch-api/pkg/registry/dockerhub"
-	"github.com/priz/devarch-api/pkg/registry/ghcr"
 )
 
 type RegistrySync struct {
@@ -16,11 +14,7 @@ type RegistrySync struct {
 	manager *registry.Manager
 }
 
-func NewRegistrySync(db *sql.DB) *RegistrySync {
-	mgr := registry.NewManager()
-	mgr.Register(dockerhub.NewClient())
-	mgr.Register(ghcr.NewClient())
-
+func NewRegistrySync(db *sql.DB, mgr *registry.Manager) *RegistrySync {
 	return &RegistrySync{
 		db:      db,
 		manager: mgr,

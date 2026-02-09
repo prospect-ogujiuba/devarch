@@ -1,6 +1,11 @@
-import { X, CheckSquare } from 'lucide-react'
+import { X, CheckSquare, Loader2, Play, Square, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { LifecycleButtons } from '@/components/ui/entity-actions'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useBulkServiceControl } from '@/features/services/queries'
 
 interface BulkActionsToolbarProps {
@@ -17,22 +22,35 @@ export function BulkActionsToolbar({ selected, totalCount, onSelectAll, onClear 
   if (selected.size === 0) return null
 
   return (
-    <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded-lg border bg-background/95 backdrop-blur px-4 py-2 shadow-sm">
-      <span className="shrink-0 min-w-0 text-sm font-medium">
-        {selected.size} selected
-      </span>
-      <LifecycleButtons
-        isRunning={false}
-        onStart={() => bulkControl.mutate({ names, action: 'start' })}
-        onStop={() => bulkControl.mutate({ names, action: 'stop' })}
-        onRestart={() => bulkControl.mutate({ names, action: 'restart' })}
-        isPending={bulkControl.isPending}
-        showAll
-      />
+    <div className="sticky top-0 z-10 flex items-center gap-2 rounded-lg border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
+      <span className="min-w-0 shrink-0 text-sm font-medium">{selected.size} selected</span>
       <div className="ml-auto flex items-center gap-1">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" disabled={bulkControl.isPending}>
+              {bulkControl.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+              Actions
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => bulkControl.mutate({ names, action: 'start' })}>
+              <Play className="size-4" />
+              Start
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => bulkControl.mutate({ names, action: 'stop' })}>
+              <Square className="size-4" />
+              Stop
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => bulkControl.mutate({ names, action: 'restart' })}>
+              <RotateCcw className="size-4" />
+              Restart
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button variant="ghost" size="sm" onClick={onSelectAll}>
           <CheckSquare className="size-4" />
-          All ({totalCount})
+          All
+          <span className="hidden sm:inline"> ({totalCount})</span>
         </Button>
         <Button variant="ghost" size="sm" onClick={onClear}>
           <X className="size-4" />

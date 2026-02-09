@@ -6,6 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
 
 type ButtonSize = 'default' | 'sm' | 'icon' | 'icon-sm'
 
@@ -22,6 +23,8 @@ interface LifecycleButtonsProps {
   showRestart?: boolean
   showAll?: boolean
   size?: ButtonSize
+  className?: string
+  buttonClassName?: string
 }
 
 export function LifecycleButtons({
@@ -37,6 +40,8 @@ export function LifecycleButtons({
   showRestart = false,
   showAll = false,
   size = 'sm',
+  className,
+  buttonClassName,
 }: LifecycleButtonsProps) {
   const anyPending = isPending ?? (isStartPending || isStopPending || isRestartPending) ?? false
   const isIcon = size === 'icon' || size === 'icon-sm'
@@ -79,12 +84,13 @@ export function LifecycleButtons({
 
   if (showAll) {
     return (
-      <div className="flex items-center gap-1">
+      <div className={cn('flex items-center gap-1', className)}>
         <Button
           variant="outline"
           size={size}
           onClick={onStart}
           disabled={anyPending || startDisabled}
+          className={buttonClassName}
         >
           {(isPending ?? isStartPending) ? (
             <Loader2 className="size-4 animate-spin" />
@@ -98,6 +104,7 @@ export function LifecycleButtons({
           size={size}
           onClick={onStop}
           disabled={anyPending}
+          className={buttonClassName}
         >
           {(isPending ?? isStopPending) ? (
             <Loader2 className="size-4 animate-spin" />
@@ -112,6 +119,7 @@ export function LifecycleButtons({
             size={size}
             onClick={onRestart}
             disabled={anyPending}
+            className={buttonClassName}
           >
             {(isPending ?? isRestartPending) ? (
               <Loader2 className="size-4 animate-spin" />
@@ -126,7 +134,7 @@ export function LifecycleButtons({
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className={cn('flex items-center gap-1', className)}>
       {isRunning ? (
         <>
           <Button
@@ -134,6 +142,7 @@ export function LifecycleButtons({
             size={size}
             onClick={onStop}
             disabled={anyPending}
+            className={buttonClassName}
           >
             {(isPending ?? isStopPending) ? (
               <Loader2 className="size-4 animate-spin" />
@@ -148,6 +157,7 @@ export function LifecycleButtons({
               size={size}
               onClick={onRestart}
               disabled={anyPending}
+              className={buttonClassName}
             >
               {(isPending ?? isRestartPending) ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -164,6 +174,7 @@ export function LifecycleButtons({
           size={size}
           onClick={onStart}
           disabled={anyPending || startDisabled}
+          className={buttonClassName}
         >
           {(isPending ?? isStartPending) ? (
             <Loader2 className="size-4 animate-spin" />
@@ -182,15 +193,17 @@ interface EnableToggleProps {
   onToggle: () => void
   isPending: boolean
   size?: ButtonSize
+  className?: string
 }
 
-export function EnableToggle({ enabled, onToggle, isPending, size = 'sm' }: EnableToggleProps) {
+export function EnableToggle({ enabled, onToggle, isPending, size = 'sm', className }: EnableToggleProps) {
   return (
     <Button
       variant={enabled ? 'outline' : 'success'}
       size={size}
       onClick={onToggle}
       disabled={isPending}
+      className={className}
     >
       {isPending ? (
         <Loader2 className="size-4 animate-spin" />
@@ -216,6 +229,7 @@ interface MoreActionsMenuProps {
   variant?: 'outline' | 'ghost'
   iconClassName?: string
   triggerClassName?: string
+  mobileLabel?: string
   triggerProps?: { onClick?: (e: React.MouseEvent) => void }
   contentProps?: { onClick?: (e: React.MouseEvent) => void }
 }
@@ -227,6 +241,7 @@ export function MoreActionsMenu({
   variant = 'outline',
   iconClassName = 'size-4',
   triggerClassName,
+  mobileLabel,
   triggerProps,
   contentProps,
 }: MoreActionsMenuProps) {
@@ -235,6 +250,7 @@ export function MoreActionsMenu({
       <DropdownMenuTrigger asChild {...triggerProps}>
         <Button variant={variant} size={size} className={triggerClassName}>
           <MoreVertical className={iconClassName} />
+          {mobileLabel ? <span className="sm:hidden">{mobileLabel}</span> : null}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} {...contentProps}>

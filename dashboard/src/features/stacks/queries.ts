@@ -442,7 +442,36 @@ export function useStackWires(name: string) {
     queryKey: ['stacks', name, 'wires'],
     queryFn: async () => {
       const response = await api.get<WireListResponse>(`/stacks/${name}/wires`)
-      return response.data
+      const data = response.data
+
+      const wires = (data.wires ?? []).map((wire) => {
+        const consumerName = wire.consumer_instance_name || wire.consumer_instance
+        const providerName = wire.provider_instance_name || wire.provider_instance
+        return {
+          ...wire,
+          consumer_instance_name: consumerName,
+          provider_instance_name: providerName,
+          contract_name: wire.contract_name,
+          consumer_contract_type: wire.consumer_contract_type || wire.contract_type,
+        }
+      })
+
+      const unresolved = (data.unresolved ?? []).map((item) => {
+        const reason = item.reason === 'missing' || item.reason === 'ambiguous'
+          ? item.reason
+          : ((item.available_providers?.length ?? 0) > 0 ? 'ambiguous' : 'missing')
+
+        return {
+          ...item,
+          reason,
+        }
+      })
+
+      return {
+        ...data,
+        wires,
+        unresolved,
+      }
     },
     enabled: !!name,
     refetchInterval: 30000,

@@ -24,6 +24,7 @@ import { EditableDependencies } from '@/components/services/editable-dependencie
 import { EditableHealthcheck } from '@/components/services/editable-healthcheck'
 import { EditableLabels } from '@/components/services/editable-labels'
 import { EditableDomains } from '@/components/services/editable-domains'
+import { TagPicker } from '@/components/services/tag-picker'
 import { ConfigFilesPanel } from '@/components/services/config-files-panel'
 import { CodeEditor } from '@/components/services/code-editor'
 import { formatUptime, formatBytes, computeUptime } from '@/lib/format'
@@ -146,16 +147,22 @@ function ServiceDetailPage() {
             </div>
             <p className="mt-1 truncate text-sm text-muted-foreground sm:text-base">{image}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <Button variant="outline" size="sm" onClick={openEdit}>
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
+            <ActionButton
+              name={service.name}
+              status={status}
+              showRestart
+              className="col-span-2"
+              buttonClassName="w-full sm:w-auto"
+            />
+            <Button variant="outline" size="sm" onClick={openEdit} className="w-full sm:w-auto">
               <Pencil className="size-4" />
               Edit
             </Button>
-            <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
+            <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)} className="w-full sm:w-auto">
               <Trash2 className="size-4" />
               Delete
             </Button>
-            <ActionButton name={service.name} status={status} showRestart />
           </div>
         </div>
       </div>
@@ -303,7 +310,7 @@ function ServiceDetailPage() {
             </div>
             <div className="grid gap-2">
               <label className="text-sm font-medium">Image Tag</label>
-              <Input value={editForm.image_tag} onChange={(e) => setEditForm((f) => ({ ...f, image_tag: e.target.value }))} />
+              <TagPicker imageName={editForm.image_name} value={editForm.image_tag} onValueChange={(v) => setEditForm((f) => ({ ...f, image_tag: v }))} />
             </div>
             <div className="grid gap-2">
               <label className="text-sm font-medium">Restart Policy</label>

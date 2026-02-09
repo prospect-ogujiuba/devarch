@@ -576,6 +576,14 @@ func (c *Client) ListNetworks() ([]string, error) {
 	return c.parseNamesList(output)
 }
 
+func (c *Client) ListAllNetworks() ([]string, error) {
+	output, err := c.execCommand("network", "ls", "--format", "{{.Name}}")
+	if err != nil {
+		return nil, err
+	}
+	return c.parseNamesList(output)
+}
+
 func (c *Client) InspectNetwork(name string) (*NetworkInfo, error) {
 	output, err := c.execCommand("network", "inspect", name)
 	if err != nil {

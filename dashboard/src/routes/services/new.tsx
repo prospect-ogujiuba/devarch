@@ -1,16 +1,22 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { z } from 'zod'
 import { ArrowLeft, Plus, Trash2, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { TagPicker } from '@/components/services/tag-picker'
 import { useCreateService } from '@/features/services/queries'
 import { useCategories } from '@/features/categories/queries'
 import { useServices } from '@/features/services/queries'
 
 export const Route = createFileRoute('/services/new')({
+  validateSearch: z.object({
+    image_name: z.string().optional(),
+    image_tag: z.string().optional(),
+  }),
   component: NewServicePage,
 })
 
@@ -47,6 +53,7 @@ interface DomainDraft {
 
 function NewServicePage() {
   const navigate = useNavigate()
+  const search = Route.useSearch()
   const createService = useCreateService()
   const { data: categories } = useCategories()
   const { data: servicesData } = useServices()
@@ -55,8 +62,8 @@ function NewServicePage() {
   const [form, setForm] = useState({
     name: '',
     category_id: '',
-    image_name: '',
-    image_tag: 'latest',
+    image_name: search.image_name ?? '',
+    image_tag: search.image_tag ?? 'latest',
     restart_policy: 'unless-stopped',
     command: '',
     user_spec: '',
@@ -107,6 +114,23 @@ function NewServicePage() {
           is_secret: e.is_secret,
         })),
         dependencies,
+        labels: labels.map((l) => ({
+          key: l.key,
+          value: l.value,
+        })),
+        domains: domains.map((d) => ({
+          domain: d.domain,
+          proxy_port: parseInt(d.proxy_port, 10) || 0,
+        })),
+        healthcheck: healthcheck.enabled
+          ? {
+              test: healthcheck.test,
+              interval_seconds: healthcheck.interval_seconds,
+              timeout_seconds: healthcheck.timeout_seconds,
+              retries: healthcheck.retries,
+              start_period_seconds: healthcheck.start_period_seconds,
+            }
+          : null,
       },
       {
         onSuccess: () => navigate({ to: '/services/$name', params: { name: form.name } }),
@@ -136,13 +160,13 @@ function NewServicePage() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 pb-24 sm:pb-0">
       <div className="flex items-center gap-4">
         <Link to="/services" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-5" />
         </Link>
         <h1 className="text-2xl font-bold flex-1">New Service</h1>
-        <Button type="submit" disabled={createService.isPending}>
+        <Button type="submit" disabled={createService.isPending} className="hidden sm:inline-flex">
           {createService.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Create Service'}
         </Button>
       </div>
@@ -175,7 +199,7 @@ function NewServicePage() {
           </div>
           <div className="grid gap-2">
             <label className="text-sm font-medium">Image Tag</label>
-            <Input value={form.image_tag} onChange={(e) => setForm({ ...form, image_tag: e.target.value })} placeholder="latest" />
+            <TagPicker imageName={form.image_name} value={form.image_tag} onValueChange={(v) => setForm({ ...form, image_tag: v })} />
           </div>
           <div className="grid gap-2">
             <label className="text-sm font-medium">Restart Policy</label>
@@ -398,6 +422,12 @@ function NewServicePage() {
           )}
         </CardContent>
       </Card>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 p-3 backdrop-blur sm:hidden">
+        <Button type="submit" disabled={createService.isPending} className="w-full">
+          {createService.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Create Service'}
+        </Button>
+      </div>
     </form>
   )
 }
