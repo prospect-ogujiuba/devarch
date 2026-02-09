@@ -370,6 +370,8 @@ export interface Project {
   scripts: Record<string, string>
   git_remote?: string
   git_branch?: string
+  stack_id?: number
+  stack_name?: string
   last_scanned_at?: string
   created_at: string
   updated_at: string

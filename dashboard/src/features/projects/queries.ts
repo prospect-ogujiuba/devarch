@@ -59,6 +59,57 @@ export function useScanProjects() {
   })
 }
 
+export function useLinkStack(name: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (stackId: number | null) => {
+      const response = await api.put<Project>(`/projects/${name}/stack`, { stack_id: stackId })
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', name] })
+      queryClient.invalidateQueries({ queryKey: ['projects', name, 'services'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', name, 'status'] })
+    },
+  })
+}
+
+export function useProjectServiceControl(projectName: string) {
+  const queryClient = useQueryClient()
+
+  const startService = useMutation({
+    mutationFn: async (service: string) => {
+      const response = await api.post<ControlResponse>(`/projects/${projectName}/services/${service}/start`)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectName, 'status'] })
+    },
+  })
+
+  const stopService = useMutation({
+    mutationFn: async (service: string) => {
+      const response = await api.post<ControlResponse>(`/projects/${projectName}/services/${service}/stop`)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectName, 'status'] })
+    },
+  })
+
+  const restartService = useMutation({
+    mutationFn: async (service: string) => {
+      const response = await api.post<ControlResponse>(`/projects/${projectName}/services/${service}/restart`)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects', projectName, 'status'] })
+    },
+  })
+
+  return { startService, stopService, restartService }
+}
+
 export function useProjectControl(name: string) {
   const queryClient = useQueryClient()
 

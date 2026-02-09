@@ -22,10 +22,13 @@ func NewProjectHandler(db *sql.DB, s *scanner.Scanner, c *project.Controller) *P
 	return &ProjectHandler{db: db, scanner: s, controller: c}
 }
 
-const projectColumns = `id, name, path, project_type, framework, language, package_manager,
-	description, version, license, entry_point, has_frontend, frontend_framework,
-	domain, proxy_port, compose_path, service_count, dependencies, scripts, git_remote, git_branch,
-	last_scanned_at, created_at, updated_at`
+const projectColumns = `p.id, p.name, p.path, p.project_type, p.framework, p.language, p.package_manager,
+	p.description, p.version, p.license, p.entry_point, p.has_frontend, p.frontend_framework,
+	p.domain, p.proxy_port, p.compose_path, p.service_count, p.dependencies, p.scripts, p.git_remote, p.git_branch,
+	p.stack_id, s.name,
+	p.last_scanned_at, p.created_at, p.updated_at`
+
+const projectFrom = ` FROM projects p LEFT JOIN stacks s ON s.id = p.stack_id`
 
 func scanProject(rows interface{ Scan(dest ...interface{}) error }) (models.Project, error) {
 	var p models.Project
@@ -38,6 +41,7 @@ func scanProject(rows interface{ Scan(dest ...interface{}) error }) (models.Proj
 		&p.ComposePath, &p.ServiceCount,
 		&p.Dependencies, &p.Scripts,
 		&p.GitRemote, &p.GitBranch,
+		&p.StackID, &p.StackName,
 		&p.LastScannedAt, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if err == nil {
@@ -50,22 +54,22 @@ func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 	typeFilter := r.URL.Query().Get("type")
 	langFilter := r.URL.Query().Get("language")
 
-	query := `SELECT ` + projectColumns + ` FROM projects WHERE 1=1`
+	query := `SELECT ` + projectColumns + projectFrom + ` WHERE 1=1`
 	var args []interface{}
 	argN := 1
 
 	if typeFilter != "" {
-		query += fmt.Sprintf(" AND project_type = $%d", argN)
+		query += fmt.Sprintf(" AND p.project_type = $%d", argN)
 		args = append(args, typeFilter)
 		argN++
 	}
 	if langFilter != "" {
-		query += fmt.Sprintf(" AND language = $%d", argN)
+		query += fmt.Sprintf(" AND p.language = $%d", argN)
 		args = append(args, langFilter)
 		argN++
 	}
 
-	query += " ORDER BY name"
+	query += " ORDER BY p.name"
 
 	rows, err := h.db.Query(query, args...)
 	if err != nil {
@@ -95,7 +99,7 @@ func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *ProjectHandler) Get(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	row := h.db.QueryRow(`SELECT `+projectColumns+` FROM projects WHERE name = $1`, name)
+	row := h.db.QueryRow(`SELECT `+projectColumns+projectFrom+` WHERE p.name = $1`, name)
 	p, err := scanProject(row)
 	if err == sql.ErrNoRows {
 		http.Error(w, "project not found", http.StatusNotFound)
@@ -126,6 +130,21 @@ func (h *ProjectHandler) Scan(w http.ResponseWriter, r *http.Request) {
 
 func (h *ProjectHandler) Services(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
+
+	var stackID sql.NullInt32
+	if err := h.db.QueryRow(`SELECT stack_id FROM projects WHERE name = $1`, name).Scan(&stackID); err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "project not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if stackID.Valid {
+		h.stackServices(w, int(stackID.Int32))
+		return
+	}
 
 	rows, err := h.db.Query(`
 		SELECT ps.id, ps.project_id, ps.service_name, ps.container_name, ps.image,
@@ -158,6 +177,96 @@ func (h *ProjectHandler) Services(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(services)
+}
+
+func (h *ProjectHandler) stackServices(w http.ResponseWriter, stackID int) {
+	rows, err := h.db.Query(`
+		SELECT si.id, si.instance_id, si.container_name, si.enabled,
+			svc.name AS template_name, svc.image_name, svc.image_tag
+		FROM service_instances si
+		JOIN services svc ON svc.id = si.template_service_id
+		WHERE si.stack_id = $1 AND si.deleted_at IS NULL
+		ORDER BY si.instance_id`, stackID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type stackSvc struct {
+		ID            int    `json:"id"`
+		InstanceID    string `json:"instance_id"`
+		ContainerName string `json:"container_name"`
+		Enabled       bool   `json:"enabled"`
+		TemplateName  string `json:"template_name"`
+		Image         string `json:"image"`
+	}
+
+	var services []stackSvc
+	for rows.Next() {
+		var s stackSvc
+		var imageName, imageTag string
+		if err := rows.Scan(&s.ID, &s.InstanceID, &s.ContainerName, &s.Enabled,
+			&s.TemplateName, &imageName, &imageTag); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		s.Image = imageName + ":" + imageTag
+		services = append(services, s)
+	}
+
+	if services == nil {
+		services = []stackSvc{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(services)
+}
+
+func (h *ProjectHandler) LinkStack(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	var body struct {
+		StackID *int `json:"stack_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if body.StackID != nil {
+		var exists bool
+		err := h.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM stacks WHERE id = $1 AND deleted_at IS NULL)`, *body.StackID).Scan(&exists)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if !exists {
+			http.Error(w, "stack not found", http.StatusNotFound)
+			return
+		}
+	}
+
+	result, err := h.db.Exec(`UPDATE projects SET stack_id = $1, updated_at = NOW() WHERE name = $2`, body.StackID, name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		http.Error(w, "project not found", http.StatusNotFound)
+		return
+	}
+
+	row := h.db.QueryRow(`SELECT `+projectColumns+projectFrom+` WHERE p.name = $1`, name)
+	p, err := scanProject(row)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(p)
 }
 
 func (h *ProjectHandler) Start(w http.ResponseWriter, r *http.Request) {
@@ -197,6 +306,39 @@ func (h *ProjectHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "restarted", "output": output})
+}
+
+func (h *ProjectHandler) StartService(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	service := chi.URLParam(r, "service")
+	if err := h.controller.StartService(r.Context(), name, service); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "started"})
+}
+
+func (h *ProjectHandler) StopService(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	service := chi.URLParam(r, "service")
+	if err := h.controller.StopService(r.Context(), name, service); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "stopped"})
+}
+
+func (h *ProjectHandler) RestartService(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	service := chi.URLParam(r, "service")
+	if err := h.controller.RestartService(r.Context(), name, service); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "restarted"})
 }
 
 func (h *ProjectHandler) Status(w http.ResponseWriter, r *http.Request) {
