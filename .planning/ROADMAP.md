@@ -110,9 +110,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 14-01-PLAN.md — Migration 010 + Go API handlers for env_files, networks, config_mounts (service + instance)
-- [ ] 14-02-PLAN.md — Dashboard service-level editable components (env_files, networks, config_mounts)
-- [ ] 14-03-PLAN.md — Dashboard instance-level override components (env_files, networks, config_mounts)
+- [x] 14-01-PLAN.md — Migration 010 + Go API handlers for env_files, networks, config_mounts (service + instance)
+- [x] 14-02-PLAN.md — Dashboard service-level editable components (env_files, networks, config_mounts)
+- [x] 14-03-PLAN.md — Dashboard instance-level override components (env_files, networks, config_mounts)
 
 #### Phase 15: Validation & Parity
 
@@ -140,9 +140,9 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15
 | 11. Parser & Importer Updates | v1.1 | 2/2 | ✓ Complete | 2026-02-09 |
 | 12. Compose Generator Parity | v1.1 | 2/2 | ✓ Complete | 2026-02-09 |
 | 13. Import Scalability | v1.1 | 2/2 | ✓ Complete | 2026-02-09 |
-| 14. Dashboard Updates | v1.1 | 0/3 | Not started | - |
+| 14. Dashboard Updates | v1.1 | 3/3 | ✓ Complete | 2026-02-09 |
 | 15. Validation & Parity | v1.1 | 0/? | Not started | - |
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-09 — Phase 13 complete*
+*Last updated: 2026-02-09 — Phase 14 complete*
