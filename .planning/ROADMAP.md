@@ -185,12 +185,12 @@ Plans:
   5. User can set resource limits per instance (CPU, memory)
   6. Resource limits appear in compose deploy.resources fields
   7. Plan output shows resource limits for validation
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md: TBD
-- [ ] 09-02-PLAN.md: TBD
-- [ ] 09-03-PLAN.md: TBD
+- [ ] 09-01-PLAN.md — Crypto package + migrations + encryption integration in handlers
+- [ ] 09-02-PLAN.md — Secret redaction in outputs + resource limits API + compose integration
+- [ ] 09-03-PLAN.md — Dashboard secret display standardization + resource limits UI
 
 ## Progress
 
@@ -207,8 +207,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 | 6. Plan/Apply Workflow | 3/3 | Complete | 2026-02-07 |
 | 7. Export/Import & Bootstrap | 4/4 | Complete | 2026-02-08 |
 | 8. Service Wiring | 4/4 | Complete | 2026-02-08 |
-| 9. Secrets & Resources | 0/TBD | Not started | - |
+| 9. Secrets & Resources | 0/3 | Not started | - |
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-08 after phase 8 execution*
+*Last updated: 2026-02-08 after phase 9 planning*
