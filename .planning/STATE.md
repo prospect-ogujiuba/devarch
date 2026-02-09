@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 Phase: 10 of 15 (Fresh Baseline Migrations)
-Plan: 02 of 04 (Stacks & Instance Overrides)
+Plan: 01 of 03 (Fresh Baseline Migrations 001-005)
 Status: In progress
-Last activity: 2026-02-09 — Completed 10-02-PLAN.md
+Last activity: 2026-02-09 — Completed 10-01-PLAN.md
 
 Progress: [██████░░░░] 60% (9/15 phases complete from v1.0)
 
@@ -28,7 +28,7 @@ Progress: [██████░░░░] 60% (9/15 phases complete from v1.0)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | v1.0 (1-9) | 30 | ~1.6h | ~3.2min |
-| v1.1 (10-15) | 2 | ~3min | ~1.5min |
+| v1.1 (10-15) | 3 | ~5.5min | ~1.8min |
 
 **Recent Trend:**
 - Starting new milestone v1.1
@@ -47,6 +47,7 @@ Recent decisions affecting current work:
 - v1.1: Domain-separated DDL files — Clean boundaries, each table created once in final form
 - v1.1: Dedicated service_config_mounts table — Config provenance needs its own model, not overloaded config_files
 - v1.1: Streaming multipart for large imports — ParseMultipartForm buffers entire body; streaming avoids OOM
+- 10-01: Migrations 001-003 pre-existing from 10-02 — Skipped Task 1, created only 004-005
 - 10-02: No sync_state seed data — Importer is sole data path; sync_state init is runtime concern
 - 10-02: projects.stack_id FK in 006 — Added in same migration that creates stacks table
 - 10-02: Migration 009 is performance-only — Contains only non-inline indexes and autovacuum tuning
@@ -62,6 +63,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 10-02-PLAN.md
+Stopped at: Completed 10-01-PLAN.md
 Resume file: None
-Next: Continue with plan 10-03
+Next: Continue with plan 10-02 or 10-03
