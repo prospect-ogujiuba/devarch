@@ -17,11 +17,14 @@ import { useInstance, useUpdateInstance } from '@/features/instances/queries'
 import { useService } from '@/features/services/queries'
 import { OverridePorts } from '@/components/instances/override-ports'
 import { OverrideVolumes } from '@/components/instances/override-volumes'
+import { OverrideEnvFiles } from '@/components/instances/override-env-files'
 import { OverrideEnvVars } from '@/components/instances/override-env-vars'
+import { OverrideNetworks } from '@/components/instances/override-networks'
 import { OverrideLabels } from '@/components/instances/override-labels'
 import { OverrideDomains } from '@/components/instances/override-domains'
 import { OverrideHealthcheck } from '@/components/instances/override-healthcheck'
 import { OverrideDependencies } from '@/components/instances/override-dependencies'
+import { OverrideConfigMounts } from '@/components/instances/override-config-mounts'
 import { OverrideConfigFiles } from '@/components/instances/override-config-files'
 import { EffectiveConfigTab } from '@/components/instances/effective-config-tab'
 import { ResourceLimits } from '@/components/instances/resource-limits'
@@ -47,12 +50,12 @@ function timeAgo(dateStr: string): string {
 
 export const Route = createFileRoute('/stacks/$name/instances/$instance')({
   validateSearch: z.object({
-    instanceTab: z.enum(['info', 'ports', 'volumes', 'environment', 'labels', 'domains', 'healthcheck', 'dependencies', 'files', 'resources', 'effective']).optional(),
+    instanceTab: z.enum(['info', 'ports', 'volumes', 'env-files', 'environment', 'networks', 'labels', 'domains', 'healthcheck', 'dependencies', 'config-mounts', 'files', 'resources', 'effective']).optional(),
   }),
   component: InstanceDetailPage,
 })
 
-const instanceTabs = ['info', 'ports', 'volumes', 'environment', 'labels', 'domains', 'healthcheck', 'dependencies', 'files', 'resources', 'effective'] as const
+const instanceTabs = ['info', 'ports', 'volumes', 'env-files', 'environment', 'networks', 'labels', 'domains', 'healthcheck', 'dependencies', 'config-mounts', 'files', 'resources', 'effective'] as const
 type InstanceTab = (typeof instanceTabs)[number]
 
 function InstanceDetailPage() {
@@ -130,11 +133,14 @@ function InstanceDetailPage() {
     { value: 'info', label: 'Info' },
     { value: 'ports', label: 'Ports' },
     { value: 'volumes', label: 'Volumes' },
+    { value: 'env-files', label: 'Env Files' },
     { value: 'environment', label: 'Environment' },
+    { value: 'networks', label: 'Networks' },
     { value: 'labels', label: 'Labels' },
     { value: 'domains', label: 'Domains' },
     { value: 'healthcheck', label: 'Healthcheck' },
     { value: 'dependencies', label: 'Dependencies' },
+    { value: 'config-mounts', label: 'Config Mounts' },
     { value: 'files', label: 'Config Files' },
     { value: 'resources', label: 'Resources' },
     { value: 'effective', label: 'Effective Config' },
@@ -254,9 +260,31 @@ function InstanceDetailPage() {
           )}
         </TabsContent>
 
+        <TabsContent value="env-files">
+          {templateService && (
+            <OverrideEnvFiles
+              instance={instance}
+              templateData={templateService}
+              stackName={stackName}
+              instanceId={instanceId}
+            />
+          )}
+        </TabsContent>
+
         <TabsContent value="environment">
           {templateService && (
             <OverrideEnvVars
+              instance={instance}
+              templateData={templateService}
+              stackName={stackName}
+              instanceId={instanceId}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="networks">
+          {templateService && (
+            <OverrideNetworks
               instance={instance}
               templateData={templateService}
               stackName={stackName}
@@ -301,6 +329,17 @@ function InstanceDetailPage() {
         <TabsContent value="dependencies">
           {templateService && (
             <OverrideDependencies
+              instance={instance}
+              templateData={templateService}
+              stackName={stackName}
+              instanceId={instanceId}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="config-mounts">
+          {templateService && (
+            <OverrideConfigMounts
               instance={instance}
               templateData={templateService}
               stackName={stackName}
