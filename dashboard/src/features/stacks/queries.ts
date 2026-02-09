@@ -1,7 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, getErrorMessage } from '@/lib/api'
-import type { Stack, DeletePreview, NetworkStatus, StackCompose, StackPlan, ApplyResult, ImportResult } from '@/types/api'
+import type { Stack, DeletePreview, NetworkStatus, StackCompose, StackPlan, ApplyResult, ImportResult, Wire } from '@/types/api'
 import { toast } from 'sonner'
+
+interface UnresolvedContract {
+  instance: string
+  contract_name: string
+  contract_type: string
+  required: boolean
+  reason: string
+  available_providers?: { instance_id: string, instance_name: string }[]
+}
+
+interface WireListResponse {
+  wires: Wire[]
+  unresolved: UnresolvedContract[]
+}
 
 export function useStacks() {
   return useQuery({
@@ -419,6 +433,90 @@ export function useImportStack() {
     },
     onError: (error) => {
       toast.error(getErrorMessage(error, 'Import failed'))
+    },
+  })
+}
+
+export function useStackWires(name: string) {
+  return useQuery({
+    queryKey: ['stacks', name, 'wires'],
+    queryFn: async () => {
+      const response = await api.get<WireListResponse>(`/stacks/${name}/wires`)
+      return response.data
+    },
+    enabled: !!name,
+    refetchInterval: 30000,
+  })
+}
+
+export function useResolveWires(name: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.post<{ resolved: number; warnings: string[] }>(`/stacks/${name}/wires/resolve`)
+      return response.data
+    },
+    onSuccess: (data) => {
+      if (data.resolved > 0) {
+        toast.success(`Resolved ${data.resolved} wire${data.resolved === 1 ? '' : 's'}`)
+      } else {
+        toast.success('No changes')
+      }
+      queryClient.invalidateQueries({ queryKey: ['stacks', name, 'wires'] })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to resolve wires'))
+    },
+  })
+}
+
+export function useCreateWire(name: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (data: { consumer_instance_id: string; provider_instance_id: string; import_contract_name: string }) => {
+      const response = await api.post(`/stacks/${name}/wires`, data)
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Wire created')
+      queryClient.invalidateQueries({ queryKey: ['stacks', name, 'wires'] })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to create wire'))
+    },
+  })
+}
+
+export function useDeleteWire(name: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (wireId: number) => {
+      const response = await api.delete(`/stacks/${name}/wires/${wireId}`)
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Wire disconnected')
+      queryClient.invalidateQueries({ queryKey: ['stacks', name, 'wires'] })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to disconnect wire'))
+    },
+  })
+}
+
+export function useCleanupOrphanedWires(name: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.post<{ deleted: number }>(`/stacks/${name}/wires/cleanup`)
+      return response.data
+    },
+    onSuccess: (data) => {
+      toast.success(`Cleaned up ${data.deleted} orphaned wire${data.deleted === 1 ? '' : 's'}`)
+      queryClient.invalidateQueries({ queryKey: ['stacks', name, 'wires'] })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to cleanup wires'))
     },
   })
 }
