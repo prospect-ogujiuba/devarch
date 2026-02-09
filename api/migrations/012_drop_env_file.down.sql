@@ -1,1 +1,0 @@
-ALTER TABLE services ADD COLUMN env_file VARCHAR(512);
