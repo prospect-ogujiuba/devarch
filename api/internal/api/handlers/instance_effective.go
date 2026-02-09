@@ -14,30 +14,36 @@ import (
 )
 
 type effectiveConfigResponse struct {
-	InstanceID       string                   `json:"instance_id"`
-	StackName        string                   `json:"stack_name"`
-	TemplateName     string                   `json:"template_name"`
-	ImageName        string                   `json:"image_name"`
-	ImageTag         string                   `json:"image_tag"`
-	RestartPolicy    string                   `json:"restart_policy"`
-	Command          string                   `json:"command,omitempty"`
-	UserSpec         string                   `json:"user_spec,omitempty"`
-	Ports            []models.ServicePort     `json:"ports"`
-	Volumes          []models.ServiceVolume   `json:"volumes"`
-	EnvVars          []models.ServiceEnvVar   `json:"env_vars"`
-	WiredEnvVars     map[string]string        `json:"wired_env_vars,omitempty"`
-	Labels           []models.ServiceLabel    `json:"labels"`
-	Domains          []models.ServiceDomain   `json:"domains"`
+	InstanceID       string                     `json:"instance_id"`
+	StackName        string                     `json:"stack_name"`
+	TemplateName     string                     `json:"template_name"`
+	ImageName        string                     `json:"image_name"`
+	ImageTag         string                     `json:"image_tag"`
+	RestartPolicy    string                     `json:"restart_policy"`
+	Command          string                     `json:"command,omitempty"`
+	UserSpec         string                     `json:"user_spec,omitempty"`
+	Ports            []models.ServicePort       `json:"ports"`
+	Volumes          []models.ServiceVolume     `json:"volumes"`
+	EnvVars          []models.ServiceEnvVar     `json:"env_vars"`
+	EnvFiles         []string                   `json:"env_files"`
+	Networks         []string                   `json:"networks"`
+	ConfigMounts     []models.ServiceConfigMount `json:"config_mounts"`
+	WiredEnvVars     map[string]string          `json:"wired_env_vars,omitempty"`
+	Labels           []models.ServiceLabel      `json:"labels"`
+	Domains          []models.ServiceDomain     `json:"domains"`
 	Healthcheck      *models.ServiceHealthcheck `json:"healthcheck,omitempty"`
-	Dependencies     []string                 `json:"dependencies"`
+	Dependencies     []string                   `json:"dependencies"`
 	ConfigFiles      []models.ServiceConfigFile `json:"config_files"`
-	OverridesApplied overrideMetadata         `json:"overrides_applied"`
+	OverridesApplied overrideMetadata           `json:"overrides_applied"`
 }
 
 type overrideMetadata struct {
 	Ports        bool `json:"ports"`
 	Volumes      bool `json:"volumes"`
 	EnvVars      bool `json:"env_vars"`
+	EnvFiles     bool `json:"env_files"`
+	Networks     bool `json:"networks"`
+	ConfigMounts bool `json:"config_mounts"`
 	Labels       bool `json:"labels"`
 	Domains      bool `json:"domains"`
 	Healthcheck  bool `json:"healthcheck"`
@@ -247,6 +253,63 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 
 	resp.ConfigFiles = mergeConfigFiles(templateConfigFiles, instanceConfigFiles)
 	resp.OverridesApplied.ConfigFiles = len(instanceConfigFiles) > 0
+
+	templateEnvFiles, err := h.loadServiceEnvFiles(templateServiceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to load template env_files: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	instanceEnvFiles, err := h.loadInstanceEnvFiles(instanceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to load instance env_files: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if len(instanceEnvFiles) > 0 {
+		resp.EnvFiles = instanceEnvFiles
+		resp.OverridesApplied.EnvFiles = true
+	} else {
+		resp.EnvFiles = templateEnvFiles
+	}
+
+	templateNetworks, err := h.loadServiceNetworks(templateServiceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to load template networks: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	instanceNetworks, err := h.loadInstanceNetworks(instanceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to load instance networks: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if len(instanceNetworks) > 0 {
+		resp.Networks = instanceNetworks
+		resp.OverridesApplied.Networks = true
+	} else {
+		resp.Networks = templateNetworks
+	}
+
+	templateConfigMounts, err := h.loadServiceConfigMounts(templateServiceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to load template config_mounts: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	instanceConfigMounts, err := h.loadInstanceConfigMounts(instanceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to load instance config_mounts: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if len(instanceConfigMounts) > 0 {
+		resp.ConfigMounts = instanceConfigMounts
+		resp.OverridesApplied.ConfigMounts = true
+	} else {
+		resp.ConfigMounts = templateConfigMounts
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
@@ -720,4 +783,136 @@ func mergeConfigFiles(template, instance []models.ServiceConfigFile) []models.Se
 		result = append(result, f)
 	}
 	return result
+}
+
+func (h *InstanceHandler) loadServiceEnvFiles(serviceID int) ([]string, error) {
+	rows, err := h.db.Query(`
+		SELECT path FROM service_env_files WHERE service_id = $1 ORDER BY sort_order
+	`, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var envFiles []string
+	for rows.Next() {
+		var path string
+		if err := rows.Scan(&path); err != nil {
+			return nil, err
+		}
+		envFiles = append(envFiles, path)
+	}
+	return envFiles, rows.Err()
+}
+
+func (h *InstanceHandler) loadInstanceEnvFiles(instanceID int) ([]string, error) {
+	rows, err := h.db.Query(`
+		SELECT path FROM instance_env_files WHERE instance_id = $1 ORDER BY sort_order
+	`, instanceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var envFiles []string
+	for rows.Next() {
+		var path string
+		if err := rows.Scan(&path); err != nil {
+			return nil, err
+		}
+		envFiles = append(envFiles, path)
+	}
+	return envFiles, rows.Err()
+}
+
+func (h *InstanceHandler) loadServiceNetworks(serviceID int) ([]string, error) {
+	rows, err := h.db.Query(`
+		SELECT network_name FROM service_networks WHERE service_id = $1 ORDER BY network_name
+	`, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var networks []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		networks = append(networks, name)
+	}
+	return networks, rows.Err()
+}
+
+func (h *InstanceHandler) loadInstanceNetworks(instanceID int) ([]string, error) {
+	rows, err := h.db.Query(`
+		SELECT network_name FROM instance_networks WHERE instance_id = $1 ORDER BY network_name
+	`, instanceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var networks []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		networks = append(networks, name)
+	}
+	return networks, rows.Err()
+}
+
+func (h *InstanceHandler) loadServiceConfigMounts(serviceID int) ([]models.ServiceConfigMount, error) {
+	rows, err := h.db.Query(`
+		SELECT id, service_id, config_file_id, source_path, target_path, readonly
+		FROM service_config_mounts WHERE service_id = $1 ORDER BY target_path
+	`, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var mounts []models.ServiceConfigMount
+	for rows.Next() {
+		var m models.ServiceConfigMount
+		var cfgFileID sql.NullInt32
+		if err := rows.Scan(&m.ID, &m.ServiceID, &cfgFileID, &m.SourcePath, &m.TargetPath, &m.ReadOnly); err != nil {
+			return nil, err
+		}
+		if cfgFileID.Valid {
+			val := int(cfgFileID.Int32)
+			m.ConfigFileID = &val
+		}
+		mounts = append(mounts, m)
+	}
+	return mounts, rows.Err()
+}
+
+func (h *InstanceHandler) loadInstanceConfigMounts(instanceID int) ([]models.ServiceConfigMount, error) {
+	rows, err := h.db.Query(`
+		SELECT id, instance_id, config_file_id, source_path, target_path, readonly
+		FROM instance_config_mounts WHERE instance_id = $1 ORDER BY target_path
+	`, instanceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var mounts []models.ServiceConfigMount
+	for rows.Next() {
+		var m models.ServiceConfigMount
+		var cfgFileID sql.NullInt32
+		if err := rows.Scan(&m.ID, &m.ServiceID, &cfgFileID, &m.SourcePath, &m.TargetPath, &m.ReadOnly); err != nil {
+			return nil, err
+		}
+		if cfgFileID.Valid {
+			val := int(cfgFileID.Int32)
+			m.ConfigFileID = &val
+		}
+		mounts = append(mounts, m)
+	}
+	return mounts, rows.Err()
 }

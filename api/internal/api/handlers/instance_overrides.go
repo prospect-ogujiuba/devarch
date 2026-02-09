@@ -776,6 +776,175 @@ func (h *InstanceHandler) UpdateResourceLimits(w http.ResponseWriter, r *http.Re
 	})
 }
 
+func (h *InstanceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request) {
+	stackName := chi.URLParam(r, "name")
+	instanceName := chi.URLParam(r, "instance")
+
+	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	var req struct {
+		EnvFiles []string `json:"env_files"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("DELETE FROM instance_env_files WHERE instance_id = $1", instanceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to delete existing env_files: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	for idx, path := range req.EnvFiles {
+		_, err = tx.Exec(
+			`INSERT INTO instance_env_files (instance_id, path, sort_order) VALUES ($1, $2, $3)`,
+			instanceID, path, idx,
+		)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to insert env_file: %v", err), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func (h *InstanceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request) {
+	stackName := chi.URLParam(r, "name")
+	instanceName := chi.URLParam(r, "instance")
+
+	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	var req struct {
+		Networks []string `json:"networks"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("DELETE FROM instance_networks WHERE instance_id = $1", instanceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to delete existing networks: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	for _, name := range req.Networks {
+		_, err = tx.Exec(
+			`INSERT INTO instance_networks (instance_id, network_name) VALUES ($1, $2)`,
+			instanceID, name,
+		)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to insert network: %v", err), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func (h *InstanceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Request) {
+	stackName := chi.URLParam(r, "name")
+	instanceName := chi.URLParam(r, "instance")
+
+	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	var req struct {
+		ConfigMounts []models.ServiceConfigMount `json:"config_mounts"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("DELETE FROM instance_config_mounts WHERE instance_id = $1", instanceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to delete existing config_mounts: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	for _, m := range req.ConfigMounts {
+		var cfgFileID sql.NullInt32
+		if m.ConfigFileID != nil {
+			cfgFileID = sql.NullInt32{Int32: int32(*m.ConfigFileID), Valid: true}
+		}
+		_, err = tx.Exec(
+			`INSERT INTO instance_config_mounts (instance_id, config_file_id, source_path, target_path, readonly) VALUES ($1, $2, $3, $4, $5)`,
+			instanceID, cfgFileID, m.SourcePath, m.TargetPath, m.ReadOnly,
+		)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to insert config_mount: %v", err), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
 func parseMemoryString(s string) (int64, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {

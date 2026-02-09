@@ -201,6 +201,12 @@ func (h *InstanceHandler) List(w http.ResponseWriter, r *http.Request) {
 				SELECT COUNT(*) FROM instance_dependencies WHERE instance_id = si.id
 			) + (
 				SELECT COUNT(*) FROM instance_config_files WHERE instance_id = si.id
+			) + (
+				SELECT COUNT(*) FROM instance_env_files WHERE instance_id = si.id
+			) + (
+				SELECT COUNT(*) FROM instance_networks WHERE instance_id = si.id
+			) + (
+				SELECT COUNT(*) FROM instance_config_mounts WHERE instance_id = si.id
 			) as override_count
 		FROM service_instances si
 		JOIN services s ON s.id = si.template_service_id
@@ -296,6 +302,12 @@ func (h *InstanceHandler) Get(w http.ResponseWriter, r *http.Request) {
 				SELECT COUNT(*) FROM instance_dependencies WHERE instance_id = si.id
 			) + (
 				SELECT COUNT(*) FROM instance_config_files WHERE instance_id = si.id
+			) + (
+				SELECT COUNT(*) FROM instance_env_files WHERE instance_id = si.id
+			) + (
+				SELECT COUNT(*) FROM instance_networks WHERE instance_id = si.id
+			) + (
+				SELECT COUNT(*) FROM instance_config_mounts WHERE instance_id = si.id
 			) as override_count
 		FROM service_instances si
 		JOIN services s ON s.id = si.template_service_id
@@ -775,6 +787,12 @@ func (h *InstanceHandler) DeletePreview(w http.ResponseWriter, r *http.Request) 
 				SELECT COUNT(*) FROM instance_dependencies WHERE instance_id = si.id
 			) + (
 				SELECT COUNT(*) FROM instance_config_files WHERE instance_id = si.id
+			) + (
+				SELECT COUNT(*) FROM instance_env_files WHERE instance_id = si.id
+			) + (
+				SELECT COUNT(*) FROM instance_networks WHERE instance_id = si.id
+			) + (
+				SELECT COUNT(*) FROM instance_config_mounts WHERE instance_id = si.id
 			) as override_count
 		FROM service_instances si
 		JOIN services s ON s.id = si.template_service_id
