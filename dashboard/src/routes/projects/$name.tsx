@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useProject, useProjectServices, useProjectStatus, useProjectControl, useProjectServiceControl, useLinkStack } from '@/features/projects/queries'
 import { useStacks } from '@/features/stacks/queries'
+import { useGenerateProjectProxyConfig } from '@/features/proxy/queries'
+import { ProxyConfigPanel } from '@/components/proxy/proxy-config-panel'
 import { useState } from 'react'
 
 export const Route = createFileRoute('/projects/$name')({
@@ -30,6 +32,7 @@ function ProjectDetailPage() {
   const { data: statuses } = useProjectStatus(name, hasStack || !!project?.compose_path)
   const { start, stop, restart } = useProjectControl(name)
   const svcControl = useProjectServiceControl(name)
+  const generateProxyConfig = useGenerateProjectProxyConfig(name)
 
   if (isLoading) {
     return (
@@ -79,6 +82,7 @@ function ProjectDetailPage() {
     ...(isWordPress && themes.length > 0 ? [{ value: 'themes', label: `Themes (${themes.length})` }] : []),
     { value: 'scripts', label: `Scripts (${scriptEntries.length})` },
     { value: 'git', label: 'Git' },
+    ...(project.domain ? [{ value: 'proxy', label: 'Proxy' }] : []),
   ]
   const tabValues = tabItems.map((t) => t.value)
   const defaultTab = hasServices ? 'services' : 'info'
@@ -355,6 +359,12 @@ function ProjectDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {project.domain && (
+          <TabsContent value="proxy">
+            <ProxyConfigPanel scope="project" name={project.name} generateMutation={generateProxyConfig} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )
