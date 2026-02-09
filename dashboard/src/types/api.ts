@@ -183,18 +183,22 @@ export interface ServiceImportContract {
 
 export interface Wire {
   id: number
-  stack_id: number
-  consumer_instance_id: number
-  provider_instance_id: number
-  import_contract_id: number
-  export_contract_id: number
+  stack_id?: number
+  consumer_instance_id?: number
+  provider_instance_id?: number
+  import_contract_id?: number
+  export_contract_id?: number
   source: 'auto' | 'explicit'
-  provider_contract_type: string
-  consumer_contract_type: string
+  provider_contract_type?: string
+  consumer_contract_type?: string
   created_at: string
   consumer_instance_name?: string
   provider_instance_name?: string
+  consumer_instance?: string
+  provider_instance?: string
   contract_name?: string
+  contract_type?: string
+  injected_env_vars?: Record<string, string>
 }
 
 export interface WiringSection {
@@ -532,10 +536,24 @@ export interface OverridesApplied {
 }
 
 export interface InstanceDeletePreview {
+  instance_name?: string
   instance_id: string
   template_name: string
   override_count: number
   container_name: string | null
+}
+
+export interface NetworkInfo {
+  name: string
+  id: string
+  driver: string
+  containers: string[]
+  container_count: number
+  labels: Record<string, string>
+  stack_name?: string
+  managed: boolean
+  orphaned: boolean
+  created: string
 }
 
 export interface NetworkStatus {
@@ -586,4 +604,46 @@ export interface ImportResult {
   created: string[]
   updated: string[]
   errors?: string[]
+}
+
+export interface RegistryInfo {
+  name: string
+  base_url: string
+  enabled: boolean
+}
+
+export interface TagResult {
+  name: string
+  digest?: string
+  size_bytes: number
+  pushed_at?: string
+  architectures?: ArchResult[]
+}
+
+export interface ArchResult {
+  os: string
+  architecture: string
+  variant?: string
+  digest?: string
+  size_bytes: number
+}
+
+export interface SearchResult {
+  name: string
+  description: string
+  star_count: number
+  pull_count: number
+  is_official: boolean
+}
+
+export interface ResourceLimits {
+  cpu_limit?: string
+  cpu_reservation?: string
+  memory_limit?: string
+  memory_reservation?: string
+}
+
+export interface ResourceLimitsResponse {
+  limits: ResourceLimits
+  warnings?: string[]
 }
