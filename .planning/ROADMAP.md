@@ -77,8 +77,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 12-01-PLAN.md — Update both generators to emit env_file, networks, config mounts from new DB tables
-- [ ] 12-02-PLAN.md — Round-trip parity verification tool (import-then-generate diff)
+- [x] 12-01-PLAN.md — Update both generators to emit env_file, networks, config mounts from new DB tables
+- [x] 12-02-PLAN.md — Round-trip parity verification tool (import-then-generate diff)
 
 #### Phase 13: Import Scalability
 
@@ -94,8 +94,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 13-01-PLAN.md — Streaming multipart handler + route-level size cap
-- [ ] 13-02-PLAN.md — Prepared statements + upsert idempotency
+- [x] 13-01-PLAN.md — Streaming multipart handler + route-level size cap
+- [x] 13-02-PLAN.md — Prepared statements + upsert idempotency
 
 #### Phase 14: Dashboard Updates
 
@@ -136,11 +136,11 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15
 |-------|-----------|----------------|--------|-----------|
 | 10. Fresh Baseline Migrations | v1.1 | 3/3 | ✓ Complete | 2026-02-09 |
 | 11. Parser & Importer Updates | v1.1 | 2/2 | ✓ Complete | 2026-02-09 |
-| 12. Compose Generator Parity | v1.1 | 0/? | Not started | - |
-| 13. Import Scalability | v1.1 | 0/? | Not started | - |
+| 12. Compose Generator Parity | v1.1 | 2/2 | ✓ Complete | 2026-02-09 |
+| 13. Import Scalability | v1.1 | 2/2 | ✓ Complete | 2026-02-09 |
 | 14. Dashboard Updates | v1.1 | 0/? | Not started | - |
 | 15. Validation & Parity | v1.1 | 0/? | Not started | - |
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-09 — Phase 11 complete*
+*Last updated: 2026-02-09 — Phase 13 complete*
