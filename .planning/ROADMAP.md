@@ -42,9 +42,9 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 **Plans:** 3 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Write fresh migrations 001-005 (categories, services, runtime, config, registry, projects)
-- [ ] 10-02-PLAN.md — Write fresh migrations 006-009 (stacks, instance overrides, wiring/sync, indexes)
-- [ ] 10-03-PLAN.md — Verify migrate-up, delete old 23 migrations, rename, re-verify
+- [x] 10-01-PLAN.md — Write fresh migrations 001-005 (categories, services, runtime, config, registry, projects)
+- [x] 10-02-PLAN.md — Write fresh migrations 006-009 (stacks, instance overrides, wiring/sync, indexes)
+- [x] 10-03-PLAN.md — Verify migrate-up, delete old 23 migrations, rename, re-verify
 
 #### Phase 11: Parser & Importer Updates
 
@@ -131,7 +131,7 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 10. Fresh Baseline Migrations | v1.1 | 0/? | Not started | - |
+| 10. Fresh Baseline Migrations | v1.1 | 3/3 | ✓ Complete | 2026-02-09 |
 | 11. Parser & Importer Updates | v1.1 | 0/? | Not started | - |
 | 12. Compose Generator Parity | v1.1 | 0/? | Not started | - |
 | 13. Import Scalability | v1.1 | 0/? | Not started | - |
@@ -140,4 +140,4 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-09 — v1.1 roadmap created*
+*Last updated: 2026-02-09 — Phase 10 complete*
