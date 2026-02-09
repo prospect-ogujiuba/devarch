@@ -4,7 +4,15 @@ type DevArchFile struct {
 	Version   int                    `yaml:"version"`
 	Stack     StackConfig            `yaml:"stack"`
 	Instances map[string]InstanceDef `yaml:"instances"`
-	Wires     []interface{}          `yaml:"wires,omitempty"`
+	Wires     []WireDef              `yaml:"wires,omitempty"`
+}
+
+type WireDef struct {
+	ConsumerInstance string `yaml:"consumer_instance"`
+	ProviderInstance string `yaml:"provider_instance"`
+	ImportContract   string `yaml:"import_contract"`
+	ExportContract   string `yaml:"export_contract"`
+	Source           string `yaml:"source"`
 }
 
 type StackConfig struct {
