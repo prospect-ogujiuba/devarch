@@ -10,17 +10,20 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/lib/pq"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/crypto"
 )
 
 type InstanceHandler struct {
 	db              *sql.DB
 	containerClient *container.Client
+	cipher          *crypto.Cipher
 }
 
-func NewInstanceHandler(db *sql.DB, cc *container.Client) *InstanceHandler {
+func NewInstanceHandler(db *sql.DB, cc *container.Client, cipher *crypto.Cipher) *InstanceHandler {
 	return &InstanceHandler{
 		db:              db,
 		containerClient: cc,
+		cipher:          cipher,
 	}
 }
 

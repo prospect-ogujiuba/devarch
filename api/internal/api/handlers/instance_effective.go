@@ -338,7 +338,7 @@ func (h *InstanceHandler) loadInstanceVolumes(instanceID int) ([]models.ServiceV
 
 func (h *InstanceHandler) loadServiceEnvVars(serviceID int) ([]models.ServiceEnvVar, error) {
 	rows, err := h.db.Query(`
-		SELECT id, service_id, key, value, is_secret
+		SELECT id, service_id, key, value, is_secret, encrypted_value, encryption_version
 		FROM service_env_vars WHERE service_id = $1 ORDER BY key
 	`, serviceID)
 	if err != nil {
@@ -349,9 +349,18 @@ func (h *InstanceHandler) loadServiceEnvVars(serviceID int) ([]models.ServiceEnv
 	var envVars []models.ServiceEnvVar
 	for rows.Next() {
 		var e models.ServiceEnvVar
-		if err := rows.Scan(&e.ID, &e.ServiceID, &e.Key, &e.Value, &e.IsSecret); err != nil {
+		var encryptedValue sql.NullString
+		var encryptionVersion int
+		if err := rows.Scan(&e.ID, &e.ServiceID, &e.Key, &e.Value, &e.IsSecret, &encryptedValue, &encryptionVersion); err != nil {
 			return nil, err
 		}
+
+		if encryptionVersion > 0 && encryptedValue.Valid {
+			e.Value = "***"
+		} else if e.IsSecret {
+			e.Value = "***"
+		}
+
 		envVars = append(envVars, e)
 	}
 	return envVars, rows.Err()
@@ -359,7 +368,7 @@ func (h *InstanceHandler) loadServiceEnvVars(serviceID int) ([]models.ServiceEnv
 
 func (h *InstanceHandler) loadInstanceEnvVars(instanceID int) ([]models.ServiceEnvVar, error) {
 	rows, err := h.db.Query(`
-		SELECT id, instance_id, key, value, is_secret
+		SELECT id, instance_id, key, value, is_secret, encrypted_value, encryption_version
 		FROM instance_env_vars WHERE instance_id = $1 ORDER BY key
 	`, instanceID)
 	if err != nil {
@@ -370,9 +379,18 @@ func (h *InstanceHandler) loadInstanceEnvVars(instanceID int) ([]models.ServiceE
 	var envVars []models.ServiceEnvVar
 	for rows.Next() {
 		var e models.ServiceEnvVar
-		if err := rows.Scan(&e.ID, &e.ServiceID, &e.Key, &e.Value, &e.IsSecret); err != nil {
+		var encryptedValue sql.NullString
+		var encryptionVersion int
+		if err := rows.Scan(&e.ID, &e.ServiceID, &e.Key, &e.Value, &e.IsSecret, &encryptedValue, &encryptionVersion); err != nil {
 			return nil, err
 		}
+
+		if encryptionVersion > 0 && encryptedValue.Valid {
+			e.Value = "***"
+		} else if e.IsSecret {
+			e.Value = "***"
+		}
+
 		envVars = append(envVars, e)
 	}
 	return envVars, rows.Err()

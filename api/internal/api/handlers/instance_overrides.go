@@ -161,6 +161,28 @@ func (h *InstanceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) 
 	}
 	defer tx.Rollback()
 
+	type existingSecret struct {
+		encryptedValue    sql.NullString
+		encryptionVersion int
+	}
+	existingSecrets := map[string]existingSecret{}
+	rows, err := tx.Query("SELECT key, encrypted_value, encryption_version FROM instance_env_vars WHERE instance_id = $1 AND is_secret = true", instanceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to query existing secrets: %v", err), http.StatusInternalServerError)
+		return
+	}
+	for rows.Next() {
+		var key string
+		var secret existingSecret
+		if err := rows.Scan(&key, &secret.encryptedValue, &secret.encryptionVersion); err != nil {
+			rows.Close()
+			http.Error(w, fmt.Sprintf("failed to scan existing secret: %v", err), http.StatusInternalServerError)
+			return
+		}
+		existingSecrets[key] = secret
+	}
+	rows.Close()
+
 	_, err = tx.Exec("DELETE FROM instance_env_vars WHERE instance_id = $1", instanceID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to delete existing env vars: %v", err), http.StatusInternalServerError)
@@ -168,9 +190,32 @@ func (h *InstanceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) 
 	}
 
 	for _, e := range req.EnvVars {
+		value := e.Value
+		var encryptedValue sql.NullString
+		encryptionVersion := 0
+
+		if e.IsSecret {
+			if e.Value == "***" || e.Value == "" {
+				if current, ok := existingSecrets[e.Key]; ok {
+					encryptedValue = current.encryptedValue
+					encryptionVersion = current.encryptionVersion
+					value = ""
+				}
+			} else {
+				encrypted, err := h.cipher.Encrypt(e.Value)
+				if err != nil {
+					http.Error(w, fmt.Sprintf("failed to encrypt secret: %v", err), http.StatusInternalServerError)
+					return
+				}
+				encryptedValue = sql.NullString{String: encrypted, Valid: true}
+				encryptionVersion = 1
+				value = ""
+			}
+		}
+
 		_, err = tx.Exec(
-			`INSERT INTO instance_env_vars (instance_id, key, value, is_secret) VALUES ($1, $2, $3, $4)`,
-			instanceID, e.Key, e.Value, e.IsSecret,
+			`INSERT INTO instance_env_vars (instance_id, key, value, is_secret, encrypted_value, encryption_version) VALUES ($1, $2, $3, $4, $5, $6)`,
+			instanceID, e.Key, value, e.IsSecret, encryptedValue, encryptionVersion,
 		)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to insert env var: %v", err), http.StatusInternalServerError)

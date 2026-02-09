@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/crypto"
 	"github.com/priz/devarch-api/internal/podman"
 	"github.com/priz/devarch-api/pkg/models"
 )
@@ -25,9 +27,10 @@ type ServiceHandler struct {
 	generator       *compose.Generator
 	validator       *compose.Validator
 	projectRoot     string
+	cipher          *crypto.Cipher
 }
 
-func NewServiceHandler(db *sql.DB, cc *container.Client, pc *podman.Client) *ServiceHandler {
+func NewServiceHandler(db *sql.DB, cc *container.Client, pc *podman.Client, cipher *crypto.Cipher) *ServiceHandler {
 	projectRoot := os.Getenv("PROJECT_ROOT")
 	gen := compose.NewGenerator(db, "microservices-net")
 	if projectRoot != "" {
@@ -43,6 +46,7 @@ func NewServiceHandler(db *sql.DB, cc *container.Client, pc *podman.Client) *Ser
 		generator:       gen,
 		validator:       compose.NewValidator(db),
 		projectRoot:     projectRoot,
+		cipher:          cipher,
 	}
 }
 
@@ -299,15 +303,30 @@ func (h *ServiceHandler) loadServiceRelations(s *models.Service) {
 		}
 	}
 
-	rows, _ = h.db.Query(`SELECT key, value, is_secret FROM service_env_vars WHERE service_id = $1`, s.ID)
+	rows, _ = h.db.Query(`SELECT key, value, is_secret, encrypted_value, encryption_version FROM service_env_vars WHERE service_id = $1`, s.ID)
 	if rows != nil {
 		defer rows.Close()
 		for rows.Next() {
 			var e models.ServiceEnvVar
-			rows.Scan(&e.Key, &e.Value, &e.IsSecret)
-			if e.IsSecret {
+			var encryptedValue sql.NullString
+			var encryptionVersion int
+			rows.Scan(&e.Key, &e.Value, &e.IsSecret, &encryptedValue, &encryptionVersion)
+
+			if encryptionVersion > 0 && encryptedValue.Valid {
+				_, err := h.cipher.Decrypt(encryptedValue.String)
+				if err == nil {
+					e.Value = "***"
+				}
+			} else if e.IsSecret && encryptionVersion == 0 && e.Value != "" {
+				encrypted, err := h.cipher.Encrypt(e.Value)
+				if err == nil {
+					h.db.Exec(`UPDATE service_env_vars SET encrypted_value = $1, encryption_version = 1, value = '' WHERE service_id = $2 AND key = $3`, encrypted, s.ID, e.Key)
+				}
+				e.Value = "***"
+			} else if e.IsSecret {
 				e.Value = "***"
 			}
+
 			s.EnvVars = append(s.EnvVars, e)
 		}
 	}
@@ -319,6 +338,16 @@ func (h *ServiceHandler) loadServiceRelations(s *models.Service) {
 			var l models.ServiceLabel
 			rows.Scan(&l.Key, &l.Value)
 			s.Labels = append(s.Labels, l)
+		}
+	}
+
+	rows, _ = h.db.Query(`SELECT domain, proxy_port FROM service_domains WHERE service_id = $1`, s.ID)
+	if rows != nil {
+		defer rows.Close()
+		for rows.Next() {
+			var d models.ServiceDomain
+			rows.Scan(&d.Domain, &d.ProxyPort)
+			s.Domains = append(s.Domains, d)
 		}
 	}
 
@@ -341,17 +370,20 @@ func (h *ServiceHandler) loadServiceRelations(s *models.Service) {
 }
 
 type createServiceRequest struct {
-	Name          string                 `json:"name"`
-	CategoryID    int                    `json:"category_id"`
-	ImageName     string                 `json:"image_name"`
-	ImageTag      string                 `json:"image_tag"`
-	RestartPolicy string                 `json:"restart_policy"`
-	Command       string                 `json:"command"`
-	UserSpec      string                 `json:"user_spec"`
-	Ports         []models.ServicePort   `json:"ports"`
-	Volumes       []models.ServiceVolume `json:"volumes"`
-	EnvVars       []models.ServiceEnvVar `json:"env_vars"`
-	Dependencies  []string               `json:"dependencies"`
+	Name          string                     `json:"name"`
+	CategoryID    int                        `json:"category_id"`
+	ImageName     string                     `json:"image_name"`
+	ImageTag      string                     `json:"image_tag"`
+	RestartPolicy string                     `json:"restart_policy"`
+	Command       string                     `json:"command"`
+	UserSpec      string                     `json:"user_spec"`
+	Ports         []models.ServicePort       `json:"ports"`
+	Volumes       []models.ServiceVolume     `json:"volumes"`
+	EnvVars       []models.ServiceEnvVar     `json:"env_vars"`
+	Dependencies  []string                   `json:"dependencies"`
+	Labels        []models.ServiceLabel      `json:"labels"`
+	Domains       []models.ServiceDomain     `json:"domains"`
+	Healthcheck   *models.ServiceHealthcheck `json:"healthcheck"`
 }
 
 func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -418,10 +450,75 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, env := range req.EnvVars {
+		value := env.Value
+		var encryptedValue sql.NullString
+		encryptionVersion := 0
+
+		if env.IsSecret && value != "" {
+			encrypted, err := h.cipher.Encrypt(value)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("failed to encrypt secret: %v", err), http.StatusInternalServerError)
+				return
+			}
+			encryptedValue = sql.NullString{String: encrypted, Valid: true}
+			encryptionVersion = 1
+			value = ""
+		}
+
 		_, err = tx.Exec(`
-			INSERT INTO service_env_vars (service_id, key, value, is_secret)
-			VALUES ($1, $2, $3, $4)
-		`, serviceID, env.Key, env.Value, env.IsSecret)
+			INSERT INTO service_env_vars (service_id, key, value, is_secret, encrypted_value, encryption_version)
+			VALUES ($1, $2, $3, $4, $5, $6)
+		`, serviceID, env.Key, value, env.IsSecret, encryptedValue, encryptionVersion)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	for _, depName := range req.Dependencies {
+		var depID int
+		err := tx.QueryRow("SELECT id FROM services WHERE name = $1", depName).Scan(&depID)
+		if err != nil {
+			http.Error(w, "dependency not found: "+depName, http.StatusBadRequest)
+			return
+		}
+		_, err = tx.Exec(`
+			INSERT INTO service_dependencies (service_id, depends_on_service_id)
+			VALUES ($1, $2)
+		`, serviceID, depID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	for _, label := range req.Labels {
+		_, err = tx.Exec(`
+			INSERT INTO service_labels (service_id, key, value)
+			VALUES ($1, $2, $3)
+		`, serviceID, label.Key, label.Value)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	for _, domain := range req.Domains {
+		_, err = tx.Exec(`
+			INSERT INTO service_domains (service_id, domain, proxy_port)
+			VALUES ($1, $2, $3)
+		`, serviceID, domain.Domain, domain.ProxyPort)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if req.Healthcheck != nil && req.Healthcheck.Test != "" {
+		_, err = tx.Exec(`
+			INSERT INTO service_healthchecks (service_id, test, interval_seconds, timeout_seconds, retries, start_period_seconds)
+			VALUES ($1, $2, $3, $4, $5, $6)
+		`, serviceID, req.Healthcheck.Test, req.Healthcheck.IntervalSeconds, req.Healthcheck.TimeoutSeconds, req.Healthcheck.Retries, req.Healthcheck.StartPeriodSeconds)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -1236,11 +1333,56 @@ func (h *ServiceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
+	type existingSecret struct {
+		encryptedValue    sql.NullString
+		encryptionVersion int
+	}
+	existingSecrets := map[string]existingSecret{}
+	rows, err := tx.Query("SELECT key, encrypted_value, encryption_version FROM service_env_vars WHERE service_id = $1 AND is_secret = true", serviceID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	for rows.Next() {
+		var key string
+		var secret existingSecret
+		if err := rows.Scan(&key, &secret.encryptedValue, &secret.encryptionVersion); err != nil {
+			rows.Close()
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		existingSecrets[key] = secret
+	}
+	rows.Close()
+
 	tx.Exec("DELETE FROM service_env_vars WHERE service_id = $1", serviceID)
 	for _, e := range req.EnvVars {
+		value := e.Value
+		var encryptedValue sql.NullString
+		encryptionVersion := 0
+
+		if e.IsSecret {
+			if e.Value == "***" || e.Value == "" {
+				if current, ok := existingSecrets[e.Key]; ok {
+					encryptedValue = current.encryptedValue
+					encryptionVersion = current.encryptionVersion
+					value = ""
+				}
+			} else {
+				encrypted, err := h.cipher.Encrypt(e.Value)
+				if err != nil {
+					http.Error(w, fmt.Sprintf("failed to encrypt secret: %v", err), http.StatusInternalServerError)
+					return
+				}
+				encryptedValue = sql.NullString{String: encrypted, Valid: true}
+				encryptionVersion = 1
+				value = ""
+			}
+		}
+
 		_, err = tx.Exec(
-			`INSERT INTO service_env_vars (service_id, key, value, is_secret) VALUES ($1, $2, $3, $4)`,
-			serviceID, e.Key, e.Value, e.IsSecret,
+			`INSERT INTO service_env_vars (service_id, key, value, is_secret, encrypted_value, encryption_version) VALUES ($1, $2, $3, $4, $5, $6)`,
+			serviceID, e.Key, value, e.IsSecret, encryptedValue, encryptionVersion,
 		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

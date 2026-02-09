@@ -12,11 +12,15 @@ import (
 
 	"github.com/priz/devarch-api/internal/api"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/crypto"
 	"github.com/priz/devarch-api/internal/nginx"
 	"github.com/priz/devarch-api/internal/podman"
 	"github.com/priz/devarch-api/internal/project"
 	"github.com/priz/devarch-api/internal/scanner"
 	"github.com/priz/devarch-api/internal/sync"
+	"github.com/priz/devarch-api/pkg/registry"
+	"github.com/priz/devarch-api/pkg/registry/dockerhub"
+	"github.com/priz/devarch-api/pkg/registry/ghcr"
 
 	_ "github.com/lib/pq"
 )
@@ -36,6 +40,14 @@ func main() {
 	if err := db.Ping(); err != nil {
 		log.Fatalf("failed to ping database: %v", err)
 	}
+
+	key, err := crypto.LoadOrGenerateKey()
+	if err != nil {
+		log.Fatalf("failed to load encryption key: %v", err)
+	}
+	log.Println("encryption key loaded successfully")
+
+	cipher := crypto.NewCipher(key)
 
 	podmanClient, err := podman.NewClient()
 	if err != nil {
@@ -78,8 +90,12 @@ func main() {
 
 	projectController := project.NewController(db, containerClient)
 
-	syncManager := sync.NewManager(db, podmanClient)
-	router := api.NewRouter(db, containerClient, podmanClient, syncManager, projectScanner, nginxGenerator, projectController)
+	registryManager := registry.NewManager()
+	registryManager.Register(dockerhub.NewClient())
+	registryManager.Register(ghcr.NewClient())
+
+	syncManager := sync.NewManager(db, podmanClient, registryManager)
+	router := api.NewRouter(db, containerClient, podmanClient, syncManager, projectScanner, nginxGenerator, projectController, registryManager, cipher)
 
 	port := os.Getenv("PORT")
 	if port == "" {
