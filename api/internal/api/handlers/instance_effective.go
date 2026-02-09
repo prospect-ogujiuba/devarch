@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/wiring"
 	"github.com/priz/devarch-api/pkg/models"
 )
 
@@ -24,6 +25,7 @@ type effectiveConfigResponse struct {
 	Ports            []models.ServicePort     `json:"ports"`
 	Volumes          []models.ServiceVolume   `json:"volumes"`
 	EnvVars          []models.ServiceEnvVar   `json:"env_vars"`
+	WiredEnvVars     map[string]string        `json:"wired_env_vars,omitempty"`
 	Labels           []models.ServiceLabel    `json:"labels"`
 	Domains          []models.ServiceDomain   `json:"domains"`
 	Healthcheck      *models.ServiceHealthcheck `json:"healthcheck,omitempty"`
@@ -130,13 +132,20 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	wiredEnvVars, err := h.loadWiredEnvVarsForEffective(instanceID, stackName)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to load wired env vars: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	instanceEnvVars, err := h.loadInstanceEnvVars(instanceID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to load instance env vars: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	resp.EnvVars = mergeEnvVars(templateEnvVars, instanceEnvVars)
+	resp.EnvVars = mergeEnvVarsThreeLayer(templateEnvVars, wiredEnvVars, instanceEnvVars)
+	resp.WiredEnvVars = wiredEnvVars
 	resp.OverridesApplied.EnvVars = len(instanceEnvVars) > 0
 
 	templateLabels, err := h.loadServiceLabels(templateServiceID)
@@ -585,6 +594,82 @@ func mergeEnvVars(template, instance []models.ServiceEnvVar) []models.ServiceEnv
 		result = append(result, e)
 	}
 	return result
+}
+
+func mergeEnvVarsThreeLayer(template []models.ServiceEnvVar, wired map[string]string, instance []models.ServiceEnvVar) []models.ServiceEnvVar {
+	merged := make(map[string]models.ServiceEnvVar)
+	for _, e := range template {
+		merged[e.Key] = e
+	}
+	for k, v := range wired {
+		merged[k] = models.ServiceEnvVar{Key: k, Value: v}
+	}
+	for _, e := range instance {
+		merged[e.Key] = e
+	}
+
+	result := make([]models.ServiceEnvVar, 0, len(merged))
+	for _, e := range merged {
+		result = append(result, e)
+	}
+	return result
+}
+
+func (h *InstanceHandler) loadWiredEnvVarsForEffective(instanceID int, stackName string) (map[string]string, error) {
+	rows, err := h.db.Query(`
+		SELECT
+			si_provider.instance_id,
+			se.name,
+			se.port,
+			se.protocol,
+			COALESCE(sic.env_vars, '{}')
+		FROM service_instance_wires siw
+		JOIN service_instances si_provider ON si_provider.id = siw.provider_instance_id
+		JOIN service_exports se ON se.id = siw.export_contract_id
+		JOIN service_import_contracts sic ON sic.id = siw.import_contract_id
+		WHERE siw.consumer_instance_id = $1
+	`, instanceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	merged := make(map[string]string)
+	for rows.Next() {
+		var providerInstanceName string
+		var contractName string
+		var port int
+		var protocol string
+		var envVarsJSON []byte
+
+		if err := rows.Scan(&providerInstanceName, &contractName, &port, &protocol, &envVarsJSON); err != nil {
+			return nil, err
+		}
+
+		envVars := make(map[string]string)
+		if len(envVarsJSON) > 0 {
+			if err := json.Unmarshal(envVarsJSON, &envVars); err != nil {
+				return nil, fmt.Errorf("unmarshal env_vars: %w", err)
+			}
+		}
+
+		provider := wiring.Provider{
+			InstanceName: providerInstanceName,
+			ContractName: contractName,
+			Port:         port,
+			Protocol:     protocol,
+		}
+		consumer := wiring.Consumer{
+			EnvVars: envVars,
+		}
+
+		injections := wiring.InjectEnvVars(stackName, provider, consumer)
+		for k, v := range injections {
+			merged[k] = v
+		}
+	}
+
+	return merged, rows.Err()
 }
 
 func mergeLabels(template, instance []models.ServiceLabel) []models.ServiceLabel {
