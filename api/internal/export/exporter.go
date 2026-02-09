@@ -344,7 +344,7 @@ func (e *Exporter) loadEffectiveEnvVars(instancePK, templateServiceID int) (map[
 	merged := make(map[string]string)
 
 	rows, err := e.db.Query(`
-		SELECT key, value FROM service_env_vars WHERE service_id = $1
+		SELECT key, value, is_secret FROM service_env_vars WHERE service_id = $1
 	`, templateServiceID)
 	if err != nil {
 		return nil, err
@@ -353,17 +353,22 @@ func (e *Exporter) loadEffectiveEnvVars(instancePK, templateServiceID int) (map[
 
 	for rows.Next() {
 		var k, v string
-		if err := rows.Scan(&k, &v); err != nil {
+		var isSecret bool
+		if err := rows.Scan(&k, &v, &isSecret); err != nil {
 			return nil, err
 		}
-		merged[k] = v
+		if isSecret {
+			merged[k] = fmt.Sprintf("${SECRET:%s}", k)
+		} else {
+			merged[k] = v
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
 	rows, err = e.db.Query(`
-		SELECT key, value FROM instance_env_vars WHERE instance_id = $1
+		SELECT key, value, is_secret FROM instance_env_vars WHERE instance_id = $1
 	`, instancePK)
 	if err != nil {
 		return nil, err
@@ -372,10 +377,15 @@ func (e *Exporter) loadEffectiveEnvVars(instancePK, templateServiceID int) (map[
 
 	for rows.Next() {
 		var k, v string
-		if err := rows.Scan(&k, &v); err != nil {
+		var isSecret bool
+		if err := rows.Scan(&k, &v, &isSecret); err != nil {
 			return nil, err
 		}
-		merged[k] = v
+		if isSecret {
+			merged[k] = fmt.Sprintf("${SECRET:%s}", k)
+		} else {
+			merged[k] = v
+		}
 	}
 	return merged, rows.Err()
 }
