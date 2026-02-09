@@ -9,7 +9,7 @@ interface EditableCardProps {
   onEdit: () => void
   onCancel: () => void
   onSave: () => void
-  onAdd: () => void
+  onAdd?: () => void
   isPending?: boolean
   isDirty?: boolean
   onResetAll?: () => void
@@ -38,9 +38,11 @@ export function EditableCard({
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base">{title}</CardTitle>
           <div className="flex flex-wrap gap-1">
-            <Button variant="outline" size="sm" onClick={onAdd}>
-              <Plus className="size-4" /> Add
-            </Button>
+            {onAdd && (
+              <Button variant="outline" size="sm" onClick={onAdd}>
+                <Plus className="size-4" /> Add
+              </Button>
+            )}
             {onResetAll && showResetAll && (
               <Button variant="outline" size="sm" onClick={onResetAll}>
                 <RotateCcw className="size-4" /> Reset All
