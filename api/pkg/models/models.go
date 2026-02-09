@@ -36,6 +36,8 @@ type Service struct {
 	Ports        []ServicePort     `json:"ports,omitempty"`
 	Volumes      []ServiceVolume   `json:"volumes,omitempty"`
 	EnvVars      []ServiceEnvVar   `json:"env_vars,omitempty"`
+	EnvFiles     []string          `json:"env_files,omitempty"`
+	Networks     []string          `json:"networks,omitempty"`
 	Dependencies []string          `json:"dependencies,omitempty"`
 	Healthcheck  *ServiceHealthcheck `json:"healthcheck,omitempty"`
 	Labels       []ServiceLabel    `json:"labels,omitempty"`
