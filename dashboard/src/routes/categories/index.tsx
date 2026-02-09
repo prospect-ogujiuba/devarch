@@ -165,7 +165,6 @@ function CategoriesPage() {
           ))}
         </div>
       )}
-      showCount={false}
     >
       {pagination.totalItems > 0 && (
         <PaginationControls

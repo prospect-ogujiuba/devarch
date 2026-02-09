@@ -48,7 +48,6 @@ interface ListPageScaffoldProps<T> {
   tableView: (items: T[]) => ReactNode
   gridView: (items: T[]) => ReactNode
   gridClassName?: string
-  showCount?: boolean
   children?: ReactNode
 }
 
@@ -70,7 +69,6 @@ export function ListPageScaffold<T>({
   items,
   tableView,
   gridView,
-  showCount = true,
   children,
 }: ListPageScaffoldProps<T>) {
   if (isLoading) {
@@ -130,12 +128,6 @@ export function ListPageScaffold<T>({
         tableView(items)
       ) : (
         gridView(items)
-      )}
-
-      {showCount && (
-        <div className="text-sm text-muted-foreground">
-          Showing {items.length} of {controls.total} {title.toLowerCase()}
-        </div>
       )}
 
       {children}

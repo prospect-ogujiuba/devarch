@@ -261,7 +261,6 @@ function NetworksPage() {
             onRemove={handleRemove}
           />
         )}
-        showCount={false}
       >
         {pagination.totalItems > 0 && (
           <PaginationControls

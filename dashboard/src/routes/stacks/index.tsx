@@ -227,7 +227,6 @@ function StacksPage() {
             onRemoveNetwork={handleRemoveNetwork}
           />
         )}
-        showCount={false}
       >
         {pagination.totalItems > 0 && (
           <PaginationControls
