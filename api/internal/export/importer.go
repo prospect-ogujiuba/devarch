@@ -103,6 +103,8 @@ func (imp *Importer) Import(file *DevArchFile) (*ImportResult, error) {
 		result.StackCreated = true
 	}
 
+	instancePKMap := make(map[string]int)
+
 	for instanceName, inst := range file.Instances {
 		var templateServiceID int
 		err := tx.QueryRow(`SELECT id FROM services WHERE name = $1`, inst.Template).Scan(&templateServiceID)
@@ -161,6 +163,12 @@ func (imp *Importer) Import(file *DevArchFile) (*ImportResult, error) {
 
 			result.Created = append(result.Created, instanceName)
 		}
+
+		instancePKMap[instanceName] = instanceID
+	}
+
+	if err := imp.importWires(tx, stackID, file, instancePKMap, result); err != nil {
+		return nil, fmt.Errorf("import wires: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -168,6 +176,80 @@ func (imp *Importer) Import(file *DevArchFile) (*ImportResult, error) {
 	}
 
 	return result, nil
+}
+
+func (imp *Importer) importWires(tx *sql.Tx, stackID int, file *DevArchFile, instancePKMap map[string]int, result *ImportResult) error {
+	for _, wireDef := range file.Wires {
+		consumerPK, consumerExists := instancePKMap[wireDef.ConsumerInstance]
+		providerPK, providerExists := instancePKMap[wireDef.ProviderInstance]
+
+		if !consumerExists {
+			result.Errors = append(result.Errors, fmt.Sprintf("Wire import: consumer instance %q not found", wireDef.ConsumerInstance))
+			continue
+		}
+		if !providerExists {
+			result.Errors = append(result.Errors, fmt.Sprintf("Wire import: provider instance %q not found", wireDef.ProviderInstance))
+			continue
+		}
+
+		var consumerTemplateID, providerTemplateID int
+		err := tx.QueryRow(`SELECT template_service_id FROM service_instances WHERE id = $1`, consumerPK).Scan(&consumerTemplateID)
+		if err != nil {
+			return fmt.Errorf("get consumer template: %w", err)
+		}
+		err = tx.QueryRow(`SELECT template_service_id FROM service_instances WHERE id = $1`, providerPK).Scan(&providerTemplateID)
+		if err != nil {
+			return fmt.Errorf("get provider template: %w", err)
+		}
+
+		var importContractID int
+		var consumerType string
+		err = tx.QueryRow(`
+			SELECT id, type FROM service_import_contracts
+			WHERE service_id = $1 AND name = $2
+		`, consumerTemplateID, wireDef.ImportContract).Scan(&importContractID, &consumerType)
+		if err == sql.ErrNoRows {
+			result.Errors = append(result.Errors, fmt.Sprintf("Wire import: import contract %q not found on consumer %q", wireDef.ImportContract, wireDef.ConsumerInstance))
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("find import contract: %w", err)
+		}
+
+		var exportContractID int
+		var providerType string
+		err = tx.QueryRow(`
+			SELECT id, type FROM service_exports
+			WHERE service_id = $1 AND name = $2
+		`, providerTemplateID, wireDef.ExportContract).Scan(&exportContractID, &providerType)
+		if err == sql.ErrNoRows {
+			result.Errors = append(result.Errors, fmt.Sprintf("Wire import: export contract %q not found on provider %q", wireDef.ExportContract, wireDef.ProviderInstance))
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("find export contract: %w", err)
+		}
+
+		_, err = tx.Exec(`
+			INSERT INTO service_instance_wires (
+				stack_id, consumer_instance_id, provider_instance_id,
+				import_contract_id, export_contract_id, source,
+				consumer_contract_type, provider_contract_type
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			ON CONFLICT (stack_id, consumer_instance_id, import_contract_id)
+			DO UPDATE SET
+				provider_instance_id = EXCLUDED.provider_instance_id,
+				export_contract_id = EXCLUDED.export_contract_id,
+				source = EXCLUDED.source,
+				consumer_contract_type = EXCLUDED.consumer_contract_type,
+				provider_contract_type = EXCLUDED.provider_contract_type
+		`, stackID, consumerPK, providerPK, importContractID, exportContractID, wireDef.Source, consumerType, providerType)
+		if err != nil {
+			return fmt.Errorf("insert wire: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (imp *Importer) deleteOverrides(tx *sql.Tx, instanceID int) error {

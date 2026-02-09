@@ -53,7 +53,7 @@ func (e *Exporter) Export(stackName string) ([]byte, error) {
 			NetworkName: netName,
 		},
 		Instances: make(map[string]InstanceDef),
-		Wires:     []interface{}{},
+		Wires:     []WireDef{},
 	}
 
 	if description.Valid && description.String != "" {
@@ -72,12 +72,14 @@ func (e *Exporter) Export(stackName string) ([]byte, error) {
 	defer rows.Close()
 
 	var instances []instanceRow
+	instanceMap := make(map[int]string)
 	for rows.Next() {
 		var inst instanceRow
 		if err := rows.Scan(&inst.id, &inst.instanceID, &inst.enabled, &inst.templateServiceID); err != nil {
 			return nil, fmt.Errorf("scan instance: %w", err)
 		}
 		instances = append(instances, inst)
+		instanceMap[inst.id] = inst.instanceID
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate instances: %w", err)
@@ -91,12 +93,61 @@ func (e *Exporter) Export(stackName string) ([]byte, error) {
 		devarchFile.Instances[inst.instanceID] = instanceDef
 	}
 
+	wires, err := e.loadWires(stackID, instanceMap)
+	if err != nil {
+		return nil, fmt.Errorf("load wires: %w", err)
+	}
+	devarchFile.Wires = wires
+
 	yamlBytes, err := yaml.Marshal(devarchFile)
 	if err != nil {
 		return nil, fmt.Errorf("marshal yaml: %w", err)
 	}
 
 	return yamlBytes, nil
+}
+
+func (e *Exporter) loadWires(stackID int, instanceMap map[int]string) ([]WireDef, error) {
+	rows, err := e.db.Query(`
+		SELECT
+			siw.consumer_instance_id,
+			siw.provider_instance_id,
+			sic.name,
+			se.name,
+			siw.source
+		FROM service_instance_wires siw
+		JOIN service_import_contracts sic ON sic.id = siw.import_contract_id
+		JOIN service_exports se ON se.id = siw.export_contract_id
+		WHERE siw.stack_id = $1
+		ORDER BY siw.consumer_instance_id, sic.name
+	`, stackID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var wires []WireDef
+	for rows.Next() {
+		var consumerPK, providerPK int
+		var importName, exportName, source string
+		if err := rows.Scan(&consumerPK, &providerPK, &importName, &exportName, &source); err != nil {
+			return nil, err
+		}
+
+		consumerInstanceID, consumerExists := instanceMap[consumerPK]
+		providerInstanceID, providerExists := instanceMap[providerPK]
+
+		if consumerExists && providerExists {
+			wires = append(wires, WireDef{
+				ConsumerInstance: consumerInstanceID,
+				ProviderInstance: providerInstanceID,
+				ImportContract:   importName,
+				ExportContract:   exportName,
+				Source:           source,
+			})
+		}
+	}
+	return wires, rows.Err()
 }
 
 func (e *Exporter) loadInstanceDef(stackName string, inst instanceRow) (InstanceDef, error) {
