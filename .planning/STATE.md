@@ -2,236 +2,39 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-03)
+See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Phase 9 - Secrets & Resources
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 9 of 9 (Secrets & Resources)
-Plan: 3 of 3 complete in Phase 9
-Status: Complete
-Last activity: 2026-02-09 — Completed 09-03-PLAN.md
+Milestone: v1.0 Stacks & Instances — SHIPPED 2026-02-09
+Status: Between milestones
+Next: `/gsd:new-milestone` to define next feature set
 
-Progress: [██████████] 100% (30 plans complete of 30 total)
+## v1.0 Performance Summary
 
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 30
-- Average duration: 3.1 min
-- Total execution time: ~1.6 hours
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 1 | 2/2 | 1min | 0.5min |
-| 2 | 5/5 | 17.5min | 3.5min |
-| 3 | 5/5 | ~21min | ~4.2min |
-| 4 | 2/2 | 7.3min | 3.7min |
-| 5 | 2/2 | 4.0min | 2.0min |
-| 6 | 3/3 | 5.0min | 1.7min |
-| 7 | 4/4 | 12.1min | 3.0min |
-| 8 | 4/4 | 12.5min | 3.1min |
-| 9 | 3/3 | 13.9min | 4.6min |
-
-*Updated after each plan completion*
-| Phase 07 P01 | 160 | 2 tasks | 5 files |
-| Phase 07 P02 | 116 | 2 tasks | 3 files |
-| Phase 07 P03 | 173 | 2 tasks | 7 files |
-| Phase 07 P04 | 275 | 2 tasks | 6 files |
-| Phase 08 P01 | 140 | 2 tasks | 5 files |
-| Phase 08 P02 | 153 | 2 tasks | 5 files |
-| Phase 08 P03 | 199 | 2 tasks | 7 files |
-| Phase 08 P04 | 257 | 2 tasks | 4 files |
-| Phase 09 P01 | 338 | 2 tasks | 12 files |
-| Phase 09 P02 | 219 | 2 tasks | 7 files |
-| Phase 09 P03 | 276 | 2 tasks | 7 files |
+- 9 phases, 30 plans completed in ~1.6 hours
+- 183 commits | 294 files | +47,453 lines
+- Timeline: 7 days (2026-02-03 → 2026-02-09)
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- Full copy-on-write overrides (including healthchecks, config files) — users expect full control
-- Isolation as core value over auto-wiring or declarative config — wiring is useless if stacks collide
-- Auto-wire + explicit contracts (both layers) — simple stacks stay simple, complex stacks are possible
-- Encryption at rest from v1 — avoids painful retrofit, builds trust for adoption
-- Per-phase dashboard UI (not a dedicated UI phase) — early feedback loop, testable increments
-- devarch.yml for sharing + backup (both equally) — portable definitions that also serve as state backup
-- Export/Import moved before Wiring (Phase 7) — validate "shareable env" loop early, wiring can follow
-- Lockfile concept (devarch.lock) — manifest (devarch.yml) + lockfile (resolved ports/digests/versions) = deterministic reproduction
-- devarch init + devarch doctor — one-command bootstrap + diagnostics for teammate handoff
-- Export includes resolved specifics (host ports, image digests, template versions) — prevents import divergence
-
-**From 01-01:**
-- Label prefix "devarch." for namespace isolation
-- DNS-safe naming (63 char limit) prevents network collision
-- Prescriptive validation errors include Slugify suggestions
-
-**From 01-02:**
-- DEVARCH_RUNTIME env var for explicit runtime control
-- Network stubs return ErrNotImplemented (Phase 4 ready)
-- Backward compat preserved during refactor (GetStatus/GetMetrics)
-
-**From 02-01:**
-- Soft-delete pattern using deleted_at with partial unique index on active stacks only
-- Stack name is immutable identifier (used in URL routes)
-- Running count placeholder set to 0 until Phase 3+ wires container client queries
-
-**From 02-02:**
-- Rename implemented as atomic clone + soft-delete transaction
-- Restore checks for active name conflicts with prescriptive error
-- Trash routes registered before /{name} routes to avoid chi parameter conflicts
-
-**From 02-03:**
-- Stack hooks follow existing service hooks pattern for consistency
-- 5-second polling for real-time updates (WebSocket extension deferred)
-- Stacks positioned second in navigation (after Overview, before Services)
-
-**From 02-04:**
-- Grid as default view for stacks (better visual hierarchy)
-- Color-coded status indicators (green/yellow/gray) for running status
-- Create/clone/rename dialogs deferred to 02-05
-
-**From 02-05:**
-- Delete cascade preview pattern shows blast radius before destructive ops
-- Rename UX hides clone+soft-delete implementation (feels first-class)
-- Clone creates records only, doesn't start containers (aligns with plan/apply workflow)
-- Disable dialog enumerates containers by name for transparency
-- All actions accessible from both list and detail views
-
-**From 03-01:**
-- Override tables mirror service tables exactly (consistency, type safety, efficient queries)
-- Partial unique index WHERE deleted_at IS NULL enables soft-delete while preventing duplicates
-- Container name follows devarch-{stack}-{instance} pattern
-- Override count computed via subquery sum in single query (avoids N+1)
-- Duplicate copies all override records in transaction (atomic, all-or-nothing)
-- Rename is direct UPDATE on instance_id + container_name (instances are DB records at this phase)
-
-**From 03-02:**
-- Override PUT endpoints follow service handler pattern (DELETE + INSERT transaction)
-- Config files use UPSERT pattern with ON CONFLICT for idempotent updates
-- System labels (devarch.*) validated at API layer and auto-injected in effective config
-- Dependencies read-only in effective config per INST-05 requirement
-- Merge semantics: full replacement for ports/volumes/domains/healthcheck, key-based for env/labels, path-based for config files
-
-**From 03-03:**
-- Auto-name generation with collision detection for instances (template-2, template-3)
-- Cache invalidation chains ensure override mutations invalidate instance detail, effective config, and list
-- Template catalog shows instance counts per template (helps user understand stack composition)
-- Empty state CTA pattern consistent with stack grid (centered card with icon and action)
-
-**From 03-04:**
-- Override editor UX pattern: template values muted, overrides with blue left border
-- Explicit save (not auto-save) with dirty tracking prevents accidental changes
-- Per-field reset (X icon) + Reset All button gives granular control
-- Config files use CodeMirror with language detection (JSON/YAML/XML)
-- Template config files shown read-only as reference above editable override
-
-**From 04-01:**
-- Idempotent CreateNetwork via inspect-then-create pattern (Docker/Podman return errors on duplicate)
-- Graceful RemoveNetwork ignores not-found errors (safe delete operations)
-- ListNetworks filters by devarch.managed_by label (orphan detection boundary)
-- Container name validation at instance creation (127-char limit, fail early with prescriptive error)
-- Network name auto-computed but overridable (devarch-{stack}-net default)
-- Clone/Rename recompute network_name for new stack (prevents shared networks)
-
-**From 04-02:**
-- Identity labels injected in effective config (single source of truth before compose generation)
-- User overrides preserved (identity labels only added if not present)
-- Network status polling at 10s (less frequent than stack - network changes rarely)
-- Globe icon with blue coloring for network indicators (distinct from container status dots/green/gray)
-
-**From 05-01:**
-- Stack compose uses separate types (stackServiceEntry) to avoid modifying generator.go
-- depends_on: simple list when no healthchecks, condition map when any target has healthcheck
-- Identity labels injected via container.BuildLabels, user overrides preserved
-- Config files materialized atomically via tmp dir + rename swap
-
-**From 05-02:**
-- Tabbed layout on stack detail (Instances + Compose tabs)
-- CodeMirror read-only with yaml language for syntax-highlighted compose preview
-- Blob download pattern for client-side YAML file save
-
-**From 06-01:**
-- Stateless ComputeDiff - caller provides desired + running inputs
-- Modifications scoped to enabled/disabled toggle only (config drift deferred)
-- Terraform-style change ordering: removes, modifies, adds
-- Deterministic staleness token via sorted instances + RFC3339Nano timestamps
-
-**From 06-02:**
-- Advisory lock per stack via pg_try_advisory_lock(stack.id) prevents concurrent applies
-- Token validation after lock acquisition prevents TOCTOU race
-- Sequential apply flow: network -> configs -> compose up (no rollback, configs left for debugging)
-- Empty running containers gracefully handled in Plan (runtime may be down)
-
-**From 06-03:**
-- Ephemeral plan storage (useState, not cached) — plans are one-shot previews, not persisted resources
-- Color-coded border-left visual hierarchy (green/yellow/red) for diff changes
-- Apply clears plan state forcing regenerate before next apply (prevents stale token reuse)
-
-**From 07-01:**
-- Keyword-based secret detection with ${SECRET:VAR_NAME} placeholder syntax
-- Export includes all instances (enabled and disabled) with Enabled boolean
-- Identity labels included in export (single source of truth)
-- [Phase 07]: Keyword-based secret detection with ${SECRET:VAR_NAME} placeholder syntax
-- [Phase 07]: Export includes all instances (enabled and disabled) with Enabled boolean
-- [Phase 07]: Identity labels included in export (single source of truth)
-
-**From 07-03:**
-- Lockfile format is JSON (not YAML) for consistency with export/import workflow
-- Image digests resolved via container runtime inspect (podman/docker) not registry for offline reproducibility
-- Template version hash: SHA256(name + created_at) truncated to 16 hex chars for drift detection
-- Lock validation integrated into apply as optional warn-only feature (never blocks operations)
-- Empty image digest tolerated (non-fatal) when image not yet pulled locally
-- [Phase 08]: Contract CRUD follows existing service handler pattern (DELETE+INSERT transaction)
-- [Phase 08]: Contracts are template-level only (no instance overrides)
-- [Phase 08]: service_instance_wires enforces one wire per import contract per consumer per stack via UNIQUE constraint
-- [Phase 08]: Auto-wire skips explicit wires (explicit overrides auto)
-- [Phase 08]: Exact type matching for contract resolution (no fuzzy matching)
-- [Phase 08]: Ambiguous providers (>1 match) left unwired with warning
-- [Phase 08]: Env var injection uses container DNS names (devarch-{stack}-{instance})
-- [Phase 08]: Plan endpoint triggers auto-wire resolution at plan time (DELETE old auto, INSERT new)
-- [Phase 08]: Three-layer env merge: template -> wired -> instance overrides (WIRE-08 compliance)
-- [Phase 08]: Wire-derived dependencies appended to user-defined dependencies (additive)
-- [Phase 08]: Export includes only wires where both consumer and provider are active instances
-- [Phase 08]: Import uses ON CONFLICT DO UPDATE for idempotent wire recreation
-
-**From 09-01:**
-- AES-256-GCM with 12-byte nonce prepended to ciphertext (base64-encoded)
-- Key auto-generated on first run at ~/.devarch/secret.key with 0600 permissions
-- Sticky secret pattern: *** in PUT preserves existing encrypted_value
-- Lazy migration: plaintext secrets (is_secret=true, encryption_version=0) encrypted on first read
-- Read endpoints redact to ***, encryption_version tracks algorithm (0=plaintext, 1=AES-256-GCM)
-
-**From 09-03:**
-- Dashboard uses 8 bullet characters (••••••••) for all secret masking, not asterisks
-- EditableCard onAdd prop made optional to support single-object editing pattern
-- Resource limits displayed in both dedicated Resources tab and effective config
-- Resource limits validation warnings from API shown in amber/yellow text
-
-**From 09-02:**
-- Belt-and-suspenders secret redaction: is_secret flag + keyword heuristic both layers
-- Compose preview uses redaction=true, apply uses redaction=false (real values for runtime)
-- Resource limits CRUD with UPSERT: DELETE row when all fields empty to avoid null rows
-- Validation warnings never block operations (always warn-only)
-- Memory parser supports k/m/g suffixes case-insensitive
+All v1.0 decisions logged in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-None yet.
+None.
 
 ## Session Continuity
 
-Last session: 2026-02-08
-Stopped at: Phase 9 verified and complete. All 9 phases of Stacks & Instances milestone complete.
+Last session: 2026-02-09
+Stopped at: v1.0 milestone archived. Ready for next milestone.
 Resume file: None
