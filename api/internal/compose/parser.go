@@ -60,9 +60,12 @@ type ParsedService struct {
 	Ports         []ParsedPort
 	Volumes       []ParsedVolume
 	EnvVars       []ParsedEnvVar
+	EnvFiles      []string
 	Dependencies  []string
 	Labels        []ParsedLabel
 	Healthcheck   *ParsedHealthcheck
+	ContainerName string
+	Networks      []string
 	Overrides     map[string]interface{}
 }
 
@@ -151,9 +154,12 @@ func ParseFileAll(path string) ([]*ParsedService, error) {
 		parsed.Ports = parsePorts(svc.Ports)
 		parsed.Volumes = parseVolumes(svc.Volumes, compose.Volumes)
 		parsed.EnvVars = parseEnvironment(svc.Environment)
+		parsed.EnvFiles = parseEnvFile(svc.EnvFile)
 		parsed.Dependencies = parseDependsOn(svc.DependsOn)
 		parsed.Labels = parseLabels(svc.Labels)
 		parsed.Healthcheck = parseHealthcheck(svc.Healthcheck)
+		parsed.ContainerName = svc.ContainerName
+		parsed.Networks = parseNetworks(svc.Networks)
 		parsed.Overrides = extractOverrides(rawCompose.Services[name])
 
 		services = append(services, parsed)
@@ -450,4 +456,46 @@ func parseDuration(d string) int {
 	default:
 		return val
 	}
+}
+
+func parseEnvFile(envFile interface{}) []string {
+	if envFile == nil {
+		return nil
+	}
+
+	switch v := envFile.(type) {
+	case string:
+		return []string{v}
+	case []interface{}:
+		result := make([]string, 0, len(v))
+		for _, e := range v {
+			result = append(result, fmt.Sprintf("%v", e))
+		}
+		return result
+	}
+
+	return nil
+}
+
+func parseNetworks(networks interface{}) []string {
+	if networks == nil {
+		return nil
+	}
+
+	switch v := networks.(type) {
+	case []interface{}:
+		result := make([]string, 0, len(v))
+		for _, n := range v {
+			result = append(result, fmt.Sprintf("%v", n))
+		}
+		return result
+	case map[string]interface{}:
+		result := make([]string, 0, len(v))
+		for name := range v {
+			result = append(result, name)
+		}
+		return result
+	}
+
+	return nil
 }
