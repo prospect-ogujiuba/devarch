@@ -82,49 +82,49 @@ Requirements for Schema Reconciliation milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCHM-01 | — | Pending |
-| SCHM-02 | — | Pending |
-| SCHM-03 | — | Pending |
-| SCHM-04 | — | Pending |
-| SCHM-05 | — | Pending |
-| SCHM-06 | — | Pending |
-| SCHM-07 | — | Pending |
-| SCHM-08 | — | Pending |
-| SCHM-09 | — | Pending |
-| SCHM-10 | — | Pending |
-| SCHM-11 | — | Pending |
-| SCHM-12 | — | Pending |
-| PARS-01 | — | Pending |
-| PARS-02 | — | Pending |
-| PARS-03 | — | Pending |
-| PARS-04 | — | Pending |
-| PARS-05 | — | Pending |
-| PARS-06 | — | Pending |
-| PARS-07 | — | Pending |
-| GENR-01 | — | Pending |
-| GENR-02 | — | Pending |
-| GENR-03 | — | Pending |
-| GENR-04 | — | Pending |
-| IMPT-01 | — | Pending |
-| IMPT-02 | — | Pending |
-| IMPT-03 | — | Pending |
-| IMPT-04 | — | Pending |
-| IMPT-05 | — | Pending |
-| IMPT-06 | — | Pending |
-| DASH-01 | — | Pending |
-| DASH-02 | — | Pending |
-| DASH-03 | — | Pending |
-| DASH-04 | — | Pending |
-| VALD-01 | — | Pending |
-| VALD-02 | — | Pending |
-| VALD-03 | — | Pending |
-| VALD-04 | — | Pending |
+| SCHM-01 | Phase 10 | Pending |
+| SCHM-02 | Phase 10 | Pending |
+| SCHM-03 | Phase 10 | Pending |
+| SCHM-04 | Phase 10 | Pending |
+| SCHM-05 | Phase 10 | Pending |
+| SCHM-06 | Phase 10 | Pending |
+| SCHM-07 | Phase 10 | Pending |
+| SCHM-08 | Phase 10 | Pending |
+| SCHM-09 | Phase 10 | Pending |
+| SCHM-10 | Phase 10 | Pending |
+| SCHM-11 | Phase 10 | Pending |
+| SCHM-12 | Phase 10 | Pending |
+| PARS-01 | Phase 11 | Pending |
+| PARS-02 | Phase 11 | Pending |
+| PARS-03 | Phase 11 | Pending |
+| PARS-04 | Phase 11 | Pending |
+| PARS-05 | Phase 11 | Pending |
+| PARS-06 | Phase 11 | Pending |
+| PARS-07 | Phase 11 | Pending |
+| GENR-01 | Phase 12 | Pending |
+| GENR-02 | Phase 12 | Pending |
+| GENR-03 | Phase 12 | Pending |
+| GENR-04 | Phase 12 | Pending |
+| IMPT-01 | Phase 13 | Pending |
+| IMPT-02 | Phase 13 | Pending |
+| IMPT-03 | Phase 13 | Pending |
+| IMPT-04 | Phase 13 | Pending |
+| IMPT-05 | Phase 13 | Pending |
+| IMPT-06 | Phase 13 | Pending |
+| DASH-01 | Phase 14 | Pending |
+| DASH-02 | Phase 14 | Pending |
+| DASH-03 | Phase 14 | Pending |
+| DASH-04 | Phase 14 | Pending |
+| VALD-01 | Phase 15 | Pending |
+| VALD-02 | Phase 15 | Pending |
+| VALD-03 | Phase 15 | Pending |
+| VALD-04 | Phase 15 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 36 total
-- Mapped to phases: 0
-- Unmapped: 36 ⚠️
+- Mapped to phases: 36/36 (100%)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-09*
-*Last updated: 2026-02-09 after initial definition*
+*Last updated: 2026-02-09 — traceability complete*
