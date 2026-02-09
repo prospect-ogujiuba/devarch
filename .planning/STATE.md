@@ -5,27 +5,48 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** v1.1 Schema Reconciliation
+**Current focus:** Phase 10 - Fresh Baseline Migrations
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-09 — Milestone v1.1 started
+Phase: 10 of 15 (Fresh Baseline Migrations)
+Plan: None (phase ready to plan)
+Status: Ready to plan
+Last activity: 2026-02-09 — Roadmap created for v1.1 milestone
 
-## v1.0 Performance Summary
+Progress: [██████░░░░] 60% (9/15 phases complete from v1.0)
 
-- 9 phases, 30 plans completed in ~1.6 hours
-- 183 commits | 294 files | +47,453 lines
-- Timeline: 7 days (2026-02-03 → 2026-02-09)
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed: 30 (from v1.0)
+- Average duration: ~3.2 minutes per plan (v1.0)
+- Total execution time: ~1.6 hours (v1.0)
+
+**By Phase:**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| v1.0 (1-9) | 30 | ~1.6h | ~3.2min |
+| v1.1 (10-15) | 0 | - | - |
+
+**Recent Trend:**
+- Starting new milestone v1.1
+- v1.0 shipped successfully on 2026-02-09
+
+*Updated after each plan completion*
 
 ## Accumulated Context
 
 ### Decisions
 
-All v1.0 decisions logged in PROJECT.md Key Decisions table.
-v1.1 decisions: fresh baseline (no compat migration), domain-separated DDL, dedicated config_mounts table, streaming multipart.
+Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
+
+- v1.1: Fresh baseline over incremental migration — 23 patch migrations create fragility; clean slate is simpler to maintain
+- v1.1: Domain-separated DDL files — Clean boundaries, each table created once in final form
+- v1.1: Dedicated service_config_mounts table — Config provenance needs its own model, not overloaded config_files
+- v1.1: Streaming multipart for large imports — ParseMultipartForm buffers entire body; streaming avoids OOM
 
 ### Pending Todos
 
@@ -38,5 +59,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Defining v1.1 requirements
+Stopped at: Roadmap created for v1.1 Schema Reconciliation milestone
 Resume file: None
+Next: `/gsd:plan-phase 10`
