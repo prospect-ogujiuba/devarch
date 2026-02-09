@@ -5,6 +5,7 @@ backup/
 prompts/
 # Build artifacts
 api/server
+api/verify-parity
 api/tmp/
 
 # Other ignores
