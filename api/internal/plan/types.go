@@ -38,6 +38,13 @@ type WirePlanEntry struct {
 	InjectedEnvVars  map[string]string `json:"injected_env_vars"`
 }
 
+type ResourceLimitEntry struct {
+	CPULimit          string `json:"cpu_limit,omitempty"`
+	CPUReservation    string `json:"cpu_reservation,omitempty"`
+	MemoryLimit       string `json:"memory_limit,omitempty"`
+	MemoryReservation string `json:"memory_reservation,omitempty"`
+}
+
 type WiringWarning struct {
 	Severity string `json:"severity"`
 	Message  string `json:"message"`
@@ -46,11 +53,12 @@ type WiringWarning struct {
 }
 
 type Plan struct {
-	StackName   string          `json:"stack_name"`
-	StackID     int             `json:"stack_id"`
-	Changes     []Change        `json:"changes"`
-	Token       string          `json:"token"`
-	GeneratedAt time.Time       `json:"generated_at"`
-	Warnings    []string        `json:"warnings,omitempty"`
-	Wiring      *WiringSection  `json:"wiring,omitempty"`
+	StackName       string                         `json:"stack_name"`
+	StackID         int                            `json:"stack_id"`
+	Changes         []Change                       `json:"changes"`
+	Token           string                         `json:"token"`
+	GeneratedAt     time.Time                      `json:"generated_at"`
+	Warnings        []string                       `json:"warnings,omitempty"`
+	Wiring          *WiringSection                 `json:"wiring,omitempty"`
+	ResourceLimits  map[string]ResourceLimitEntry  `json:"resource_limits,omitempty"`
 }

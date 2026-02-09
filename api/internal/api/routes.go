@@ -215,6 +215,9 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 						r.Put("/healthcheck", instanceHandler.UpdateHealthcheck)
 						r.Put("/dependencies", instanceHandler.UpdateDependencies)
 
+						r.Get("/resources", instanceHandler.GetResourceLimits)
+						r.Put("/resources", instanceHandler.UpdateResourceLimits)
+
 						r.Get("/files", instanceHandler.ListConfigFiles)
 						r.Get("/files/*", instanceHandler.GetConfigFile)
 						r.Put("/files/*", instanceHandler.PutConfigFile)
