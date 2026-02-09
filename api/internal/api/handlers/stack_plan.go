@@ -124,8 +124,61 @@ func (h *StackHandler) Plan(w http.ResponseWriter, r *http.Request) {
 		planResp.Warnings = append(planResp.Warnings, wiringWarnings...)
 	}
 
+	resourceLimits, resourceWarnings, err := h.loadResourceLimitsForStack(stackID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to load resource limits: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if len(resourceLimits) > 0 {
+		planResp.ResourceLimits = resourceLimits
+		planResp.Warnings = append(planResp.Warnings, resourceWarnings...)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(planResp)
+}
+
+func (h *StackHandler) loadResourceLimitsForStack(stackID int) (map[string]plan.ResourceLimitEntry, []string, error) {
+	rows, err := h.db.Query(`
+		SELECT si.instance_id, irl.cpu_limit, irl.cpu_reservation, irl.memory_limit, irl.memory_reservation
+		FROM instance_resource_limits irl
+		JOIN service_instances si ON si.id = irl.instance_id
+		WHERE si.stack_id = $1 AND si.deleted_at IS NULL
+		ORDER BY si.instance_id
+	`, stackID)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	limits := make(map[string]plan.ResourceLimitEntry)
+	warnings := []string{}
+
+	for rows.Next() {
+		var instanceID string
+		var cpuLimit, cpuReservation, memoryLimit, memoryReservation sql.NullString
+		if err := rows.Scan(&instanceID, &cpuLimit, &cpuReservation, &memoryLimit, &memoryReservation); err != nil {
+			return nil, nil, err
+		}
+
+		entry := plan.ResourceLimitEntry{}
+		if cpuLimit.Valid && cpuLimit.String != "" {
+			entry.CPULimit = cpuLimit.String
+		}
+		if cpuReservation.Valid && cpuReservation.String != "" {
+			entry.CPUReservation = cpuReservation.String
+		}
+		if memoryLimit.Valid && memoryLimit.String != "" {
+			entry.MemoryLimit = memoryLimit.String
+		}
+		if memoryReservation.Valid && memoryReservation.String != "" {
+			entry.MemoryReservation = memoryReservation.String
+		}
+
+		limits[instanceID] = entry
+	}
+
+	return limits, warnings, rows.Err()
 }
 
 func (h *StackHandler) resolveAndBuildWiring(stackID int, stackName string) (*plan.WiringSection, []string, error) {

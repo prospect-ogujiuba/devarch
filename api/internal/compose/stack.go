@@ -22,18 +22,33 @@ type stackCompose struct {
 }
 
 type stackServiceEntry struct {
-	Image         string            `yaml:"image,omitempty"`
-	ContainerName string            `yaml:"container_name"`
-	Restart       string            `yaml:"restart,omitempty"`
-	Command       interface{}       `yaml:"command,omitempty"`
-	User          string            `yaml:"user,omitempty"`
-	Ports         []string          `yaml:"ports,omitempty"`
-	Volumes       []string          `yaml:"volumes,omitempty"`
-	Environment   map[string]string `yaml:"environment,omitempty"`
-	DependsOn     interface{}       `yaml:"depends_on,omitempty"`
-	Labels        []string          `yaml:"labels,omitempty"`
+	Image         string             `yaml:"image,omitempty"`
+	ContainerName string             `yaml:"container_name"`
+	Restart       string             `yaml:"restart,omitempty"`
+	Command       interface{}        `yaml:"command,omitempty"`
+	User          string             `yaml:"user,omitempty"`
+	Ports         []string           `yaml:"ports,omitempty"`
+	Volumes       []string           `yaml:"volumes,omitempty"`
+	Environment   map[string]string  `yaml:"environment,omitempty"`
+	DependsOn     interface{}        `yaml:"depends_on,omitempty"`
+	Labels        []string           `yaml:"labels,omitempty"`
 	Healthcheck   *healthcheckConfig `yaml:"healthcheck,omitempty"`
-	Networks      []string          `yaml:"networks"`
+	Networks      []string           `yaml:"networks"`
+	Deploy        *deployConfig      `yaml:"deploy,omitempty"`
+}
+
+type deployConfig struct {
+	Resources *resourcesConfig `yaml:"resources,omitempty"`
+}
+
+type resourcesConfig struct {
+	Limits       *resourceLimits `yaml:"limits,omitempty"`
+	Reservations *resourceLimits `yaml:"reservations,omitempty"`
+}
+
+type resourceLimits struct {
+	CPUs   string `yaml:"cpus,omitempty"`
+	Memory string `yaml:"memory,omitempty"`
 }
 
 type stackInstance struct {
@@ -224,6 +239,14 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 		svc.Healthcheck = cfg.healthcheck
 
 		svc.DependsOn = g.buildDependsOn(inst.instanceID, cfg.dependencies, enabledMap, allInstanceIDs, configs, &warnings)
+
+		deployConfig, err := g.loadResourceLimits(inst.id)
+		if err != nil {
+			return nil, nil, fmt.Errorf("load resource limits for %s: %w", inst.instanceID, err)
+		}
+		if deployConfig != nil {
+			svc.Deploy = deployConfig
+		}
 
 		compose.Services[inst.instanceID] = svc
 	}
@@ -847,6 +870,55 @@ func (g *Generator) resolveStackVolumePath(source, stackName, instanceID string)
 		return source
 	}
 	return g.resolveRelativePath(source, "")
+}
+
+func (g *Generator) loadResourceLimits(instancePK int) (*deployConfig, error) {
+	var cpuLimit, cpuReservation, memoryLimit, memoryReservation sql.NullString
+
+	err := g.db.QueryRow(`
+		SELECT cpu_limit, cpu_reservation, memory_limit, memory_reservation
+		FROM instance_resource_limits WHERE instance_id = $1
+	`, instancePK).Scan(&cpuLimit, &cpuReservation, &memoryLimit, &memoryReservation)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	hasLimits := cpuLimit.Valid || memoryLimit.Valid
+	hasReservations := cpuReservation.Valid || memoryReservation.Valid
+
+	if !hasLimits && !hasReservations {
+		return nil, nil
+	}
+
+	deploy := &deployConfig{
+		Resources: &resourcesConfig{},
+	}
+
+	if hasLimits {
+		deploy.Resources.Limits = &resourceLimits{}
+		if cpuLimit.Valid && cpuLimit.String != "" {
+			deploy.Resources.Limits.CPUs = cpuLimit.String
+		}
+		if memoryLimit.Valid && memoryLimit.String != "" {
+			deploy.Resources.Limits.Memory = memoryLimit.String
+		}
+	}
+
+	if hasReservations {
+		deploy.Resources.Reservations = &resourceLimits{}
+		if cpuReservation.Valid && cpuReservation.String != "" {
+			deploy.Resources.Reservations.CPUs = cpuReservation.String
+		}
+		if memoryReservation.Valid && memoryReservation.String != "" {
+			deploy.Resources.Reservations.Memory = memoryReservation.String
+		}
+	}
+
+	return deploy, nil
 }
 
 func (g *Generator) MaterializeStackConfigs(stackName, baseDir string) error {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -639,4 +640,166 @@ func (h *InstanceHandler) DeleteConfigFile(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *InstanceHandler) GetResourceLimits(w http.ResponseWriter, r *http.Request) {
+	stackName := chi.URLParam(r, "name")
+	instanceName := chi.URLParam(r, "instance")
+
+	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	type resourceLimitsResponse struct {
+		CPULimit          string `json:"cpu_limit,omitempty"`
+		CPUReservation    string `json:"cpu_reservation,omitempty"`
+		MemoryLimit       string `json:"memory_limit,omitempty"`
+		MemoryReservation string `json:"memory_reservation,omitempty"`
+	}
+
+	var resp resourceLimitsResponse
+	err = h.db.QueryRow(`
+		SELECT cpu_limit, cpu_reservation, memory_limit, memory_reservation
+		FROM instance_resource_limits WHERE instance_id = $1
+	`, instanceID).Scan(
+		&resp.CPULimit,
+		&resp.CPUReservation,
+		&resp.MemoryLimit,
+		&resp.MemoryReservation,
+	)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, "no resource limits configured", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get resource limits: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *InstanceHandler) UpdateResourceLimits(w http.ResponseWriter, r *http.Request) {
+	stackName := chi.URLParam(r, "name")
+	instanceName := chi.URLParam(r, "instance")
+
+	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	var req struct {
+		CPULimit          string `json:"cpu_limit"`
+		CPUReservation    string `json:"cpu_reservation"`
+		MemoryLimit       string `json:"memory_limit"`
+		MemoryReservation string `json:"memory_reservation"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	warnings := []string{}
+
+	if req.MemoryLimit != "" {
+		bytes, err := parseMemoryString(req.MemoryLimit)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("invalid memory_limit: %v", err), http.StatusBadRequest)
+			return
+		}
+		if bytes < 4*1024*1024 {
+			warnings = append(warnings, "memory limit very low (< 4MB), container may fail to start")
+		}
+	}
+
+	if req.CPULimit != "" {
+		cpuLimit, err := strconv.ParseFloat(req.CPULimit, 64)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("invalid cpu_limit: must be numeric, got %q", req.CPULimit), http.StatusBadRequest)
+			return
+		}
+		if cpuLimit < 0.01 {
+			warnings = append(warnings, "CPU limit extremely low (< 0.01)")
+		}
+	}
+
+	allEmpty := req.CPULimit == "" && req.CPUReservation == "" && req.MemoryLimit == "" && req.MemoryReservation == ""
+	if allEmpty {
+		_, err := h.db.Exec("DELETE FROM instance_resource_limits WHERE instance_id = $1", instanceID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to delete resource limits: %v", err), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "deleted",
+		})
+		return
+	}
+
+	_, err = h.db.Exec(`
+		INSERT INTO instance_resource_limits (instance_id, cpu_limit, cpu_reservation, memory_limit, memory_reservation)
+		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''))
+		ON CONFLICT (instance_id) DO UPDATE SET
+			cpu_limit = NULLIF(EXCLUDED.cpu_limit, ''),
+			cpu_reservation = NULLIF(EXCLUDED.cpu_reservation, ''),
+			memory_limit = NULLIF(EXCLUDED.memory_limit, ''),
+			memory_reservation = NULLIF(EXCLUDED.memory_reservation, '')
+	`, instanceID, req.CPULimit, req.CPUReservation, req.MemoryLimit, req.MemoryReservation)
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to save resource limits: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":             "updated",
+		"cpu_limit":          req.CPULimit,
+		"cpu_reservation":    req.CPUReservation,
+		"memory_limit":       req.MemoryLimit,
+		"memory_reservation": req.MemoryReservation,
+		"warnings":           warnings,
+	})
+}
+
+func parseMemoryString(s string) (int64, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, fmt.Errorf("empty string")
+	}
+
+	multiplier := int64(1)
+	lastChar := strings.ToLower(string(s[len(s)-1]))
+
+	if lastChar == "k" {
+		multiplier = 1024
+		s = s[:len(s)-1]
+	} else if lastChar == "m" {
+		multiplier = 1024 * 1024
+		s = s[:len(s)-1]
+	} else if lastChar == "g" {
+		multiplier = 1024 * 1024 * 1024
+		s = s[:len(s)-1]
+	}
+
+	num, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid number: %w", err)
+	}
+
+	return num * multiplier, nil
 }
