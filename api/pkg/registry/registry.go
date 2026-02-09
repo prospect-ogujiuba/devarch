@@ -2,8 +2,11 @@ package registry
 
 import (
 	"context"
+	"errors"
 	"time"
 )
+
+var ErrSearchNotSupported = errors.New("search not supported by this registry")
 
 type Registry interface {
 	Name() string
@@ -11,7 +14,21 @@ type Registry interface {
 	GetImageInfo(ctx context.Context, repository string) (*ImageInfo, error)
 	ListTags(ctx context.Context, repository string, opts ListTagsOptions) ([]TagInfo, error)
 	GetTagManifest(ctx context.Context, repository, tag string) (*TagInfo, error)
+	SearchImages(ctx context.Context, query string, opts SearchOptions) ([]SearchResult, error)
 	RateLimitRemaining() int
+}
+
+type SearchOptions struct {
+	PageSize int
+	Page     int
+}
+
+type SearchResult struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	StarCount   int    `json:"star_count"`
+	PullCount   int64  `json:"pull_count"`
+	IsOfficial  bool   `json:"is_official"`
 }
 
 type ImageInfo struct {
@@ -60,6 +77,10 @@ func (m *Manager) Register(r Registry) {
 
 func (m *Manager) Get(name string) Registry {
 	return m.registries[name]
+}
+
+func (m *Manager) All() map[string]Registry {
+	return m.registries
 }
 
 func (m *Manager) DetectRegistry(imageName string) string {

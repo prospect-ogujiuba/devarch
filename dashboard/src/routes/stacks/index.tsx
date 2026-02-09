@@ -5,7 +5,6 @@ import { Layers, Plus, CheckCircle2, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   useStacks,
-  useDeleteStack,
   useEnableStack,
   useDisableStack,
   useCreateNetwork,
@@ -19,6 +18,7 @@ import { StackGrid } from '@/components/stacks/stack-grid'
 import { CreateStackDialog } from '@/components/stacks/create-stack-dialog'
 import { CloneStackDialog } from '@/components/stacks/clone-stack-dialog'
 import { RenameStackDialog } from '@/components/stacks/rename-stack-dialog'
+import { DeleteStackDialog } from '@/components/stacks/delete-stack-dialog'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ListPageScaffold } from '@/components/ui/list-page-scaffold'
 import { PaginationControls } from '@/components/ui/pagination-controls'
@@ -75,7 +75,6 @@ function StacksPage() {
   const navigate = Route.useNavigate()
   const stacks = useMemo(() => data ?? [], [data])
 
-  const deleteMutation = useDeleteStack()
   const enableMutation = useEnableStack()
   const disableMutation = useDisableStack()
   const createNetworkMutation = useCreateNetwork()
@@ -87,6 +86,7 @@ function StacksPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [cloneTarget, setCloneTarget] = useState<Stack | null>(null)
   const [renameTarget, setRenameTarget] = useState<Stack | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Stack | null>(null)
 
   const controls = useUrlSyncedListControls(
     { storageKey: 'stacks', items: stacks, searchFn, filterFns, sortFns, defaultSort: 'name', defaultView: 'grid' },
@@ -135,9 +135,8 @@ function StacksPage() {
   const handleEnable = (name: string) => enableMutation.mutate(name)
   const handleDisable = (name: string) => disableMutation.mutate(name)
   const handleDelete = (name: string) => {
-    if (confirm(`Delete stack "${name}"? This will soft-delete the stack and stop all containers.`)) {
-      deleteMutation.mutate(name)
-    }
+    const stack = stacks.find((s) => s.name === name)
+    if (stack) setDeleteTarget(stack)
   }
   const handleCreateNetwork = (name: string) => createNetworkMutation.mutate(name)
   const handleRemoveNetwork = (name: string) => removeNetworkMutation.mutate(name)
@@ -257,6 +256,14 @@ function StacksPage() {
           stack={renameTarget}
           open={Boolean(renameTarget)}
           onOpenChange={(open) => { if (!open) setRenameTarget(null) }}
+        />
+      )}
+      {deleteTarget && (
+        <DeleteStackDialog
+          stack={deleteTarget}
+          open={Boolean(deleteTarget)}
+          onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+          onSuccess={() => setDeleteTarget(null)}
         />
       )}
     </>

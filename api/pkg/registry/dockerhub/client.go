@@ -178,6 +178,62 @@ func (c *Client) ListTags(ctx context.Context, repository string, opts registry.
 	return tags, nil
 }
 
+type searchResponse struct {
+	Results []struct {
+		RepoName    string `json:"repo_name"`
+		Description string `json:"short_description"`
+		StarCount   int    `json:"star_count"`
+		PullCount   int64  `json:"pull_count"`
+		IsOfficial  bool   `json:"is_official"`
+	} `json:"results"`
+}
+
+func (c *Client) SearchImages(ctx context.Context, query string, opts registry.SearchOptions) ([]registry.SearchResult, error) {
+	pageSize := opts.PageSize
+	if pageSize == 0 {
+		pageSize = 25
+	}
+	page := opts.Page
+	if page == 0 {
+		page = 1
+	}
+
+	url := fmt.Sprintf("%s/search/repositories?query=%s&page_size=%d&page=%d", hubAPIURL, query, pageSize, page)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
+	}
+
+	var sr searchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&sr); err != nil {
+		return nil, err
+	}
+
+	results := make([]registry.SearchResult, len(sr.Results))
+	for i, r := range sr.Results {
+		results[i] = registry.SearchResult{
+			Name:        r.RepoName,
+			Description: r.Description,
+			StarCount:   r.StarCount,
+			PullCount:   r.PullCount,
+			IsOfficial:  r.IsOfficial,
+		}
+	}
+
+	return results, nil
+}
+
 func (c *Client) GetTagManifest(ctx context.Context, repository, tag string) (*registry.TagInfo, error) {
 	tags, err := c.ListTags(ctx, repository, registry.ListTagsOptions{PageSize: 100})
 	if err != nil {

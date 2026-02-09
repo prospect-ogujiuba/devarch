@@ -166,6 +166,9 @@ interface CreateServicePayload {
   volumes?: Omit<ServiceVolume, 'id' | 'service_id'>[]
   env_vars?: Omit<ServiceEnvVar, 'id' | 'service_id'>[]
   dependencies?: string[]
+  labels?: Omit<ServiceLabel, 'id' | 'service_id'>[]
+  domains?: Omit<ServiceDomain, 'id' | 'service_id'>[]
+  healthcheck?: Omit<ServiceHealthcheck, 'id' | 'service_id'> | null
 }
 
 export function useCreateService() {

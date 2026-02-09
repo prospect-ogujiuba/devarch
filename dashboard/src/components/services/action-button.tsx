@@ -6,9 +6,18 @@ interface ActionButtonProps {
   status: string
   showRestart?: boolean
   size?: 'default' | 'sm' | 'icon' | 'icon-sm'
+  className?: string
+  buttonClassName?: string
 }
 
-export function ActionButton({ name, status, showRestart = false, size = 'sm' }: ActionButtonProps) {
+export function ActionButton({
+  name,
+  status,
+  showRestart = false,
+  size = 'sm',
+  className,
+  buttonClassName,
+}: ActionButtonProps) {
   const startMutation = useStartService()
   const stopMutation = useStopService()
   const restartMutation = useRestartService()
@@ -27,6 +36,8 @@ export function ActionButton({ name, status, showRestart = false, size = 'sm' }:
       startDisabled={status === 'starting'}
       showRestart={showRestart}
       size={size}
+      className={className}
+      buttonClassName={buttonClassName}
     />
   )
 }

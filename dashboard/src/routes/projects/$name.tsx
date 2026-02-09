@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { z } from 'zod'
-import { ArrowLeft, Loader2, GitBranch, Package, Code2, ExternalLink, Puzzle, Palette, Play, Square, RotateCcw, Server } from 'lucide-react'
+import { ArrowLeft, Loader2, GitBranch, Package, Code2, ExternalLink, Puzzle, Palette, Server } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { ResponsiveTabsList } from '@/components/ui/responsive-tabs-list'
+import { LifecycleButtons } from '@/components/ui/entity-actions'
 import { ProjectLogo } from '@/components/projects/project-logo'
 import { useProject, useProjectServices, useProjectStatus, useProjectControl } from '@/features/projects/queries'
 
@@ -78,7 +78,7 @@ function ProjectDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <Link to="/projects" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-5" />
         </Link>
@@ -103,44 +103,27 @@ function ProjectDetailPage() {
             <p className="text-muted-foreground">{project.description}</p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
           {hasCompose && (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => start.mutate()}
-                disabled={start.isPending}
-              >
-                <Play className="size-3.5 mr-1" />
-                Start
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => stop.mutate()}
-                disabled={stop.isPending}
-              >
-                <Square className="size-3.5 mr-1" />
-                Stop
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => restart.mutate()}
-                disabled={restart.isPending}
-              >
-                <RotateCcw className="size-3.5 mr-1" />
-                Restart
-              </Button>
-            </>
+            <LifecycleButtons
+              isRunning={false}
+              onStart={() => start.mutate()}
+              onStop={() => stop.mutate()}
+              onRestart={() => restart.mutate()}
+              isStartPending={start.isPending}
+              isStopPending={stop.isPending}
+              isRestartPending={restart.isPending}
+              showAll
+              className="col-span-2"
+              buttonClassName="w-full sm:w-auto"
+            />
           )}
           {project.domain && (
             <a
               href={`https://${project.domain}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+              className="col-span-2 inline-flex items-center justify-center gap-1 rounded-md border px-3 py-2 text-sm text-primary hover:underline sm:col-span-1 sm:justify-start sm:border-0 sm:px-0 sm:py-0"
             >
               <ExternalLink className="size-4" />
               {project.domain}
