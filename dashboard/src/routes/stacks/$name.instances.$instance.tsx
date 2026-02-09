@@ -24,6 +24,7 @@ import { OverrideHealthcheck } from '@/components/instances/override-healthcheck
 import { OverrideDependencies } from '@/components/instances/override-dependencies'
 import { OverrideConfigFiles } from '@/components/instances/override-config-files'
 import { EffectiveConfigTab } from '@/components/instances/effective-config-tab'
+import { ResourceLimits } from '@/components/instances/resource-limits'
 import {
   DeleteInstanceDialog,
   DuplicateInstanceDialog,
@@ -46,12 +47,12 @@ function timeAgo(dateStr: string): string {
 
 export const Route = createFileRoute('/stacks/$name/instances/$instance')({
   validateSearch: z.object({
-    instanceTab: z.enum(['info', 'ports', 'volumes', 'environment', 'labels', 'domains', 'healthcheck', 'dependencies', 'files', 'effective']).optional(),
+    instanceTab: z.enum(['info', 'ports', 'volumes', 'environment', 'labels', 'domains', 'healthcheck', 'dependencies', 'files', 'resources', 'effective']).optional(),
   }),
   component: InstanceDetailPage,
 })
 
-const instanceTabs = ['info', 'ports', 'volumes', 'environment', 'labels', 'domains', 'healthcheck', 'dependencies', 'files', 'effective'] as const
+const instanceTabs = ['info', 'ports', 'volumes', 'environment', 'labels', 'domains', 'healthcheck', 'dependencies', 'files', 'resources', 'effective'] as const
 type InstanceTab = (typeof instanceTabs)[number]
 
 function InstanceDetailPage() {
@@ -135,12 +136,13 @@ function InstanceDetailPage() {
     { value: 'healthcheck', label: 'Healthcheck' },
     { value: 'dependencies', label: 'Dependencies' },
     { value: 'files', label: 'Config Files' },
+    { value: 'resources', label: 'Resources' },
     { value: 'effective', label: 'Effective Config' },
   ]
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <Link to="/stacks/$name" params={{ name: stackName }} className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-5" />
         </Link>
@@ -157,13 +159,14 @@ function InstanceDetailPage() {
             <p className="text-xs font-mono text-muted-foreground">{instance.container_name}</p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
           <EnableToggle
             enabled={instance.enabled}
             onToggle={handleToggleEnabled}
             isPending={updateInstance.isPending}
+            className="w-full sm:w-auto"
           />
-          <MoreActionsMenu>
+          <MoreActionsMenu triggerClassName="w-full sm:w-auto" mobileLabel="Actions">
             <DropdownMenuItem onClick={openEdit}>
               <Edit className="size-4" />
               Edit Description
@@ -315,6 +318,10 @@ function InstanceDetailPage() {
               instanceId={instanceId}
             />
           )}
+        </TabsContent>
+
+        <TabsContent value="resources">
+          <ResourceLimits stackName={stackName} instanceId={instanceId} />
         </TabsContent>
 
         <TabsContent value="effective">

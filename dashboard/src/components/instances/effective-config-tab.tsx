@@ -3,7 +3,7 @@ import { Copy, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useEffectiveConfig } from '@/features/instances/queries'
+import { useEffectiveConfig, useResourceLimits } from '@/features/instances/queries'
 import { cn } from '@/lib/utils'
 import YAML from 'yaml'
 
@@ -14,6 +14,7 @@ interface Props {
 
 export function EffectiveConfigTab({ stackName, instanceId }: Props) {
   const { data: raw, isLoading } = useEffectiveConfig(stackName, instanceId)
+  const { data: resourceLimits } = useResourceLimits(stackName, instanceId)
   const [format, setFormat] = useState<'yaml' | 'json'>('yaml')
   const [copied, setCopied] = useState(false)
 
@@ -111,7 +112,7 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
           {config.ports.length === 0 ? (
             <p className="text-sm text-muted-foreground">No ports configured</p>
           ) : (
-            <div className="overflow-auto">
+            <ScrollableTable>
               <table className="w-full text-sm">
                 <thead className="border-b">
                   <tr className="text-left">
@@ -132,7 +133,7 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollableTable>
           )}
         </CardContent>
       </Card>
@@ -148,7 +149,7 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
           {config.volumes.length === 0 ? (
             <p className="text-sm text-muted-foreground">No volumes configured</p>
           ) : (
-            <div className="overflow-auto">
+            <ScrollableTable>
               <table className="w-full text-sm">
                 <thead className="border-b">
                   <tr className="text-left">
@@ -169,7 +170,7 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollableTable>
           )}
         </CardContent>
       </Card>
@@ -185,7 +186,7 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
           {config.env_vars.length === 0 ? (
             <p className="text-sm text-muted-foreground">No environment variables</p>
           ) : (
-            <div className="overflow-auto">
+            <ScrollableTable>
               <table className="w-full text-sm">
                 <thead className="border-b">
                   <tr className="text-left">
@@ -202,7 +203,7 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollableTable>
           )}
         </CardContent>
       </Card>
@@ -218,7 +219,7 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
           {config.labels.length === 0 ? (
             <p className="text-sm text-muted-foreground">No labels</p>
           ) : (
-            <div className="overflow-auto">
+            <ScrollableTable>
               <table className="w-full text-sm">
                 <thead className="border-b">
                   <tr className="text-left">
@@ -235,7 +236,7 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollableTable>
           )}
         </CardContent>
       </Card>
@@ -251,7 +252,7 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
           {config.domains.length === 0 ? (
             <p className="text-sm text-muted-foreground">No domains configured</p>
           ) : (
-            <div className="overflow-auto">
+            <ScrollableTable>
               <table className="w-full text-sm">
                 <thead className="border-b">
                   <tr className="text-left">
@@ -268,7 +269,7 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollableTable>
           )}
         </CardContent>
       </Card>
@@ -314,6 +315,42 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
           )}
         </CardContent>
       </Card>
+
+      {resourceLimits && (resourceLimits.cpu_limit || resourceLimits.cpu_reservation || resourceLimits.memory_limit || resourceLimits.memory_reservation) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Resource Limits</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+              {resourceLimits.cpu_limit && (
+                <div className="flex flex-col">
+                  <span className="text-muted-foreground">CPU Limit:</span>
+                  <span className="font-mono">{resourceLimits.cpu_limit} cores</span>
+                </div>
+              )}
+              {resourceLimits.cpu_reservation && (
+                <div className="flex flex-col">
+                  <span className="text-muted-foreground">CPU Reservation:</span>
+                  <span className="font-mono">{resourceLimits.cpu_reservation} cores</span>
+                </div>
+              )}
+              {resourceLimits.memory_limit && (
+                <div className="flex flex-col">
+                  <span className="text-muted-foreground">Memory Limit:</span>
+                  <span className="font-mono">{resourceLimits.memory_limit}</span>
+                </div>
+              )}
+              {resourceLimits.memory_reservation && (
+                <div className="flex flex-col">
+                  <span className="text-muted-foreground">Memory Reservation:</span>
+                  <span className="font-mono">{resourceLimits.memory_reservation}</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className={cn(o.config_files && 'border-l-2 border-l-blue-500')}>
         <CardHeader>
@@ -416,4 +453,10 @@ function toYAML(config: NormalizedConfig): string {
   }
 
   return YAML.stringify(doc)
+}
+
+function ScrollableTable({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="overflow-x-auto">{children}</div>
+  )
 }
