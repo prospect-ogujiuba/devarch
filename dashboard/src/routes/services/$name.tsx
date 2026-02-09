@@ -23,6 +23,9 @@ import { EditablePorts } from '@/components/services/editable-ports'
 import { EditableVolumes } from '@/components/services/editable-volumes'
 import { EditableEnvVars } from '@/components/services/editable-env-vars'
 import { EditableDependencies } from '@/components/services/editable-dependencies'
+import { EditableEnvFiles } from '@/components/services/editable-env-files'
+import { EditableNetworks } from '@/components/services/editable-networks'
+import { EditableConfigMounts } from '@/components/services/editable-config-mounts'
 import { EditableHealthcheck } from '@/components/services/editable-healthcheck'
 import { EditableLabels } from '@/components/services/editable-labels'
 import { EditableDomains } from '@/components/services/editable-domains'
@@ -235,7 +238,10 @@ function ServiceDetailPage() {
           <EditableDomains name={service.name} domains={service.domains ?? []} />
           <EditablePorts name={service.name} ports={service.ports ?? []} />
           <EditableVolumes name={service.name} volumes={service.volumes ?? []} />
+          <EditableEnvFiles name={service.name} envFiles={service.env_files ?? []} />
+          <EditableNetworks name={service.name} networks={service.networks ?? []} />
           <EditableDependencies name={service.name} dependencies={service.dependencies ?? []} />
+          <EditableConfigMounts name={service.name} configMounts={service.config_mounts ?? []} />
           <EditableHealthcheck name={service.name} healthcheck={service.healthcheck ?? null} />
           <EditableLabels name={service.name} labels={service.labels ?? []} />
         </TabsContent>
