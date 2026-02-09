@@ -74,10 +74,11 @@ Plans:
   2. Compose generator emits explicit networks section from service_networks table
   3. Compose generator emits config mounts with correct source/target from service_config_mounts table
   4. Generated compose for all 166+ services matches legacy output byte-for-byte (modulo whitespace/ordering)
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 12-01: [TBD during planning]
+- [ ] 12-01-PLAN.md — Update both generators to emit env_file, networks, config mounts from new DB tables
+- [ ] 12-02-PLAN.md — Round-trip parity verification tool (import-then-generate diff)
 
 #### Phase 13: Import Scalability
 
