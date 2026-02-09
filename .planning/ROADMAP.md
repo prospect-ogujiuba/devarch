@@ -91,10 +91,11 @@ Plans:
   3. All other endpoints retain global 10MB cap
   4. Bulk import uses prepared statements and batched upserts within transaction
   5. Import handles conflicts idempotently (same import twice succeeds)
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 13-01: [TBD during planning]
+- [ ] 13-01-PLAN.md — Streaming multipart handler + route-level size cap
+- [ ] 13-02-PLAN.md — Prepared statements + upsert idempotency
 
 #### Phase 14: Dashboard Updates
 
