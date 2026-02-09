@@ -168,10 +168,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Migration 019 (wiring tables) + contract CRUD on templates + TypeScript types
-- [ ] 08-02-PLAN.md — Wiring domain package (resolver, env injector, validator) + wire management API
-- [ ] 08-03-PLAN.md — Plan/compose/export integration with wire-injected env vars
-- [ ] 08-04-PLAN.md — Dashboard Wiring tab with wire table, create/disconnect, ambiguous resolution
+- [x] 08-01-PLAN.md — Migration 019 (wiring tables) + contract CRUD on templates + TypeScript types (COMPLETE 2026-02-08)
+- [x] 08-02-PLAN.md — Wiring domain package (resolver, env injector, validator) + wire management API (COMPLETE 2026-02-08)
+- [x] 08-03-PLAN.md — Plan/compose/export integration with wire-injected env vars (COMPLETE 2026-02-08)
+- [x] 08-04-PLAN.md — Dashboard Wiring tab with wire table, create/disconnect, ambiguous resolution (COMPLETE 2026-02-08)
 
 ### Phase 9: Secrets & Resources
 **Goal**: Secrets encrypted at rest, resource limits per instance, all sensitive data redacted in outputs
@@ -206,9 +206,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 | 5. Compose Generation | 2/2 | Complete | 2026-02-07 |
 | 6. Plan/Apply Workflow | 3/3 | Complete | 2026-02-07 |
 | 7. Export/Import & Bootstrap | 4/4 | Complete | 2026-02-08 |
-| 8. Service Wiring | 0/4 | Planned | - |
+| 8. Service Wiring | 4/4 | Complete | 2026-02-08 |
 | 9. Secrets & Resources | 0/TBD | Not started | - |
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-08 after phase 8 planning*
+*Last updated: 2026-02-08 after phase 8 execution*
