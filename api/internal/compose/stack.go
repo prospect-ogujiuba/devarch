@@ -2,6 +2,7 @@ package compose
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/wiring"
 	"gopkg.in/yaml.v3"
 )
 
@@ -357,6 +359,12 @@ func (g *Generator) loadInstanceEffectiveConfig(stackName string, inst stackInst
 		return nil, fmt.Errorf("dependencies: %w", err)
 	}
 
+	wireDeps, err := g.loadWireDependencies(inst.id)
+	if err != nil {
+		return nil, fmt.Errorf("wire dependencies: %w", err)
+	}
+	cfg.dependencies = append(cfg.dependencies, wireDeps...)
+
 	cfg.configFiles, err = g.loadEffectiveConfigFiles(inst.id, inst.templateServiceID)
 	if err != nil {
 		return nil, fmt.Errorf("config files: %w", err)
@@ -477,6 +485,14 @@ func (g *Generator) loadEffectiveEnvVars(instancePK, templateServiceID int) (map
 		return nil, err
 	}
 
+	wiredEnvVars, err := g.loadWiredEnvVarsForInstance(instancePK)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range wiredEnvVars {
+		merged[k] = v
+	}
+
 	rows, err = g.db.Query(`
 		SELECT key, value FROM instance_env_vars WHERE instance_id = $1
 	`, instancePK)
@@ -492,6 +508,74 @@ func (g *Generator) loadEffectiveEnvVars(instancePK, templateServiceID int) (map
 		}
 		merged[k] = v
 	}
+	return merged, rows.Err()
+}
+
+func (g *Generator) loadWiredEnvVarsForInstance(instancePK int) (map[string]string, error) {
+	var stackName string
+	err := g.db.QueryRow(`
+		SELECT st.name
+		FROM service_instances si
+		JOIN stacks st ON st.id = si.stack_id
+		WHERE si.id = $1
+	`, instancePK).Scan(&stackName)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := g.db.Query(`
+		SELECT
+			si_provider.instance_id,
+			se.name,
+			se.port,
+			se.protocol,
+			COALESCE(sic.env_vars, '{}')
+		FROM service_instance_wires siw
+		JOIN service_instances si_provider ON si_provider.id = siw.provider_instance_id
+		JOIN service_exports se ON se.id = siw.export_contract_id
+		JOIN service_import_contracts sic ON sic.id = siw.import_contract_id
+		WHERE siw.consumer_instance_id = $1
+	`, instancePK)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	merged := make(map[string]string)
+	for rows.Next() {
+		var providerInstanceName string
+		var contractName string
+		var port int
+		var protocol string
+		var envVarsJSON []byte
+
+		if err := rows.Scan(&providerInstanceName, &contractName, &port, &protocol, &envVarsJSON); err != nil {
+			return nil, err
+		}
+
+		envVars := make(map[string]string)
+		if len(envVarsJSON) > 0 {
+			if err := json.Unmarshal(envVarsJSON, &envVars); err != nil {
+				return nil, fmt.Errorf("unmarshal env_vars: %w", err)
+			}
+		}
+
+		provider := wiring.Provider{
+			InstanceName: providerInstanceName,
+			ContractName: contractName,
+			Port:         port,
+			Protocol:     protocol,
+		}
+		consumer := wiring.Consumer{
+			EnvVars: envVars,
+		}
+
+		injections := wiring.InjectEnvVars(stackName, provider, consumer)
+		for k, v := range injections {
+			merged[k] = v
+		}
+	}
+
 	return merged, rows.Err()
 }
 
@@ -633,6 +717,30 @@ func (g *Generator) loadEffectiveDependencies(instancePK, templateServiceID int)
 	}
 	defer rows.Close()
 
+	for rows.Next() {
+		var dep string
+		if err := rows.Scan(&dep); err != nil {
+			return nil, err
+		}
+		deps = append(deps, dep)
+	}
+	return deps, rows.Err()
+}
+
+func (g *Generator) loadWireDependencies(instancePK int) ([]string, error) {
+	rows, err := g.db.Query(`
+		SELECT si_provider.instance_id
+		FROM service_instance_wires siw
+		JOIN service_instances si_provider ON si_provider.id = siw.provider_instance_id
+		WHERE siw.consumer_instance_id = $1
+		ORDER BY si_provider.instance_id
+	`, instancePK)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var deps []string
 	for rows.Next() {
 		var dep string
 		if err := rows.Scan(&dep); err != nil {
