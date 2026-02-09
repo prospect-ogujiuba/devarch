@@ -410,6 +410,62 @@ func (h *ServiceHandler) loadServiceRelations(s *models.Service) {
 	if err == nil {
 		s.Healthcheck = &hc
 	}
+
+	if rows, err := h.db.Query(`SELECT path FROM service_env_files WHERE service_id = $1 ORDER BY sort_order`, s.ID); err != nil {
+		log.Printf("loadServiceRelations: env_files query error for service %d: %v", s.ID, err)
+	} else {
+		defer rows.Close()
+		for rows.Next() {
+			var path string
+			if err := rows.Scan(&path); err != nil {
+				log.Printf("loadServiceRelations: env_files scan error: %v", err)
+				continue
+			}
+			s.EnvFiles = append(s.EnvFiles, path)
+		}
+		if err := rows.Err(); err != nil {
+			log.Printf("loadServiceRelations: env_files iteration error: %v", err)
+		}
+	}
+
+	if rows, err := h.db.Query(`SELECT network_name FROM service_networks WHERE service_id = $1 ORDER BY network_name`, s.ID); err != nil {
+		log.Printf("loadServiceRelations: networks query error for service %d: %v", s.ID, err)
+	} else {
+		defer rows.Close()
+		for rows.Next() {
+			var name string
+			if err := rows.Scan(&name); err != nil {
+				log.Printf("loadServiceRelations: networks scan error: %v", err)
+				continue
+			}
+			s.Networks = append(s.Networks, name)
+		}
+		if err := rows.Err(); err != nil {
+			log.Printf("loadServiceRelations: networks iteration error: %v", err)
+		}
+	}
+
+	if rows, err := h.db.Query(`SELECT id, service_id, config_file_id, source_path, target_path, readonly FROM service_config_mounts WHERE service_id = $1`, s.ID); err != nil {
+		log.Printf("loadServiceRelations: config_mounts query error for service %d: %v", s.ID, err)
+	} else {
+		defer rows.Close()
+		for rows.Next() {
+			var m models.ServiceConfigMount
+			var cfgFileID sql.NullInt32
+			if err := rows.Scan(&m.ID, &m.ServiceID, &cfgFileID, &m.SourcePath, &m.TargetPath, &m.ReadOnly); err != nil {
+				log.Printf("loadServiceRelations: config_mounts scan error: %v", err)
+				continue
+			}
+			if cfgFileID.Valid {
+				val := int(cfgFileID.Int32)
+				m.ConfigFileID = &val
+			}
+			s.ConfigMounts = append(s.ConfigMounts, m)
+		}
+		if err := rows.Err(); err != nil {
+			log.Printf("loadServiceRelations: config_mounts iteration error: %v", err)
+		}
+	}
 }
 
 type createServiceRequest struct {
@@ -1604,6 +1660,142 @@ func (h *ServiceHandler) UpdateDomains(w http.ResponseWriter, r *http.Request) {
 		_, err = tx.Exec(
 			`INSERT INTO service_domains (service_id, domain, proxy_port) VALUES ($1, $2, $3)`,
 			serviceID, d.Domain, d.ProxyPort,
+		)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func (h *ServiceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request) {
+	serviceID, ok := h.lookupServiceID(w, r)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		EnvFiles []string `json:"env_files"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	h.snapshotAndUpdate(serviceID)
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	tx.Exec("DELETE FROM service_env_files WHERE service_id = $1", serviceID)
+	for idx, path := range req.EnvFiles {
+		_, err = tx.Exec(
+			`INSERT INTO service_env_files (service_id, path, sort_order) VALUES ($1, $2, $3)`,
+			serviceID, path, idx,
+		)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func (h *ServiceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request) {
+	serviceID, ok := h.lookupServiceID(w, r)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		Networks []string `json:"networks"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	h.snapshotAndUpdate(serviceID)
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	tx.Exec("DELETE FROM service_networks WHERE service_id = $1", serviceID)
+	for _, name := range req.Networks {
+		_, err = tx.Exec(
+			`INSERT INTO service_networks (service_id, network_name) VALUES ($1, $2)`,
+			serviceID, name,
+		)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func (h *ServiceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Request) {
+	serviceID, ok := h.lookupServiceID(w, r)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		ConfigMounts []models.ServiceConfigMount `json:"config_mounts"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	h.snapshotAndUpdate(serviceID)
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	tx.Exec("DELETE FROM service_config_mounts WHERE service_id = $1", serviceID)
+	for _, m := range req.ConfigMounts {
+		var cfgFileID sql.NullInt32
+		if m.ConfigFileID != nil {
+			cfgFileID = sql.NullInt32{Int32: int32(*m.ConfigFileID), Valid: true}
+		}
+		_, err = tx.Exec(
+			`INSERT INTO service_config_mounts (service_id, config_file_id, source_path, target_path, readonly) VALUES ($1, $2, $3, $4, $5)`,
+			serviceID, cfgFileID, m.SourcePath, m.TargetPath, m.ReadOnly,
 		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
