@@ -43,6 +43,7 @@ type Service struct {
 	Labels       []ServiceLabel    `json:"labels,omitempty"`
 	Domains      []ServiceDomain      `json:"domains,omitempty"`
 	ConfigFiles  []ServiceConfigFile  `json:"config_files,omitempty"`
+	ConfigMounts []ServiceConfigMount `json:"config_mounts,omitempty"`
 
 	ConfigStatus     string          `json:"config_status"`
 	LastValidatedAt  sql.NullTime    `json:"-"`
@@ -159,6 +160,15 @@ type ServiceDomain struct {
 	ServiceID int    `json:"service_id"`
 	Domain    string `json:"domain"`
 	ProxyPort int    `json:"proxy_port,omitempty"`
+}
+
+type ServiceConfigMount struct {
+	ID           int    `json:"id"`
+	ServiceID    int    `json:"service_id"`
+	ConfigFileID *int   `json:"config_file_id,omitempty"`
+	SourcePath   string `json:"source_path"`
+	TargetPath   string `json:"target_path"`
+	ReadOnly     bool   `json:"readonly"`
 }
 
 type ContainerState struct {
