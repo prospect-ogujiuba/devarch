@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 Phase: 11 of 15 (Parser & Importer Updates)
-Plan: 1 of 2 (plan 11-01 complete)
-Status: In progress
-Last activity: 2026-02-09 — Completed 11-01-PLAN.md
+Plan: 2 of 2 (phase 11 complete)
+Status: Phase complete
+Last activity: 2026-02-09 — Completed 11-02-PLAN.md
 
-Progress: [███████░░░] 67% (10/15 phases complete, 31/TBD plans total)
+Progress: [████████░░] 73% (11/15 phases complete, 32/TBD plans total)
 
 ## Performance Metrics
 
@@ -32,7 +32,7 @@ Progress: [███████░░░] 67% (10/15 phases complete, 31/TBD pl
 
 **Recent Trend:**
 - Phase 10 complete (3 plans, 53min total)
-- Phase 11 in progress (1/2 plans, 5min)
+- Phase 11 complete (2 plans, 9min total)
 - v1.0 shipped successfully on 2026-02-09
 
 *Updated after each plan completion*
@@ -57,6 +57,9 @@ Recent decisions affecting current work:
 - 11-01: Store env_file paths as-is — No filesystem validation during import
 - 11-01: Extract network names only — Ignore network config, store names in service_networks
 - 11-01: sort_order preserves declaration order — service_env_files uses loop index for proper ordering
+- 11-02: Config volumes classified by config/ prefix — Parse-time classification replaces runtime guessing
+- 11-02: NULL config_file_id for missing files — Warnings logged, FKs resolved in post-import pass
+- 11-02: ResolveConfigMountLinks() post-import — Called after ImportAllConfigFiles() completes
 
 ### Pending Todos
 
@@ -69,6 +72,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 11-01-PLAN.md
+Stopped at: Completed 11-02-PLAN.md (phase 11 complete)
 Resume file: None
-Next: Plan and execute 11-02 (generator updates)
+Next: Phase 12 - Generator Updates
