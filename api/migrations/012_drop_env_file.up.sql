@@ -1,1 +1,0 @@
-ALTER TABLE services DROP COLUMN IF EXISTS env_file;

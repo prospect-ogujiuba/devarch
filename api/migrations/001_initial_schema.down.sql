@@ -1,9 +1,0 @@
-DROP TABLE IF EXISTS service_labels;
-DROP TABLE IF EXISTS service_domains;
-DROP TABLE IF EXISTS service_healthchecks;
-DROP TABLE IF EXISTS service_dependencies;
-DROP TABLE IF EXISTS service_env_vars;
-DROP TABLE IF EXISTS service_volumes;
-DROP TABLE IF EXISTS service_ports;
-DROP TABLE IF EXISTS services;
-DROP TABLE IF EXISTS categories;

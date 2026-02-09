@@ -1,1 +1,0 @@
-ALTER TABLE stacks DROP COLUMN source;
