@@ -14,6 +14,7 @@ import (
 	"github.com/priz/devarch-api/internal/nginx"
 	"github.com/priz/devarch-api/internal/podman"
 	"github.com/priz/devarch-api/internal/project"
+	"github.com/priz/devarch-api/internal/proxy"
 	"github.com/priz/devarch-api/internal/scanner"
 	"github.com/priz/devarch-api/internal/sync"
 	"github.com/priz/devarch-api/pkg/registry"
@@ -26,12 +27,13 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
+	r.Use(mw.MaxBodySize(10 << 20)) // 10MB request body limit
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-API-Key"},
 		ExposedHeaders:   []string{"Link", "X-Total-Count", "X-Page", "X-Per-Page", "X-Total-Pages"},
-		AllowCredentials: true,
+		AllowCredentials: false,
 		MaxAge:           300,
 	}))
 
@@ -46,6 +48,8 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	stackHandler := handlers.NewStackHandler(db, containerClient)
 	instanceHandler := handlers.NewInstanceHandler(db, containerClient, cipher)
 	networkHandler := handlers.NewNetworkHandler(db, containerClient)
+	proxyGenerator := proxy.NewGenerator(db)
+	proxyHandler := handlers.NewProxyHandler(proxyGenerator)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(mw.APIKeyAuth)
@@ -97,6 +101,8 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 				r.Get("/image", registryHandler.GetImage)
 				r.Get("/tags", registryHandler.GetTags)
 				r.Get("/vulnerabilities", registryHandler.GetVulnerabilities)
+
+				r.Post("/proxy-config", proxyHandler.GenerateForService)
 			})
 		})
 
@@ -122,8 +128,12 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 				r.Post("/services/{service}/start", projectHandler.StartService)
 				r.Post("/services/{service}/stop", projectHandler.StopService)
 				r.Post("/services/{service}/restart", projectHandler.RestartService)
+
+				r.Post("/proxy-config", proxyHandler.GenerateForProject)
 			})
 		})
+
+		r.Get("/proxy/types", proxyHandler.ListTypes)
 
 		r.Route("/nginx", func(r chi.Router) {
 			r.Post("/generate", nginxHandler.GenerateAll)
@@ -189,6 +199,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 				r.Get("/plan", stackHandler.Plan)
 				r.Post("/apply", stackHandler.Apply)
 				r.Get("/export", stackHandler.ExportStack)
+				r.Post("/proxy-config", proxyHandler.GenerateForStack)
 
 				r.Post("/lock", stackHandler.GenerateLock)
 				r.Post("/lock/validate", stackHandler.ValidateLock)

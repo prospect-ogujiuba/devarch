@@ -649,3 +649,26 @@ export interface ResourceLimitsResponse {
   limits: ResourceLimits
   warnings?: string[]
 }
+
+export interface ProxyTarget {
+  name: string
+  domain: string
+  target_host: string
+  target_port: number
+  https: boolean
+  websocket: boolean
+  client_max_body?: string
+}
+
+export interface ProxyConfigResult {
+  proxy_type: string
+  scope: string
+  name: string
+  config: string
+  targets: ProxyTarget[]
+}
+
+export interface ProxyTypeInfo {
+  id: string
+  name: string
+}

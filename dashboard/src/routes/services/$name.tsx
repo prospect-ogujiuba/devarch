@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ResponsiveTabsList } from '@/components/ui/responsive-tabs-list'
 import { useService, useServiceCompose, useDeleteService, useUpdateService } from '@/features/services/queries'
+import { useGenerateServiceProxyConfig } from '@/features/proxy/queries'
+import { ProxyConfigPanel } from '@/components/proxy/proxy-config-panel'
 import { StatusBadge } from '@/components/services/status-badge'
 import { ActionButton } from '@/components/services/action-button'
 import { LogViewer } from '@/components/services/log-viewer'
@@ -31,12 +33,12 @@ import { formatUptime, formatBytes, computeUptime } from '@/lib/format'
 
 export const Route = createFileRoute('/services/$name')({
   validateSearch: z.object({
-    tab: z.enum(['info', 'env', 'logs', 'compose', 'files']).optional(),
+    tab: z.enum(['info', 'env', 'logs', 'compose', 'files', 'proxy']).optional(),
   }),
   component: ServiceDetailPage,
 })
 
-const serviceTabs = ['info', 'env', 'logs', 'compose', 'files'] as const
+const serviceTabs = ['info', 'env', 'logs', 'compose', 'files', 'proxy'] as const
 type ServiceTab = (typeof serviceTabs)[number]
 
 function ServiceDetailPage() {
@@ -48,6 +50,8 @@ function ServiceDetailPage() {
   const { data: composeYaml, isLoading: composeLoading } = useServiceCompose(name)
   const deleteService = useDeleteService()
   const updateService = useUpdateService()
+
+  const generateProxyConfig = useGenerateServiceProxyConfig(name)
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [composeExpanded, setComposeExpanded] = useState(false)
@@ -124,6 +128,7 @@ function ServiceDetailPage() {
     { value: 'logs', label: 'Logs' },
     { value: 'compose', label: 'Compose' },
     { value: 'files', label: 'Files' },
+    { value: 'proxy', label: 'Proxy' },
   ]
 
   const handleTabChange = (tab: string) => {
@@ -285,6 +290,10 @@ function ServiceDetailPage() {
 
         <TabsContent value="files">
           <ConfigFilesPanel serviceName={service.name} />
+        </TabsContent>
+
+        <TabsContent value="proxy">
+          <ProxyConfigPanel scope="service" name={service.name} generateMutation={generateProxyConfig} />
         </TabsContent>
       </Tabs>
 

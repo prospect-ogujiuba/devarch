@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { LifecycleButtons, EnableToggle, MoreActionsMenu } from '@/components/ui/entity-actions'
 import { useStack, useEnableStack, useDisableStack, useStopStack, useStartStack, useRestartStack, useStackNetwork, useStackCompose, useGeneratePlan, useApplyPlan, useCreateNetwork, useRemoveNetwork, useExportStack, useImportStack } from '@/features/stacks/queries'
+import { useGenerateStackProxyConfig } from '@/features/proxy/queries'
+import { ProxyConfigPanel } from '@/components/proxy/proxy-config-panel'
 import { CodeEditor } from '@/components/services/code-editor'
 import { useInstances, useUpdateInstance, useStopInstance, useStartInstance, useRestartInstance } from '@/features/instances/queries'
 import { EditStackDialog } from '@/components/stacks/edit-stack-dialog'
@@ -151,12 +153,12 @@ function InstanceCard({ instance, stackName, runningContainerNames, onDelete, on
 
 export const Route = createFileRoute('/stacks/$name')({
   validateSearch: z.object({
-    tab: z.enum(['instances', 'compose', 'wiring', 'deploy']).optional(),
+    tab: z.enum(['instances', 'compose', 'wiring', 'deploy', 'proxy']).optional(),
   }),
   component: StackDetailLayout,
 })
 
-const stackTabs = ['instances', 'compose', 'wiring', 'deploy'] as const
+const stackTabs = ['instances', 'compose', 'wiring', 'deploy', 'proxy'] as const
 type StackTab = (typeof stackTabs)[number]
 
 function StackDetailLayout() {
@@ -187,6 +189,7 @@ function StackDetailPage() {
   const removeNetwork = useRemoveNetwork()
   const exportStack = useExportStack(name)
   const importStack = useImportStack()
+  const generateProxyConfig = useGenerateStackProxyConfig(name)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [editOpen, setEditOpen] = useState(false)
@@ -274,6 +277,7 @@ function StackDetailPage() {
     { value: 'compose', label: 'Compose' },
     { value: 'wiring', label: 'Wiring' },
     { value: 'deploy', label: 'Deploy' },
+    { value: 'proxy', label: 'Proxy' },
   ]
 
   return (
@@ -560,6 +564,10 @@ function StackDetailPage() {
 
         <TabsContent value="wiring">
           <WiringTab stackName={name} />
+        </TabsContent>
+
+        <TabsContent value="proxy">
+          <ProxyConfigPanel scope="stack" name={name} generateMutation={generateProxyConfig} />
         </TabsContent>
 
         <TabsContent value="deploy">
