@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Phase 12 - Compose Generator Parity
+**Current focus:** Phase 13 - Import Scalability
 
 ## Current Position
 
-Phase: 12 of 15 (Compose Generator Parity)
-Plan: 2 of 2 (phase 12 complete)
-Status: Phase complete
-Last activity: 2026-02-09 — Completed 12-02-PLAN.md
+Phase: 13 of 15 (Import Scalability)
+Plan: 2 of TBD (phase 13 in progress)
+Status: Active
+Last activity: 2026-02-09 — Completed 13-02-PLAN.md
 
-Progress: [████████░░] 80% (12/15 phases complete, 34/TBD plans total)
+Progress: [████████░░] 83% (13/15 phases in progress, 36/TBD plans total)
 
 ## Performance Metrics
 
@@ -34,9 +34,15 @@ Progress: [████████░░] 80% (12/15 phases complete, 34/TBD pl
 - Phase 10 complete (3 plans, 53min total)
 - Phase 11 complete (2 plans, 9min total)
 - Phase 12 complete (2 plans, 6min total)
+- Phase 13 in progress (2 plans, 5min total so far)
 - v1.0 shipped successfully on 2026-02-09
 
 *Updated after each plan completion*
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 13 P01 | 2m22s | 2 | 3 |
+| Phase 13 P02 | 2m47s | 1 | 1 |
 
 ## Accumulated Context
 
@@ -66,6 +72,11 @@ Recent decisions affecting current work:
 - 12-01: env_file always YAML list — Simpler code path, semantically identical, consistent Dashboard rendering
 - 12-02: Volume comparison skips source path — Compares target + read_only only; source path resolution differences are artifacts, not semantic mismatches
 - 12-02: Config mount validation via volume targets — Generator merges config mounts into volumes; validate via target presence + MaterializeConfigFiles paths
+- [Phase 13]: Streaming multipart via multipart.NewReader eliminates full-body buffering
+- [Phase 13]: io.LimitReader caps YAML part size, not multipart overhead
+- [Phase 13]: Route-level MaxBodySize(256MB) overrides global 10MB via r.With()
+- [Phase 13-02]: Use xmax = 0 for insert detection — PostgreSQL xmax indicates transaction ID of deleting/updating transaction; 0 means row was inserted
+- [Phase 13-02]: Delete-then-reinsert for override tables — Lack natural unique keys; atomic within transaction, simpler than complex upserts
 
 ### Pending Todos
 
@@ -78,6 +89,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 12-02-PLAN.md (phase 12 complete)
+Stopped at: Completed 13-02-PLAN.md
 Resume file: None
-Next: Phase 13 - Nginx Subdomain Routing
+Next: Phase 13 plan 03 (if exists) or Phase 14
