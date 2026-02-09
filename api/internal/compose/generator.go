@@ -54,6 +54,7 @@ type serviceConfig struct {
 	Ports         []string               `yaml:"ports,omitempty"`
 	Volumes       []string               `yaml:"volumes,omitempty"`
 	Environment   map[string]string      `yaml:"environment,omitempty"`
+	EnvFile       []string               `yaml:"env_file,omitempty"`
 	DependsOn     []string               `yaml:"depends_on,omitempty"`
 	Labels        []string               `yaml:"labels,omitempty"`
 	Healthcheck   *healthcheckConfig     `yaml:"healthcheck,omitempty"`
@@ -73,17 +74,21 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 		return nil, fmt.Errorf("load relations: %w", err)
 	}
 
+	// Build networks map from DB-sourced network names
+	networksMap := make(map[string]networkConfig)
+	for _, netName := range service.Networks {
+		networksMap[netName] = networkConfig{External: true}
+	}
+
 	compose := generatedCompose{
-		Networks: map[string]networkConfig{
-			g.networkName: {External: true},
-		},
+		Networks: networksMap,
 		Services: make(map[string]serviceConfig),
 	}
 
 	svc := serviceConfig{
 		ContainerName: service.Name,
 		Restart:       service.RestartPolicy,
-		Networks:      []string{g.networkName},
+		Networks:      service.Networks,
 	}
 
 	if service.ImageName != "" {
@@ -136,6 +141,15 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 			svc.Environment[env.Key] = env.Value
 		}
 	}
+
+	svc.EnvFile = service.EnvFiles
+
+	// Load and merge config mounts into volumes
+	configMounts, err := g.loadConfigMounts(service.ID, categoryName)
+	if err != nil {
+		return nil, fmt.Errorf("load config mounts: %w", err)
+	}
+	svc.Volumes = append(svc.Volumes, configMounts...)
 
 	svc.DependsOn = service.Dependencies
 
@@ -272,6 +286,38 @@ func (g *Generator) loadServiceRelations(service *models.Service) error {
 	}
 
 	rows, err = g.db.Query(`
+		SELECT path FROM service_env_files WHERE service_id = $1 ORDER BY sort_order
+	`, service.ID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var path string
+		if err := rows.Scan(&path); err != nil {
+			return err
+		}
+		service.EnvFiles = append(service.EnvFiles, path)
+	}
+
+	rows, err = g.db.Query(`
+		SELECT network_name FROM service_networks WHERE service_id = $1 ORDER BY id
+	`, service.ID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var network string
+		if err := rows.Scan(&network); err != nil {
+			return err
+		}
+		service.Networks = append(service.Networks, network)
+	}
+
+	rows, err = g.db.Query(`
 		SELECT s.name FROM service_dependencies d
 		JOIN services s ON d.depends_on_service_id = s.id
 		WHERE d.service_id = $1
@@ -315,6 +361,53 @@ func (g *Generator) loadServiceRelations(service *models.Service) error {
 	}
 
 	return nil
+}
+
+func (g *Generator) loadConfigMounts(serviceID int, categoryName string) ([]string, error) {
+	rows, err := g.db.Query(`
+		SELECT scm.source_path, scm.target_path, scm.readonly, scf.file_path
+		FROM service_config_mounts scm
+		LEFT JOIN service_config_files scf ON scf.id = scm.config_file_id
+		WHERE scm.service_id = $1
+	`, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var mounts []string
+	for rows.Next() {
+		var sourcePath, targetPath string
+		var readonly bool
+		var configFilePath sql.NullString
+		if err := rows.Scan(&sourcePath, &targetPath, &readonly, &configFilePath); err != nil {
+			return nil, err
+		}
+
+		// Resolve source path: if config_file_id is resolved, use materialized path
+		var resolvedSource string
+		if configFilePath.Valid {
+			resolvedSource = filepath.Join("compose", categoryName, g.getServiceName(serviceID), configFilePath.String)
+			resolvedSource = g.resolveRelativePath(resolvedSource, categoryName)
+		} else {
+			// Use raw source_path for NULL config_file_id
+			resolvedSource = g.resolveRelativePath(sourcePath, categoryName)
+		}
+
+		mountStr := fmt.Sprintf("%s:%s", resolvedSource, targetPath)
+		if readonly {
+			mountStr += ":ro"
+		}
+		mounts = append(mounts, mountStr)
+	}
+
+	return mounts, rows.Err()
+}
+
+func (g *Generator) getServiceName(serviceID int) string {
+	var name string
+	g.db.QueryRow(`SELECT name FROM services WHERE id = $1`, serviceID).Scan(&name)
+	return name
 }
 
 // MaterializeConfigFiles writes all config files from DB to compose/{category}/{service}/
