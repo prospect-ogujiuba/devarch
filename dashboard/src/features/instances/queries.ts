@@ -14,6 +14,7 @@ import type {
   InstanceDependency,
   ResourceLimits,
   ResourceLimitsResponse,
+  ServiceConfigMount,
 } from '@/types/api'
 import { toast } from 'sonner'
 
@@ -40,6 +41,9 @@ export function useInstance(stackName: string, instanceId: string) {
         ports: data.ports ?? [],
         volumes: data.volumes ?? [],
         env_vars: data.env_vars ?? [],
+        env_files: data.env_files ?? [],
+        networks: data.networks ?? [],
+        config_mounts: data.config_mounts ?? [],
         labels: data.labels ?? [],
         domains: data.domains ?? [],
         healthcheck: data.healthcheck ?? null,
@@ -454,6 +458,63 @@ export function useUpdateResourceLimits(stackName: string, instanceId: string) {
     },
     onError: (error) => {
       toast.error(getErrorMessage(error, 'Failed to update resource limits'))
+    },
+  })
+}
+
+export function useUpdateInstanceEnvFiles(stackName: string, instanceId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (env_files: string[]) => {
+      const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/env-files`, { env_files })
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Env files updated')
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update env files'))
+    },
+  })
+}
+
+export function useUpdateInstanceNetworks(stackName: string, instanceId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (networks: string[]) => {
+      const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/networks`, { networks })
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Networks updated')
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update networks'))
+    },
+  })
+}
+
+export function useUpdateInstanceConfigMounts(stackName: string, instanceId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (config_mounts: Omit<ServiceConfigMount, 'id' | 'service_id'>[]) => {
+      const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/config-mounts`, { config_mounts })
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Config mounts updated')
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update config mounts'))
     },
   })
 }
