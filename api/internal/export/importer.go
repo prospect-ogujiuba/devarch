@@ -3,7 +3,9 @@ package export
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
+	"time"
 )
 
 type ImportResult struct {
@@ -23,6 +25,8 @@ func NewImporter(db *sql.DB) *Importer {
 }
 
 func (imp *Importer) Import(file *DevArchFile) (*ImportResult, error) {
+	start := time.Now()
+
 	result := &ImportResult{
 		StackName: file.Stack.Name,
 		Created:   []string{},
@@ -93,65 +97,127 @@ func (imp *Importer) Import(file *DevArchFile) (*ImportResult, error) {
 		}
 	}
 
+	// Prepare statements for instance and override inserts
+	instanceStmt, err := tx.Prepare(`
+		INSERT INTO service_instances (stack_id, instance_id, template_service_id, container_name, enabled)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (stack_id, instance_id) WHERE deleted_at IS NULL
+		DO UPDATE SET template_service_id = EXCLUDED.template_service_id, enabled = EXCLUDED.enabled, updated_at = NOW()
+		RETURNING id, (xmax = 0) AS was_inserted
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("prepare instance upsert: %w", err)
+	}
+	defer instanceStmt.Close()
+
+	portStmt, err := tx.Prepare(`
+		INSERT INTO instance_ports (instance_id, host_ip, host_port, container_port, protocol)
+		VALUES ($1, $2, $3, $4, $5)
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("prepare port insert: %w", err)
+	}
+	defer portStmt.Close()
+
+	volumeStmt, err := tx.Prepare(`
+		INSERT INTO instance_volumes (instance_id, volume_type, source, target, read_only, is_external)
+		VALUES ($1, $2, $3, $4, $5, false)
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("prepare volume insert: %w", err)
+	}
+	defer volumeStmt.Close()
+
+	envStmt, err := tx.Prepare(`
+		INSERT INTO instance_env_vars (instance_id, key, value, is_secret)
+		VALUES ($1, $2, $3, $4)
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("prepare env var insert: %w", err)
+	}
+	defer envStmt.Close()
+
+	labelStmt, err := tx.Prepare(`
+		INSERT INTO instance_labels (instance_id, key, value)
+		VALUES ($1, $2, $3)
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("prepare label insert: %w", err)
+	}
+	defer labelStmt.Close()
+
+	domainStmt, err := tx.Prepare(`
+		INSERT INTO instance_domains (instance_id, domain, proxy_port)
+		VALUES ($1, $2, $3)
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("prepare domain insert: %w", err)
+	}
+	defer domainStmt.Close()
+
+	healthcheckStmt, err := tx.Prepare(`
+		INSERT INTO instance_healthchecks (instance_id, test, interval_seconds, timeout_seconds, retries, start_period_seconds)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("prepare healthcheck insert: %w", err)
+	}
+	defer healthcheckStmt.Close()
+
+	depStmt, err := tx.Prepare(`
+		INSERT INTO instance_dependencies (instance_id, depends_on, condition)
+		VALUES ($1, $2, 'service_started')
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("prepare dependency insert: %w", err)
+	}
+	defer depStmt.Close()
+
+	configStmt, err := tx.Prepare(`
+		INSERT INTO instance_config_files (instance_id, file_path, content, file_mode, is_template)
+		VALUES ($1, $2, $3, $4, $5)
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("prepare config file insert: %w", err)
+	}
+	defer configStmt.Close()
+
 	instancePKMap := make(map[string]int)
 
 	for instanceName, inst := range file.Instances {
+		// Get template service ID using prepared statement
 		var templateServiceID int
-		err := tx.QueryRow(`SELECT id FROM services WHERE name = $1`, inst.Template).Scan(&templateServiceID)
+		err := templateStmt.QueryRow(inst.Template).Scan(&templateServiceID)
 		if err != nil {
 			return nil, fmt.Errorf("get template service ID for %q: %w", inst.Template, err)
 		}
 
-		var instanceID int
-		var instanceExists bool
-		err = tx.QueryRow(`
-			SELECT id FROM service_instances
-			WHERE instance_id = $1 AND stack_id = $2 AND deleted_at IS NULL
-		`, instanceName, stackID).Scan(&instanceID)
-		if err == sql.ErrNoRows {
-			instanceExists = false
-		} else if err != nil {
-			return nil, fmt.Errorf("check instance %q: %w", instanceName, err)
-		} else {
-			instanceExists = true
-		}
-
 		containerName := fmt.Sprintf("devarch-%s-%s", file.Stack.Name, instanceName)
 
-		if instanceExists {
-			_, err = tx.Exec(`
-				UPDATE service_instances
-				SET template_service_id = $1, enabled = $2, updated_at = NOW()
-				WHERE id = $3
-			`, templateServiceID, inst.Enabled, instanceID)
-			if err != nil {
-				return nil, fmt.Errorf("update instance %q: %w", instanceName, err)
-			}
+		// Upsert instance
+		var instanceID int
+		var wasInserted bool
+		err = instanceStmt.QueryRow(stackID, instanceName, templateServiceID, containerName, inst.Enabled).Scan(&instanceID, &wasInserted)
+		if err != nil {
+			return nil, fmt.Errorf("upsert instance %q: %w", instanceName, err)
+		}
 
+		// Delete old overrides if updating
+		if !wasInserted {
 			if err := imp.deleteOverrides(tx, instanceID); err != nil {
 				return nil, fmt.Errorf("delete overrides for %q: %w", instanceName, err)
 			}
+		}
 
-			if err := imp.insertOverrides(tx, instanceID, &inst); err != nil {
-				return nil, fmt.Errorf("insert overrides for %q: %w", instanceName, err)
-			}
+		// Insert overrides using prepared statements
+		if err := imp.insertOverridesWithStmts(instanceID, &inst, portStmt, volumeStmt, envStmt, labelStmt, domainStmt, healthcheckStmt, depStmt, configStmt); err != nil {
+			return nil, fmt.Errorf("insert overrides for %q: %w", instanceName, err)
+		}
 
-			result.Updated = append(result.Updated, instanceName)
-		} else {
-			err = tx.QueryRow(`
-				INSERT INTO service_instances (stack_id, instance_id, template_service_id, container_name, enabled)
-				VALUES ($1, $2, $3, $4, $5)
-				RETURNING id
-			`, stackID, instanceName, templateServiceID, containerName, inst.Enabled).Scan(&instanceID)
-			if err != nil {
-				return nil, fmt.Errorf("create instance %q: %w", instanceName, err)
-			}
-
-			if err := imp.insertOverrides(tx, instanceID, &inst); err != nil {
-				return nil, fmt.Errorf("insert overrides for %q: %w", instanceName, err)
-			}
-
+		if wasInserted {
 			result.Created = append(result.Created, instanceName)
+		} else {
+			result.Updated = append(result.Updated, instanceName)
 		}
 
 		instancePKMap[instanceName] = instanceID
@@ -164,6 +230,8 @@ func (imp *Importer) Import(file *DevArchFile) (*ImportResult, error) {
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("commit transaction: %w", err)
 	}
+
+	log.Printf("import complete: stack=%s created=%d updated=%d duration=%s", result.StackName, len(result.Created), len(result.Updated), time.Since(start))
 
 	return result, nil
 }
@@ -264,12 +332,9 @@ func (imp *Importer) deleteOverrides(tx *sql.Tx, instanceID int) error {
 	return nil
 }
 
-func (imp *Importer) insertOverrides(tx *sql.Tx, instanceID int, inst *InstanceDef) error {
+func (imp *Importer) insertOverridesWithStmts(instanceID int, inst *InstanceDef, portStmt, volumeStmt, envStmt, labelStmt, domainStmt, healthcheckStmt, depStmt, configStmt *sql.Stmt) error {
 	for _, p := range inst.Ports {
-		_, err := tx.Exec(`
-			INSERT INTO instance_ports (instance_id, host_ip, host_port, container_port, protocol)
-			VALUES ($1, $2, $3, $4, $5)
-		`, instanceID, p.HostIP, p.HostPort, p.ContainerPort, p.Protocol)
+		_, err := portStmt.Exec(instanceID, p.HostIP, p.HostPort, p.ContainerPort, p.Protocol)
 		if err != nil {
 			return fmt.Errorf("insert port: %w", err)
 		}
@@ -280,10 +345,7 @@ func (imp *Importer) insertOverrides(tx *sql.Tx, instanceID int, inst *InstanceD
 		if v.Source != "" && !strings.HasPrefix(v.Source, "/") && !strings.HasPrefix(v.Source, ".") {
 			volumeType = "volume"
 		}
-		_, err := tx.Exec(`
-			INSERT INTO instance_volumes (instance_id, volume_type, source, target, read_only, is_external)
-			VALUES ($1, $2, $3, $4, $5, false)
-		`, instanceID, volumeType, v.Source, v.Target, v.ReadOnly)
+		_, err := volumeStmt.Exec(instanceID, volumeType, v.Source, v.Target, v.ReadOnly)
 		if err != nil {
 			return fmt.Errorf("insert volume: %w", err)
 		}
@@ -291,10 +353,7 @@ func (imp *Importer) insertOverrides(tx *sql.Tx, instanceID int, inst *InstanceD
 
 	for key, value := range inst.Environment {
 		isSecret := strings.Contains(value, "${SECRET:")
-		_, err := tx.Exec(`
-			INSERT INTO instance_env_vars (instance_id, key, value, is_secret)
-			VALUES ($1, $2, $3, $4)
-		`, instanceID, key, value, isSecret)
+		_, err := envStmt.Exec(instanceID, key, value, isSecret)
 		if err != nil {
 			return fmt.Errorf("insert env var: %w", err)
 		}
@@ -304,20 +363,14 @@ func (imp *Importer) insertOverrides(tx *sql.Tx, instanceID int, inst *InstanceD
 		if strings.HasPrefix(key, "devarch.") {
 			continue
 		}
-		_, err := tx.Exec(`
-			INSERT INTO instance_labels (instance_id, key, value)
-			VALUES ($1, $2, $3)
-		`, instanceID, key, value)
+		_, err := labelStmt.Exec(instanceID, key, value)
 		if err != nil {
 			return fmt.Errorf("insert label: %w", err)
 		}
 	}
 
 	for _, d := range inst.Domains {
-		_, err := tx.Exec(`
-			INSERT INTO instance_domains (instance_id, domain, proxy_port)
-			VALUES ($1, $2, $3)
-		`, instanceID, d.Domain, d.ProxyPort)
+		_, err := domainStmt.Exec(instanceID, d.Domain, d.ProxyPort)
 		if err != nil {
 			return fmt.Errorf("insert domain: %w", err)
 		}
@@ -328,30 +381,21 @@ func (imp *Importer) insertOverrides(tx *sql.Tx, instanceID int, inst *InstanceD
 		timeoutSec := parseDuration(inst.Healthcheck.Timeout, 10)
 		startPeriodSec := parseDuration(inst.Healthcheck.StartPeriod, 0)
 
-		_, err := tx.Exec(`
-			INSERT INTO instance_healthchecks (instance_id, test, interval_seconds, timeout_seconds, retries, start_period_seconds)
-			VALUES ($1, $2, $3, $4, $5, $6)
-		`, instanceID, inst.Healthcheck.Test, intervalSec, timeoutSec, inst.Healthcheck.Retries, startPeriodSec)
+		_, err := healthcheckStmt.Exec(instanceID, inst.Healthcheck.Test, intervalSec, timeoutSec, inst.Healthcheck.Retries, startPeriodSec)
 		if err != nil {
 			return fmt.Errorf("insert healthcheck: %w", err)
 		}
 	}
 
 	for _, dep := range inst.Dependencies {
-		_, err := tx.Exec(`
-			INSERT INTO instance_dependencies (instance_id, depends_on, condition)
-			VALUES ($1, $2, 'service_started')
-		`, instanceID, dep)
+		_, err := depStmt.Exec(instanceID, dep)
 		if err != nil {
 			return fmt.Errorf("insert dependency: %w", err)
 		}
 	}
 
 	for path, cfg := range inst.ConfigFiles {
-		_, err := tx.Exec(`
-			INSERT INTO instance_config_files (instance_id, file_path, content, file_mode, is_template)
-			VALUES ($1, $2, $3, $4, $5)
-		`, instanceID, path, cfg.Content, cfg.FileMode, cfg.IsTemplate)
+		_, err := configStmt.Exec(instanceID, path, cfg.Content, cfg.FileMode, cfg.IsTemplate)
 		if err != nil {
 			return fmt.Errorf("insert config file: %w", err)
 		}
