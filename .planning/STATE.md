@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 Phase: 14 of 15 (Dashboard Updates)
-Plan: 2 of 3
-Status: In progress
-Last activity: 2026-02-09 — Completed 14-02-PLAN.md
+Plan: 3 of 3
+Status: Phase complete
+Last activity: 2026-02-09 — Completed 14-03-PLAN.md
 
-Progress: [████████░░] 87% (13/15 phases complete, 38/TBD plans total)
+Progress: [█████████░] 93% (14/15 phases complete, 39/TBD plans total)
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Progress: [████████░░] 87% (13/15 phases complete, 38/TBD pl
 | Phase 13 P02 | 2m47s | 1 | 1 |
 | Phase 14 P01 | 3m19s | 2 | 8 |
 | Phase 14 P02 | 2m14s | 2 | 6 |
+| Phase 14 P03 | 5m14s | 2 | 5 |
 
 ## Accumulated Context
 
@@ -83,6 +84,8 @@ Recent decisions affecting current work:
 - [Phase 14-01]: Instance override tables mirror service tables — Created instance_env_files, instance_networks, instance_config_mounts following established override pattern
 - [Phase 14-01]: ServiceConfigMount with optional config_file_id — Flexible model supports both DB-managed and external config paths
 - [Phase 14-01]: Override detection in effective config — Boolean flags per field let dashboard highlight instance-specific overrides
+- [Phase 14-03]: Tab order logical grouping — Groups related overrides (runtime, filesystem, network, config) for better navigation UX
+- [Phase 14-03]: Config mounts show resolved/unresolved badge — Transparency in config_file_id linkage vs external paths
 - [Phase 14-02]: Service-level component placement order — EnvFiles after Volumes, Networks after EnvFiles, ConfigMounts after Dependencies; groups related config types
 - [Phase 14-02]: Config mount resolution badges — Green for resolved (config_file_id set), amber for unresolved (external path only); visual provenance feedback
 
@@ -97,6 +100,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 14-02-PLAN.md
+Stopped at: Completed 14-03-PLAN.md
 Resume file: None
 Next: Phase 14-03 - Instance override dashboard components
