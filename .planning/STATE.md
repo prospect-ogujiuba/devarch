@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 Phase: 12 of 15 (Compose Generator Parity)
-Plan: 1 of 1 (phase 12 complete)
+Plan: 2 of 2 (phase 12 complete)
 Status: Phase complete
-Last activity: 2026-02-09 — Completed 12-01-PLAN.md
+Last activity: 2026-02-09 — Completed 12-02-PLAN.md
 
-Progress: [████████░░] 80% (12/15 phases complete, 33/TBD plans total)
+Progress: [████████░░] 80% (12/15 phases complete, 34/TBD plans total)
 
 ## Performance Metrics
 
@@ -33,7 +33,7 @@ Progress: [████████░░] 80% (12/15 phases complete, 33/TBD pl
 **Recent Trend:**
 - Phase 10 complete (3 plans, 53min total)
 - Phase 11 complete (2 plans, 9min total)
-- Phase 12 complete (1 plan, 3min total)
+- Phase 12 complete (2 plans, 6min total)
 - v1.0 shipped successfully on 2026-02-09
 
 *Updated after each plan completion*
@@ -64,6 +64,8 @@ Recent decisions affecting current work:
 - 12-01: DB-sourced networks only — Generator emits exactly what's in service_networks; no hardcoded fallback maintains single source of truth
 - 12-01: Config mount materialized paths — Mounts with resolved config_file_id use compose/{category}/{service}/{file_path}; NULL uses raw source_path
 - 12-01: env_file always YAML list — Simpler code path, semantically identical, consistent Dashboard rendering
+- 12-02: Volume comparison skips source path — Compares target + read_only only; source path resolution differences are artifacts, not semantic mismatches
+- 12-02: Config mount validation via volume targets — Generator merges config mounts into volumes; validate via target presence + MaterializeConfigFiles paths
 
 ### Pending Todos
 
@@ -76,6 +78,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 12-01-PLAN.md (phase 12 complete)
+Stopped at: Completed 12-02-PLAN.md (phase 12 complete)
 Resume file: None
 Next: Phase 13 - Nginx Subdomain Routing
