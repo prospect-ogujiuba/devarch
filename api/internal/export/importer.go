@@ -3,7 +3,9 @@ package export
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
+	"time"
 )
 
 type ImportResult struct {
@@ -36,6 +38,14 @@ func (imp *Importer) Import(file *DevArchFile) (*ImportResult, error) {
 	}
 	defer tx.Rollback()
 
+	// Prepare template lookup statement
+	templateStmt, err := tx.Prepare(`SELECT id FROM services WHERE name = $1`)
+	if err != nil {
+		return nil, fmt.Errorf("prepare template lookup: %w", err)
+	}
+	defer templateStmt.Close()
+
+	// Check all templates exist
 	templateNames := make(map[string]bool)
 	for _, inst := range file.Instances {
 		templateNames[inst.Template] = true
@@ -43,13 +53,12 @@ func (imp *Importer) Import(file *DevArchFile) (*ImportResult, error) {
 
 	var missingTemplates []string
 	for name := range templateNames {
-		var exists bool
-		err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM services WHERE name = $1)`, name).Scan(&exists)
-		if err != nil {
-			return nil, fmt.Errorf("check template %q: %w", name, err)
-		}
-		if !exists {
+		var templateID int
+		err := templateStmt.QueryRow(name).Scan(&templateID)
+		if err == sql.ErrNoRows {
 			missingTemplates = append(missingTemplates, name)
+		} else if err != nil {
+			return nil, fmt.Errorf("check template %q: %w", name, err)
 		}
 	}
 
@@ -57,50 +66,33 @@ func (imp *Importer) Import(file *DevArchFile) (*ImportResult, error) {
 		return nil, fmt.Errorf("Template %s not found in catalog. Import the template first.", strings.Join(missingTemplates, ", "))
 	}
 
-	var stackID int
-	var stackExists bool
-	err = tx.QueryRow(`SELECT id FROM stacks WHERE name = $1 AND deleted_at IS NULL`, file.Stack.Name).Scan(&stackID)
-	if err == sql.ErrNoRows {
-		stackExists = false
-	} else if err != nil {
-		return nil, fmt.Errorf("check stack: %w", err)
-	} else {
-		stackExists = true
+	// Upsert stack
+	networkName := file.Stack.NetworkName
+	if networkName == "" {
+		networkName = fmt.Sprintf("devarch-%s-net", file.Stack.Name)
 	}
 
-	if stackExists {
+	var stackID int
+	var wasInserted bool
+	err = tx.QueryRow(`
+		INSERT INTO stacks (name, description, network_name, enabled)
+		VALUES ($1, $2, $3, true)
+		ON CONFLICT (name) WHERE deleted_at IS NULL
+		DO UPDATE SET description = EXCLUDED.description, network_name = EXCLUDED.network_name, updated_at = NOW()
+		RETURNING id, (xmax = 0) AS was_inserted
+	`, file.Stack.Name, file.Stack.Description, networkName).Scan(&stackID, &wasInserted)
+	if err != nil {
+		return nil, fmt.Errorf("upsert stack: %w", err)
+	}
+	result.StackCreated = wasInserted
+
+	// Acquire advisory lock for existing stacks
+	if !wasInserted {
 		var acquired bool
 		err = tx.QueryRow(`SELECT pg_try_advisory_xact_lock($1)`, stackID).Scan(&acquired)
 		if err != nil || !acquired {
 			return nil, fmt.Errorf("stack is locked by another operation")
 		}
-
-		networkName := file.Stack.NetworkName
-		if networkName == "" {
-			networkName = fmt.Sprintf("devarch-%s-net", file.Stack.Name)
-		}
-
-		_, err = tx.Exec(`UPDATE stacks SET description = $1, network_name = $2, updated_at = NOW() WHERE id = $3`,
-			file.Stack.Description, networkName, stackID)
-		if err != nil {
-			return nil, fmt.Errorf("update stack: %w", err)
-		}
-		result.StackCreated = false
-	} else {
-		networkName := file.Stack.NetworkName
-		if networkName == "" {
-			networkName = fmt.Sprintf("devarch-%s-net", file.Stack.Name)
-		}
-
-		err = tx.QueryRow(`
-			INSERT INTO stacks (name, description, network_name, enabled)
-			VALUES ($1, $2, $3, true)
-			RETURNING id
-		`, file.Stack.Name, file.Stack.Description, networkName).Scan(&stackID)
-		if err != nil {
-			return nil, fmt.Errorf("create stack: %w", err)
-		}
-		result.StackCreated = true
 	}
 
 	instancePKMap := make(map[string]int)

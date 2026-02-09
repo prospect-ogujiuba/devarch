@@ -3,7 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/priz/devarch-api/internal/container"
@@ -12,20 +17,64 @@ import (
 )
 
 func (h *StackHandler) ImportStack(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		http.Error(w, fmt.Sprintf("failed to parse multipart form: %v", err), http.StatusBadRequest)
+	// Extract boundary from Content-Type header
+	contentType := r.Header.Get("Content-Type")
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err != nil || mediaType != "multipart/form-data" {
+		http.Error(w, "invalid Content-Type: expected multipart/form-data", http.StatusBadRequest)
+		return
+	}
+	boundary := params["boundary"]
+	if boundary == "" {
+		http.Error(w, "missing boundary in Content-Type", http.StatusBadRequest)
 		return
 	}
 
-	file, _, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get file from form: %v", err), http.StatusBadRequest)
+	// Get import size limit from env var (default 256MB)
+	importMaxBytes := int64(256 << 20)
+	if envVal := os.Getenv("STACK_IMPORT_MAX_BYTES"); envVal != "" {
+		if parsed, err := strconv.ParseInt(envVal, 10, 64); err == nil {
+			importMaxBytes = parsed
+		}
+	}
+
+	// Create streaming multipart reader
+	mr := multipart.NewReader(r.Body, boundary)
+
+	// Find the "file" part
+	var filePart *multipart.Part
+	for {
+		part, err := mr.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to read multipart: %v", err), http.StatusBadRequest)
+			return
+		}
+		if part.FormName() == "file" {
+			filePart = part
+			break
+		}
+		part.Close()
+	}
+
+	if filePart == nil {
+		http.Error(w, "missing 'file' field in multipart form", http.StatusBadRequest)
 		return
 	}
-	defer file.Close()
+	defer filePart.Close()
 
+	// Apply size limit to the file part
+	limitedReader := io.LimitReader(filePart, importMaxBytes)
+
+	// Decode YAML from streaming reader
 	var devarchFile export.DevArchFile
-	if err := yaml.NewDecoder(file).Decode(&devarchFile); err != nil {
+	if err := yaml.NewDecoder(limitedReader).Decode(&devarchFile); err != nil {
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
+			http.Error(w, fmt.Sprintf("payload too large: exceeds %d bytes", importMaxBytes), http.StatusRequestEntityTooLarge)
+			return
+		}
 		http.Error(w, fmt.Sprintf("failed to decode YAML: %v", err), http.StatusBadRequest)
 		return
 	}
