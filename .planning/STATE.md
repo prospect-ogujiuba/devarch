@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-03)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Phase 8 - Service Wiring
+**Current focus:** Phase 9 - Secrets & Resources
 
 ## Current Position
 
-Phase: 8 of 9 (Service Wiring)
-Plan: 4 of 4 complete in Phase 8
-Status: Phase complete
-Last activity: 2026-02-09 — Completed 08-04-PLAN.md
+Phase: 9 of 9 (Secrets & Resources)
+Plan: 1 of 2 complete in Phase 9
+Status: In progress
+Last activity: 2026-02-09 — Completed 09-01-PLAN.md
 
-Progress: [██████████] ~100% (27 plans complete of ~27 total)
+Progress: [██████████] ~100% (28 plans complete of ~29 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 27
-- Average duration: 2.7 min
-- Total execution time: ~1.27 hours
+- Total plans completed: 28
+- Average duration: 2.8 min
+- Total execution time: ~1.35 hours
 
 **By Phase:**
 
@@ -35,6 +35,7 @@ Progress: [██████████] ~100% (27 plans complete of ~27 total
 | 6 | 3/3 | 5.0min | 1.7min |
 | 7 | 4/4 | 12.1min | 3.0min |
 | 8 | 4/4 | 12.5min | 3.1min |
+| 9 | 1/2 | 5.6min | 5.6min |
 
 *Updated after each plan completion*
 | Phase 07 P01 | 160 | 2 tasks | 5 files |
@@ -45,6 +46,7 @@ Progress: [██████████] ~100% (27 plans complete of ~27 total
 | Phase 08 P02 | 153 | 2 tasks | 5 files |
 | Phase 08 P03 | 199 | 2 tasks | 7 files |
 | Phase 08 P04 | 257 | 2 tasks | 4 files |
+| Phase 09 P01 | 338 | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -198,6 +200,13 @@ Recent decisions affecting current work:
 - [Phase 08]: Export includes only wires where both consumer and provider are active instances
 - [Phase 08]: Import uses ON CONFLICT DO UPDATE for idempotent wire recreation
 
+**From 09-01:**
+- AES-256-GCM with 12-byte nonce prepended to ciphertext (base64-encoded)
+- Key auto-generated on first run at ~/.devarch/secret.key with 0600 permissions
+- Sticky secret pattern: *** in PUT preserves existing encrypted_value
+- Lazy migration: plaintext secrets (is_secret=true, encryption_version=0) encrypted on first read
+- Read endpoints redact to ***, encryption_version tracks algorithm (0=plaintext, 1=AES-256-GCM)
+
 ### Pending Todos
 
 None yet.
@@ -208,6 +217,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-08
-Stopped at: Completed all 4 plans in Phase 8 (Service Wiring). Phase 8 verified and complete.
+Last session: 2026-02-09
+Stopped at: Completed 09-01-PLAN.md (encryption foundation)
 Resume file: None
