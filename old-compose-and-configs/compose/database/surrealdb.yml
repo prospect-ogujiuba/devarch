@@ -1,0 +1,28 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  surrealdb_data:
+
+services:
+  surrealdb:
+    container_name: surrealdb
+    image: surrealdb/surrealdb:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - SURREAL_USER=root
+      - SURREAL_PASS=admin1234567
+    ports:
+      - "127.0.0.1:8507:8000"
+    volumes:
+      - surrealdb_data:/data
+    command: start --log trace --user root --pass admin1234567 file:/data/database.db
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

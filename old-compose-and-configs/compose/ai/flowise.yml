@@ -1,0 +1,32 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  flowise_data:
+
+services:
+  flowise:
+    container_name: flowise
+    image: flowiseai/flowise:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - PORT=3000
+      - FLOWISE_USERNAME=${SHARED_USER:-admin}
+      - FLOWISE_PASSWORD=${SHARED_DB_PASSWORD:-admin}
+      - DATABASE_PATH=/data
+      - APIKEY_PATH=/data
+      - LOG_PATH=/data/logs
+      - BLOB_STORAGE_PATH=/data/storage
+    ports:
+      - "127.0.0.1:3033:3000"
+    volumes:
+      - flowise_data:/data
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

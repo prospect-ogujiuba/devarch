@@ -1,0 +1,29 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  tyk_data:
+
+services:
+  tyk:
+    container_name: tyk
+    image: tykio/tyk-gateway:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - TYK_GW_SECRET=admin1234567
+      - TYK_GW_STORAGE_HOST=redis
+      - TYK_GW_STORAGE_PORT=6379
+    ports:
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - tyk_data:/opt/tyk-gateway
+      - ../../config/tyk/tyk.conf:/opt/tyk-gateway/tyk.conf:ro
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/hello"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

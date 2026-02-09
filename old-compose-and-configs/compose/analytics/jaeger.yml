@@ -1,0 +1,37 @@
+networks:
+  microservices-net:
+    external: true
+
+services:
+  jaeger:
+    container_name: jaeger
+    image: jaegertracing/all-in-one:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+      - SPAN_STORAGE_TYPE=badger
+      - BADGER_EPHEMERAL=false
+      - BADGER_DIRECTORY_VALUE=/badger/data
+      - BADGER_DIRECTORY_KEY=/badger/key
+    ports:
+      - "127.0.0.1:5775:5775/udp"
+      - "127.0.0.1:6831:6831/udp"
+      - "127.0.0.1:6832:6832/udp"
+      - "127.0.0.1:5778:5778"
+      - "127.0.0.1:16686:16686"
+      - "127.0.0.1:14268:14268"
+      - "127.0.0.1:14250:14250"
+      - "127.0.0.1:9411:9411"
+    volumes:
+      - jaeger_data:/badger
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:14269/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  jaeger_data:

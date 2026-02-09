@@ -1,0 +1,19 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  playwright_tests:
+
+services:
+  playwright:
+    container_name: playwright
+    image: mcr.microsoft.com/playwright:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    working_dir: /tests
+    volumes:
+      - playwright_tests:/tests
+    networks:
+      - microservices-net
+    command: tail -f /dev/null

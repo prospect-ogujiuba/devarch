@@ -1,0 +1,29 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  localai_models:
+
+services:
+  localai:
+    container_name: localai
+    image: localai/localai:latest-cpu
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - DEBUG=false
+      - THREADS=4
+      - CONTEXT_SIZE=512
+      - MODELS_PATH=/models
+    ports:
+      - "127.0.0.1:8880:8080"
+    volumes:
+      - localai_models:/models
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/readyz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

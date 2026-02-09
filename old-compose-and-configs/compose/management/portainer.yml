@@ -1,0 +1,21 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  portainer_data:
+
+services:
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:lts
+    privileged: true
+    ports:
+      - "127.0.0.1:9443:9443"
+      - "127.0.0.1:8001:8000"
+      - "127.0.0.1:9002:9000"
+    volumes:
+      - /run/user/1000/podman/podman.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - microservices-net

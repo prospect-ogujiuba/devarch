@@ -1,0 +1,24 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  authelia_config:
+
+services:
+  authelia:
+    container_name: authelia
+    image: authelia/authelia:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - TZ=UTC
+      - AUTHELIA_JWT_SECRET=${AUTHELIA_JWT_SECRET:-insecure_secret_change_me}
+      - AUTHELIA_SESSION_SECRET=${AUTHELIA_SESSION_SECRET:-insecure_secret_change_me}
+      - AUTHELIA_STORAGE_ENCRYPTION_KEY=${AUTHELIA_STORAGE_ENCRYPTION_KEY:-insecure_secret_change_me}
+    ports:
+      - "127.0.0.1:9730:9091"
+    volumes:
+      - authelia_config:/config
+    networks:
+      - microservices-net

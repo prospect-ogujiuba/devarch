@@ -1,0 +1,24 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  dbeaver_data:
+
+services:
+  dbeaver:
+    container_name: dbeaver
+    image: dbeaver/cloudbeaver:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    ports:
+      - "127.0.0.1:8611:8978"
+    volumes:
+      - dbeaver_data:/opt/cloudbeaver/workspace
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8978/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

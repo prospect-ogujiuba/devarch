@@ -1,0 +1,28 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  edgedb_data:
+
+services:
+  edgedb:
+    container_name: edgedb
+    image: edgedb/edgedb:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - EDGEDB_SERVER_SECURITY=insecure_dev_mode
+      - EDGEDB_SERVER_USER=edgedb
+      - EDGEDB_SERVER_PASSWORD=admin1234567
+    ports:
+      - "127.0.0.1:5656:5656"
+    volumes:
+      - edgedb_data:/var/lib/edgedb/data
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "edgedb", "query", "--host", "localhost", "SELECT 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

@@ -1,0 +1,25 @@
+networks:
+  microservices-net:
+    external: true
+
+volumes:
+  elixir_apps:
+
+services:
+  elixir:
+    container_name: elixir
+    image: elixir:latest
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      - MIX_ENV=dev
+    ports:
+      - "127.0.0.1:4040:4000"
+      - "127.0.0.1:4041:4001"
+    volumes:
+      - elixir_apps:/app
+      - ../../apps:/apps
+    working_dir: /app
+    command: tail -f /dev/null
+    networks:
+      - microservices-net
