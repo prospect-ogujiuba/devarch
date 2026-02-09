@@ -77,14 +77,18 @@ export function useLinkStack(name: string) {
 export function useProjectServiceControl(projectName: string) {
   const queryClient = useQueryClient()
 
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['projects', projectName] })
+    queryClient.invalidateQueries({ queryKey: ['projects', projectName, 'services'] })
+    queryClient.invalidateQueries({ queryKey: ['projects', projectName, 'status'] })
+  }
+
   const startService = useMutation({
     mutationFn: async (service: string) => {
       const response = await api.post<ControlResponse>(`/projects/${projectName}/services/${service}/start`)
       return response.data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects', projectName, 'status'] })
-    },
+    onSettled: invalidate,
   })
 
   const stopService = useMutation({
@@ -92,9 +96,7 @@ export function useProjectServiceControl(projectName: string) {
       const response = await api.post<ControlResponse>(`/projects/${projectName}/services/${service}/stop`)
       return response.data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects', projectName, 'status'] })
-    },
+    onSettled: invalidate,
   })
 
   const restartService = useMutation({
@@ -102,9 +104,7 @@ export function useProjectServiceControl(projectName: string) {
       const response = await api.post<ControlResponse>(`/projects/${projectName}/services/${service}/restart`)
       return response.data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects', projectName, 'status'] })
-    },
+    onSettled: invalidate,
   })
 
   return { startService, stopService, restartService }
@@ -113,14 +113,18 @@ export function useProjectServiceControl(projectName: string) {
 export function useProjectControl(name: string) {
   const queryClient = useQueryClient()
 
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['projects', name] })
+    queryClient.invalidateQueries({ queryKey: ['projects', name, 'services'] })
+    queryClient.invalidateQueries({ queryKey: ['projects', name, 'status'] })
+  }
+
   const start = useMutation({
     mutationFn: async () => {
       const response = await api.post<ControlResponse>(`/projects/${name}/start`)
       return response.data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects', name, 'status'] })
-    },
+    onSettled: invalidateAll,
   })
 
   const stop = useMutation({
@@ -128,9 +132,7 @@ export function useProjectControl(name: string) {
       const response = await api.post<ControlResponse>(`/projects/${name}/stop`)
       return response.data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects', name, 'status'] })
-    },
+    onSettled: invalidateAll,
   })
 
   const restart = useMutation({
@@ -138,9 +140,7 @@ export function useProjectControl(name: string) {
       const response = await api.post<ControlResponse>(`/projects/${name}/restart`)
       return response.data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects', name, 'status'] })
-    },
+    onSettled: invalidateAll,
   })
 
   return { start, stop, restart }
