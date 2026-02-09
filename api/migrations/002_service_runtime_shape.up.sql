@@ -5,7 +5,7 @@ CREATE TABLE service_ports (
     host_port INTEGER NOT NULL,
     container_port INTEGER NOT NULL,
     protocol VARCHAR(8) DEFAULT 'tcp',
-    UNIQUE(host_ip, host_port)
+    UNIQUE(service_id, host_ip, host_port)
 );
 
 CREATE INDEX idx_service_ports_service ON service_ports(service_id);
