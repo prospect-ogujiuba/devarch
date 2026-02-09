@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-03)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Phase 7 - Export/Import Bootstrap
+**Current focus:** Phase 8 - Service Wiring
 
 ## Current Position
 
-Phase: 7 of 9 (Export/Import Bootstrap)
-Plan: 4 of 4 complete in Phase 7
-Status: Phase complete
-Last activity: 2026-02-08 — Completed 07-04-PLAN.md
+Phase: 8 of 9 (Service Wiring)
+Plan: 1 of 4 complete in Phase 8
+Status: In progress
+Last activity: 2026-02-08 — Completed 08-01-PLAN.md
 
-Progress: [████████░░] ~85% (23 plans complete of ~27 total)
+Progress: [█████████░] ~89% (24 plans complete of ~27 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23
-- Average duration: 2.8 min
-- Total execution time: ~1.08 hours
+- Total plans completed: 24
+- Average duration: 2.7 min
+- Total execution time: ~1.13 hours
 
 **By Phase:**
 
@@ -34,12 +34,14 @@ Progress: [████████░░] ~85% (23 plans complete of ~27 total)
 | 5 | 2/2 | 4.0min | 2.0min |
 | 6 | 3/3 | 5.0min | 1.7min |
 | 7 | 4/4 | 12.1min | 3.0min |
+| 8 | 1/4 | 2.3min | 2.3min |
 
 *Updated after each plan completion*
 | Phase 07 P01 | 160 | 2 tasks | 5 files |
 | Phase 07 P02 | 116 | 2 tasks | 3 files |
 | Phase 07 P03 | 173 | 2 tasks | 7 files |
 | Phase 07 P04 | 275 | 2 tasks | 6 files |
+| Phase 08 P01 | 140 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -180,6 +182,9 @@ Recent decisions affecting current work:
 - Template version hash: SHA256(name + created_at) truncated to 16 hex chars for drift detection
 - Lock validation integrated into apply as optional warn-only feature (never blocks operations)
 - Empty image digest tolerated (non-fatal) when image not yet pulled locally
+- [Phase 08]: Contract CRUD follows existing service handler pattern (DELETE+INSERT transaction)
+- [Phase 08]: Contracts are template-level only (no instance overrides)
+- [Phase 08]: service_instance_wires enforces one wire per import contract per consumer per stack via UNIQUE constraint
 
 ### Pending Todos
 
@@ -192,5 +197,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 07-04-PLAN.md (dashboard export/import UI + CLI bootstrap/diagnostics). Phase 7 complete.
+Stopped at: Completed 08-01-PLAN.md (service wiring schema + contract CRUD endpoints). Phase 8 in progress.
 Resume file: None
