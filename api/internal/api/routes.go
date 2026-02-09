@@ -205,6 +205,12 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 						r.Get("/effective-config", instanceHandler.EffectiveConfig)
 					})
 				})
+
+				r.Get("/wires", stackHandler.ListWires)
+				r.Post("/wires/resolve", stackHandler.ResolveWires)
+				r.Post("/wires/cleanup", stackHandler.CleanupOrphanedWires)
+				r.Post("/wires", stackHandler.CreateWire)
+				r.Delete("/wires/{wireId}", stackHandler.DeleteWire)
 			})
 		})
 	})
