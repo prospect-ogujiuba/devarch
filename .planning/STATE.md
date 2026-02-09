@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 ## Current Position
 
 Phase: 9 of 9 (Secrets & Resources)
-Plan: 1 of 2 complete in Phase 9
+Plan: 2 of 3 complete in Phase 9
 Status: In progress
-Last activity: 2026-02-09 — Completed 09-01-PLAN.md
+Last activity: 2026-02-09 — Completed 09-02-PLAN.md
 
-Progress: [██████████] ~100% (28 plans complete of ~29 total)
+Progress: [██████████] ~97% (29 plans complete of ~30 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 28
-- Average duration: 2.8 min
-- Total execution time: ~1.35 hours
+- Total plans completed: 29
+- Average duration: 3.1 min
+- Total execution time: ~1.5 hours
 
 **By Phase:**
 
@@ -35,7 +35,7 @@ Progress: [██████████] ~100% (28 plans complete of ~29 total
 | 6 | 3/3 | 5.0min | 1.7min |
 | 7 | 4/4 | 12.1min | 3.0min |
 | 8 | 4/4 | 12.5min | 3.1min |
-| 9 | 1/2 | 5.6min | 5.6min |
+| 9 | 2/3 | 9.3min | 4.7min |
 
 *Updated after each plan completion*
 | Phase 07 P01 | 160 | 2 tasks | 5 files |
@@ -47,6 +47,7 @@ Progress: [██████████] ~100% (28 plans complete of ~29 total
 | Phase 08 P03 | 199 | 2 tasks | 7 files |
 | Phase 08 P04 | 257 | 2 tasks | 4 files |
 | Phase 09 P01 | 338 | 2 tasks | 12 files |
+| Phase 09 P02 | 219 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -207,6 +208,13 @@ Recent decisions affecting current work:
 - Lazy migration: plaintext secrets (is_secret=true, encryption_version=0) encrypted on first read
 - Read endpoints redact to ***, encryption_version tracks algorithm (0=plaintext, 1=AES-256-GCM)
 
+**From 09-02:**
+- Belt-and-suspenders secret redaction: is_secret flag + keyword heuristic both layers
+- Compose preview uses redaction=true, apply uses redaction=false (real values for runtime)
+- Resource limits CRUD with UPSERT: DELETE row when all fields empty to avoid null rows
+- Validation warnings never block operations (always warn-only)
+- Memory parser supports k/m/g suffixes case-insensitive
+
 ### Pending Todos
 
 None yet.
@@ -218,5 +226,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 09-01-PLAN.md (encryption foundation)
+Stopped at: Completed 09-02-PLAN.md (secret redaction + resource limits)
 Resume file: None
