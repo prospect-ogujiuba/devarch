@@ -12,6 +12,8 @@ import type {
   InstanceDomain,
   InstanceHealthcheck,
   InstanceDependency,
+  ResourceLimits,
+  ResourceLimitsResponse,
 } from '@/types/api'
 import { toast } from 'sonner'
 
@@ -32,7 +34,18 @@ export function useInstance(stackName: string, instanceId: string) {
     queryKey: ['stacks', stackName, 'instances', instanceId],
     queryFn: async () => {
       const response = await api.get<InstanceDetail>(`/stacks/${stackName}/instances/${instanceId}`)
-      return response.data
+      const data = response.data
+      return {
+        ...data,
+        ports: data.ports ?? [],
+        volumes: data.volumes ?? [],
+        env_vars: data.env_vars ?? [],
+        labels: data.labels ?? [],
+        domains: data.domains ?? [],
+        healthcheck: data.healthcheck ?? null,
+        dependencies: data.dependencies ?? [],
+        config_files: data.config_files ?? [],
+      }
     },
     enabled: !!stackName && !!instanceId,
     refetchInterval: 30000,
@@ -55,7 +68,11 @@ export function useInstanceDeletePreview(stackName: string, instanceId: string) 
     queryKey: ['stacks', stackName, 'instances', instanceId, 'delete-preview'],
     queryFn: async () => {
       const response = await api.get<InstanceDeletePreview>(`/stacks/${stackName}/instances/${instanceId}/delete-preview`)
-      return response.data
+      const data = response.data
+      return {
+        ...data,
+        instance_id: data.instance_id || data.instance_name || instanceId,
+      }
     },
     enabled: !!stackName && !!instanceId,
   })
@@ -326,7 +343,7 @@ export function useUpdateInstanceHealthcheck(stackName: string, instanceId: stri
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (healthcheck: Omit<InstanceHealthcheck, 'id' | 'instance_id'> | null) => {
-      const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/healthcheck`, { healthcheck })
+      const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/healthcheck`, healthcheck)
       return response.data
     },
     onSuccess: () => {
@@ -397,6 +414,46 @@ export function useDeleteConfigFile(stackName: string, instanceId: string) {
     },
     onError: (error) => {
       toast.error(getErrorMessage(error, 'Failed to delete file'))
+    },
+  })
+}
+
+export function useResourceLimits(stackName: string, instanceId: string) {
+  return useQuery({
+    queryKey: ['stacks', stackName, 'instances', instanceId, 'resources'],
+    queryFn: async () => {
+      try {
+        const response = await api.get<ResourceLimits>(`/stacks/${stackName}/instances/${instanceId}/resources`)
+        return response.data
+      } catch (error: unknown) {
+        if (error && typeof error === 'object' && 'response' in error) {
+          const axiosError = error as { response?: { status?: number } }
+          if (axiosError.response?.status === 404) {
+            return null
+          }
+        }
+        throw error
+      }
+    },
+    enabled: !!stackName && !!instanceId,
+  })
+}
+
+export function useUpdateResourceLimits(stackName: string, instanceId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (limits: ResourceLimits) => {
+      const response = await api.put<ResourceLimitsResponse>(`/stacks/${stackName}/instances/${instanceId}/resources`, limits)
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Resource limits updated')
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'resources'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update resource limits'))
     },
   })
 }

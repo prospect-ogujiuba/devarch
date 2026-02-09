@@ -74,7 +74,7 @@ export function EditableEnvVars({ name, envVars }: Props) {
                 {envVars.map((env, i) => (
                   <div key={i} className="text-sm font-mono flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
                     <span className="text-muted-foreground sm:min-w-[200px]">{env.key}:</span>
-                    <span className="break-all">{env.is_secret && !revealedSecrets.has(i) ? '********' : env.value}</span>
+                    <span className="break-all">{env.is_secret && !revealedSecrets.has(i) ? '••••••••' : env.value}</span>
                     {env.is_secret && (
                       <Button variant="ghost" size="icon-sm" className="size-6 sm:ml-1" onClick={() => toggleSecret(i)}>
                         {revealedSecrets.has(i) ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
