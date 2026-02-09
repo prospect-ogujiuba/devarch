@@ -30,6 +30,7 @@ type stackServiceEntry struct {
 	Ports         []string           `yaml:"ports,omitempty"`
 	Volumes       []string           `yaml:"volumes,omitempty"`
 	Environment   map[string]string  `yaml:"environment,omitempty"`
+	EnvFile       []string           `yaml:"env_file,omitempty"`
 	DependsOn     interface{}        `yaml:"depends_on,omitempty"`
 	Labels        []string           `yaml:"labels,omitempty"`
 	Healthcheck   *healthcheckConfig `yaml:"healthcheck,omitempty"`
@@ -68,10 +69,13 @@ type stackInstanceConfig struct {
 	ports            []portEntry
 	volumes          []volumeEntry
 	envVars          map[string]string
+	envFiles         []string
+	networks         []string
 	labels           map[string]string
 	healthcheck      *healthcheckConfig
 	dependencies     []string
 	configFiles      []configFileEntry
+	configMounts     []configMountEntry
 	composeOverrides map[string]interface{}
 }
 
@@ -94,6 +98,13 @@ type configFileEntry struct {
 	filePath string
 	content  string
 	fileMode string
+}
+
+type configMountEntry struct {
+	sourcePath     string
+	targetPath     string
+	readonly       bool
+	configFilePath sql.NullString
 }
 
 func (g *Generator) GenerateStack(stackName string) ([]byte, []string, error) {
@@ -150,10 +161,24 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 		secretKeys[inst.instanceID] = secrets
 	}
 
+	// Build networks map from all instances' networks
+	networksMap := make(map[string]networkConfig)
+	for _, inst := range instances {
+		if !inst.enabled {
+			continue
+		}
+		cfg := configs[inst.instanceID]
+		for _, netName := range cfg.networks {
+			networksMap[netName] = networkConfig{External: true}
+		}
+	}
+	// Ensure default network is included if no networks from DB
+	if len(networksMap) == 0 {
+		networksMap[netName] = networkConfig{External: true}
+	}
+
 	compose := stackCompose{
-		Networks: map[string]networkConfig{
-			netName: {External: true},
-		},
+		Networks: networksMap,
 		Services: make(map[string]stackServiceEntry),
 	}
 
@@ -167,10 +192,15 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 		}
 		cfg := configs[inst.instanceID]
 
+		networks := cfg.networks
+		if len(networks) == 0 {
+			networks = []string{netName}
+		}
+
 		svc := stackServiceEntry{
 			ContainerName: inst.containerName,
 			Restart:       cfg.restartPolicy,
-			Networks:      []string{netName},
+			Networks:      networks,
 		}
 
 		if cfg.imageName != "" {
@@ -226,6 +256,27 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 			} else {
 				svc.Environment = cfg.envVars
 			}
+		}
+
+		svc.EnvFile = cfg.envFiles
+
+		// Merge config mounts into volumes
+		for _, mount := range cfg.configMounts {
+			var resolvedSource string
+			if mount.configFilePath.Valid {
+				// Resolve to materialized path: compose/stacks/{stackName}/{instanceID}/{file_path}
+				resolvedSource = filepath.Join("compose", "stacks", stackName, inst.instanceID, mount.configFilePath.String)
+				resolvedSource = g.resolveStackVolumePath(resolvedSource, stackName, inst.instanceID)
+			} else {
+				// Use raw source_path for NULL config_file_id
+				resolvedSource = g.resolveStackVolumePath(mount.sourcePath, stackName, inst.instanceID)
+			}
+
+			mountStr := fmt.Sprintf("%s:%s", resolvedSource, mount.targetPath)
+			if mount.readonly {
+				mountStr += ":ro"
+			}
+			svc.Volumes = append(svc.Volumes, mountStr)
 		}
 
 		labelKeys := make([]string, 0, len(cfg.labels))
@@ -486,6 +537,21 @@ func (g *Generator) loadInstanceEffectiveConfigWithSecrets(stackName string, ins
 	cfg.configFiles, err = g.loadEffectiveConfigFiles(inst.id, inst.templateServiceID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("config files: %w", err)
+	}
+
+	cfg.envFiles, err = g.loadEffectiveEnvFiles(inst.id, inst.templateServiceID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("env files: %w", err)
+	}
+
+	cfg.networks, err = g.loadEffectiveNetworks(inst.id, inst.templateServiceID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("networks: %w", err)
+	}
+
+	cfg.configMounts, err = g.loadEffectiveConfigMounts(inst.id, inst.templateServiceID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("config mounts: %w", err)
 	}
 
 	return cfg, secretKeys, nil
@@ -931,6 +997,69 @@ func (g *Generator) loadEffectiveConfigFiles(instancePK, templateServiceID int) 
 		result = append(result, f)
 	}
 	return result, nil
+}
+
+func (g *Generator) loadEffectiveEnvFiles(instancePK, templateServiceID int) ([]string, error) {
+	rows, err := g.db.Query(`
+		SELECT path FROM service_env_files WHERE service_id = $1 ORDER BY sort_order
+	`, templateServiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var envFiles []string
+	for rows.Next() {
+		var path string
+		if err := rows.Scan(&path); err != nil {
+			return nil, err
+		}
+		envFiles = append(envFiles, path)
+	}
+	return envFiles, rows.Err()
+}
+
+func (g *Generator) loadEffectiveNetworks(instancePK, templateServiceID int) ([]string, error) {
+	rows, err := g.db.Query(`
+		SELECT network_name FROM service_networks WHERE service_id = $1 ORDER BY id
+	`, templateServiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var networks []string
+	for rows.Next() {
+		var network string
+		if err := rows.Scan(&network); err != nil {
+			return nil, err
+		}
+		networks = append(networks, network)
+	}
+	return networks, rows.Err()
+}
+
+func (g *Generator) loadEffectiveConfigMounts(instancePK, templateServiceID int) ([]configMountEntry, error) {
+	rows, err := g.db.Query(`
+		SELECT scm.source_path, scm.target_path, scm.readonly, scf.file_path
+		FROM service_config_mounts scm
+		LEFT JOIN service_config_files scf ON scf.id = scm.config_file_id
+		WHERE scm.service_id = $1
+	`, templateServiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var mounts []configMountEntry
+	for rows.Next() {
+		var m configMountEntry
+		if err := rows.Scan(&m.sourcePath, &m.targetPath, &m.readonly, &m.configFilePath); err != nil {
+			return nil, err
+		}
+		mounts = append(mounts, m)
+	}
+	return mounts, rows.Err()
 }
 
 func (g *Generator) resolveStackVolumePath(source, stackName, instanceID string) string {
