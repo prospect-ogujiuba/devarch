@@ -20,7 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: Plan/Apply Workflow** - Safety mechanism with advisory locking
 - [x] **Phase 7: Export/Import & Bootstrap** - Shareable devarch.yml, lockfile, init/doctor
 - [ ] **Phase 8: Service Wiring** - Contract-based auto-wiring + explicit wiring
-- [ ] **Phase 9: Secrets & Resources** - Encryption + resource limits
+- [x] **Phase 9: Secrets & Resources** - Encryption + resource limits
 
 ## Phase Details
 
@@ -188,9 +188,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Crypto package + migrations + encryption integration in handlers
-- [ ] 09-02-PLAN.md — Secret redaction in outputs + resource limits API + compose integration
-- [ ] 09-03-PLAN.md — Dashboard secret display standardization + resource limits UI
+- [x] 09-01-PLAN.md — Crypto package + migrations + encryption integration in handlers (COMPLETE 2026-02-08)
+- [x] 09-02-PLAN.md — Secret redaction in outputs + resource limits API + compose integration (COMPLETE 2026-02-08)
+- [x] 09-03-PLAN.md — Dashboard secret display standardization + resource limits UI (COMPLETE 2026-02-08)
 
 ## Progress
 
@@ -207,8 +207,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 | 6. Plan/Apply Workflow | 3/3 | Complete | 2026-02-07 |
 | 7. Export/Import & Bootstrap | 4/4 | Complete | 2026-02-08 |
 | 8. Service Wiring | 4/4 | Complete | 2026-02-08 |
-| 9. Secrets & Resources | 0/3 | Not started | - |
+| 9. Secrets & Resources | 3/3 | Complete | 2026-02-08 |
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-08 after phase 9 planning*
+*Last updated: 2026-02-08 after phase 9 execution*
