@@ -3,6 +3,8 @@ package api
 import (
 	"database/sql"
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -22,6 +24,14 @@ import (
 
 func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podman.Client, syncManager *sync.Manager, projectScanner *scanner.Scanner, nginxGenerator *nginx.Generator, projectController *project.Controller, registryManager *registry.Manager, cipher *crypto.Cipher) http.Handler {
 	r := chi.NewRouter()
+
+	// Read stack import size limit from env var (default 256MB)
+	importMaxBytes := int64(256 << 20)
+	if envVal := os.Getenv("STACK_IMPORT_MAX_BYTES"); envVal != "" {
+		if parsed, err := strconv.ParseInt(envVal, 10, 64); err == nil {
+			importMaxBytes = parsed
+		}
+	}
 
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -178,7 +188,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 			r.Post("/trash/{name}/restore", stackHandler.Restore)
 			r.Delete("/trash/{name}", stackHandler.PermanentDelete)
 
-			r.Post("/import", stackHandler.ImportStack)
+			r.With(mw.MaxBodySize(importMaxBytes)).Post("/import", stackHandler.ImportStack)
 
 			r.Route("/{name}", func(r chi.Router) {
 				r.Get("/", stackHandler.Get)
