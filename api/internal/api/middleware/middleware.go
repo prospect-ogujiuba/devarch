@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"crypto/subtle"
+	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"sync"
@@ -18,16 +20,22 @@ func JSONContentType(next http.Handler) http.Handler {
 func CacheControl(maxAge time.Duration) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Cache-Control", "max-age="+time.Duration(maxAge.Seconds()).String())
+			w.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", int(maxAge.Seconds())))
 			next.ServeHTTP(w, r)
 		})
 	}
 }
 
+var apiKeyWarningLogged bool
+
 func APIKeyAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		apiKey := os.Getenv("DEVARCH_API_KEY")
 		if apiKey == "" {
+			if !apiKeyWarningLogged {
+				log.Println("WARNING: DEVARCH_API_KEY is not set — API authentication is disabled. Set DEVARCH_API_KEY to enable auth.")
+				apiKeyWarningLogged = true
+			}
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -52,6 +60,8 @@ type visitor struct {
 	lastSeen time.Time
 }
 
+const maxVisitors = 10000
+
 func RateLimit(requestsPerSecond float64, burst int) func(http.Handler) http.Handler {
 	rl := &rateLimiter{visitors: make(map[string]*visitor)}
 
@@ -75,6 +85,11 @@ func RateLimit(requestsPerSecond float64, burst int) func(http.Handler) http.Han
 			rl.mu.Lock()
 			v, exists := rl.visitors[ip]
 			if !exists {
+				if len(rl.visitors) >= maxVisitors {
+					rl.mu.Unlock()
+					http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
+					return
+				}
 				v = &visitor{tokens: float64(burst)}
 				rl.visitors[ip] = v
 			}
@@ -106,4 +121,13 @@ func NoCache(next http.Handler) http.Handler {
 		w.Header().Set("Expires", "0")
 		next.ServeHTTP(w, r)
 	})
+}
+
+func MaxBodySize(bytes int64) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.Body = http.MaxBytesReader(w, r.Body, bytes)
+			next.ServeHTTP(w, r)
+		})
+	}
 }

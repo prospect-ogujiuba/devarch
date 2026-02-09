@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -283,34 +284,52 @@ func (h *ServiceHandler) loadServiceByName(name string) (*models.Service, error)
 }
 
 func (h *ServiceHandler) loadServiceRelations(s *models.Service) {
-	rows, _ := h.db.Query(`SELECT host_ip, host_port, container_port, protocol FROM service_ports WHERE service_id = $1`, s.ID)
-	if rows != nil {
+	if rows, err := h.db.Query(`SELECT host_ip, host_port, container_port, protocol FROM service_ports WHERE service_id = $1`, s.ID); err != nil {
+		log.Printf("loadServiceRelations: ports query error for service %d: %v", s.ID, err)
+	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var p models.ServicePort
-			rows.Scan(&p.HostIP, &p.HostPort, &p.ContainerPort, &p.Protocol)
+			if err := rows.Scan(&p.HostIP, &p.HostPort, &p.ContainerPort, &p.Protocol); err != nil {
+				log.Printf("loadServiceRelations: ports scan error: %v", err)
+				continue
+			}
 			s.Ports = append(s.Ports, p)
+		}
+		if err := rows.Err(); err != nil {
+			log.Printf("loadServiceRelations: ports iteration error: %v", err)
 		}
 	}
 
-	rows, _ = h.db.Query(`SELECT volume_type, source, target, read_only, is_external FROM service_volumes WHERE service_id = $1`, s.ID)
-	if rows != nil {
+	if rows, err := h.db.Query(`SELECT volume_type, source, target, read_only, is_external FROM service_volumes WHERE service_id = $1`, s.ID); err != nil {
+		log.Printf("loadServiceRelations: volumes query error for service %d: %v", s.ID, err)
+	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var v models.ServiceVolume
-			rows.Scan(&v.VolumeType, &v.Source, &v.Target, &v.ReadOnly, &v.IsExternal)
+			if err := rows.Scan(&v.VolumeType, &v.Source, &v.Target, &v.ReadOnly, &v.IsExternal); err != nil {
+				log.Printf("loadServiceRelations: volumes scan error: %v", err)
+				continue
+			}
 			s.Volumes = append(s.Volumes, v)
+		}
+		if err := rows.Err(); err != nil {
+			log.Printf("loadServiceRelations: volumes iteration error: %v", err)
 		}
 	}
 
-	rows, _ = h.db.Query(`SELECT key, value, is_secret, encrypted_value, encryption_version FROM service_env_vars WHERE service_id = $1`, s.ID)
-	if rows != nil {
+	if rows, err := h.db.Query(`SELECT key, value, is_secret, encrypted_value, encryption_version FROM service_env_vars WHERE service_id = $1`, s.ID); err != nil {
+		log.Printf("loadServiceRelations: env_vars query error for service %d: %v", s.ID, err)
+	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var e models.ServiceEnvVar
 			var encryptedValue sql.NullString
 			var encryptionVersion int
-			rows.Scan(&e.Key, &e.Value, &e.IsSecret, &encryptedValue, &encryptionVersion)
+			if err := rows.Scan(&e.Key, &e.Value, &e.IsSecret, &encryptedValue, &encryptionVersion); err != nil {
+				log.Printf("loadServiceRelations: env_vars scan error: %v", err)
+				continue
+			}
 
 			if encryptionVersion > 0 && encryptedValue.Valid {
 				_, err := h.cipher.Decrypt(encryptedValue.String)
@@ -329,35 +348,59 @@ func (h *ServiceHandler) loadServiceRelations(s *models.Service) {
 
 			s.EnvVars = append(s.EnvVars, e)
 		}
+		if err := rows.Err(); err != nil {
+			log.Printf("loadServiceRelations: env_vars iteration error: %v", err)
+		}
 	}
 
-	rows, _ = h.db.Query(`SELECT key, value FROM service_labels WHERE service_id = $1`, s.ID)
-	if rows != nil {
+	if rows, err := h.db.Query(`SELECT key, value FROM service_labels WHERE service_id = $1`, s.ID); err != nil {
+		log.Printf("loadServiceRelations: labels query error for service %d: %v", s.ID, err)
+	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var l models.ServiceLabel
-			rows.Scan(&l.Key, &l.Value)
+			if err := rows.Scan(&l.Key, &l.Value); err != nil {
+				log.Printf("loadServiceRelations: labels scan error: %v", err)
+				continue
+			}
 			s.Labels = append(s.Labels, l)
+		}
+		if err := rows.Err(); err != nil {
+			log.Printf("loadServiceRelations: labels iteration error: %v", err)
 		}
 	}
 
-	rows, _ = h.db.Query(`SELECT domain, proxy_port FROM service_domains WHERE service_id = $1`, s.ID)
-	if rows != nil {
+	if rows, err := h.db.Query(`SELECT domain, proxy_port FROM service_domains WHERE service_id = $1`, s.ID); err != nil {
+		log.Printf("loadServiceRelations: domains query error for service %d: %v", s.ID, err)
+	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var d models.ServiceDomain
-			rows.Scan(&d.Domain, &d.ProxyPort)
+			if err := rows.Scan(&d.Domain, &d.ProxyPort); err != nil {
+				log.Printf("loadServiceRelations: domains scan error: %v", err)
+				continue
+			}
 			s.Domains = append(s.Domains, d)
+		}
+		if err := rows.Err(); err != nil {
+			log.Printf("loadServiceRelations: domains iteration error: %v", err)
 		}
 	}
 
-	rows, _ = h.db.Query(`SELECT srv.name FROM service_dependencies d JOIN services srv ON d.depends_on_service_id = srv.id WHERE d.service_id = $1`, s.ID)
-	if rows != nil {
+	if rows, err := h.db.Query(`SELECT srv.name FROM service_dependencies d JOIN services srv ON d.depends_on_service_id = srv.id WHERE d.service_id = $1`, s.ID); err != nil {
+		log.Printf("loadServiceRelations: dependencies query error for service %d: %v", s.ID, err)
+	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var name string
-			rows.Scan(&name)
+			if err := rows.Scan(&name); err != nil {
+				log.Printf("loadServiceRelations: dependencies scan error: %v", err)
+				continue
+			}
 			s.Dependencies = append(s.Dependencies, name)
+		}
+		if err := rows.Err(); err != nil {
+			log.Printf("loadServiceRelations: dependencies iteration error: %v", err)
 		}
 	}
 
@@ -615,11 +658,16 @@ func (h *ServiceHandler) snapshotConfig(s *models.Service, summary string) {
 	}
 
 	var nextVersion int
-	h.db.QueryRow(`SELECT COALESCE(MAX(version), 0) + 1 FROM service_config_versions WHERE service_id = $1`, s.ID).Scan(&nextVersion)
-	h.db.Exec(`
+	if err := h.db.QueryRow(`SELECT COALESCE(MAX(version), 0) + 1 FROM service_config_versions WHERE service_id = $1`, s.ID).Scan(&nextVersion); err != nil {
+		log.Printf("snapshotConfig: failed to get next version for service %d: %v", s.ID, err)
+		return
+	}
+	if _, err := h.db.Exec(`
 		INSERT INTO service_config_versions (service_id, version, config_snapshot, change_summary)
 		VALUES ($1, $2, $3, $4)
-	`, s.ID, nextVersion, snapshotJSON, summary)
+	`, s.ID, nextVersion, snapshotJSON, summary); err != nil {
+		log.Printf("snapshotConfig: failed to insert version %d for service %d: %v", nextVersion, s.ID, err)
+	}
 }
 
 func (h *ServiceHandler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -631,8 +679,12 @@ func (h *ServiceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
+	affected, err := result.RowsAffected()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if affected == 0 {
 		http.Error(w, "service not found", http.StatusNotFound)
 		return
 	}
@@ -1588,8 +1640,12 @@ func (h *ServiceHandler) DeleteConfigFile(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
+	affected, err := result.RowsAffected()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if affected == 0 {
 		http.Error(w, "file not found", http.StatusNotFound)
 		return
 	}

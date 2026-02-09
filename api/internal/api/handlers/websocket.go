@@ -94,45 +94,64 @@ func (h *WebSocketHandler) broadcastStatus() {
 	}
 
 	h.mu.RLock()
-	defer h.mu.RUnlock()
-
+	var failed []*websocket.Conn
 	for conn := range h.clients {
 		conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-		err := conn.WriteJSON(status)
-		if err != nil {
+		if err := conn.WriteJSON(status); err != nil {
 			log.Printf("websocket write error: %v", err)
 			conn.Close()
-			go func(c *websocket.Conn) {
-				h.mu.Lock()
-				delete(h.clients, c)
-				h.mu.Unlock()
-			}(conn)
+			failed = append(failed, conn)
 		}
+	}
+	h.mu.RUnlock()
+
+	if len(failed) > 0 {
+		h.mu.Lock()
+		for _, conn := range failed {
+			delete(h.clients, conn)
+		}
+		h.mu.Unlock()
 	}
 }
 
 func (h *WebSocketHandler) pingClients() {
 	h.mu.RLock()
-	defer h.mu.RUnlock()
-
+	var failed []*websocket.Conn
 	for conn := range h.clients {
 		conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-		err := conn.WriteMessage(websocket.PingMessage, nil)
-		if err != nil {
+		if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 			conn.Close()
+			failed = append(failed, conn)
 		}
+	}
+	h.mu.RUnlock()
+
+	if len(failed) > 0 {
+		h.mu.Lock()
+		for _, conn := range failed {
+			delete(h.clients, conn)
+		}
+		h.mu.Unlock()
 	}
 }
 
 func (h *WebSocketHandler) Broadcast(msg interface{}) {
 	h.mu.RLock()
-	defer h.mu.RUnlock()
-
+	var failed []*websocket.Conn
 	for conn := range h.clients {
 		conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-		err := conn.WriteJSON(msg)
-		if err != nil {
+		if err := conn.WriteJSON(msg); err != nil {
 			conn.Close()
+			failed = append(failed, conn)
 		}
+	}
+	h.mu.RUnlock()
+
+	if len(failed) > 0 {
+		h.mu.Lock()
+		for _, conn := range failed {
+			delete(h.clients, conn)
+		}
+		h.mu.Unlock()
 	}
 }
