@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS instance_resource_limits;
+DROP TABLE IF EXISTS instance_dependencies;
+DROP TABLE IF EXISTS instance_config_files;
+DROP TABLE IF EXISTS instance_healthchecks;
+DROP TABLE IF EXISTS instance_domains;
+DROP TABLE IF EXISTS instance_labels;
+DROP TABLE IF EXISTS instance_env_vars;
+DROP TABLE IF EXISTS instance_volumes;
+DROP TABLE IF EXISTS instance_ports;

@@ -1,0 +1,9 @@
+DROP TABLE service_networks;
+DROP TABLE service_domains;
+DROP TABLE service_labels;
+DROP TABLE service_healthchecks;
+DROP TABLE service_dependencies;
+DROP TABLE service_env_files;
+DROP TABLE service_env_vars;
+DROP TABLE service_volumes;
+DROP TABLE service_ports;
