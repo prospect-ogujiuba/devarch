@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 ## Current Position
 
 Phase: 8 of 9 (Service Wiring)
-Plan: 1 of 4 complete in Phase 8
+Plan: 2 of 4 complete in Phase 8
 Status: In progress
-Last activity: 2026-02-08 — Completed 08-01-PLAN.md
+Last activity: 2026-02-09 — Completed 08-02-PLAN.md
 
-Progress: [█████████░] ~89% (24 plans complete of ~27 total)
+Progress: [█████████░] ~93% (25 plans complete of ~27 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 24
+- Total plans completed: 25
 - Average duration: 2.7 min
-- Total execution time: ~1.13 hours
+- Total execution time: ~1.19 hours
 
 **By Phase:**
 
@@ -34,7 +34,7 @@ Progress: [█████████░] ~89% (24 plans complete of ~27 total)
 | 5 | 2/2 | 4.0min | 2.0min |
 | 6 | 3/3 | 5.0min | 1.7min |
 | 7 | 4/4 | 12.1min | 3.0min |
-| 8 | 1/4 | 2.3min | 2.3min |
+| 8 | 2/4 | 4.9min | 2.5min |
 
 *Updated after each plan completion*
 | Phase 07 P01 | 160 | 2 tasks | 5 files |
@@ -42,6 +42,7 @@ Progress: [█████████░] ~89% (24 plans complete of ~27 total)
 | Phase 07 P03 | 173 | 2 tasks | 7 files |
 | Phase 07 P04 | 275 | 2 tasks | 6 files |
 | Phase 08 P01 | 140 | 2 tasks | 5 files |
+| Phase 08 P02 | 153 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -185,6 +186,10 @@ Recent decisions affecting current work:
 - [Phase 08]: Contract CRUD follows existing service handler pattern (DELETE+INSERT transaction)
 - [Phase 08]: Contracts are template-level only (no instance overrides)
 - [Phase 08]: service_instance_wires enforces one wire per import contract per consumer per stack via UNIQUE constraint
+- [Phase 08]: Auto-wire skips explicit wires (explicit overrides auto)
+- [Phase 08]: Exact type matching for contract resolution (no fuzzy matching)
+- [Phase 08]: Ambiguous providers (>1 match) left unwired with warning
+- [Phase 08]: Env var injection uses container DNS names (devarch-{stack}-{instance})
 
 ### Pending Todos
 
@@ -196,6 +201,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-08
-Stopped at: Completed 08-01-PLAN.md (service wiring schema + contract CRUD endpoints). Phase 8 in progress.
+Last session: 2026-02-09
+Stopped at: Completed 08-02-PLAN.md (wiring domain package + wire management API). Phase 8 in progress.
 Resume file: None
