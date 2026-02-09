@@ -3,9 +3,7 @@ package export
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"strings"
-	"time"
 )
 
 type ImportResult struct {
