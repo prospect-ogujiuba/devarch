@@ -10,14 +10,16 @@ import (
 	"github.com/priz/devarch-api/internal/api/handlers"
 	mw "github.com/priz/devarch-api/internal/api/middleware"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/crypto"
 	"github.com/priz/devarch-api/internal/nginx"
 	"github.com/priz/devarch-api/internal/podman"
 	"github.com/priz/devarch-api/internal/project"
 	"github.com/priz/devarch-api/internal/scanner"
 	"github.com/priz/devarch-api/internal/sync"
+	"github.com/priz/devarch-api/pkg/registry"
 )
 
-func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podman.Client, syncManager *sync.Manager, projectScanner *scanner.Scanner, nginxGenerator *nginx.Generator, projectController *project.Controller) http.Handler {
+func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podman.Client, syncManager *sync.Manager, projectScanner *scanner.Scanner, nginxGenerator *nginx.Generator, projectController *project.Controller, registryManager *registry.Manager, cipher *crypto.Cipher) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
@@ -33,16 +35,17 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 		MaxAge:           300,
 	}))
 
-	serviceHandler := handlers.NewServiceHandler(db, containerClient, podmanClient)
+	serviceHandler := handlers.NewServiceHandler(db, containerClient, podmanClient, cipher)
 	categoryHandler := handlers.NewCategoryHandler(db, containerClient, podmanClient)
 	statusHandler := handlers.NewStatusHandler(db, podmanClient, syncManager)
-	registryHandler := handlers.NewRegistryHandler(db)
+	registryHandler := handlers.NewRegistryHandler(db, registryManager)
 	wsHandler := handlers.NewWebSocketHandler(syncManager)
 	projectHandler := handlers.NewProjectHandler(db, projectScanner, projectController)
 	runtimeHandler := handlers.NewRuntimeHandler(containerClient, podmanClient)
 	nginxHandler := handlers.NewNginxHandler(nginxGenerator, containerClient)
 	stackHandler := handlers.NewStackHandler(db, containerClient)
-	instanceHandler := handlers.NewInstanceHandler(db, containerClient)
+	instanceHandler := handlers.NewInstanceHandler(db, containerClient, cipher)
+	networkHandler := handlers.NewNetworkHandler(db, containerClient)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(mw.APIKeyAuth)
@@ -134,6 +137,21 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 		r.Post("/runtime/switch", runtimeHandler.Switch)
 		r.Get("/socket/status", runtimeHandler.SocketStatus)
 		r.Post("/socket/start", runtimeHandler.SocketStart)
+
+		r.Route("/networks", func(r chi.Router) {
+			r.Get("/", networkHandler.List)
+			r.Post("/", networkHandler.Create)
+			r.Post("/bulk-remove", networkHandler.BulkRemove)
+			r.Delete("/{name}", networkHandler.Remove)
+		})
+
+		r.Route("/registries", func(r chi.Router) {
+			r.Get("/", registryHandler.ListRegistries)
+			r.Route("/{registry}", func(r chi.Router) {
+				r.Get("/search", registryHandler.SearchImages)
+				r.Get("/images/*", registryHandler.ImageRoute)
+			})
+		})
 
 		r.Route("/stacks", func(r chi.Router) {
 			r.Get("/", stackHandler.List)
