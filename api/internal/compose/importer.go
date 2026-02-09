@@ -282,8 +282,8 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 
 	var serviceID int
 	err = tx.QueryRow(`
-		INSERT INTO services (name, category_id, image_name, image_tag, restart_policy, command, user_spec, compose_overrides)
-		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), NULLIF($7, ''), $8)
+		INSERT INTO services (name, category_id, image_name, image_tag, restart_policy, command, user_spec, compose_overrides, container_name_template)
+		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), NULLIF($7, ''), $8, NULLIF($9, ''))
 		ON CONFLICT (name) DO UPDATE SET
 			category_id = $2,
 			image_name = $3,
@@ -292,10 +292,11 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 			command = NULLIF($6, ''),
 			user_spec = NULLIF($7, ''),
 			compose_overrides = $8,
+			container_name_template = NULLIF($9, ''),
 			updated_at = NOW()
 		RETURNING id
 	`, parsed.Name, categoryID, parsed.ImageName, parsed.ImageTag,
-		parsed.RestartPolicy, parsed.Command, parsed.UserSpec, overridesJSON).Scan(&serviceID)
+		parsed.RestartPolicy, parsed.Command, parsed.UserSpec, overridesJSON, parsed.ContainerName).Scan(&serviceID)
 	if err != nil {
 		return fmt.Errorf("insert service: %w", err)
 	}
@@ -352,6 +353,32 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 		`, serviceID, label.Key, label.Value)
 		if err != nil {
 			return fmt.Errorf("insert label: %w", err)
+		}
+	}
+
+	if _, err := tx.Exec("DELETE FROM service_env_files WHERE service_id = $1", serviceID); err != nil {
+		return err
+	}
+	for idx, path := range parsed.EnvFiles {
+		_, err := tx.Exec(`
+			INSERT INTO service_env_files (service_id, path, sort_order)
+			VALUES ($1, $2, $3)
+		`, serviceID, path, idx)
+		if err != nil {
+			return fmt.Errorf("insert env_file: %w", err)
+		}
+	}
+
+	if _, err := tx.Exec("DELETE FROM service_networks WHERE service_id = $1", serviceID); err != nil {
+		return err
+	}
+	for _, network := range parsed.Networks {
+		_, err := tx.Exec(`
+			INSERT INTO service_networks (service_id, network_name)
+			VALUES ($1, $2)
+		`, serviceID, network)
+		if err != nil {
+			return fmt.Errorf("insert network: %w", err)
 		}
 	}
 
