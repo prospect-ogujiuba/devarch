@@ -145,80 +145,12 @@ func (i *Importer) importServices(path string, categoryID int, categoryName stri
 	}
 
 	for _, parsed := range services {
-		i.rewriteConfigPaths(parsed, categoryName)
 		i.resolvePaths(parsed, path)
 		if err := i.importService(parsed, categoryID); err != nil {
 			fmt.Printf("warning: failed to import service %s: %v\n", parsed.Name, err)
 		}
 	}
 	return nil
-}
-
-// rewriteConfigPaths rewrites volume source paths and build contexts that reference
-// config/{dirName}/... to compose/{categoryName}/{serviceName}/... so the DB stores
-// the final materialized path. This eliminates runtime path guessing in the generator.
-func (i *Importer) rewriteConfigPaths(parsed *ParsedService, categoryName string) {
-	for idx := range parsed.Volumes {
-		v := &parsed.Volumes[idx]
-		if v.VolumeType != "bind" {
-			continue
-		}
-		v.Source = rewriteConfigSource(v.Source, categoryName, parsed.Name)
-	}
-
-	if parsed.Overrides == nil {
-		return
-	}
-
-	// Rewrite override volumes
-	if volumes, ok := parsed.Overrides["volumes"]; ok {
-		if volList, ok := volumes.([]interface{}); ok {
-			for i, v := range volList {
-				if volStr, ok := v.(string); ok {
-					parts := strings.SplitN(volStr, ":", 3)
-					if len(parts) >= 2 {
-						parts[0] = rewriteConfigSource(parts[0], categoryName, parsed.Name)
-						volList[i] = strings.Join(parts, ":")
-					}
-				}
-			}
-		}
-	}
-
-	// Rewrite build context
-	if build, ok := parsed.Overrides["build"]; ok {
-		switch b := build.(type) {
-		case string:
-			parsed.Overrides["build"] = rewriteConfigSource(b, categoryName, parsed.Name)
-		case map[string]interface{}:
-			if ctx, ok := b["context"].(string); ok {
-				b["context"] = rewriteConfigSource(ctx, categoryName, parsed.Name)
-			}
-		}
-	}
-}
-
-// rewriteConfigSource converts a config/ path to a compose/ path.
-// ../config/nginx/custom → compose/proxy/nginx-proxy-manager/custom
-// ../config/nginx        → compose/proxy/nginx-proxy-manager
-func rewriteConfigSource(source, categoryName, serviceName string) string {
-	cleaned := source
-	for strings.HasPrefix(cleaned, "../") {
-		cleaned = strings.TrimPrefix(cleaned, "../")
-	}
-
-	if !strings.HasPrefix(cleaned, "config/") {
-		return source
-	}
-
-	rest := strings.TrimPrefix(cleaned, "config/")
-	// Strip the first path component (the config dir name, e.g. "nginx")
-	if idx := strings.Index(rest, "/"); idx >= 0 {
-		relPart := rest[idx:] // includes leading /
-		return filepath.Join("compose", categoryName, serviceName) + relPart
-	}
-	// Exact match: config/{dirName} with no trailing path
-	return filepath.Join("compose", categoryName, serviceName)
 }
 
 func (i *Importer) resolvePaths(parsed *ParsedService, composePath string) {
@@ -382,6 +314,20 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 		}
 	}
 
+	// Import config mounts (with NULL config_file_id, resolved later)
+	if _, err := tx.Exec("DELETE FROM service_config_mounts WHERE service_id = $1", serviceID); err != nil {
+		return err
+	}
+	for _, mount := range parsed.ConfigMounts {
+		_, err := tx.Exec(`
+			INSERT INTO service_config_mounts (service_id, config_file_id, source_path, target_path, readonly)
+			VALUES ($1, NULL, $2, $3, $4)
+		`, serviceID, mount.SourcePath, mount.TargetPath, mount.ReadOnly)
+		if err != nil {
+			return fmt.Errorf("insert config mount: %w", err)
+		}
+	}
+
 	if _, err := tx.Exec("DELETE FROM service_healthchecks WHERE service_id = $1", serviceID); err != nil {
 		return err
 	}
@@ -505,6 +451,92 @@ func isBinaryContent(data []byte) bool {
 		return false
 	}
 	return true
+}
+
+// ResolveConfigMountLinks updates service_config_mounts rows to link them to their owning service's config_file.
+// Must be called after both ImportAll() and ImportAllConfigFiles() complete.
+func (i *Importer) ResolveConfigMountLinks() error {
+	// Get all config mounts with NULL config_file_id
+	rows, err := i.db.Query(`
+		SELECT scm.id, scm.source_path
+		FROM service_config_mounts scm
+		WHERE scm.config_file_id IS NULL
+	`)
+	if err != nil {
+		return fmt.Errorf("query config mounts: %w", err)
+	}
+	defer rows.Close()
+
+	type mountRecord struct {
+		id         int
+		sourcePath string
+	}
+	var mounts []mountRecord
+	for rows.Next() {
+		var m mountRecord
+		if err := rows.Scan(&m.id, &m.sourcePath); err != nil {
+			return err
+		}
+		mounts = append(mounts, m)
+	}
+
+	resolved := 0
+	for _, mount := range mounts {
+		// Parse source_path to extract config owner and relpath
+		cleaned := mount.sourcePath
+		for strings.HasPrefix(cleaned, "../") {
+			cleaned = strings.TrimPrefix(cleaned, "../")
+		}
+
+		if !strings.HasPrefix(cleaned, "config/") {
+			continue // shouldn't happen, but skip non-config paths
+		}
+
+		rest := strings.TrimPrefix(cleaned, "config/")
+		var configOwner, configRelPath string
+		if idx := strings.Index(rest, "/"); idx >= 0 {
+			configOwner = rest[:idx]
+			configRelPath = rest[idx+1:]
+		} else {
+			configOwner = rest
+			configRelPath = ""
+		}
+
+		if configRelPath == "" {
+			continue // directory mount, no file to link
+		}
+
+		// Resolve config_file_id
+		var configFileID int
+		err := i.db.QueryRow(`
+			SELECT scf.id
+			FROM service_config_files scf
+			JOIN services s ON s.id = scf.service_id
+			WHERE s.name = $1 AND scf.file_path = $2
+		`, configOwner, configRelPath).Scan(&configFileID)
+
+		if err == sql.ErrNoRows {
+			fmt.Printf("warning: config mount source_path=%s not found in service_config_files (owner=%s, path=%s)\n",
+				mount.sourcePath, configOwner, configRelPath)
+			continue
+		} else if err != nil {
+			return fmt.Errorf("resolve config_file_id for mount %d: %w", mount.id, err)
+		}
+
+		// Update the mount with resolved FK
+		_, err = i.db.Exec(`
+			UPDATE service_config_mounts
+			SET config_file_id = $1
+			WHERE id = $2
+		`, configFileID, mount.id)
+		if err != nil {
+			return fmt.Errorf("update config mount %d: %w", mount.id, err)
+		}
+		resolved++
+	}
+
+	fmt.Printf("resolved %d config mount FKs\n", resolved)
+	return nil
 }
 
 func (i *Importer) resolveDependencies() error {

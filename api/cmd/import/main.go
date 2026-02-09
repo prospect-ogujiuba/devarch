@@ -84,5 +84,11 @@ func main() {
 		} else {
 			log.Printf("config files imported: %d files", fileCount)
 		}
+
+		// Resolve config mount FKs after config files are imported
+		log.Println("resolving config mount links...")
+		if err := importer.ResolveConfigMountLinks(); err != nil {
+			log.Printf("warning: config mount link resolution: %v", err)
+		}
 	}
 }
