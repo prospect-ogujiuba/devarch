@@ -68,6 +68,7 @@ function ProjectDetailPage() {
     : Object.entries(deps).filter(([, v]) => typeof v === 'string') as [string, string][]
 
   const statusMap = new Map(statuses?.map(s => [s.name, s]) ?? [])
+  const anyRunning = statuses?.some(s => s.status === 'running') ?? false
   const hasCompose = !!project.compose_path
   const hasServices = hasStack || hasCompose
   const tabItems = [
@@ -113,7 +114,7 @@ function ProjectDetailPage() {
         <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
           {hasServices && (
             <LifecycleButtons
-              isRunning={false}
+              isRunning={anyRunning}
               onStart={() => start.mutate()}
               onStop={() => stop.mutate()}
               onRestart={() => restart.mutate()}
@@ -553,6 +554,7 @@ function ServiceStatusBadge({ status }: { status: string }) {
 
   const colors = status === 'running' ? 'bg-green-500/10 text-green-500 border-green-500/20'
     : status === 'exited' || status === 'stopped' ? 'bg-red-500/10 text-red-500 border-red-500/20'
+    : status === 'not-created' ? 'bg-muted text-muted-foreground border-border'
     : ''
 
   return <Badge variant={variant} className={`text-xs ${colors}`}>{status}</Badge>
