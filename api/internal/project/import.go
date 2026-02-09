@@ -103,7 +103,7 @@ func (c *Controller) ensureStack(projectName string) (*stackInfo, error) {
 				INSERT INTO instance_dependencies (instance_id, depends_on, condition)
 				VALUES (
 					(SELECT id FROM service_instances WHERE stack_id = $1 AND instance_id = $2),
-					(SELECT container_name FROM service_instances WHERE stack_id = $1 AND instance_id = $3),
+					$3,
 					'service_started'
 				)
 				ON CONFLICT (instance_id, depends_on) DO NOTHING
