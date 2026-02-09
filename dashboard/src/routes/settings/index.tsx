@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { Loader2, Monitor, Plug, Key, CheckCircle, XCircle } from 'lucide-react'
+import { Loader2, Monitor, Plug, Key, CheckCircle, XCircle, LogOut } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useRuntimeStatus, useSwitchRuntime, useSocketStatus, useStartSocket } from '@/features/runtime/queries'
-import { getApiKey, setApiKey } from '@/lib/api'
+import { getApiKey, setApiKey, clearApiKey } from '@/lib/api'
 
 export const Route = createFileRoute('/settings/')({
   component: SettingsPage,
@@ -174,6 +174,11 @@ function ApiKeySection() {
     setTimeout(() => setSaved(false), 2000)
   }
 
+  function handleLogout() {
+    clearApiKey()
+    window.location.href = '/login'
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -197,6 +202,10 @@ function ApiKeySection() {
             {saved ? 'Saved' : 'Save'}
           </Button>
         </div>
+        <Button onClick={handleLogout} variant="destructive" size="sm">
+          <LogOut className="size-4 mr-1" />
+          Logout
+        </Button>
       </CardContent>
     </Card>
   )

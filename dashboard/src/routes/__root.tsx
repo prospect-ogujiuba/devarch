@@ -1,11 +1,12 @@
-import { createRootRoute, Outlet } from '@tanstack/react-router'
+import { createRootRoute, Outlet, useLocation, useNavigate } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/lib/theme'
 import { Header } from '@/components/layout/header'
 import { MobileSidebar } from '@/components/layout/sidebar'
 import { useWebSocket } from '@/hooks/use-websocket'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { getApiKey } from '@/lib/api'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,6 +22,31 @@ export const Route = createRootRoute({
 })
 
 function RootLayout() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const isLogin = location.pathname === '/login'
+
+  useEffect(() => {
+    if (!isLogin && !getApiKey()) {
+      navigate({ to: '/login' })
+    }
+  }, [isLogin, navigate, location.pathname])
+
+  if (isLogin) {
+    return (
+      <ThemeProvider>
+        <Outlet />
+        <Toaster richColors />
+      </ThemeProvider>
+    )
+  }
+
+  if (!getApiKey()) return null
+
+  return <AuthenticatedShell />
+}
+
+function AuthenticatedShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const toggleSidebar = useCallback(() => setSidebarOpen(prev => !prev), [])
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
