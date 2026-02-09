@@ -56,18 +56,11 @@ func (c *Controller) getStackInfo(projectName string) (*stackInfo, error) {
 }
 
 func (c *Controller) Start(ctx context.Context, name string) (string, error) {
-	si, err := c.getStackInfo(name)
+	si, err := c.ensureStack(name)
 	if err != nil {
 		return "", err
 	}
-	if si != nil {
-		return c.startStack(si)
-	}
-	composePath, err := c.getComposePath(name)
-	if err != nil {
-		return "", err
-	}
-	return c.runCompose(composePath, "up", "-d")
+	return c.startStack(si)
 }
 
 func (c *Controller) Stop(ctx context.Context, name string) (string, error) {
@@ -86,22 +79,12 @@ func (c *Controller) Stop(ctx context.Context, name string) (string, error) {
 }
 
 func (c *Controller) Restart(ctx context.Context, name string) (string, error) {
-	si, err := c.getStackInfo(name)
+	si, err := c.ensureStack(name)
 	if err != nil {
 		return "", err
 	}
-	if si != nil {
-		c.stopStack(si)
-		return c.startStack(si)
-	}
-	composePath, err := c.getComposePath(name)
-	if err != nil {
-		return "", err
-	}
-	if _, err := c.runCompose(composePath, "down"); err != nil {
-		return "", err
-	}
-	return c.runCompose(composePath, "up", "-d")
+	c.stopStack(si)
+	return c.startStack(si)
 }
 
 func (c *Controller) Status(ctx context.Context, name string) ([]ServiceStatus, error) {
@@ -280,26 +263,22 @@ func (c *Controller) getInstanceInfo(projectName, service string) (*stackInfo, s
 }
 
 func (c *Controller) StartService(ctx context.Context, projectName, service string) error {
-	si, instanceID, _, enabled, err := c.getInstanceInfo(projectName, service)
+	si, err := c.ensureStack(projectName)
 	if err != nil {
 		return err
 	}
-	if si != nil {
-		if !enabled {
-			return fmt.Errorf("instance %q is disabled", service)
-		}
-		projName, yamlBytes, err := c.stackCompose(si)
-		if err != nil {
-			return err
-		}
-		return c.containerClient.StartComposeService(projName, yamlBytes, instanceID)
-	}
-	composePath, err := c.getComposePath(projectName)
+	_, instanceID, _, enabled, err := c.getInstanceInfo(projectName, service)
 	if err != nil {
 		return err
 	}
-	_, err = c.containerClient.RunCompose(composePath, "start", service)
-	return err
+	if !enabled {
+		return fmt.Errorf("instance %q is disabled", service)
+	}
+	projName, yamlBytes, err := c.stackCompose(si)
+	if err != nil {
+		return err
+	}
+	return c.containerClient.StartComposeService(projName, yamlBytes, instanceID)
 }
 
 func (c *Controller) StopService(ctx context.Context, projectName, service string) error {
@@ -319,26 +298,22 @@ func (c *Controller) StopService(ctx context.Context, projectName, service strin
 }
 
 func (c *Controller) RestartService(ctx context.Context, projectName, service string) error {
-	si, instanceID, _, enabled, err := c.getInstanceInfo(projectName, service)
+	si, err := c.ensureStack(projectName)
 	if err != nil {
 		return err
 	}
-	if si != nil {
-		if !enabled {
-			return fmt.Errorf("instance %q is disabled", service)
-		}
-		projName, yamlBytes, err := c.stackCompose(si)
-		if err != nil {
-			return err
-		}
-		return c.containerClient.RestartComposeService(projName, yamlBytes, instanceID)
-	}
-	composePath, err := c.getComposePath(projectName)
+	_, instanceID, _, enabled, err := c.getInstanceInfo(projectName, service)
 	if err != nil {
 		return err
 	}
-	_, err = c.containerClient.RunCompose(composePath, "restart", service)
-	return err
+	if !enabled {
+		return fmt.Errorf("instance %q is disabled", service)
+	}
+	projName, yamlBytes, err := c.stackCompose(si)
+	if err != nil {
+		return err
+	}
+	return c.containerClient.RestartComposeService(projName, yamlBytes, instanceID)
 }
 
 func (c *Controller) getComposePath(name string) (string, error) {

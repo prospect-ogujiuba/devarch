@@ -1,0 +1,1 @@
+ALTER TABLE stacks ADD COLUMN source VARCHAR(32) DEFAULT 'manual';
