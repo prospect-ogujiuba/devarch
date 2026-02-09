@@ -113,11 +113,15 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 			r.Post("/scan", projectHandler.Scan)
 			r.Route("/{name}", func(r chi.Router) {
 				r.Get("/", projectHandler.Get)
+				r.Put("/stack", projectHandler.LinkStack)
 				r.Get("/services", projectHandler.Services)
 				r.Get("/status", projectHandler.Status)
 				r.Post("/start", projectHandler.Start)
 				r.Post("/stop", projectHandler.Stop)
 				r.Post("/restart", projectHandler.Restart)
+				r.Post("/services/{service}/start", projectHandler.StartService)
+				r.Post("/services/{service}/stop", projectHandler.StopService)
+				r.Post("/services/{service}/restart", projectHandler.RestartService)
 			})
 		})
 

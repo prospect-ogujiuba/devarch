@@ -296,6 +296,10 @@ type Project struct {
 	GitRemoteStr      string          `json:"git_remote,omitempty"`
 	GitBranch         sql.NullString  `json:"-"`
 	GitBranchStr      string          `json:"git_branch,omitempty"`
+	StackID           sql.NullInt32   `json:"-"`
+	StackIDInt        *int            `json:"stack_id,omitempty"`
+	StackName         sql.NullString  `json:"-"`
+	StackNameStr      string          `json:"stack_name,omitempty"`
 	LastScannedAt     sql.NullTime    `json:"-"`
 	LastScannedAtStr  *time.Time      `json:"last_scanned_at,omitempty"`
 	CreatedAt         time.Time       `json:"created_at"`
@@ -342,6 +346,13 @@ func (p *Project) ResolveNulls() {
 	}
 	if p.GitBranch.Valid {
 		p.GitBranchStr = p.GitBranch.String
+	}
+	if p.StackID.Valid {
+		v := int(p.StackID.Int32)
+		p.StackIDInt = &v
+	}
+	if p.StackName.Valid {
+		p.StackNameStr = p.StackName.String
 	}
 	if p.LastScannedAt.Valid {
 		p.LastScannedAtStr = &p.LastScannedAt.Time
