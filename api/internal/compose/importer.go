@@ -240,7 +240,7 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 		_, err := tx.Exec(`
 			INSERT INTO service_ports (service_id, host_ip, host_port, container_port, protocol)
 			VALUES ($1, $2, $3, $4, $5)
-			ON CONFLICT (host_ip, host_port) DO NOTHING
+			ON CONFLICT (service_id, host_ip, host_port) DO NOTHING
 		`, serviceID, port.HostIP, port.HostPort, port.ContainerPort, port.Protocol)
 		if err != nil {
 			return fmt.Errorf("insert port: %w", err)

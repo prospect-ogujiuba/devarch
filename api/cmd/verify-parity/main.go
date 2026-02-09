@@ -165,25 +165,11 @@ type verifyResult struct {
 func verifyService(db *sql.DB, gen *compose.Generator, svc serviceRecord, composeDir, projectRoot string, verbose bool) verifyResult {
 	result := verifyResult{Pass: true}
 
-	// Load original compose file
-	originalPath := filepath.Join(composeDir, svc.Category, svc.Name+".yml")
-	originalServices, err := compose.ParseFileAll(originalPath)
+	// Load original compose file — try exact name match first, then scan category dir
+	original, err := findOriginalService(composeDir, svc)
 	if err != nil {
 		result.Pass = false
 		result.Messages = append(result.Messages, fmt.Sprintf("parse original: %v", err))
-		return result
-	}
-
-	var original *compose.ParsedService
-	for _, s := range originalServices {
-		if s.Name == svc.Name {
-			original = s
-			break
-		}
-	}
-	if original == nil {
-		result.Pass = false
-		result.Messages = append(result.Messages, "service not found in original compose")
 		return result
 	}
 
@@ -196,7 +182,7 @@ func verifyService(db *sql.DB, gen *compose.Generator, svc serviceRecord, compos
 		&dbService.ID, &dbService.Name, &dbService.CategoryID,
 		&dbService.ImageName, &dbService.ImageTag, &dbService.RestartPolicy,
 		&dbService.Command, &dbService.UserSpec, &dbService.ComposeOverrides,
-		&sql.NullString{}, // container_name_template not used for generation
+		&dbService.ContainerNameTemplate,
 	)
 	if err != nil {
 		result.Pass = false
@@ -265,6 +251,41 @@ func verifyService(db *sql.DB, gen *compose.Generator, svc serviceRecord, compos
 	compareNetworks(original, generated, &result)
 
 	return result
+}
+
+func findOriginalService(composeDir string, svc serviceRecord) (*compose.ParsedService, error) {
+	// Try exact name match first
+	exactPath := filepath.Join(composeDir, svc.Category, svc.Name+".yml")
+	if services, err := compose.ParseFileAll(exactPath); err == nil {
+		for _, s := range services {
+			if s.Name == svc.Name {
+				return s, nil
+			}
+		}
+	}
+
+	// Scan all yml files in category directory for the service
+	catDir := filepath.Join(composeDir, svc.Category)
+	entries, err := os.ReadDir(catDir)
+	if err != nil {
+		return nil, fmt.Errorf("read category dir %s: %w", svc.Category, err)
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yml") {
+			continue
+		}
+		path := filepath.Join(catDir, entry.Name())
+		services, err := compose.ParseFileAll(path)
+		if err != nil {
+			continue
+		}
+		for _, s := range services {
+			if s.Name == svc.Name {
+				return s, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("service %s not found in any compose file under %s/", svc.Name, svc.Category)
 }
 
 func compareImage(original, generated *compose.ParsedService, result *verifyResult) {

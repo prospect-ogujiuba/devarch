@@ -85,8 +85,13 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 		Services: make(map[string]serviceConfig),
 	}
 
+	containerName := service.Name
+	if service.ContainerNameTemplate.Valid && service.ContainerNameTemplate.String != "" {
+		containerName = service.ContainerNameTemplate.String
+	}
+
 	svc := serviceConfig{
-		ContainerName: service.Name,
+		ContainerName: containerName,
 		Restart:       service.RestartPolicy,
 		Networks:      service.Networks,
 	}
@@ -165,6 +170,8 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 		testParts := strings.Fields(service.Healthcheck.Test)
 		if len(testParts) > 0 && testParts[0] == "CMD" {
 			hc.Test = testParts
+		} else if len(testParts) > 0 && testParts[0] == "CMD-SHELL" {
+			hc.Test = append([]string{"CMD-SHELL"}, strings.Join(testParts[1:], " "))
 		} else {
 			hc.Test = append([]string{"CMD-SHELL"}, service.Healthcheck.Test)
 		}

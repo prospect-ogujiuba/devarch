@@ -172,10 +172,6 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 			networksMap[netName] = networkConfig{External: true}
 		}
 	}
-	// Ensure default network is included if no networks from DB
-	if len(networksMap) == 0 {
-		networksMap[netName] = networkConfig{External: true}
-	}
 
 	compose := stackCompose{
 		Networks: networksMap,
@@ -193,9 +189,6 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 		cfg := configs[inst.instanceID]
 
 		networks := cfg.networks
-		if len(networks) == 0 {
-			networks = []string{netName}
-		}
 
 		svc := stackServiceEntry{
 			ContainerName: inst.containerName,
@@ -865,6 +858,8 @@ func (g *Generator) scanHealthcheck(query string, id int) (*healthcheckConfig, e
 	testParts := strings.Fields(test)
 	if len(testParts) > 0 && testParts[0] == "CMD" {
 		hc.Test = testParts
+	} else if len(testParts) > 0 && testParts[0] == "CMD-SHELL" {
+		hc.Test = append([]string{"CMD-SHELL"}, strings.Join(testParts[1:], " "))
 	} else {
 		hc.Test = append([]string{"CMD-SHELL"}, test)
 	}

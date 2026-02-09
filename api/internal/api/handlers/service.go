@@ -274,9 +274,9 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *ServiceHandler) loadServiceByName(name string) (*models.Service, error) {
 	var s models.Service
 	err := h.db.QueryRow(
-		`SELECT id, name, image_name, image_tag, restart_policy, command, user_spec, compose_overrides FROM services WHERE name = $1`,
+		`SELECT id, name, image_name, image_tag, restart_policy, command, user_spec, compose_overrides, container_name_template FROM services WHERE name = $1`,
 		name,
-	).Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec, &s.ComposeOverrides)
+	).Scan(&s.ID, &s.Name, &s.ImageName, &s.ImageTag, &s.RestartPolicy, &s.Command, &s.UserSpec, &s.ComposeOverrides, &s.ContainerNameTemplate)
 	if err != nil {
 		return nil, err
 	}

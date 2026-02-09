@@ -28,7 +28,9 @@ type Service struct {
 	UserSpec      sql.NullString `json:"-"`
 	UserSpecStr   string         `json:"user_spec,omitempty"`
 	Enabled          bool           `json:"enabled"`
-	ComposeOverrides NullableJSON   `json:"compose_overrides,omitempty"`
+	ContainerNameTemplate sql.NullString `json:"-"`
+	ContainerNameStr      string         `json:"container_name_template,omitempty"`
+	ComposeOverrides      NullableJSON   `json:"compose_overrides,omitempty"`
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
 
