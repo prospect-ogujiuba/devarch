@@ -182,6 +182,33 @@ func (imp *Importer) Import(file *DevArchFile) (*ImportResult, error) {
 	}
 	defer configStmt.Close()
 
+	envFileStmt, err := tx.Prepare(`
+		INSERT INTO instance_env_files (instance_id, path, sort_order)
+		VALUES ($1, $2, $3)
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("prepare env file insert: %w", err)
+	}
+	defer envFileStmt.Close()
+
+	networkStmt, err := tx.Prepare(`
+		INSERT INTO instance_networks (instance_id, network_name)
+		VALUES ($1, $2)
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("prepare network insert: %w", err)
+	}
+	defer networkStmt.Close()
+
+	configMountStmt, err := tx.Prepare(`
+		INSERT INTO instance_config_mounts (instance_id, config_file_id, source_path, target_path, readonly)
+		VALUES ($1, (SELECT id FROM service_config_files WHERE service_id = $2 AND file_path = $3), $4, $5, $6)
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("prepare config mount insert: %w", err)
+	}
+	defer configMountStmt.Close()
+
 	instancePKMap := make(map[string]int)
 
 	for instanceName, inst := range file.Instances {
@@ -210,7 +237,7 @@ func (imp *Importer) Import(file *DevArchFile) (*ImportResult, error) {
 		}
 
 		// Insert overrides using prepared statements
-		if err := imp.insertOverridesWithStmts(instanceID, &inst, portStmt, volumeStmt, envStmt, labelStmt, domainStmt, healthcheckStmt, depStmt, configStmt); err != nil {
+		if err := imp.insertOverridesWithStmts(instanceID, templateServiceID, &inst, portStmt, volumeStmt, envStmt, labelStmt, domainStmt, healthcheckStmt, depStmt, configStmt, envFileStmt, networkStmt, configMountStmt); err != nil {
 			return nil, fmt.Errorf("insert overrides for %q: %w", instanceName, err)
 		}
 
@@ -315,11 +342,14 @@ func (imp *Importer) deleteOverrides(tx *sql.Tx, instanceID int) error {
 		"instance_ports",
 		"instance_volumes",
 		"instance_env_vars",
+		"instance_env_files",
+		"instance_networks",
 		"instance_labels",
 		"instance_domains",
 		"instance_healthchecks",
 		"instance_dependencies",
 		"instance_config_files",
+		"instance_config_mounts",
 	}
 
 	for _, table := range tables {
@@ -332,7 +362,7 @@ func (imp *Importer) deleteOverrides(tx *sql.Tx, instanceID int) error {
 	return nil
 }
 
-func (imp *Importer) insertOverridesWithStmts(instanceID int, inst *InstanceDef, portStmt, volumeStmt, envStmt, labelStmt, domainStmt, healthcheckStmt, depStmt, configStmt *sql.Stmt) error {
+func (imp *Importer) insertOverridesWithStmts(instanceID, templateServiceID int, inst *InstanceDef, portStmt, volumeStmt, envStmt, labelStmt, domainStmt, healthcheckStmt, depStmt, configStmt, envFileStmt, networkStmt, configMountStmt *sql.Stmt) error {
 	for _, p := range inst.Ports {
 		_, err := portStmt.Exec(instanceID, p.HostIP, p.HostPort, p.ContainerPort, p.Protocol)
 		if err != nil {
@@ -398,6 +428,31 @@ func (imp *Importer) insertOverridesWithStmts(instanceID int, inst *InstanceDef,
 		_, err := configStmt.Exec(instanceID, path, cfg.Content, cfg.FileMode, cfg.IsTemplate)
 		if err != nil {
 			return fmt.Errorf("insert config file: %w", err)
+		}
+	}
+
+	for idx, path := range inst.EnvFiles {
+		_, err := envFileStmt.Exec(instanceID, path, idx)
+		if err != nil {
+			return fmt.Errorf("insert env file: %w", err)
+		}
+	}
+
+	for _, network := range inst.Networks {
+		_, err := networkStmt.Exec(instanceID, network)
+		if err != nil {
+			return fmt.Errorf("insert network: %w", err)
+		}
+	}
+
+	for _, mount := range inst.ConfigMounts {
+		var cfPath interface{}
+		if mount.ConfigFilePath != "" {
+			cfPath = mount.ConfigFilePath
+		}
+		_, err := configMountStmt.Exec(instanceID, templateServiceID, cfPath, mount.SourcePath, mount.TargetPath, mount.ReadOnly)
+		if err != nil {
+			return fmt.Errorf("insert config mount: %w", err)
 		}
 	}
 

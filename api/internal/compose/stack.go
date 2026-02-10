@@ -114,21 +114,11 @@ func (g *Generator) GenerateStack(stackName string) ([]byte, []string, error) {
 func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets bool) ([]byte, []string, error) {
 	var warnings []string
 
-	var networkName sql.NullString
 	err := g.db.QueryRow(`
-		SELECT network_name FROM stacks WHERE name = $1 AND deleted_at IS NULL
-	`, stackName).Scan(&networkName)
+		SELECT 1 FROM stacks WHERE name = $1 AND deleted_at IS NULL
+	`, stackName).Scan(new(int))
 	if err != nil {
 		return nil, nil, fmt.Errorf("query stack: %w", err)
-	}
-
-	netName := g.networkName
-	if netName == "" {
-		if networkName.Valid && networkName.String != "" {
-			netName = networkName.String
-		} else {
-			netName = fmt.Sprintf("devarch-%s-net", stackName)
-		}
 	}
 
 	instances, err := g.loadStackInstances(stackName)
@@ -995,9 +985,10 @@ func (g *Generator) loadEffectiveConfigFiles(instancePK, templateServiceID int) 
 }
 
 func (g *Generator) loadEffectiveEnvFiles(instancePK, templateServiceID int) ([]string, error) {
+	// Check instance overrides first
 	rows, err := g.db.Query(`
-		SELECT path FROM service_env_files WHERE service_id = $1 ORDER BY sort_order
-	`, templateServiceID)
+		SELECT path FROM instance_env_files WHERE instance_id = $1 ORDER BY sort_order
+	`, instancePK)
 	if err != nil {
 		return nil, err
 	}
@@ -1011,13 +1002,38 @@ func (g *Generator) loadEffectiveEnvFiles(instancePK, templateServiceID int) ([]
 		}
 		envFiles = append(envFiles, path)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(envFiles) > 0 {
+		return envFiles, nil
+	}
+
+	// Fall back to service template
+	rows, err = g.db.Query(`
+		SELECT path FROM service_env_files WHERE service_id = $1 ORDER BY sort_order
+	`, templateServiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var path string
+		if err := rows.Scan(&path); err != nil {
+			return nil, err
+		}
+		envFiles = append(envFiles, path)
+	}
 	return envFiles, rows.Err()
 }
 
 func (g *Generator) loadEffectiveNetworks(instancePK, templateServiceID int) ([]string, error) {
+	// Check instance overrides first
 	rows, err := g.db.Query(`
-		SELECT network_name FROM service_networks WHERE service_id = $1 ORDER BY id
-	`, templateServiceID)
+		SELECT network_name FROM instance_networks WHERE instance_id = $1 ORDER BY id
+	`, instancePK)
 	if err != nil {
 		return nil, err
 	}
@@ -1031,11 +1047,64 @@ func (g *Generator) loadEffectiveNetworks(instancePK, templateServiceID int) ([]
 		}
 		networks = append(networks, network)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(networks) > 0 {
+		return networks, nil
+	}
+
+	// Fall back to service template
+	rows, err = g.db.Query(`
+		SELECT network_name FROM service_networks WHERE service_id = $1 ORDER BY id
+	`, templateServiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var network string
+		if err := rows.Scan(&network); err != nil {
+			return nil, err
+		}
+		networks = append(networks, network)
+	}
 	return networks, rows.Err()
 }
 
 func (g *Generator) loadEffectiveConfigMounts(instancePK, templateServiceID int) ([]configMountEntry, error) {
+	// Check instance overrides first
 	rows, err := g.db.Query(`
+		SELECT icm.source_path, icm.target_path, icm.readonly, scf.file_path
+		FROM instance_config_mounts icm
+		LEFT JOIN service_config_files scf ON scf.id = icm.config_file_id
+		WHERE icm.instance_id = $1
+	`, instancePK)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var mounts []configMountEntry
+	for rows.Next() {
+		var m configMountEntry
+		if err := rows.Scan(&m.sourcePath, &m.targetPath, &m.readonly, &m.configFilePath); err != nil {
+			return nil, err
+		}
+		mounts = append(mounts, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(mounts) > 0 {
+		return mounts, nil
+	}
+
+	// Fall back to service template
+	rows, err = g.db.Query(`
 		SELECT scm.source_path, scm.target_path, scm.readonly, scf.file_path
 		FROM service_config_mounts scm
 		LEFT JOIN service_config_files scf ON scf.id = scm.config_file_id
@@ -1046,7 +1115,6 @@ func (g *Generator) loadEffectiveConfigMounts(instancePK, templateServiceID int)
 	}
 	defer rows.Close()
 
-	var mounts []configMountEntry
 	for rows.Next() {
 		var m configMountEntry
 		if err := rows.Scan(&m.sourcePath, &m.targetPath, &m.readonly, &m.configFilePath); err != nil {

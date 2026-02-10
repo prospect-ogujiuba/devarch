@@ -239,6 +239,30 @@ func (e *Exporter) loadInstanceDef(stackName string, inst instanceRow) (Instance
 		def.ConfigFiles = configFiles
 	}
 
+	envFiles, err := e.loadEffectiveEnvFiles(inst.id, inst.templateServiceID)
+	if err != nil {
+		return def, fmt.Errorf("load env files: %w", err)
+	}
+	if len(envFiles) > 0 {
+		def.EnvFiles = envFiles
+	}
+
+	networks, err := e.loadEffectiveNetworks(inst.id, inst.templateServiceID)
+	if err != nil {
+		return def, fmt.Errorf("load networks: %w", err)
+	}
+	if len(networks) > 0 {
+		def.Networks = networks
+	}
+
+	configMounts, err := e.loadEffectiveConfigMounts(inst.id, inst.templateServiceID)
+	if err != nil {
+		return def, fmt.Errorf("load config mounts: %w", err)
+	}
+	if len(configMounts) > 0 {
+		def.ConfigMounts = configMounts
+	}
+
 	return def, nil
 }
 
@@ -642,4 +666,147 @@ func (e *Exporter) loadEffectiveConfigFiles(instancePK, templateServiceID int) (
 	}
 
 	return merged, rows.Err()
+}
+
+func (e *Exporter) loadEffectiveEnvFiles(instancePK, templateServiceID int) ([]string, error) {
+	rows, err := e.db.Query(`
+		SELECT path FROM instance_env_files WHERE instance_id = $1 ORDER BY sort_order
+	`, instancePK)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var envFiles []string
+	for rows.Next() {
+		var path string
+		if err := rows.Scan(&path); err != nil {
+			return nil, err
+		}
+		envFiles = append(envFiles, path)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(envFiles) > 0 {
+		return envFiles, nil
+	}
+
+	rows, err = e.db.Query(`
+		SELECT path FROM service_env_files WHERE service_id = $1 ORDER BY sort_order
+	`, templateServiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var path string
+		if err := rows.Scan(&path); err != nil {
+			return nil, err
+		}
+		envFiles = append(envFiles, path)
+	}
+	return envFiles, rows.Err()
+}
+
+func (e *Exporter) loadEffectiveNetworks(instancePK, templateServiceID int) ([]string, error) {
+	rows, err := e.db.Query(`
+		SELECT network_name FROM instance_networks WHERE instance_id = $1 ORDER BY network_name
+	`, instancePK)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var networks []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		networks = append(networks, name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(networks) > 0 {
+		return networks, nil
+	}
+
+	rows, err = e.db.Query(`
+		SELECT network_name FROM service_networks WHERE service_id = $1 ORDER BY network_name
+	`, templateServiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		networks = append(networks, name)
+	}
+	return networks, rows.Err()
+}
+
+func (e *Exporter) loadEffectiveConfigMounts(instancePK, templateServiceID int) ([]ConfigMountDef, error) {
+	rows, err := e.db.Query(`
+		SELECT icm.source_path, icm.target_path, icm.readonly, scf.file_path
+		FROM instance_config_mounts icm
+		LEFT JOIN service_config_files scf ON scf.id = icm.config_file_id
+		WHERE icm.instance_id = $1 ORDER BY icm.target_path
+	`, instancePK)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var mounts []ConfigMountDef
+	for rows.Next() {
+		var m ConfigMountDef
+		var cfPath sql.NullString
+		if err := rows.Scan(&m.SourcePath, &m.TargetPath, &m.ReadOnly, &cfPath); err != nil {
+			return nil, err
+		}
+		if cfPath.Valid {
+			m.ConfigFilePath = cfPath.String
+		}
+		mounts = append(mounts, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(mounts) > 0 {
+		return mounts, nil
+	}
+
+	rows, err = e.db.Query(`
+		SELECT scm.source_path, scm.target_path, scm.readonly, scf.file_path
+		FROM service_config_mounts scm
+		LEFT JOIN service_config_files scf ON scf.id = scm.config_file_id
+		WHERE scm.service_id = $1 ORDER BY scm.target_path
+	`, templateServiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var m ConfigMountDef
+		var cfPath sql.NullString
+		if err := rows.Scan(&m.SourcePath, &m.TargetPath, &m.ReadOnly, &cfPath); err != nil {
+			return nil, err
+		}
+		if cfPath.Valid {
+			m.ConfigFilePath = cfPath.String
+		}
+		mounts = append(mounts, m)
+	}
+	return mounts, rows.Err()
 }

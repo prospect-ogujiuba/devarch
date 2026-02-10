@@ -1690,6 +1690,13 @@ func (h *ServiceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	for _, path := range req.EnvFiles {
+		if strings.TrimSpace(path) == "" {
+			http.Error(w, "env_file path cannot be empty", http.StatusBadRequest)
+			return
+		}
+	}
+
 	h.snapshotAndUpdate(serviceID)
 
 	tx, err := h.db.Begin()
@@ -1734,6 +1741,13 @@ func (h *ServiceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	for _, name := range req.Networks {
+		if strings.TrimSpace(name) == "" {
+			http.Error(w, "network name cannot be empty", http.StatusBadRequest)
+			return
+		}
+	}
+
 	h.snapshotAndUpdate(serviceID)
 
 	tx, err := h.db.Begin()
@@ -1776,6 +1790,13 @@ func (h *ServiceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Reque
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	for _, m := range req.ConfigMounts {
+		if strings.TrimSpace(m.TargetPath) == "" {
+			http.Error(w, "config mount target_path cannot be empty", http.StatusBadRequest)
+			return
+		}
 	}
 
 	h.snapshotAndUpdate(serviceID)

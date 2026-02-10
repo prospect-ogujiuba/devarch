@@ -22,18 +22,21 @@ type StackConfig struct {
 }
 
 type InstanceDef struct {
-	Template    string                  `yaml:"template"`
-	Enabled     bool                    `yaml:"enabled"`
-	Image       string                  `yaml:"image,omitempty"`
-	Ports       []PortDef               `yaml:"ports,omitempty"`
-	Volumes     []VolumeDef             `yaml:"volumes,omitempty"`
-	Environment map[string]string       `yaml:"environment,omitempty"`
-	Labels      map[string]string       `yaml:"labels,omitempty"`
-	Domains     []DomainDef             `yaml:"domains,omitempty"`
-	Healthcheck *HealthcheckDef         `yaml:"healthcheck,omitempty"`
-	Dependencies []string               `yaml:"dependencies,omitempty"`
-	ConfigFiles map[string]ConfigFileDef `yaml:"config_files,omitempty"`
-	Command     string                  `yaml:"command,omitempty"`
+	Template     string                  `yaml:"template"`
+	Enabled      bool                    `yaml:"enabled"`
+	Image        string                  `yaml:"image,omitempty"`
+	Ports        []PortDef               `yaml:"ports,omitempty"`
+	Volumes      []VolumeDef             `yaml:"volumes,omitempty"`
+	Environment  map[string]string       `yaml:"environment,omitempty"`
+	EnvFiles     []string                `yaml:"env_files,omitempty"`
+	Networks     []string                `yaml:"networks,omitempty"`
+	Labels       map[string]string       `yaml:"labels,omitempty"`
+	Domains      []DomainDef             `yaml:"domains,omitempty"`
+	Healthcheck  *HealthcheckDef         `yaml:"healthcheck,omitempty"`
+	Dependencies []string                `yaml:"dependencies,omitempty"`
+	ConfigFiles  map[string]ConfigFileDef `yaml:"config_files,omitempty"`
+	ConfigMounts []ConfigMountDef        `yaml:"config_mounts,omitempty"`
+	Command      string                  `yaml:"command,omitempty"`
 }
 
 type PortDef struct {
@@ -66,4 +69,11 @@ type ConfigFileDef struct {
 	Content    string `yaml:"content"`
 	FileMode   string `yaml:"file_mode"`
 	IsTemplate bool   `yaml:"is_template,omitempty"`
+}
+
+type ConfigMountDef struct {
+	SourcePath     string `yaml:"source_path"`
+	TargetPath     string `yaml:"target_path"`
+	ReadOnly       bool   `yaml:"read_only,omitempty"`
+	ConfigFilePath string `yaml:"config_file_path,omitempty"`
 }
