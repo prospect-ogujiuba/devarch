@@ -127,8 +127,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 15-01-PLAN.md — Fix parity failures, create whitelist/golden-services JSON, verify-parity exits 0
-- [ ] 15-02-PLAN.md — Boundary test tool: 200MB import succeeds, 300MB rejected with 413
+- [ ] 15-01-PLAN.md — Triage remaining parity failures, fix or whitelist, verify-parity exits 0 with golden services clean
+- [ ] 15-02-PLAN.md — Build verify-boundary tool: 200MB import accepted, 300MB rejected with 413
 
 ## Progress
 
