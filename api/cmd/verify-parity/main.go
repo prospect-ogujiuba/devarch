@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -10,19 +11,23 @@ import (
 	"sort"
 	"strings"
 
+	_ "github.com/lib/pq"
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/pkg/models"
-	_ "github.com/lib/pq"
 )
 
 func main() {
 	var (
-		dbURL       = flag.String("db", "", "Database URL (or set DATABASE_URL env)")
-		composeDir  = flag.String("compose-dir", "", "Path to compose directory")
-		projectRoot = flag.String("project-root", "", "Project root for resolving relative paths")
-		configDir   = flag.String("config-dir", "", "Path to config directory for service config files")
-		service     = flag.String("service", "", "Verify single service by name (optional)")
-		verbose     = flag.Bool("verbose", false, "Print details for passing services too")
+		dbURL        = flag.String("db", "", "Database URL (or set DATABASE_URL env)")
+		composeDir   = flag.String("compose-dir", "", "Path to compose directory")
+		projectRoot  = flag.String("project-root", "", "Project root for resolving relative paths")
+		configDir    = flag.String("config-dir", "", "Path to config directory for service config files")
+		service      = flag.String("service", "", "Verify single service by name (optional)")
+		verbose      = flag.Bool("verbose", false, "Print details for passing services too")
+		jsonOut      = flag.Bool("json", false, "Print machine-readable JSON output")
+		strict       = flag.Bool("strict", false, "Fail when any whitelist exception is used")
+		whitelist    = flag.String("whitelist", "", "Path to parity whitelist JSON file")
+		goldenSource = flag.String("golden-services", "", "Path to golden services JSON file")
 	)
 	flag.Parse()
 
@@ -39,6 +44,27 @@ func main() {
 
 	if *projectRoot == "" {
 		log.Fatal("project-root is required")
+	}
+
+	if *whitelist == "" {
+		*whitelist = filepath.Join(*projectRoot, "api", "cmd", "verify-parity", "whitelist.json")
+	}
+	if *goldenSource == "" {
+		*goldenSource = filepath.Join(*projectRoot, "api", "cmd", "verify-parity", "golden-services.json")
+	}
+
+	whitelistEntries, err := loadWhitelist(*whitelist)
+	if err != nil {
+		log.Fatalf("failed to load whitelist: %v", err)
+	}
+
+	goldenServices, err := loadGoldenServices(*goldenSource)
+	if err != nil {
+		log.Fatalf("failed to load golden services: %v", err)
+	}
+
+	if err := validateWhitelistAgainstGolden(whitelistEntries, goldenServices); err != nil {
+		log.Fatalf("invalid whitelist: %v", err)
 	}
 
 	db, err := sql.Open("postgres", *dbURL)
@@ -126,28 +152,96 @@ func main() {
 
 	passed := 0
 	failed := 0
+	whitelisted := 0
+	serviceReports := make([]serviceParityReport, 0, len(services))
 
 	for _, svc := range services {
 		result := verifyService(db, gen, svc, *composeDir, *projectRoot, *verbose)
-		if result.Pass {
+		audit := applyWhitelistGovernance(svc.Name, result.Messages, whitelistEntries, goldenServices)
+
+		report := serviceParityReport{
+			Name:        svc.Name,
+			Category:    svc.Category,
+			Pass:        len(audit.Failures) == 0,
+			Golden:      goldenServices[strings.ToLower(svc.Name)],
+			Failures:    audit.Failures,
+			Whitelisted: audit.Whitelisted,
+		}
+		serviceReports = append(serviceReports, report)
+
+		if len(audit.Failures) == 0 && len(audit.Whitelisted) == 0 {
 			passed++
-			if *verbose {
+			if *verbose && !*jsonOut {
 				fmt.Printf("PASS  %s (%s)\n", svc.Name, svc.Category)
+			}
+		} else if len(audit.Failures) == 0 {
+			whitelisted++
+			if *verbose && !*jsonOut {
+				fmt.Printf("ALLOW %s (%s)\n", svc.Name, svc.Category)
+				for _, msg := range audit.Whitelisted {
+					fmt.Printf("  - %s\n", msg)
+				}
+				fmt.Println()
 			}
 		} else {
 			failed++
-			fmt.Printf("FAIL  %s (%s)\n", svc.Name, svc.Category)
-			for _, msg := range result.Messages {
-				fmt.Printf("  - %s\n", msg)
+			if !*jsonOut {
+				fmt.Printf("FAIL  %s (%s)\n", svc.Name, svc.Category)
+				for _, msg := range audit.Failures {
+					fmt.Printf("  - %s\n", msg)
+				}
+				for _, msg := range audit.Whitelisted {
+					fmt.Printf("  - [whitelisted] %s\n", msg)
+				}
+				fmt.Println()
 			}
-			fmt.Println()
 		}
 	}
 
-	fmt.Printf("Summary: %d/%d passed, %d failed\n", passed, len(services), failed)
+	exitCode := 0
+	if failed > 0 || (*strict && whitelisted > 0) {
+		exitCode = 1
+	}
 
-	if failed > 0 {
-		os.Exit(1)
+	if *jsonOut {
+		summary := paritySummary{
+			Passed:      passed,
+			Failed:      failed,
+			Whitelisted: whitelisted,
+			Total:       len(services),
+			Strict:      *strict,
+			ExitCode:    exitCode,
+		}
+		goldenList := make([]string, 0, len(goldenServices))
+		for svc := range goldenServices {
+			goldenList = append(goldenList, svc)
+		}
+		sort.Strings(goldenList)
+
+		output := parityJSONOutput{
+			Summary:         summary,
+			Services:        serviceReports,
+			WhitelistPath:   *whitelist,
+			GoldenListPath:  *goldenSource,
+			GoldenServices:  goldenList,
+			ComposeDir:      *composeDir,
+			ProjectRoot:     *projectRoot,
+			ServiceSelector: *service,
+		}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(output); err != nil {
+			log.Fatalf("failed to write JSON output: %v", err)
+		}
+	} else {
+		fmt.Printf("Summary: %d/%d passed, %d failed, %d whitelisted\n", passed, len(services), failed, whitelisted)
+		if *strict {
+			fmt.Printf("Strict mode: %t\n", *strict)
+		}
+	}
+
+	if exitCode != 0 {
+		os.Exit(exitCode)
 	}
 }
 
@@ -160,6 +254,143 @@ type serviceRecord struct {
 type verifyResult struct {
 	Pass     bool
 	Messages []string
+}
+
+type whitelistEntry struct {
+	Service string `json:"service"`
+	Field   string `json:"field"`
+	Reason  string `json:"reason"`
+}
+
+type whitelistFile struct {
+	Entries []whitelistEntry `json:"entries"`
+}
+
+type goldenServiceFile struct {
+	Services []string `json:"services"`
+}
+
+type auditedMessages struct {
+	Failures    []string
+	Whitelisted []string
+}
+
+type serviceParityReport struct {
+	Name        string   `json:"name"`
+	Category    string   `json:"category"`
+	Pass        bool     `json:"pass"`
+	Golden      bool     `json:"golden"`
+	Failures    []string `json:"failures,omitempty"`
+	Whitelisted []string `json:"whitelisted,omitempty"`
+}
+
+type paritySummary struct {
+	Passed      int  `json:"passed"`
+	Failed      int  `json:"failed"`
+	Whitelisted int  `json:"whitelisted"`
+	Total       int  `json:"total"`
+	Strict      bool `json:"strict"`
+	ExitCode    int  `json:"exit_code"`
+}
+
+type parityJSONOutput struct {
+	Summary         paritySummary         `json:"summary"`
+	Services        []serviceParityReport `json:"services"`
+	WhitelistPath   string                `json:"whitelist_path"`
+	GoldenListPath  string                `json:"golden_services_path"`
+	GoldenServices  []string              `json:"golden_services"`
+	ComposeDir      string                `json:"compose_dir"`
+	ProjectRoot     string                `json:"project_root"`
+	ServiceSelector string                `json:"service_selector,omitempty"`
+}
+
+func loadWhitelist(path string) (map[string]whitelistEntry, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var file whitelistFile
+	if err := json.Unmarshal(data, &file); err != nil {
+		return nil, err
+	}
+
+	entries := make(map[string]whitelistEntry, len(file.Entries))
+	for _, entry := range file.Entries {
+		service := strings.TrimSpace(strings.ToLower(entry.Service))
+		field := strings.TrimSpace(strings.ToLower(entry.Field))
+		reason := strings.TrimSpace(entry.Reason)
+		if service == "" || field == "" || reason == "" {
+			return nil, fmt.Errorf("invalid whitelist entry: service, field, and reason are required")
+		}
+		entry.Service = service
+		entry.Field = field
+		entry.Reason = reason
+		entries[whitelistKey(service, field)] = entry
+	}
+
+	return entries, nil
+}
+
+func loadGoldenServices(path string) (map[string]bool, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var file goldenServiceFile
+	if err := json.Unmarshal(data, &file); err != nil {
+		return nil, err
+	}
+
+	services := make(map[string]bool, len(file.Services))
+	for _, name := range file.Services {
+		normalized := strings.TrimSpace(strings.ToLower(name))
+		if normalized == "" {
+			continue
+		}
+		services[normalized] = true
+	}
+
+	return services, nil
+}
+
+func validateWhitelistAgainstGolden(whitelist map[string]whitelistEntry, golden map[string]bool) error {
+	for _, entry := range whitelist {
+		if golden[entry.Service] {
+			return fmt.Errorf("service %q is golden and cannot be whitelisted", entry.Service)
+		}
+	}
+	return nil
+}
+
+func applyWhitelistGovernance(serviceName string, messages []string, whitelist map[string]whitelistEntry, golden map[string]bool) auditedMessages {
+	audit := auditedMessages{Failures: make([]string, 0), Whitelisted: make([]string, 0)}
+	service := strings.ToLower(serviceName)
+
+	for _, msg := range messages {
+		field := parityField(msg)
+		if _, ok := whitelist[whitelistKey(service, field)]; ok {
+			if golden[service] {
+				audit.Failures = append(audit.Failures, fmt.Sprintf("%s (whitelist denied for golden service)", msg))
+				continue
+			}
+			audit.Whitelisted = append(audit.Whitelisted, msg)
+			continue
+		}
+		audit.Failures = append(audit.Failures, msg)
+	}
+
+	return audit
+}
+
+func parityField(msg string) string {
+	parts := strings.SplitN(msg, ":", 2)
+	return strings.TrimSpace(strings.ToLower(parts[0]))
+}
+
+func whitelistKey(service, field string) string {
+	return service + "::" + field
 }
 
 func verifyService(db *sql.DB, gen *compose.Generator, svc serviceRecord, composeDir, projectRoot string, verbose bool) verifyResult {

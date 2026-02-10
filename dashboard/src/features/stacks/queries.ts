@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { isAxiosError } from 'axios'
 import { api, getErrorMessage } from '@/lib/api'
 import type { Stack, DeletePreview, NetworkStatus, StackCompose, StackPlan, ApplyResult, ImportResult, Wire } from '@/types/api'
 import { toast } from 'sonner'
@@ -432,6 +433,14 @@ export function useImportStack() {
       queryClient.invalidateQueries({ queryKey: ['stacks', result.stack_name] })
     },
     onError: (error) => {
+      if (isAxiosError(error) && error.response?.status === 413) {
+        const maxBytes = typeof error.response.data === 'object' && error.response.data !== null
+          ? (error.response.data as Record<string, unknown>).max_bytes
+          : undefined
+        const maxMB = typeof maxBytes === 'number' ? Math.round(maxBytes / (1024 * 1024)) : 256
+        toast.error(`Import file is too large. Max allowed is ${maxMB}MB.`)
+        return
+      }
       toast.error(getErrorMessage(error, 'Import failed'))
     },
   })
