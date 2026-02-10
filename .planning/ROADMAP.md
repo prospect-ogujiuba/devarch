@@ -124,10 +124,11 @@ Plans:
   2. Golden service parity explicitly verified: php, python, nginx-proxy-manager, blackbox-exporter, rabbitmq, traefik, devarch-api
   3. Import boundary test: 200MB payload succeeds
   4. Import boundary test: 300MB payload rejected with clear error message
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 15-01: [TBD during planning]
+- [ ] 15-01-PLAN.md — Fix parity failures, create whitelist/golden-services JSON, verify-parity exits 0
+- [ ] 15-02-PLAN.md — Boundary test tool: 200MB import succeeds, 300MB rejected with 413
 
 ## Progress
 
