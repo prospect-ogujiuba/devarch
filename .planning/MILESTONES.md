@@ -17,3 +17,18 @@
 
 ---
 
+
+## v1.1 Schema Reconciliation (Shipped: 2026-02-10)
+
+**Stats:** 6 phases, 14 plans | 73 commits | 402 files | +21,548 lines | 2 days (Feb 9–10, 2026)
+
+**Key accomplishments:**
+- Replaced 23 patch migrations with 9 domain-separated fresh baseline (39 tables, zero seed data)
+- Parser/importer preserves env_files, container_name, networks, config mounts with cross-service FK provenance
+- Compose generator emits all new fields from DB — 172/173 services match legacy 1:1 (1 whitelisted)
+- Streaming multipart import handles 256MB payloads without memory exhaustion, prepared statement batching
+- Dashboard UI for env_files, networks, config_mounts at both service and instance level with override support
+- Living verification tools (verify-parity, verify-boundary) prove parity and boundary behavior
+
+---
+
