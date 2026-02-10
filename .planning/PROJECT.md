@@ -10,20 +10,25 @@ Portability promise: `devarch.yml` (intent) + `devarch.lock` (resolved ports/dig
 
 Two stacks using the same service template must never collide. Isolation (naming, networking, ports) is the primitive everything else depends on.
 
-## Current State (v1.0 shipped 2026-02-09)
+## Current State (v1.1 shipped 2026-02-10)
 
-- 166+ service templates across 24 categories
+- 172+ service templates across 24 categories, 1:1 legacy parity verified
+- 9 domain-separated migrations (001-009), 39 tables, zero seed data
+- Parser preserves env_files, container_name, networks, config mounts with cross-service FK provenance
+- Compose generator emits all fields faithfully from DB — verified by verify-parity tool
 - Stack CRUD with soft-delete, clone-as-rename
-- Service instances with full copy-on-write overrides (ports, volumes, env, labels, deps, domains, healthchecks, config files)
+- Service instances with full copy-on-write overrides (ports, volumes, env, labels, deps, domains, healthchecks, config files, env_files, networks, config_mounts)
 - Per-stack network isolation, deterministic container naming (devarch-{stack}-{instance})
 - Stack compose generation with config materialization
 - Terraform-style plan/apply with advisory locking + staleness detection
 - Contract-based auto-wiring + explicit wiring for ambiguous cases
 - devarch.yml export/import + devarch.lock + devarch init/doctor
+- Streaming multipart import (256MB cap), prepared statement batching
 - AES-256-GCM secret encryption at rest, redaction in all outputs
 - Resource limits (CPU/memory) mapped to compose deploy.resources
-- Dashboard: full stack management UI shipped per-phase
-- DB migrations: 001-019+
+- Dashboard: full stack management UI with env_files, networks, config_mounts editing
+- Living verification tools: verify-parity (parity proof), verify-boundary (size limit proof)
+- Codebase: ~25K LOC Go, ~18K LOC TypeScript
 
 ## Requirements
 
@@ -51,19 +56,18 @@ Two stacks using the same service template must never collide. Isolation (naming
 - ✓ Resource limits per instance — v1.0
 - ✓ Runtime abstraction fix (no hardcoded podman calls) — v1.0
 - ✓ Dashboard: full stack management UI — v1.0
+- ✓ Fresh baseline migrations (9 domain-separated, 39 tables, zero seeds) — v1.1
+- ✓ Parser preserves env_file, container_name, networks, config mounts — v1.1
+- ✓ Config mount provenance with cross-service FK linking — v1.1
+- ✓ Compose generator 1:1 legacy parity (172/173 pass, 1 whitelisted) — v1.1
+- ✓ Streaming multipart import (256MB cap, prepared statements, idempotent upserts) — v1.1
+- ✓ Dashboard env_files, networks, config_mounts editing (service + instance) — v1.1
+- ✓ Golden service parity verified (7/7 pass with zero exceptions) — v1.1
+- ✓ Import boundary tests (200MB accepted, 300MB rejected with 413) — v1.1
 
 ### Active
 
-**Current Milestone: v1.1 Schema Reconciliation**
-
-**Goal:** Replace fragmented 23-migration chain with clean, domain-separated fresh baseline — 1:1 legacy parity, no seeds, no patch artifacts.
-
-**Target features:**
-- Fresh baseline migrations (9 domain-separated files, final-form DDL)
-- Parser/importer fixes (env_file, container_name, networks, config provenance)
-- Compose generator parity (faithful env_files/networks/config mounts output)
-- Large import scalability (streaming multipart, 256MB cap, batched upserts)
-- Golden service parity verification (php, python, nginx-proxy-manager, blackbox-exporter, rabbitmq, traefik, devarch-api)
+(No active milestone — run `/gsd:new-milestone` to start next)
 
 ### Out of Scope
 
@@ -78,7 +82,7 @@ Two stacks using the same service template must never collide. Isolation (naming
 
 - **API**: Go 1.22, chi router, lib/pq, gorilla/websocket, yaml.v3
 - **Dashboard**: React 19, Vite, TanStack Router + Query, Tailwind 4, Radix UI, Zod, CodeMirror
-- **DB**: PostgreSQL, 23 migrations (v1.0) → being replaced with fresh baseline (v1.1)
+- **DB**: PostgreSQL, 9 domain-separated migrations (v1.1 fresh baseline)
 - **Runtime**: Podman or Docker via container.Client abstraction
 - **Scripts**: bash CLI wrapper (devarch), service manager, runtime switcher
 
@@ -107,10 +111,12 @@ Two stacks using the same service template must never collide. Isolation (naming
 | Lockfile as JSON (not YAML) | Consistency with export/import workflow | ✓ Good |
 | Three-layer env merge: template → wired → overrides | WIRE-08 compliance, user always wins | ✓ Good |
 
-| Fresh baseline over incremental migration | 23 patch migrations create fragility; clean slate is simpler to maintain | — Pending |
-| Domain-separated DDL files | Clean boundaries, each table created once in final form | — Pending |
-| Dedicated service_config_mounts table | Config provenance needs its own model, not overloaded config_files | — Pending |
-| Streaming multipart for large imports | ParseMultipartForm buffers entire body; streaming avoids OOM | — Pending |
+| Fresh baseline over incremental migration | 23 patch migrations create fragility; clean slate is simpler to maintain | ✓ Good |
+| Domain-separated DDL files | Clean boundaries, each table created once in final form | ✓ Good |
+| Dedicated service_config_mounts table | Config provenance needs its own model, not overloaded config_files | ✓ Good |
+| Streaming multipart for large imports | ParseMultipartForm buffers entire body; streaming avoids OOM | ✓ Good |
+| MaxBodySize scope isolation | Import route registered outside /api/v1 group to avoid middleware stacking | ✓ Good |
+| Whitelist governance for parity exceptions | Expected differences documented with reason, golden services never whitelisted | ✓ Good |
 
 ---
-*Last updated: 2026-02-09 after v1.1 milestone start*
+*Last updated: 2026-02-10 after v1.1 milestone*
