@@ -805,6 +805,13 @@ func (h *InstanceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request)
 	}
 	defer tx.Rollback()
 
+	for _, path := range req.EnvFiles {
+		if strings.TrimSpace(path) == "" {
+			http.Error(w, "env_file path cannot be empty", http.StatusBadRequest)
+			return
+		}
+	}
+
 	_, err = tx.Exec("DELETE FROM instance_env_files WHERE instance_id = $1", instanceID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to delete existing env_files: %v", err), http.StatusInternalServerError)
@@ -851,6 +858,13 @@ func (h *InstanceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 		return
+	}
+
+	for _, name := range req.Networks {
+		if strings.TrimSpace(name) == "" {
+			http.Error(w, "network name cannot be empty", http.StatusBadRequest)
+			return
+		}
 	}
 
 	tx, err := h.db.Begin()
@@ -906,6 +920,13 @@ func (h *InstanceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Requ
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 		return
+	}
+
+	for _, m := range req.ConfigMounts {
+		if strings.TrimSpace(m.TargetPath) == "" {
+			http.Error(w, "config mount target_path cannot be empty", http.StatusBadRequest)
+			return
+		}
 	}
 
 	tx, err := h.db.Begin()

@@ -11,6 +11,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/crypto"
+	"github.com/priz/devarch-api/pkg/models"
 )
 
 type InstanceHandler struct {
@@ -39,6 +40,21 @@ type instanceResponse struct {
 	OverrideCount     int       `json:"override_count"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+type instanceDetailResponse struct {
+	instanceResponse
+	Ports        []models.ServicePort       `json:"ports"`
+	Volumes      []models.ServiceVolume     `json:"volumes"`
+	EnvVars      []models.ServiceEnvVar     `json:"env_vars"`
+	EnvFiles     []string                   `json:"env_files"`
+	Networks     []string                   `json:"networks"`
+	ConfigMounts []models.ServiceConfigMount `json:"config_mounts"`
+	Labels       []models.ServiceLabel      `json:"labels"`
+	Domains      []models.ServiceDomain     `json:"domains"`
+	Healthcheck  *models.ServiceHealthcheck `json:"healthcheck"`
+	Dependencies []string                   `json:"dependencies"`
+	ConfigFiles  []models.ServiceConfigFile `json:"config_files"`
 }
 
 type createInstanceRequest struct {
@@ -336,8 +352,57 @@ func (h *InstanceHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Load instance override data
+	detail := instanceDetailResponse{
+		instanceResponse: instance,
+		Ports:        []models.ServicePort{},
+		Volumes:      []models.ServiceVolume{},
+		EnvVars:      []models.ServiceEnvVar{},
+		EnvFiles:     []string{},
+		Networks:     []string{},
+		ConfigMounts: []models.ServiceConfigMount{},
+		Labels:       []models.ServiceLabel{},
+		Domains:      []models.ServiceDomain{},
+		Dependencies: []string{},
+		ConfigFiles:  []models.ServiceConfigFile{},
+	}
+
+	if ports, err := h.loadInstancePorts(instance.ID); err == nil && len(ports) > 0 {
+		detail.Ports = ports
+	}
+	if volumes, err := h.loadInstanceVolumes(instance.ID); err == nil && len(volumes) > 0 {
+		detail.Volumes = volumes
+	}
+	if envVars, err := h.loadInstanceEnvVars(instance.ID); err == nil && len(envVars) > 0 {
+		detail.EnvVars = envVars
+	}
+	if envFiles, err := h.loadInstanceEnvFiles(instance.ID); err == nil && len(envFiles) > 0 {
+		detail.EnvFiles = envFiles
+	}
+	if networks, err := h.loadInstanceNetworks(instance.ID); err == nil && len(networks) > 0 {
+		detail.Networks = networks
+	}
+	if configMounts, err := h.loadInstanceConfigMounts(instance.ID); err == nil && len(configMounts) > 0 {
+		detail.ConfigMounts = configMounts
+	}
+	if labels, err := h.loadInstanceLabels(instance.ID); err == nil && len(labels) > 0 {
+		detail.Labels = labels
+	}
+	if domains, err := h.loadInstanceDomains(instance.ID); err == nil && len(domains) > 0 {
+		detail.Domains = domains
+	}
+	if hc, err := h.loadInstanceHealthcheck(instance.ID); err == nil && hc != nil {
+		detail.Healthcheck = hc
+	}
+	if deps, err := h.loadInstanceDependencies(instance.ID); err == nil && len(deps) > 0 {
+		detail.Dependencies = deps
+	}
+	if configFiles, err := h.loadInstanceConfigFiles(instance.ID); err == nil && len(configFiles) > 0 {
+		detail.ConfigFiles = configFiles
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(instance)
+	json.NewEncoder(w).Encode(detail)
 }
 
 func (h *InstanceHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -433,11 +498,14 @@ func (h *InstanceHandler) Update(w http.ResponseWriter, r *http.Request) {
 			(SELECT COUNT(*) FROM instance_ports WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_volumes WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_env_vars WHERE instance_id = $1) +
+			(SELECT COUNT(*) FROM instance_env_files WHERE instance_id = $1) +
+			(SELECT COUNT(*) FROM instance_networks WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_labels WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_domains WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_healthchecks WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_dependencies WHERE instance_id = $1) +
-			(SELECT COUNT(*) FROM instance_config_files WHERE instance_id = $1)
+			(SELECT COUNT(*) FROM instance_config_files WHERE instance_id = $1) +
+			(SELECT COUNT(*) FROM instance_config_mounts WHERE instance_id = $1)
 	`, instance.ID).Scan(&instance.OverrideCount)
 	if err != nil {
 		instance.OverrideCount = 0
@@ -626,6 +694,27 @@ func (h *InstanceHandler) Duplicate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_, err = tx.Exec(`INSERT INTO instance_env_files (instance_id, path, sort_order)
+		SELECT $1, path, sort_order FROM instance_env_files WHERE instance_id = $2`, newInstance.ID, sourceInstanceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to copy env files: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = tx.Exec(`INSERT INTO instance_networks (instance_id, network_name)
+		SELECT $1, network_name FROM instance_networks WHERE instance_id = $2`, newInstance.ID, sourceInstanceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to copy networks: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = tx.Exec(`INSERT INTO instance_config_mounts (instance_id, config_file_id, source_path, target_path, readonly)
+		SELECT $1, config_file_id, source_path, target_path, readonly FROM instance_config_mounts WHERE instance_id = $2`, newInstance.ID, sourceInstanceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to copy config mounts: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	if err := tx.Commit(); err != nil {
 		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
 		return
@@ -641,11 +730,14 @@ func (h *InstanceHandler) Duplicate(w http.ResponseWriter, r *http.Request) {
 			(SELECT COUNT(*) FROM instance_ports WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_volumes WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_env_vars WHERE instance_id = $1) +
+			(SELECT COUNT(*) FROM instance_env_files WHERE instance_id = $1) +
+			(SELECT COUNT(*) FROM instance_networks WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_labels WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_domains WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_healthchecks WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_dependencies WHERE instance_id = $1) +
-			(SELECT COUNT(*) FROM instance_config_files WHERE instance_id = $1)
+			(SELECT COUNT(*) FROM instance_config_files WHERE instance_id = $1) +
+			(SELECT COUNT(*) FROM instance_config_mounts WHERE instance_id = $1)
 	`, newInstance.ID).Scan(&newInstance.OverrideCount)
 	if err != nil {
 		newInstance.OverrideCount = 0
@@ -746,11 +838,14 @@ func (h *InstanceHandler) Rename(w http.ResponseWriter, r *http.Request) {
 			(SELECT COUNT(*) FROM instance_ports WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_volumes WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_env_vars WHERE instance_id = $1) +
+			(SELECT COUNT(*) FROM instance_env_files WHERE instance_id = $1) +
+			(SELECT COUNT(*) FROM instance_networks WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_labels WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_domains WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_healthchecks WHERE instance_id = $1) +
 			(SELECT COUNT(*) FROM instance_dependencies WHERE instance_id = $1) +
-			(SELECT COUNT(*) FROM instance_config_files WHERE instance_id = $1)
+			(SELECT COUNT(*) FROM instance_config_files WHERE instance_id = $1) +
+			(SELECT COUNT(*) FROM instance_config_mounts WHERE instance_id = $1)
 	`, instance.ID).Scan(&instance.OverrideCount)
 	if err != nil {
 		instance.OverrideCount = 0
