@@ -37,7 +37,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(mw.MaxBodySize(10 << 20)) // 10MB request body limit
+	// MaxBodySize removed from global scope - applied per-route instead
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -64,9 +64,13 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 
 	r.Post("/api/v1/auth/validate", authHandler.Validate)
 
+	// Stack import with large body limit - registered before main route group to avoid 10MB default
+	r.With(mw.APIKeyAuth, mw.RateLimit(10, 50), mw.MaxBodySize(importMaxBytes)).Post("/api/v1/stacks/import", stackHandler.ImportStack)
+
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(mw.APIKeyAuth)
 		r.Use(mw.RateLimit(10, 50))
+		r.Use(mw.MaxBodySize(10 << 20)) // Default 10MB for most routes
 		r.Route("/services", func(r chi.Router) {
 			r.Get("/", serviceHandler.List)
 			r.Post("/", serviceHandler.Create)
@@ -191,7 +195,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 			r.Post("/trash/{name}/restore", stackHandler.Restore)
 			r.Delete("/trash/{name}", stackHandler.PermanentDelete)
 
-			r.With(mw.MaxBodySize(importMaxBytes)).Post("/import", stackHandler.ImportStack)
+			// /import moved outside route group (line 68) to use 256MB limit instead of 10MB default
 
 			r.Route("/{name}", func(r chi.Router) {
 				r.Get("/", stackHandler.Get)
