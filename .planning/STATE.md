@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 ## Current Position
 
-Phase: 14 of 15 (Dashboard Updates)
-Plan: 3 of 3
-Status: Phase complete, verified
-Last activity: 2026-02-09 — Phase 14 verified and complete
+Phase: 15 of 15 (Validation & Parity)
+Plan: 2 of 2
+Status: Phase complete
+Last activity: 2026-02-10 — Phase 15 Plan 02 complete
 
-Progress: [█████████░] 93% (14/15 phases complete, 39/TBD plans total)
+Progress: [██████████] 100% (15/15 phases complete, 41/TBD plans total)
 
 ## Performance Metrics
 
@@ -47,6 +47,9 @@ Progress: [█████████░] 93% (14/15 phases complete, 39/TBD pl
 | Phase 14 P01 | 3m19s | 2 | 8 |
 | Phase 14 P02 | 2m14s | 2 | 6 |
 | Phase 14 P03 | 5m14s | 2 | 5 |
+| Phase 15 P01 | ~6m | 2 | 4 |
+| Phase 15 P02 | 12m40s | 2 | 2 |
+| Phase 15 P01 | 7m29s | 2 | 2 |
 
 ## Accumulated Context
 
@@ -88,6 +91,9 @@ Recent decisions affecting current work:
 - [Phase 14-03]: Config mounts show resolved/unresolved badge — Transparency in config_file_id linkage vs external paths
 - [Phase 14-02]: Service-level component placement order — EnvFiles after Volumes, Networks after EnvFiles, ConfigMounts after Dependencies; groups related config types
 - [Phase 14-02]: Config mount resolution badges — Green for resolved (config_file_id set), amber for unresolved (external path only); visual provenance feedback
+- [Phase 15-02]: MaxBodySize scope matters — Chi r.Use() applies to all children; r.With() adds middleware on top. Multiple MaxBytesReader wrappers enforce smallest limit. Solution: register large-limit routes outside restrictive parent groups
+- [Phase 15-01]: Whitelist zammad dependencies on external services — zammad references zammad-db and zammad-elasticsearch which are not standalone services; external dependencies provided at runtime
+- [Phase 15-01]: Stderr for diagnostics, stdout for structured output — All importer warnings now use fmt.Fprintf(os.Stderr) to preserve clean JSON output
 
 ### Pending Todos
 
@@ -99,7 +105,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-09
-Stopped at: Phase 14 complete, verified
+Last session: 2026-02-10
+Stopped at: Phase 15 Plan 02 complete — verify-boundary validates import size boundaries
 Resume file: None
-Next: Phase 15 - Validation & Parity
+Next: Phase 15 complete
