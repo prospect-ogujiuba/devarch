@@ -21,8 +21,6 @@ export function EditableNetworks({ name, networks }: Props) {
     mutation.mutate({ name, data: { networks: section.drafts } }, { onSuccess: () => section.setEditing(false) })
   }
 
-  if (!section.editing && networks.length === 0) return null
-
   return (
     <EditableCard
       title="Networks"
@@ -53,6 +51,8 @@ export function EditableNetworks({ name, networks }: Props) {
             ))}
             {section.drafts.length === 0 && <p className="text-muted-foreground text-sm">No networks</p>}
           </>
+        ) : networks.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No networks configured</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {networks.map((network, i) => (

@@ -31,6 +31,9 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
     ports: raw.ports ?? [],
     volumes: raw.volumes ?? [],
     env_vars: raw.env_vars ?? [],
+    env_files: raw.env_files ?? [],
+    networks: raw.networks ?? [],
+    config_mounts: raw.config_mounts ?? [],
     labels: raw.labels ?? [],
     domains: raw.domains ?? [],
     dependencies: raw.dependencies ?? [],
@@ -42,6 +45,9 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
     ports: !!oa.ports,
     volumes: !!oa.volumes,
     env_vars: !!oa.env_vars,
+    env_files: !!oa.env_files,
+    networks: !!oa.networks,
+    config_mounts: !!oa.config_mounts,
     labels: !!oa.labels,
     domains: !!oa.domains,
     healthcheck: !!oa.healthcheck,
@@ -204,6 +210,78 @@ export function EffectiveConfigTab({ stackName, instanceId }: Props) {
                 </tbody>
               </table>
             </ScrollableTable>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className={cn(o.env_files && 'border-l-2 border-l-blue-500')}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Env Files</CardTitle>
+            {o.env_files && <Badge variant="secondary">Overridden</Badge>}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {config.env_files.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No env files configured</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {config.env_files.map((path, i) => (
+                <Badge key={i} variant="outline">{path}</Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className={cn(o.networks && 'border-l-2 border-l-blue-500')}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Networks</CardTitle>
+            {o.networks && <Badge variant="secondary">Overridden</Badge>}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {config.networks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No networks configured</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {config.networks.map((name, i) => (
+                <Badge key={i} variant="outline">{name}</Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className={cn(o.config_mounts && 'border-l-2 border-l-blue-500')}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Config Mounts</CardTitle>
+            {o.config_mounts && <Badge variant="secondary">Overridden</Badge>}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {config.config_mounts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No config mounts configured</p>
+          ) : (
+            <div className="space-y-2">
+              {config.config_mounts.map((m, i) => (
+                <div key={i} className="text-sm flex items-center gap-2">
+                  <code className="font-mono text-muted-foreground flex-1">
+                    {m.source_path} → {m.target_path}
+                  </code>
+                  <div className="flex items-center gap-1">
+                    {m.config_file_id ? (
+                      <Badge variant="default" className="bg-green-600 hover:bg-green-700">resolved</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="bg-amber-600 hover:bg-amber-700">unresolved</Badge>
+                    )}
+                    {m.readonly && <Badge variant="outline" className="text-xs">ro</Badge>}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
@@ -393,6 +471,9 @@ interface NormalizedConfig {
   ports: { host_ip: string; host_port: number; container_port: number; protocol: string }[]
   volumes: { source: string; target: string; read_only: boolean }[]
   env_vars: { key: string; value?: string; is_secret: boolean }[]
+  env_files: string[]
+  networks: string[]
+  config_mounts: { source_path: string; target_path: string; readonly: boolean; config_file_id?: number | null }[]
   labels: { key: string; value: string }[]
   dependencies: string[]
   healthcheck?: { test: string; interval_seconds: number; timeout_seconds: number; retries: number; start_period_seconds: number } | null
@@ -431,6 +512,14 @@ function toYAML(config: NormalizedConfig): string {
     svc.labels = Object.fromEntries(
       config.labels.map((l) => [l.key, l.value])
     )
+  }
+
+  if (config.env_files.length > 0) {
+    svc.env_file = config.env_files
+  }
+
+  if (config.networks.length > 0) {
+    svc.networks = config.networks
   }
 
   if (config.dependencies.length > 0) {

@@ -37,8 +37,6 @@ export function EditableConfigMounts({ name, configMounts }: Props) {
     mutation.mutate({ name, data: { config_mounts: section.drafts } }, { onSuccess: () => section.setEditing(false) })
   }
 
-  if (!section.editing && configMounts.length === 0) return null
-
   return (
     <EditableCard
       title="Config Mounts"
@@ -80,6 +78,8 @@ export function EditableConfigMounts({ name, configMounts }: Props) {
             ))}
             {section.drafts.length === 0 && <p className="text-muted-foreground text-sm">No config mounts</p>}
           </>
+        ) : configMounts.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No config mounts configured</p>
         ) : (
           <div className="space-y-2">
             {configMounts.map((mount, i) => (

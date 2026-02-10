@@ -810,6 +810,10 @@ func (h *InstanceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request)
 			http.Error(w, "env_file path cannot be empty", http.StatusBadRequest)
 			return
 		}
+		if strings.Contains(path, "..") || strings.HasPrefix(path, "/") {
+			http.Error(w, "env_file path must be relative and cannot contain '..'", http.StatusBadRequest)
+			return
+		}
 	}
 
 	_, err = tx.Exec("DELETE FROM instance_env_files WHERE instance_id = $1", instanceID)
@@ -861,8 +865,13 @@ func (h *InstanceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request)
 	}
 
 	for _, name := range req.Networks {
-		if strings.TrimSpace(name) == "" {
+		trimmed := strings.TrimSpace(name)
+		if trimmed == "" {
 			http.Error(w, "network name cannot be empty", http.StatusBadRequest)
+			return
+		}
+		if strings.ContainsAny(trimmed, " \t/\\:") {
+			http.Error(w, fmt.Sprintf("invalid network name %q: contains disallowed characters", trimmed), http.StatusBadRequest)
 			return
 		}
 	}
@@ -925,6 +934,10 @@ func (h *InstanceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Requ
 	for _, m := range req.ConfigMounts {
 		if strings.TrimSpace(m.TargetPath) == "" {
 			http.Error(w, "config mount target_path cannot be empty", http.StatusBadRequest)
+			return
+		}
+		if strings.Contains(m.SourcePath, "..") {
+			http.Error(w, "config mount source_path cannot contain '..'", http.StatusBadRequest)
 			return
 		}
 	}

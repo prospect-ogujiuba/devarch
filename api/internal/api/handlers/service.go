@@ -1695,6 +1695,10 @@ func (h *ServiceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request) 
 			http.Error(w, "env_file path cannot be empty", http.StatusBadRequest)
 			return
 		}
+		if strings.Contains(path, "..") || strings.HasPrefix(path, "/") {
+			http.Error(w, "env_file path must be relative and cannot contain '..'", http.StatusBadRequest)
+			return
+		}
 	}
 
 	h.snapshotAndUpdate(serviceID)
@@ -1742,8 +1746,13 @@ func (h *ServiceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request) 
 	}
 
 	for _, name := range req.Networks {
-		if strings.TrimSpace(name) == "" {
+		trimmed := strings.TrimSpace(name)
+		if trimmed == "" {
 			http.Error(w, "network name cannot be empty", http.StatusBadRequest)
+			return
+		}
+		if strings.ContainsAny(trimmed, " \t/\\:") {
+			http.Error(w, fmt.Sprintf("invalid network name %q: contains disallowed characters", trimmed), http.StatusBadRequest)
 			return
 		}
 	}
@@ -1795,6 +1804,10 @@ func (h *ServiceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Reque
 	for _, m := range req.ConfigMounts {
 		if strings.TrimSpace(m.TargetPath) == "" {
 			http.Error(w, "config mount target_path cannot be empty", http.StatusBadRequest)
+			return
+		}
+		if strings.Contains(m.SourcePath, "..") {
+			http.Error(w, "config mount source_path cannot contain '..'", http.StatusBadRequest)
 			return
 		}
 	}

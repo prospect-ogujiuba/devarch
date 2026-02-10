@@ -21,8 +21,6 @@ export function EditableEnvFiles({ name, envFiles }: Props) {
     mutation.mutate({ name, data: { env_files: section.drafts } }, { onSuccess: () => section.setEditing(false) })
   }
 
-  if (!section.editing && envFiles.length === 0) return null
-
   return (
     <EditableCard
       title="Env Files"
@@ -53,6 +51,8 @@ export function EditableEnvFiles({ name, envFiles }: Props) {
             ))}
             {section.drafts.length === 0 && <p className="text-muted-foreground text-sm">No env files</p>}
           </>
+        ) : envFiles.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No env files configured</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {envFiles.map((path, i) => (
