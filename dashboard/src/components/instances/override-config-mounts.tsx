@@ -147,11 +147,11 @@ export function OverrideConfigMounts({ instance, templateData, stackName, instan
                   {overrideConfigMounts.map((mount, i) => (
                     <div key={i} className="text-sm border-l-2 border-blue-500 pl-2">
                       <span>{mount.source_path} → {mount.target_path}</span>
-                      {mount.readonly && <Badge variant="default" className="ml-2">ro</Badge>}
+                      {mount.readonly && <Badge variant="outline" className="ml-2">ro</Badge>}
                       {mount.config_file_id ? (
-                        <Badge variant="default" className="ml-2">resolved</Badge>
+                        <Badge variant="default" className="ml-2 bg-green-600 hover:bg-green-700">resolved</Badge>
                       ) : (
-                        <Badge variant="default" className="ml-2">unresolved</Badge>
+                        <Badge variant="secondary" className="ml-2 bg-amber-600 hover:bg-amber-700">unresolved</Badge>
                       )}
                     </div>
                   ))}

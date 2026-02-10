@@ -893,7 +893,7 @@ func (h *InstanceHandler) loadServiceConfigMounts(serviceID int) ([]models.Servi
 
 func (h *InstanceHandler) loadInstanceConfigMounts(instanceID int) ([]models.ServiceConfigMount, error) {
 	rows, err := h.db.Query(`
-		SELECT id, instance_id, config_file_id, source_path, target_path, readonly
+		SELECT id, config_file_id, source_path, target_path, readonly
 		FROM instance_config_mounts WHERE instance_id = $1 ORDER BY target_path
 	`, instanceID)
 	if err != nil {
@@ -905,7 +905,7 @@ func (h *InstanceHandler) loadInstanceConfigMounts(instanceID int) ([]models.Ser
 	for rows.Next() {
 		var m models.ServiceConfigMount
 		var cfgFileID sql.NullInt32
-		if err := rows.Scan(&m.ID, &m.ServiceID, &cfgFileID, &m.SourcePath, &m.TargetPath, &m.ReadOnly); err != nil {
+		if err := rows.Scan(&m.ID, &cfgFileID, &m.SourcePath, &m.TargetPath, &m.ReadOnly); err != nil {
 			return nil, err
 		}
 		if cfgFileID.Valid {
