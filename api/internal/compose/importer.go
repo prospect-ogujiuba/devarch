@@ -131,7 +131,7 @@ func (i *Importer) importCategoryServices(category string) error {
 
 		path := filepath.Join(categoryDir, entry.Name())
 		if err := i.importServices(path, categoryID, category); err != nil {
-			fmt.Printf("warning: failed to import %s: %v\n", path, err)
+			fmt.Fprintf(os.Stderr, "warning: failed to import %s: %v\n", path, err)
 		}
 	}
 
@@ -147,7 +147,7 @@ func (i *Importer) importServices(path string, categoryID int, categoryName stri
 	for _, parsed := range services {
 		i.resolvePaths(parsed, path)
 		if err := i.importService(parsed, categoryID); err != nil {
-			fmt.Printf("warning: failed to import service %s: %v\n", parsed.Name, err)
+			fmt.Fprintf(os.Stderr, "warning: failed to import service %s: %v\n", parsed.Name, err)
 		}
 	}
 	return nil
@@ -371,7 +371,7 @@ func (i *Importer) ImportAllConfigFiles() (int, error) {
 
 		count, err := i.importServiceConfigFiles(serviceID, filepath.Join(i.configDir, serviceName))
 		if err != nil {
-			fmt.Printf("warning: config import for %s: %v\n", serviceName, err)
+			fmt.Fprintf(os.Stderr, "warning: config import for %s: %v\n", serviceName, err)
 			continue
 		}
 		total += count
@@ -516,7 +516,7 @@ func (i *Importer) ResolveConfigMountLinks() error {
 		`, configOwner, configRelPath).Scan(&configFileID)
 
 		if err == sql.ErrNoRows {
-			fmt.Printf("warning: config mount source_path=%s not found in service_config_files (owner=%s, path=%s)\n",
+			fmt.Fprintf(os.Stderr, "warning: config mount source_path=%s not found in service_config_files (owner=%s, path=%s)\n",
 				mount.sourcePath, configOwner, configRelPath)
 			continue
 		} else if err != nil {
@@ -535,7 +535,7 @@ func (i *Importer) ResolveConfigMountLinks() error {
 		resolved++
 	}
 
-	fmt.Printf("resolved %d config mount FKs\n", resolved)
+	fmt.Fprintf(os.Stderr, "resolved %d config mount FKs\n", resolved)
 	return nil
 }
 
