@@ -1,0 +1,11 @@
+{
+  "services": [
+    "php",
+    "python",
+    "nginx-proxy-manager",
+    "blackbox-exporter",
+    "rabbitmq",
+    "traefik",
+    "devarch-api"
+  ]
+}
