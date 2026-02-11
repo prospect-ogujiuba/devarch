@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/priz/devarch-api/internal/api/respond"
-	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/identity"
 	"github.com/priz/devarch-api/internal/export"
 	"gopkg.in/yaml.v3"
 )
@@ -138,7 +138,7 @@ func (h *StackHandler) ImportStack(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := container.ValidateName(devarchFile.Stack.Name); err != nil {
+	if err := identity.ValidateName(devarchFile.Stack.Name); err != nil {
 		respond.BadRequest(w, r, fmt.Sprintf("invalid stack name: %v", err))
 		return
 	}

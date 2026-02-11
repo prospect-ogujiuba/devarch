@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/priz/devarch-api/internal/identity"
 	"github.com/priz/devarch-api/pkg/models"
 )
 
@@ -310,8 +311,8 @@ func (h *InstanceHandler) UpdateLabels(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, l := range req.Labels {
-		if strings.HasPrefix(l.Key, "devarch.") {
-			respond.BadRequest(w, r, fmt.Sprintf("label key %q cannot start with 'devarch.' - this prefix is reserved for system labels", l.Key))
+		if strings.HasPrefix(l.Key, identity.LabelPrefix) {
+			respond.BadRequest(w, r, fmt.Sprintf("label key %q cannot start with %q - this prefix is reserved for system labels", l.Key, identity.LabelPrefix))
 			return
 		}
 	}

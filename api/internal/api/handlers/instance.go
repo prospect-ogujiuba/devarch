@@ -12,6 +12,7 @@ import (
 	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/crypto"
+	"github.com/priz/devarch-api/internal/identity"
 	"github.com/priz/devarch-api/pkg/models"
 )
 
@@ -116,7 +117,7 @@ func (h *InstanceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := container.ValidateName(req.InstanceID); err != nil {
+	if err := identity.ValidateName(req.InstanceID); err != nil {
 		respond.BadRequest(w, r, err.Error())
 		return
 	}
@@ -143,12 +144,12 @@ func (h *InstanceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate combined container name length
-	if err := container.ValidateContainerName(stackActualName, req.InstanceID); err != nil {
+	if err := identity.ValidateContainerName(stackActualName, req.InstanceID); err != nil {
 		respond.BadRequest(w, r, err.Error())
 		return
 	}
 
-	containerName := container.ContainerName(stackActualName, req.InstanceID)
+	containerName := identity.ContainerName(stackActualName, req.InstanceID)
 
 	var instance instanceResponse
 	err = h.db.QueryRow(`
@@ -636,7 +637,7 @@ func (h *InstanceHandler) Duplicate(w http.ResponseWriter, r *http.Request) {
 		newInstanceID = sourceInstanceName + "-copy"
 	}
 
-	if err := container.ValidateName(newInstanceID); err != nil {
+	if err := identity.ValidateName(newInstanceID); err != nil {
 		respond.BadRequest(w, r, err.Error())
 		return
 	}
@@ -652,7 +653,7 @@ func (h *InstanceHandler) Duplicate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate combined container name length
-	if err := container.ValidateContainerName(stackActualName, newInstanceID); err != nil {
+	if err := identity.ValidateContainerName(stackActualName, newInstanceID); err != nil {
 		respond.BadRequest(w, r, err.Error())
 		return
 	}
@@ -664,7 +665,7 @@ func (h *InstanceHandler) Duplicate(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	containerName := container.ContainerName(stackActualName, newInstanceID)
+	containerName := identity.ContainerName(stackActualName, newInstanceID)
 
 	var newInstance instanceResponse
 	err = tx.QueryRow(`
@@ -843,7 +844,7 @@ func (h *InstanceHandler) Rename(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := container.ValidateName(req.InstanceID); err != nil {
+	if err := identity.ValidateName(req.InstanceID); err != nil {
 		respond.BadRequest(w, r, err.Error())
 		return
 	}
@@ -871,12 +872,12 @@ func (h *InstanceHandler) Rename(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate combined container name length
-	if err := container.ValidateContainerName(stackActualName, req.InstanceID); err != nil {
+	if err := identity.ValidateContainerName(stackActualName, req.InstanceID); err != nil {
 		respond.BadRequest(w, r, err.Error())
 		return
 	}
 
-	newContainerName := container.ContainerName(stackActualName, req.InstanceID)
+	newContainerName := identity.ContainerName(stackActualName, req.InstanceID)
 
 	var instance instanceResponse
 	err = h.db.QueryRow(`

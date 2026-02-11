@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/identity"
 )
 
 type NetworkHandler struct {
@@ -80,7 +81,7 @@ func (h *NetworkHandler) List(w http.ResponseWriter, r *http.Request) {
 			containers = []string{}
 		}
 
-		managed := container.IsDevArchManaged(info.Labels)
+		managed := identity.IsDevArchManaged(info.Labels)
 
 		item := networkListItem{
 			Name:           info.Name,
@@ -147,7 +148,7 @@ func (h *NetworkHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	labels := map[string]string{
-		container.LabelManagedBy: container.ManagedByValue,
+		identity.LabelManagedBy: identity.ManagedByValue,
 	}
 
 	if err := h.containerClient.CreateNetwork(req.Name, labels); err != nil {

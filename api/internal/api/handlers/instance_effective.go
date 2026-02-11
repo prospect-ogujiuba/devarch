@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/identity"
 	"github.com/priz/devarch-api/internal/wiring"
 	"github.com/priz/devarch-api/pkg/models"
 )
@@ -183,7 +183,7 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 
 	// Inject identity labels from container package (NETW-04 requirement)
 	// User overrides take precedence — only add if not already present
-	identityLabels := container.BuildLabels(stackName, instanceName, strconv.Itoa(templateServiceID))
+	identityLabels := identity.BuildLabels(stackName, instanceName, strconv.Itoa(templateServiceID))
 	existingKeys := make(map[string]bool)
 	for _, l := range resp.Labels {
 		existingKeys[l.Key] = true

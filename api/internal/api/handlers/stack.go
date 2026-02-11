@@ -14,6 +14,7 @@ import (
 	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/identity"
 	"github.com/priz/devarch-api/internal/orchestration"
 )
 
@@ -33,7 +34,7 @@ func NewStackHandler(db *sql.DB, cc *container.Client, os *orchestration.Service
 
 func (h *StackHandler) runningCount(stackName string) int {
 	count, err := h.containerClient.CountRunningWithLabels(map[string]string{
-		container.LabelStackID: stackName,
+		identity.LabelStackID: stackName,
 	})
 	if err != nil {
 		return 0
@@ -42,7 +43,7 @@ func (h *StackHandler) runningCount(stackName string) int {
 }
 
 func (h *StackHandler) networkActive(networkName *string, stackName string) bool {
-	name := container.NetworkName(stackName)
+	name := identity.NetworkName(stackName)
 	if networkName != nil && *networkName != "" {
 		name = *networkName
 	}
@@ -59,7 +60,7 @@ func (h *StackHandler) stackCompose(stackName string) ([]byte, error) {
 		return nil, fmt.Errorf("lookup stack: %w", err)
 	}
 
-	netName := fmt.Sprintf("devarch-%s-net", stackName)
+	netName := identity.NetworkName(stackName)
 	if networkName.Valid && networkName.String != "" {
 		netName = networkName.String
 	}
@@ -135,16 +136,16 @@ func (h *StackHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate name using existing container validation
-	if err := container.ValidateName(req.Name); err != nil {
+	if err := identity.ValidateName(req.Name); err != nil {
 		respond.BadRequest(w, r, err.Error())
 		return
 	}
 
 	// Compute or validate network_name
-	networkName := container.NetworkName(req.Name)
+	networkName := identity.NetworkName(req.Name)
 	if req.NetworkName != nil && *req.NetworkName != "" {
 		// User provided custom network name, validate it
-		if err := container.ValidateName(*req.NetworkName); err != nil {
+		if err := identity.ValidateName(*req.NetworkName); err != nil {
 			respond.BadRequest(w, r, fmt.Sprintf("invalid network_name: %v", err))
 			return
 		}
@@ -542,7 +543,7 @@ func (h *StackHandler) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// No network_name set (shouldn't happen after migration)
-		response.NetworkName = container.NetworkName(name)
+		response.NetworkName = identity.NetworkName(name)
 		response.Status = "not_created"
 	}
 
@@ -575,7 +576,7 @@ func (h *StackHandler) CreateNetwork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	netName := container.NetworkName(name)
+	netName := identity.NetworkName(name)
 	if networkName != nil && *networkName != "" {
 		netName = *networkName
 	}
@@ -618,7 +619,7 @@ func (h *StackHandler) RemoveNetwork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	netName := container.NetworkName(name)
+	netName := identity.NetworkName(name)
 	if networkName != nil && *networkName != "" {
 		netName = *networkName
 	}
@@ -665,7 +666,7 @@ func (h *StackHandler) Disable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	running, err := h.containerClient.ListRunningContainersWithLabels(map[string]string{
-		container.LabelStackID: name,
+		identity.LabelStackID: name,
 	})
 	if err != nil {
 		log.Printf("warning: failed to list running containers for stack %q: %v", name, err)
@@ -839,12 +840,12 @@ func (h *StackHandler) Clone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := container.ValidateName(req.Name); err != nil {
+	if err := identity.ValidateName(req.Name); err != nil {
 		respond.BadRequest(w, r, err.Error())
 		return
 	}
 
-	newNetworkName := container.NetworkName(req.Name)
+	newNetworkName := identity.NetworkName(req.Name)
 
 	// Begin transaction
 	tx, err := h.db.BeginTx(r.Context(), nil)
@@ -951,12 +952,12 @@ func (h *StackHandler) Rename(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := container.ValidateName(req.Name); err != nil {
+	if err := identity.ValidateName(req.Name); err != nil {
 		respond.BadRequest(w, r, err.Error())
 		return
 	}
 
-	newNetworkName := container.NetworkName(req.Name)
+	newNetworkName := identity.NetworkName(req.Name)
 
 	// Begin transaction - rename is clone + soft-delete in single tx
 	tx, err := h.db.BeginTx(r.Context(), nil)
@@ -1086,7 +1087,7 @@ func (h *StackHandler) DeletePreview(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		instanceCount++
-		containerNames = append(containerNames, container.ContainerName(name, fmt.Sprintf("%d", instanceID)))
+		containerNames = append(containerNames, identity.ContainerName(name, fmt.Sprintf("%d", instanceID)))
 	}
 
 	respond.JSON(w, r, http.StatusOK, deletePreviewResponse{
