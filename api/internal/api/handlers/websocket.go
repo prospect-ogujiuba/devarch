@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/security"
 	devsync "github.com/priz/devarch-api/internal/sync"
 )
@@ -60,7 +61,7 @@ func (h *WebSocketHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		token := r.URL.Query().Get("token")
 		apiKey := os.Getenv("DEVARCH_API_KEY")
 		if err := security.ValidateWSToken(token, []byte(apiKey)); err != nil {
-			http.Error(w, "unauthorized: invalid or missing ws token", http.StatusUnauthorized)
+			respond.Unauthorized(w, r, "unauthorized: invalid or missing ws token")
 			return
 		}
 	}
