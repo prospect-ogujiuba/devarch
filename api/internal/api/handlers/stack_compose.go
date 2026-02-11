@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/compose"
 )
 
@@ -21,11 +21,11 @@ func (h *StackHandler) Compose(w http.ResponseWriter, r *http.Request) {
 	`, stackName).Scan(&stackID, &networkName)
 
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("stack %q not found", stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", stackName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -50,14 +50,14 @@ func (h *StackHandler) Compose(w http.ResponseWriter, r *http.Request) {
 	projectRoot := os.Getenv("PROJECT_ROOT")
 	if projectRoot != "" {
 		if err := gen.MaterializeStackConfigs(stackName, projectRoot); err != nil {
-			http.Error(w, fmt.Sprintf("failed to materialize config files: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	yamlBytes, warnings, err := gen.GenerateStackWithRedaction(stackName, true)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to generate compose: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -66,8 +66,7 @@ func (h *StackHandler) Compose(w http.ResponseWriter, r *http.Request) {
 		SELECT COUNT(*) FROM service_instances WHERE stack_id = $1 AND enabled = true AND deleted_at IS NULL
 	`, stackID).Scan(&instanceCount)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	respond.JSON(w, r, http.StatusOK, map[string]interface{}{
 		"yaml":           string(yamlBytes),
 		"warnings":       warnings,
 		"instance_count": instanceCount,

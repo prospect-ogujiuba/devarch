@@ -15,17 +15,16 @@ func (h *StackHandler) Stop(w http.ResponseWriter, r *http.Request) {
 
 	yamlBytes, err := h.stackCompose(name)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to generate compose: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if err := h.containerClient.StopStack("devarch-"+name, yamlBytes); err != nil {
-		http.Error(w, fmt.Sprintf("failed to stop stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "stopped"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "stopped"})
 }
 
 func (h *StackHandler) Start(w http.ResponseWriter, r *http.Request) {
@@ -36,11 +35,11 @@ func (h *StackHandler) Start(w http.ResponseWriter, r *http.Request) {
 		SELECT enabled FROM stacks WHERE name = $1 AND deleted_at IS NULL
 	`, name).Scan(&enabled)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", name)
 		return
 	}
 	if !enabled {
-		http.Error(w, "stack is disabled — enable it first", http.StatusConflict)
+		respond.Conflict(w, r, "stack is disabled — enable it first")
 		return
 	}
 
@@ -57,7 +56,7 @@ func (h *StackHandler) Start(w http.ResponseWriter, r *http.Request) {
 		"devarch.stack":      name,
 	}
 	if err := h.containerClient.CreateNetwork(netName, labels); err != nil {
-		http.Error(w, fmt.Sprintf("failed to create network: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -75,24 +74,23 @@ func (h *StackHandler) Start(w http.ResponseWriter, r *http.Request) {
 	projectRoot := os.Getenv("PROJECT_ROOT")
 	if projectRoot != "" {
 		if err := gen.MaterializeStackConfigs(name, projectRoot); err != nil {
-			http.Error(w, fmt.Sprintf("failed to materialize configs: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	yamlBytes, _, err := gen.GenerateStack(name)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to generate compose: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if err := h.containerClient.StartService("devarch-"+name, yamlBytes); err != nil {
-		http.Error(w, fmt.Sprintf("failed to start stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "started"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "started"})
 }
 
 func (h *StackHandler) Restart(w http.ResponseWriter, r *http.Request) {
@@ -103,17 +101,17 @@ func (h *StackHandler) Restart(w http.ResponseWriter, r *http.Request) {
 		SELECT enabled FROM stacks WHERE name = $1 AND deleted_at IS NULL
 	`, name).Scan(&enabled)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", name)
 		return
 	}
 	if !enabled {
-		http.Error(w, "stack is disabled — enable it first", http.StatusConflict)
+		respond.Conflict(w, r, "stack is disabled — enable it first")
 		return
 	}
 
 	stopYaml, err := h.stackCompose(name)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to generate compose: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -132,7 +130,7 @@ func (h *StackHandler) Restart(w http.ResponseWriter, r *http.Request) {
 		"devarch.stack":      name,
 	}
 	if err := h.containerClient.CreateNetwork(netName, labels); err != nil {
-		http.Error(w, fmt.Sprintf("failed to create network: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -150,22 +148,21 @@ func (h *StackHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	projectRoot := os.Getenv("PROJECT_ROOT")
 	if projectRoot != "" {
 		if err := gen.MaterializeStackConfigs(name, projectRoot); err != nil {
-			http.Error(w, fmt.Sprintf("failed to materialize configs: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	yamlBytes, _, err := gen.GenerateStack(name)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to generate compose: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if err := h.containerClient.StartService("devarch-"+name, yamlBytes); err != nil {
-		http.Error(w, fmt.Sprintf("failed to start stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "restarted"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "restarted"})
 }
