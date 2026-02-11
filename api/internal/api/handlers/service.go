@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/crypto"
@@ -120,7 +121,7 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.db.Query(query, args...)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -135,7 +136,7 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 			&s.CreatedAt, &s.UpdatedAt, &catName,
 			&s.ComposeOverrides,
 		); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		s.Category = &models.Category{Name: catName}
@@ -148,7 +149,7 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 		services = append(services, s)
 	}
 	if err := rows.Err(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -174,12 +175,11 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 		services = []models.Service{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Total-Count", strconv.Itoa(total))
 	w.Header().Set("X-Page", strconv.Itoa(page))
 	w.Header().Set("X-Per-Page", strconv.Itoa(limit))
 	w.Header().Set("X-Total-Pages", strconv.Itoa(totalPages))
-	json.NewEncoder(w).Encode(services)
+	respond.JSON(w, r, http.StatusOK, services)
 }
 
 func (h *ServiceHandler) loadServiceIncludes(ctx context.Context, s *models.Service, includes string) {
@@ -245,11 +245,11 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 		&s.ComposeOverrides,
 	)
 	if err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -267,8 +267,7 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 	h.loadServiceRelations(&s)
 	h.loadServiceIncludes(r.Context(), &s, r.URL.Query().Get("include"))
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(s)
+	respond.JSON(w, r, http.StatusOK, s)
 }
 
 func (h *ServiceHandler) loadServiceByName(name string) (*models.Service, error) {
@@ -488,16 +487,16 @@ type createServiceRequest struct {
 func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createServiceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid JSON body")
 		return
 	}
 
 	if req.Name == "" || req.CategoryID == 0 {
-		http.Error(w, "name and category_id are required", http.StatusBadRequest)
+		respond.BadRequest(w, r, "name and category_id are required")
 		return
 	}
 	if !isValidServiceName(req.Name) {
-		http.Error(w, "name must be lowercase alphanumeric with hyphens only", http.StatusBadRequest)
+		respond.BadRequest(w, r, "name must be lowercase alphanumeric with hyphens only")
 		return
 	}
 
@@ -510,7 +509,7 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -522,7 +521,7 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		RETURNING id
 	`, req.Name, req.CategoryID, req.ImageName, req.ImageTag, req.RestartPolicy, req.Command, req.UserSpec).Scan(&serviceID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -532,7 +531,7 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 			VALUES ($1, $2, $3, $4, $5)
 		`, serviceID, port.HostIP, port.HostPort, port.ContainerPort, port.Protocol)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
@@ -543,7 +542,7 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 			VALUES ($1, $2, $3, $4, $5, $6)
 		`, serviceID, vol.VolumeType, vol.Source, vol.Target, vol.ReadOnly, vol.IsExternal)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
@@ -556,7 +555,7 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		if env.IsSecret && value != "" {
 			encrypted, err := h.cipher.Encrypt(value)
 			if err != nil {
-				http.Error(w, fmt.Sprintf("failed to encrypt secret: %v", err), http.StatusInternalServerError)
+				respond.InternalError(w, r, fmt.Errorf("failed to encrypt secret: %w", err))
 				return
 			}
 			encryptedValue = sql.NullString{String: encrypted, Valid: true}
@@ -569,7 +568,7 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 			VALUES ($1, $2, $3, $4, $5, $6)
 		`, serviceID, env.Key, value, env.IsSecret, encryptedValue, encryptionVersion)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
@@ -578,7 +577,7 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		var depID int
 		err := tx.QueryRow("SELECT id FROM services WHERE name = $1", depName).Scan(&depID)
 		if err != nil {
-			http.Error(w, "dependency not found: "+depName, http.StatusBadRequest)
+			respond.BadRequest(w, r, "dependency not found: "+depName)
 			return
 		}
 		_, err = tx.Exec(`
@@ -586,7 +585,7 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 			VALUES ($1, $2)
 		`, serviceID, depID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
@@ -597,7 +596,7 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 			VALUES ($1, $2, $3)
 		`, serviceID, label.Key, label.Value)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
@@ -608,7 +607,7 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 			VALUES ($1, $2, $3)
 		`, serviceID, domain.Domain, domain.ProxyPort)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
@@ -619,19 +618,17 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 			VALUES ($1, $2, $3, $4, $5, $6)
 		`, serviceID, req.Healthcheck.Test, req.Healthcheck.IntervalSeconds, req.Healthcheck.TimeoutSeconds, req.Healthcheck.Retries, req.Healthcheck.StartPeriodSeconds)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]int{"id": serviceID})
+	respond.JSON(w, r, http.StatusCreated, map[string]int{"id": serviceID})
 }
 
 func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -651,11 +648,11 @@ func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 		&s.CreatedAt, &s.UpdatedAt, &catName, &s.ComposeOverrides,
 	)
 	if err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -665,7 +662,7 @@ func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	var req createServiceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid JSON body")
 		return
 	}
 
@@ -681,12 +678,11 @@ func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 		WHERE id = $6
 	`, req.ImageName, req.ImageTag, req.RestartPolicy, req.Command, req.UserSpec, s.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *ServiceHandler) snapshotConfig(s *models.Service, summary string) {
@@ -731,27 +727,26 @@ func (h *ServiceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.db.Exec("DELETE FROM services WHERE name = $1", name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	affected, err := result.RowsAffected()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	if affected == 0 {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
 func (h *ServiceHandler) Start(w http.ResponseWriter, r *http.Request) {
 	if h.containerClient == nil {
-		http.Error(w, "compose operations unavailable", http.StatusServiceUnavailable)
+		respond.Error(w, r, http.StatusServiceUnavailable, "service_unavailable", "compose operations unavailable", nil)
 		return
 	}
 
@@ -759,40 +754,39 @@ func (h *ServiceHandler) Start(w http.ResponseWriter, r *http.Request) {
 
 	s, err := h.loadServiceByName(name)
 	if err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	// Materialize config files before starting
 	if h.projectRoot != "" {
 		if err := h.generator.MaterializeConfigFiles(s, h.projectRoot); err != nil {
-			http.Error(w, "materialize config: "+err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, fmt.Errorf("materialize config: %w", err))
 			return
 		}
 	}
 
 	composeYAML, err := h.generator.Generate(s)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if err := h.containerClient.StartService(name, composeYAML); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "started"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "started"})
 }
 
 func (h *ServiceHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	if h.containerClient == nil {
-		http.Error(w, "compose operations unavailable", http.StatusServiceUnavailable)
+		respond.Error(w, r, http.StatusServiceUnavailable, "service_unavailable", "compose operations unavailable", nil)
 		return
 	}
 
@@ -800,32 +794,31 @@ func (h *ServiceHandler) Stop(w http.ResponseWriter, r *http.Request) {
 
 	s, err := h.loadServiceByName(name)
 	if err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	composeYAML, err := h.generator.Generate(s)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if err := h.containerClient.StopService(name, composeYAML); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "stopped"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "stopped"})
 }
 
 func (h *ServiceHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	if h.containerClient == nil {
-		http.Error(w, "compose operations unavailable", http.StatusServiceUnavailable)
+		respond.Error(w, r, http.StatusServiceUnavailable, "service_unavailable", "compose operations unavailable", nil)
 		return
 	}
 
@@ -833,32 +826,31 @@ func (h *ServiceHandler) Restart(w http.ResponseWriter, r *http.Request) {
 
 	s, err := h.loadServiceByName(name)
 	if err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	composeYAML, err := h.generator.Generate(s)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if err := h.containerClient.RestartService(name, composeYAML); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "restarted"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "restarted"})
 }
 
 func (h *ServiceHandler) Rebuild(w http.ResponseWriter, r *http.Request) {
 	if h.containerClient == nil {
-		http.Error(w, "compose operations unavailable", http.StatusServiceUnavailable)
+		respond.Error(w, r, http.StatusServiceUnavailable, "service_unavailable", "compose operations unavailable", nil)
 		return
 	}
 
@@ -866,36 +858,35 @@ func (h *ServiceHandler) Rebuild(w http.ResponseWriter, r *http.Request) {
 
 	s, err := h.loadServiceByName(name)
 	if err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	// Materialize config files before rebuilding
 	if h.projectRoot != "" {
 		if err := h.generator.MaterializeConfigFiles(s, h.projectRoot); err != nil {
-			http.Error(w, "materialize config: "+err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, fmt.Errorf("materialize config: %w", err))
 			return
 		}
 	}
 
 	composeYAML, err := h.generator.Generate(s)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	noCache := r.URL.Query().Get("no_cache") == "true"
 	if err := h.containerClient.RebuildService(name, composeYAML, noCache); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "rebuilt"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "rebuilt"})
 }
 
 func (h *ServiceHandler) Status(w http.ResponseWriter, r *http.Request) {
@@ -903,12 +894,11 @@ func (h *ServiceHandler) Status(w http.ResponseWriter, r *http.Request) {
 
 	status, err := h.podmanClient.GetServiceState(r.Context(), name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(status)
+	respond.JSON(w, r, http.StatusOK, status)
 }
 
 func (h *ServiceHandler) Logs(w http.ResponseWriter, r *http.Request) {
@@ -923,7 +913,7 @@ func (h *ServiceHandler) Logs(w http.ResponseWriter, r *http.Request) {
 
 	logs, err := h.podmanClient.ContainerLogsString(r.Context(), name, tail)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -936,12 +926,11 @@ func (h *ServiceHandler) Metrics(w http.ResponseWriter, r *http.Request) {
 
 	metrics, err := h.podmanClient.GetServiceMetrics(r.Context(), name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(metrics)
+	respond.JSON(w, r, http.StatusOK, metrics)
 }
 
 func (h *ServiceHandler) Compose(w http.ResponseWriter, r *http.Request) {
@@ -949,17 +938,17 @@ func (h *ServiceHandler) Compose(w http.ResponseWriter, r *http.Request) {
 
 	s, err := h.loadServiceByName(name)
 	if err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	composeYAML, err := h.generator.Generate(s)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -974,13 +963,13 @@ type bulkRequest struct {
 
 func (h *ServiceHandler) Bulk(w http.ResponseWriter, r *http.Request) {
 	if h.containerClient == nil {
-		http.Error(w, "compose operations unavailable", http.StatusServiceUnavailable)
+		respond.Error(w, r, http.StatusServiceUnavailable, "service_unavailable", "compose operations unavailable", nil)
 		return
 	}
 
 	var req bulkRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid JSON body")
 		return
 	}
 
@@ -1018,8 +1007,7 @@ func (h *ServiceHandler) Bulk(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(results)
+	respond.JSON(w, r, http.StatusOK, results)
 }
 
 func (h *ServiceHandler) Versions(w http.ResponseWriter, r *http.Request) {
@@ -1027,10 +1015,10 @@ func (h *ServiceHandler) Versions(w http.ResponseWriter, r *http.Request) {
 
 	var serviceID int
 	if err := h.db.QueryRow("SELECT id FROM services WHERE name = $1", name).Scan(&serviceID); err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	} else if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -1041,7 +1029,7 @@ func (h *ServiceHandler) Versions(w http.ResponseWriter, r *http.Request) {
 		ORDER BY version DESC
 	`, serviceID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -1050,14 +1038,13 @@ func (h *ServiceHandler) Versions(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var v models.ConfigVersion
 		if err := rows.Scan(&v.ID, &v.ServiceID, &v.Version, &v.ConfigSnapshot, &v.ChangeSummary, &v.CreatedAt); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		versions = append(versions, v)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(versions)
+	respond.JSON(w, r, http.StatusOK, versions)
 }
 
 func (h *ServiceHandler) GetVersion(w http.ResponseWriter, r *http.Request) {
@@ -1065,16 +1052,16 @@ func (h *ServiceHandler) GetVersion(w http.ResponseWriter, r *http.Request) {
 	versionStr := chi.URLParam(r, "version")
 	version, err := strconv.Atoi(versionStr)
 	if err != nil {
-		http.Error(w, "invalid version", http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid version")
 		return
 	}
 
 	var serviceID int
 	if err := h.db.QueryRow("SELECT id FROM services WHERE name = $1", name).Scan(&serviceID); err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	} else if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -1085,16 +1072,15 @@ func (h *ServiceHandler) GetVersion(w http.ResponseWriter, r *http.Request) {
 		WHERE service_id = $1 AND version = $2
 	`, serviceID, version).Scan(&v.ID, &v.ServiceID, &v.Version, &v.ConfigSnapshot, &v.ChangeSummary, &v.CreatedAt)
 	if err == sql.ErrNoRows {
-		http.Error(w, "version not found", http.StatusNotFound)
+		respond.NotFound(w, r, "version", versionStr)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(v)
+	respond.JSON(w, r, http.StatusOK, v)
 }
 
 func (h *ServiceHandler) Validate(w http.ResponseWriter, r *http.Request) {
@@ -1102,11 +1088,11 @@ func (h *ServiceHandler) Validate(w http.ResponseWriter, r *http.Request) {
 
 	s, err := h.loadServiceByName(name)
 	if err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -1124,8 +1110,7 @@ func (h *ServiceHandler) Validate(w http.ResponseWriter, r *http.Request) {
 		WHERE id = $3
 	`, status, errorsJSON, s.ID)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	respond.JSON(w, r, http.StatusOK, result)
 }
 
 func (h *ServiceHandler) Export(w http.ResponseWriter, r *http.Request) {
@@ -1133,11 +1118,11 @@ func (h *ServiceHandler) Export(w http.ResponseWriter, r *http.Request) {
 
 	s, err := h.loadServiceByName(name)
 	if err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -1146,12 +1131,11 @@ func (h *ServiceHandler) Export(w http.ResponseWriter, r *http.Request) {
 
 	composeYAML, err := h.generator.Generate(s)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	respond.JSON(w, r, http.StatusOK, map[string]interface{}{
 		"service":  name,
 		"category": catName,
 		"yaml":     string(composeYAML),
@@ -1163,27 +1147,26 @@ func (h *ServiceHandler) Materialize(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	if h.projectRoot == "" {
-		http.Error(w, "PROJECT_ROOT not set", http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("PROJECT_ROOT not set"))
 		return
 	}
 
 	s, err := h.loadServiceByName(name)
 	if err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if err := h.generator.MaterializeConfigFiles(s, h.projectRoot); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "materialized"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "materialized"})
 }
 
 // ListConfigFiles returns config files for a service
@@ -1192,10 +1175,10 @@ func (h *ServiceHandler) ListConfigFiles(w http.ResponseWriter, r *http.Request)
 
 	var serviceID int
 	if err := h.db.QueryRow("SELECT id FROM services WHERE name = $1", name).Scan(&serviceID); err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	} else if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -1204,7 +1187,7 @@ func (h *ServiceHandler) ListConfigFiles(w http.ResponseWriter, r *http.Request)
 		FROM service_config_files WHERE service_id = $1 ORDER BY file_path
 	`, serviceID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -1213,7 +1196,7 @@ func (h *ServiceHandler) ListConfigFiles(w http.ResponseWriter, r *http.Request)
 	for rows.Next() {
 		var f models.ServiceConfigFile
 		if err := rows.Scan(&f.ID, &f.ServiceID, &f.FilePath, &f.FileMode, &f.IsTemplate, &f.CreatedAt, &f.UpdatedAt); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		files = append(files, f)
@@ -1223,8 +1206,7 @@ func (h *ServiceHandler) ListConfigFiles(w http.ResponseWriter, r *http.Request)
 		files = []models.ServiceConfigFile{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(files)
+	respond.JSON(w, r, http.StatusOK, files)
 }
 
 // GetConfigFile returns a single config file's content
@@ -1234,10 +1216,10 @@ func (h *ServiceHandler) GetConfigFile(w http.ResponseWriter, r *http.Request) {
 
 	var serviceID int
 	if err := h.db.QueryRow("SELECT id FROM services WHERE name = $1", name).Scan(&serviceID); err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	} else if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -1247,16 +1229,15 @@ func (h *ServiceHandler) GetConfigFile(w http.ResponseWriter, r *http.Request) {
 		FROM service_config_files WHERE service_id = $1 AND file_path = $2
 	`, serviceID, filePath).Scan(&f.ID, &f.ServiceID, &f.FilePath, &f.Content, &f.FileMode, &f.IsTemplate, &f.CreatedAt, &f.UpdatedAt)
 	if err == sql.ErrNoRows {
-		http.Error(w, "file not found", http.StatusNotFound)
+		respond.NotFound(w, r, "file", filePath)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(f)
+	respond.JSON(w, r, http.StatusOK, f)
 }
 
 // PutConfigFile creates or updates a config file
@@ -1266,10 +1247,10 @@ func (h *ServiceHandler) PutConfigFile(w http.ResponseWriter, r *http.Request) {
 
 	var serviceID int
 	if err := h.db.QueryRow("SELECT id FROM services WHERE name = $1", name).Scan(&serviceID); err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	} else if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -1280,7 +1261,7 @@ func (h *ServiceHandler) PutConfigFile(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		// Fall back to reading raw body as content
 		r.Body = io.NopCloser(strings.NewReader(""))
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid request body")
 		return
 	}
 
@@ -1295,12 +1276,11 @@ func (h *ServiceHandler) PutConfigFile(w http.ResponseWriter, r *http.Request) {
 			content = $3, file_mode = $4, updated_at = NOW()
 	`, serviceID, filePath, req.Content, req.FileMode)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "saved"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "saved"})
 }
 
 func (h *ServiceHandler) lookupServiceID(w http.ResponseWriter, r *http.Request) (int, bool) {
@@ -1308,11 +1288,11 @@ func (h *ServiceHandler) lookupServiceID(w http.ResponseWriter, r *http.Request)
 	var id int
 	err := h.db.QueryRow("SELECT id FROM services WHERE name = $1", name).Scan(&id)
 	if err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return 0, false
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return 0, false
 	}
 	return id, true
@@ -1340,7 +1320,7 @@ func (h *ServiceHandler) UpdatePorts(w http.ResponseWriter, r *http.Request) {
 		Ports []models.ServicePort `json:"ports"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid JSON body")
 		return
 	}
 
@@ -1348,7 +1328,7 @@ func (h *ServiceHandler) UpdatePorts(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -1360,18 +1340,17 @@ func (h *ServiceHandler) UpdatePorts(w http.ResponseWriter, r *http.Request) {
 			serviceID, p.HostIP, p.HostPort, p.ContainerPort, p.Protocol,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *ServiceHandler) UpdateVolumes(w http.ResponseWriter, r *http.Request) {
@@ -1384,7 +1363,7 @@ func (h *ServiceHandler) UpdateVolumes(w http.ResponseWriter, r *http.Request) {
 		Volumes []models.ServiceVolume `json:"volumes"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid JSON body")
 		return
 	}
 
@@ -1392,7 +1371,7 @@ func (h *ServiceHandler) UpdateVolumes(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -1404,18 +1383,17 @@ func (h *ServiceHandler) UpdateVolumes(w http.ResponseWriter, r *http.Request) {
 			serviceID, v.VolumeType, v.Source, v.Target, v.ReadOnly, v.IsExternal,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *ServiceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) {
@@ -1428,7 +1406,7 @@ func (h *ServiceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) {
 		EnvVars []models.ServiceEnvVar `json:"env_vars"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid JSON body")
 		return
 	}
 
@@ -1436,7 +1414,7 @@ func (h *ServiceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -1448,7 +1426,7 @@ func (h *ServiceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) {
 	existingSecrets := map[string]existingSecret{}
 	rows, err := tx.Query("SELECT key, encrypted_value, encryption_version FROM service_env_vars WHERE service_id = $1 AND is_secret = true", serviceID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	for rows.Next() {
@@ -1456,7 +1434,7 @@ func (h *ServiceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) {
 		var secret existingSecret
 		if err := rows.Scan(&key, &secret.encryptedValue, &secret.encryptionVersion); err != nil {
 			rows.Close()
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		existingSecrets[key] = secret
@@ -1479,7 +1457,7 @@ func (h *ServiceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) {
 			} else {
 				encrypted, err := h.cipher.Encrypt(e.Value)
 				if err != nil {
-					http.Error(w, fmt.Sprintf("failed to encrypt secret: %v", err), http.StatusInternalServerError)
+					respond.InternalError(w, r, fmt.Errorf("failed to encrypt secret: %w", err))
 					return
 				}
 				encryptedValue = sql.NullString{String: encrypted, Valid: true}
@@ -1493,18 +1471,17 @@ func (h *ServiceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) {
 			serviceID, e.Key, value, e.IsSecret, encryptedValue, encryptionVersion,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *ServiceHandler) UpdateDependencies(w http.ResponseWriter, r *http.Request) {
@@ -1517,7 +1494,7 @@ func (h *ServiceHandler) UpdateDependencies(w http.ResponseWriter, r *http.Reque
 		Dependencies []string `json:"dependencies"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid JSON body")
 		return
 	}
 
@@ -1525,7 +1502,7 @@ func (h *ServiceHandler) UpdateDependencies(w http.ResponseWriter, r *http.Reque
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -1535,7 +1512,7 @@ func (h *ServiceHandler) UpdateDependencies(w http.ResponseWriter, r *http.Reque
 		var depID int
 		err := tx.QueryRow("SELECT id FROM services WHERE name = $1", depName).Scan(&depID)
 		if err != nil {
-			http.Error(w, "dependency not found: "+depName, http.StatusBadRequest)
+			respond.BadRequest(w, r, "dependency not found: "+depName)
 			return
 		}
 		_, err = tx.Exec(
@@ -1543,18 +1520,17 @@ func (h *ServiceHandler) UpdateDependencies(w http.ResponseWriter, r *http.Reque
 			serviceID, depID,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *ServiceHandler) UpdateHealthcheck(w http.ResponseWriter, r *http.Request) {
@@ -1565,7 +1541,7 @@ func (h *ServiceHandler) UpdateHealthcheck(w http.ResponseWriter, r *http.Reques
 
 	var req *models.ServiceHealthcheck
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid JSON body")
 		return
 	}
 
@@ -1579,13 +1555,12 @@ func (h *ServiceHandler) UpdateHealthcheck(w http.ResponseWriter, r *http.Reques
 			serviceID, req.Test, req.IntervalSeconds, req.TimeoutSeconds, req.Retries, req.StartPeriodSeconds,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *ServiceHandler) UpdateLabels(w http.ResponseWriter, r *http.Request) {
@@ -1598,7 +1573,7 @@ func (h *ServiceHandler) UpdateLabels(w http.ResponseWriter, r *http.Request) {
 		Labels []models.ServiceLabel `json:"labels"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid JSON body")
 		return
 	}
 
@@ -1606,7 +1581,7 @@ func (h *ServiceHandler) UpdateLabels(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -1618,18 +1593,17 @@ func (h *ServiceHandler) UpdateLabels(w http.ResponseWriter, r *http.Request) {
 			serviceID, l.Key, l.Value,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *ServiceHandler) UpdateDomains(w http.ResponseWriter, r *http.Request) {
@@ -1642,7 +1616,7 @@ func (h *ServiceHandler) UpdateDomains(w http.ResponseWriter, r *http.Request) {
 		Domains []models.ServiceDomain `json:"domains"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid JSON body")
 		return
 	}
 
@@ -1650,7 +1624,7 @@ func (h *ServiceHandler) UpdateDomains(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -1662,18 +1636,17 @@ func (h *ServiceHandler) UpdateDomains(w http.ResponseWriter, r *http.Request) {
 			serviceID, d.Domain, d.ProxyPort,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *ServiceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request) {
@@ -1686,17 +1659,17 @@ func (h *ServiceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request) 
 		EnvFiles []string `json:"env_files"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid JSON body")
 		return
 	}
 
 	for _, path := range req.EnvFiles {
 		if strings.TrimSpace(path) == "" {
-			http.Error(w, "env_file path cannot be empty", http.StatusBadRequest)
+			respond.BadRequest(w, r, "env_file path cannot be empty")
 			return
 		}
 		if strings.Contains(path, "..") || strings.HasPrefix(path, "/") {
-			http.Error(w, "env_file path must be relative and cannot contain '..'", http.StatusBadRequest)
+			respond.BadRequest(w, r, "env_file path must be relative and cannot contain '..'")
 			return
 		}
 	}
@@ -1705,7 +1678,7 @@ func (h *ServiceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request) 
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -1717,18 +1690,17 @@ func (h *ServiceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request) 
 			serviceID, path, idx,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *ServiceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request) {
@@ -1741,18 +1713,18 @@ func (h *ServiceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request) 
 		Networks []string `json:"networks"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid JSON body")
 		return
 	}
 
 	for _, name := range req.Networks {
 		trimmed := strings.TrimSpace(name)
 		if trimmed == "" {
-			http.Error(w, "network name cannot be empty", http.StatusBadRequest)
+			respond.BadRequest(w, r, "network name cannot be empty")
 			return
 		}
 		if strings.ContainsAny(trimmed, " \t/\\:") {
-			http.Error(w, fmt.Sprintf("invalid network name %q: contains disallowed characters", trimmed), http.StatusBadRequest)
+			respond.BadRequest(w, r, fmt.Sprintf("invalid network name %q: contains disallowed characters", trimmed))
 			return
 		}
 	}
@@ -1761,7 +1733,7 @@ func (h *ServiceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request) 
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -1773,18 +1745,17 @@ func (h *ServiceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request) 
 			serviceID, name,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *ServiceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Request) {
@@ -1797,17 +1768,17 @@ func (h *ServiceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Reque
 		ConfigMounts []models.ServiceConfigMount `json:"config_mounts"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid JSON body")
 		return
 	}
 
 	for _, m := range req.ConfigMounts {
 		if strings.TrimSpace(m.TargetPath) == "" {
-			http.Error(w, "config mount target_path cannot be empty", http.StatusBadRequest)
+			respond.BadRequest(w, r, "config mount target_path cannot be empty")
 			return
 		}
 		if strings.Contains(m.SourcePath, "..") {
-			http.Error(w, "config mount source_path cannot contain '..'", http.StatusBadRequest)
+			respond.BadRequest(w, r, "config mount source_path cannot contain '..'")
 			return
 		}
 	}
@@ -1816,7 +1787,7 @@ func (h *ServiceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Reque
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -1832,18 +1803,17 @@ func (h *ServiceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Reque
 			serviceID, cfgFileID, m.SourcePath, m.TargetPath, m.ReadOnly,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 // DeleteConfigFile removes a config file
@@ -1853,31 +1823,30 @@ func (h *ServiceHandler) DeleteConfigFile(w http.ResponseWriter, r *http.Request
 
 	var serviceID int
 	if err := h.db.QueryRow("SELECT id FROM services WHERE name = $1", name).Scan(&serviceID); err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	} else if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	result, err := h.db.Exec("DELETE FROM service_config_files WHERE service_id = $1 AND file_path = $2", serviceID, filePath)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	affected, err := result.RowsAffected()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	if affected == 0 {
-		http.Error(w, "file not found", http.StatusNotFound)
+		respond.NotFound(w, r, "file", filePath)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
 // ListExports returns export contracts for a service template
@@ -1894,7 +1863,7 @@ func (h *ServiceHandler) ListExports(w http.ResponseWriter, r *http.Request) {
 		ORDER BY name
 	`, serviceID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -1911,7 +1880,7 @@ func (h *ServiceHandler) ListExports(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var e Export
 		if err := rows.Scan(&e.ID, &e.Name, &e.Type, &e.Port, &e.Protocol); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		exports = append(exports, e)
@@ -1921,8 +1890,7 @@ func (h *ServiceHandler) ListExports(w http.ResponseWriter, r *http.Request) {
 		exports = []Export{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(exports)
+	respond.JSON(w, r, http.StatusOK, exports)
 }
 
 // UpdateExports replaces all export contracts for a service template
@@ -1943,13 +1911,13 @@ func (h *ServiceHandler) UpdateExports(w http.ResponseWriter, r *http.Request) {
 		Exports []Export `json:"exports"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid JSON body")
 		return
 	}
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -1965,18 +1933,17 @@ func (h *ServiceHandler) UpdateExports(w http.ResponseWriter, r *http.Request) {
 			serviceID, e.Name, e.Type, e.Port, protocol,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 // ListImports returns import contracts for a service template
@@ -1993,7 +1960,7 @@ func (h *ServiceHandler) ListImports(w http.ResponseWriter, r *http.Request) {
 		ORDER BY name
 	`, serviceID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -2011,11 +1978,11 @@ func (h *ServiceHandler) ListImports(w http.ResponseWriter, r *http.Request) {
 		var i Import
 		var envVarsJSON []byte
 		if err := rows.Scan(&i.ID, &i.Name, &i.Type, &i.Required, &envVarsJSON); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		if err := json.Unmarshal(envVarsJSON, &i.EnvVars); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		imports = append(imports, i)
@@ -2025,8 +1992,7 @@ func (h *ServiceHandler) ListImports(w http.ResponseWriter, r *http.Request) {
 		imports = []Import{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(imports)
+	respond.JSON(w, r, http.StatusOK, imports)
 }
 
 // UpdateImports replaces all import contracts for a service template
@@ -2047,13 +2013,13 @@ func (h *ServiceHandler) UpdateImports(w http.ResponseWriter, r *http.Request) {
 		Imports []Import `json:"imports"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid JSON body")
 		return
 	}
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -2062,7 +2028,7 @@ func (h *ServiceHandler) UpdateImports(w http.ResponseWriter, r *http.Request) {
 	for _, i := range req.Imports {
 		envVarsJSON, err := json.Marshal(i.EnvVars)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		_, err = tx.Exec(
@@ -2070,16 +2036,15 @@ func (h *ServiceHandler) UpdateImports(w http.ResponseWriter, r *http.Request) {
 			serviceID, i.Name, i.Type, i.Required, envVarsJSON,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
