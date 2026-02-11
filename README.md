@@ -760,7 +760,7 @@ Manual sync can be triggered via `POST /api/v1/sync`. Job status visible at `GET
 
 ## 14. Database Schema
 
-11 migration files (001-011) creating ~40 tables:
+12 migration files (001-012) creating ~40 tables:
 
 | Migration | Tables Created |
 |-----------|---------------|
@@ -775,6 +775,7 @@ Manual sync can be triggered via `POST /api/v1/sync`. Job status visible at `GET
 | 009 | Performance indexes |
 | 010 | Additional instance override tables |
 | 011 | Drops `project_services`, adds `stacks.project_id`, makes `projects.stack_id NOT NULL` |
+| 012 | Fixes flowstate build context paths in `compose_overrides` |
 
 ---
 

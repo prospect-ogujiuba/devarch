@@ -43,7 +43,7 @@ docker compose up      # postgres :5433, api :8550
 - `internal/podman/` — Podman-specific implementation
 - `internal/nginx/` — nginx config generation
 - `internal/project/` — project controller
-- `migrations/` — 11 SQL migrations (001-011)
+- `migrations/` — 12 SQL migrations (001-012)
 
 **Dashboard** (`dashboard/`): React 19, Vite, TanStack Router (file-based) + Query, Tailwind 4, Radix UI, Zod, CodeMirror
 - `src/routes/` — page components (services, projects, categories, settings)
