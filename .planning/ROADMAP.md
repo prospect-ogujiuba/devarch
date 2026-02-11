@@ -145,10 +145,11 @@ Plans:
   3. Identity service owns network naming conventions
   4. Identity service owns container naming conventions
   5. No ad-hoc `fmt.Sprintf("devarch-...")` calls remain outside identity service
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 22-01-PLAN.md — Create identity package (naming service, validation, labels)
+- [ ] 22-02-PLAN.md — Migrate all callers to identity package, delete container naming/validation
 
 #### Phase 23: Performance Optimization
 **Goal**: Status/metrics batch retrieval, accurate filtered counts, optimized override queries
