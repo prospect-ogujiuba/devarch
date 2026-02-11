@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -54,6 +55,16 @@ func NewWebSocketHandler(sm *devsync.Manager, allowedOrigins []string, secMode s
 }
 
 func (h *WebSocketHandler) Handle(w http.ResponseWriter, r *http.Request) {
+	// Validate WS token if required by security mode
+	if h.secMode.RequiresWSAuth() {
+		token := r.URL.Query().Get("token")
+		apiKey := os.Getenv("DEVARCH_API_KEY")
+		if err := security.ValidateWSToken(token, []byte(apiKey)); err != nil {
+			http.Error(w, "unauthorized: invalid or missing ws token", http.StatusUnauthorized)
+			return
+		}
+	}
+
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("websocket upgrade error: %v", err)

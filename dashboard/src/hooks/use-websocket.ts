@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { WebSocketMessage } from '@/types/api'
+import { fetchWSToken } from '@/lib/api'
 
 const BASE_DELAY = 3000
 const MAX_DELAY = 30000
@@ -26,11 +27,16 @@ export function useWebSocket() {
       }
     }
 
-    function connect() {
+    async function connect() {
       if (!mounted) return
 
+      const token = await fetchWSToken()
+
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const wsUrl = `${protocol}//${window.location.host}/api/v1/ws/status`
+      let wsUrl = `${protocol}//${window.location.host}/api/v1/ws/status`
+      if (token) {
+        wsUrl += `?token=${encodeURIComponent(token)}`
+      }
 
       try {
         const ws = new WebSocket(wsUrl)
