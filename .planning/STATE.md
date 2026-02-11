@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Phase 17: CORS Origin Hardening
+**Current focus:** Phase 18: WebSocket Auth & Security Modes
 
 ## Current Position
 
-Phase: 17 of 28 (CORS Origin Hardening)
-Plan: 1 of 1 in current phase
-Status: Phase complete
-Last activity: 2026-02-11 — Completed 17-01 CORS Origin Hardening
+Phase: 18 of 28 (WebSocket Auth & Security Modes)
+Plan: 2 of 2 in current phase
+Status: Complete
+Last activity: 2026-02-11 — Completed Phase 18 WebSocket Auth & Security Modes
 
-Progress: [██████████] 100% (Phase 17 complete)
+Progress: [██████████] 100% (Phase 18, 2 of 2 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) = 46
-- Average duration: ~4.5 minutes per plan
+- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) + 2 (v1.1.3) = 48
+- Average duration: ~4.3 minutes per plan
 - Total execution time: ~3.5 hours
 
 **By Phase:**
@@ -31,15 +31,18 @@ Progress: [██████████] 100% (Phase 17 complete)
 | v1.1 (10-15) | 14 | ~1.8h | ~7.7min |
 | v1.1.1 (16) | 1 | 42s | 42s |
 | v1.1.2 (17) | 1 | 98s | 98s |
+| v1.1.3 (18) | 2 | 302s | 151s |
 
 **Recent Trend:**
 - v1.0 shipped successfully on 2026-02-09
 - v1.1 shipped successfully on 2026-02-10
-- v1.1.1 ready to begin
+- v1.1.1-v1.1.3 in progress
 
 *Updated after each plan completion*
 | Phase 16 P01 | 42 | 1 tasks | 2 files |
 | Phase 17 P01 | 98 | 2 tasks | 4 files |
+| Phase 18 P01 | 165 | 2 tasks | 7 files |
+| Phase 18 P02 | 137 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -53,6 +56,10 @@ Recent decisions affecting current work:
 - MaxBodySize scope isolation (Phase 15-02): Register large-limit routes outside restrictive groups
 - [Phase 17]: Use comma-separated ALLOWED_ORIGINS env var for both CORS and WebSocket (single source of truth)
 - [Phase 17]: Default to wildcard when ALLOWED_ORIGINS unset (dev-friendly, no breaking changes)
+- [Phase 18-01]: Empty SECURITY_MODE defaults to dev-open for backward compatibility
+- [Phase 18-01]: Mode validation at startup prevents invalid runtime configuration
+- [Phase 18]: HMAC-SHA256 signing using DEVARCH_API_KEY as secret (no additional secret needed)
+- [Phase 18]: 60-second WS token TTL (sufficient for upgrade handshake)
 
 ### Pending Todos
 
@@ -65,9 +72,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 17-01-PLAN.md
+Stopped at: Completed 18-02-PLAN.md
 Resume file: None
-Next: Continue with Phase 18
+Next: Phase 18 complete — await next phase
 
 ---
 *Last updated: 2026-02-11*
