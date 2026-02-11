@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/export"
 	"github.com/priz/devarch-api/internal/lock"
 )
@@ -20,7 +21,7 @@ func (h *StackHandler) GenerateLock(w http.ResponseWriter, r *http.Request) {
 	var req generateLockRequest
 	if r.ContentLength > 0 {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+			respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 			return
 		}
 	}
@@ -34,10 +35,10 @@ func (h *StackHandler) GenerateLock(w http.ResponseWriter, r *http.Request) {
 		ymlContent, err = exporter.Export(stackName)
 		if err != nil {
 			if err.Error() == fmt.Sprintf("stack %q not found", stackName) {
-				http.Error(w, err.Error(), http.StatusNotFound)
+				respond.NotFound(w, r, "stack", stackName)
 				return
 			}
-			http.Error(w, fmt.Sprintf("export failed: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
@@ -45,13 +46,13 @@ func (h *StackHandler) GenerateLock(w http.ResponseWriter, r *http.Request) {
 	generator := lock.NewGenerator(h.db, h.containerClient)
 	lockFile, err := generator.Generate(stackName, ymlContent)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("generate lock failed: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	lockJSON, err := json.MarshalIndent(lockFile, "", "  ")
 	if err != nil {
-		http.Error(w, fmt.Sprintf("marshal lock failed: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -66,19 +67,18 @@ func (h *StackHandler) ValidateLock(w http.ResponseWriter, r *http.Request) {
 
 	var lockFile lock.LockFile
 	if err := json.NewDecoder(r.Body).Decode(&lockFile); err != nil {
-		http.Error(w, fmt.Sprintf("invalid lock file: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid lock file: %v", err))
 		return
 	}
 
 	validator := lock.NewValidator(h.db, h.containerClient)
 	result, err := validator.Validate(&lockFile, stackName)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("validation failed: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	respond.JSON(w, r, http.StatusOK, result)
 }
 
 func (h *StackHandler) RefreshLock(w http.ResponseWriter, r *http.Request) {
@@ -88,23 +88,23 @@ func (h *StackHandler) RefreshLock(w http.ResponseWriter, r *http.Request) {
 	ymlContent, err := exporter.Export(stackName)
 	if err != nil {
 		if err.Error() == fmt.Sprintf("stack %q not found", stackName) {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			respond.NotFound(w, r, "stack", stackName)
 			return
 		}
-		http.Error(w, fmt.Sprintf("export failed: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	generator := lock.NewGenerator(h.db, h.containerClient)
 	lockFile, err := generator.Generate(stackName, ymlContent)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("generate lock failed: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	lockJSON, err := json.MarshalIndent(lockFile, "", "  ")
 	if err != nil {
-		http.Error(w, fmt.Sprintf("marshal lock failed: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
