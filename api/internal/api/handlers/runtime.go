@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"strings"
 
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/podman"
 )
@@ -106,8 +107,7 @@ func (h *RuntimeHandler) Status(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = ctx
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	respond.JSON(w, r, http.StatusOK,resp)
 }
 
 type switchRequest struct {
@@ -124,12 +124,12 @@ type switchOptions struct {
 func (h *RuntimeHandler) Switch(w http.ResponseWriter, r *http.Request) {
 	var req switchRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, err.Error())
 		return
 	}
 
 	if req.Runtime != "docker" && req.Runtime != "podman" {
-		http.Error(w, `runtime must be "docker" or "podman"`, http.StatusBadRequest)
+		respond.BadRequest(w, r, `runtime must be "docker" or "podman"`)
 		return
 	}
 
@@ -152,7 +152,7 @@ func (h *RuntimeHandler) Switch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := execRuntime(req.Runtime, "version"); err != nil {
-		http.Error(w, fmt.Sprintf("%s is not installed or not accessible", req.Runtime), http.StatusServiceUnavailable)
+		respond.Error(w, r, http.StatusServiceUnavailable, "service_unavailable", fmt.Sprintf("%s is not installed or not accessible", req.Runtime), nil)
 		return
 	}
 
@@ -190,8 +190,7 @@ func (h *RuntimeHandler) Switch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	respond.JSON(w, r, http.StatusOK,map[string]interface{}{
 		"previous":         current,
 		"current":          req.Runtime,
 		"services_stopped": servicesStopped,
@@ -285,8 +284,7 @@ func (h *RuntimeHandler) SocketStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	respond.JSON(w, r, http.StatusOK,resp)
 }
 
 type socketStartRequest struct {
@@ -302,7 +300,7 @@ type socketStartOptions struct {
 func (h *RuntimeHandler) SocketStart(w http.ResponseWriter, r *http.Request) {
 	var req socketStartRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, err.Error())
 		return
 	}
 
@@ -310,7 +308,7 @@ func (h *RuntimeHandler) SocketStart(w http.ResponseWriter, r *http.Request) {
 		req.Type = "rootless"
 	}
 	if req.Type != "rootless" && req.Type != "rootful" {
-		http.Error(w, `type must be "rootless" or "rootful"`, http.StatusBadRequest)
+		respond.BadRequest(w, r, `type must be "rootless" or "rootful"`)
 		return
 	}
 
@@ -332,7 +330,7 @@ func (h *RuntimeHandler) SocketStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !startSystemdService("podman.socket", isUser) {
-		http.Error(w, fmt.Sprintf("could not start %s podman socket", req.Type), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("could not start %s podman socket", req.Type))
 		return
 	}
 
@@ -342,8 +340,7 @@ func (h *RuntimeHandler) SocketStart(w http.ResponseWriter, r *http.Request) {
 		socketPath = "/run/podman/podman.sock"
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	respond.JSON(w, r, http.StatusOK,map[string]interface{}{
 		"type":        req.Type,
 		"socket_path": socketPath,
 		"connectivity": "started",

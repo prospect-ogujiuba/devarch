@@ -136,9 +136,7 @@ func (h *NetworkHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	info, err := h.containerClient.InspectNetwork(req.Name)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(map[string]string{
+		respond.JSON(w, r, http.StatusCreated, map[string]string{
 			"status":  "created",
 			"network": req.Name,
 		})
@@ -150,9 +148,7 @@ func (h *NetworkHandler) Create(w http.ResponseWriter, r *http.Request) {
 		containers = []string{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(networkListItem{
+	respond.JSON(w, r, http.StatusCreated, networkListItem{
 		Name:           info.Name,
 		ID:             info.ID,
 		Driver:         info.Driver,

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/pkg/registry"
 )
 
@@ -43,11 +43,11 @@ func (h *RegistryHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	var imageName string
 	err := h.db.QueryRow("SELECT image_name FROM services WHERE name = $1", name).Scan(&imageName)
 	if err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -66,12 +66,11 @@ func (h *RegistryHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	if err == sql.ErrNoRows {
 		img.Repository = imageName
 		img.Registry = "unknown"
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(img)
+		respond.JSON(w, r, http.StatusOK,img)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -87,8 +86,7 @@ func (h *RegistryHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	}
 	img.Registry = registryName
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(img)
+	respond.JSON(w, r, http.StatusOK,img)
 }
 
 type tagResponse struct {
@@ -104,11 +102,11 @@ func (h *RegistryHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 	var imageName string
 	err := h.db.QueryRow("SELECT image_name FROM services WHERE name = $1", name).Scan(&imageName)
 	if err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -121,7 +119,7 @@ func (h *RegistryHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 		LIMIT 20
 	`, imageName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -148,8 +146,7 @@ func (h *RegistryHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 		tags = append(tags, t)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tags)
+	respond.JSON(w, r, http.StatusOK,tags)
 }
 
 type vulnResponse struct {
@@ -168,11 +165,11 @@ func (h *RegistryHandler) GetVulnerabilities(w http.ResponseWriter, r *http.Requ
 	var imageName, imageTag string
 	err := h.db.QueryRow("SELECT image_name, image_tag FROM services WHERE name = $1", name).Scan(&imageName, &imageTag)
 	if err == sql.ErrNoRows {
-		http.Error(w, "service not found", http.StatusNotFound)
+		respond.NotFound(w, r, "service", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -187,7 +184,7 @@ func (h *RegistryHandler) GetVulnerabilities(w http.ResponseWriter, r *http.Requ
 		ORDER BY v.cvss_score DESC NULLS LAST
 	`, imageName, imageTag)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -214,8 +211,7 @@ func (h *RegistryHandler) GetVulnerabilities(w http.ResponseWriter, r *http.Requ
 		vulns = append(vulns, vr)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(vulns)
+	respond.JSON(w, r, http.StatusOK,vulns)
 }
 
 type registryListItem struct {
@@ -227,7 +223,7 @@ type registryListItem struct {
 func (h *RegistryHandler) ListRegistries(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.db.Query("SELECT name, base_url, enabled FROM registries ORDER BY name")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -245,15 +241,14 @@ func (h *RegistryHandler) ListRegistries(w http.ResponseWriter, r *http.Request)
 		registries = []registryListItem{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(registries)
+	respond.JSON(w, r, http.StatusOK,registries)
 }
 
 func (h *RegistryHandler) SearchImages(w http.ResponseWriter, r *http.Request) {
 	registryName := chi.URLParam(r, "registry")
 	query := r.URL.Query().Get("q")
 	if query == "" {
-		http.Error(w, "query parameter 'q' is required", http.StatusBadRequest)
+		respond.BadRequest(w, r, "query parameter 'q' is required")
 		return
 	}
 
@@ -262,14 +257,13 @@ func (h *RegistryHandler) SearchImages(w http.ResponseWriter, r *http.Request) {
 
 	cacheKey := fmt.Sprintf("search:%s:%s:%d:%d", registryName, query, pageSize, page)
 	if cached, ok := h.cache.Get(cacheKey); ok {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(cached)
+		respond.JSON(w, r, http.StatusOK,cached)
 		return
 	}
 
 	reg := h.manager.Get(registryName)
 	if reg == nil {
-		http.Error(w, "registry not found", http.StatusNotFound)
+		respond.NotFound(w, r, "registry", registryName)
 		return
 	}
 
@@ -278,11 +272,11 @@ func (h *RegistryHandler) SearchImages(w http.ResponseWriter, r *http.Request) {
 		Page:     page,
 	})
 	if errors.Is(err, registry.ErrSearchNotSupported) {
-		http.Error(w, "search not supported by this registry", http.StatusNotImplemented)
+		respond.Error(w, r, http.StatusNotImplemented, "not_implemented", "search not supported by this registry", nil)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -292,41 +286,38 @@ func (h *RegistryHandler) SearchImages(w http.ResponseWriter, r *http.Request) {
 
 	h.cache.Set(cacheKey, results, 5*time.Minute)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(results)
+	respond.JSON(w, r, http.StatusOK,results)
 }
 
 func (h *RegistryHandler) GetImageInfoLive(w http.ResponseWriter, r *http.Request) {
 	registryName := chi.URLParam(r, "registry")
 	repository := chi.URLParam(r, "*")
 	if repository == "" {
-		http.Error(w, "repository path required", http.StatusBadRequest)
+		respond.BadRequest(w, r, "repository path required")
 		return
 	}
 
 	cacheKey := fmt.Sprintf("imageinfo:%s:%s", registryName, repository)
 	if cached, ok := h.cache.Get(cacheKey); ok {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(cached)
+		respond.JSON(w, r, http.StatusOK,cached)
 		return
 	}
 
 	reg := h.manager.Get(registryName)
 	if reg == nil {
-		http.Error(w, "registry not found", http.StatusNotFound)
+		respond.NotFound(w, r, "registry", registryName)
 		return
 	}
 
 	info, err := reg.GetImageInfo(r.Context(), repository)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	h.cache.Set(cacheKey, info, 10*time.Minute)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(info)
+	respond.JSON(w, r, http.StatusOK,info)
 }
 
 type liveTagResponse struct {
@@ -341,7 +332,7 @@ func (h *RegistryHandler) ListImageTags(w http.ResponseWriter, r *http.Request) 
 	registryName := chi.URLParam(r, "registry")
 	repository := chi.URLParam(r, "*")
 	if repository == "" {
-		http.Error(w, "repository path required", http.StatusBadRequest)
+		respond.BadRequest(w, r, "repository path required")
 		return
 	}
 
@@ -350,14 +341,13 @@ func (h *RegistryHandler) ListImageTags(w http.ResponseWriter, r *http.Request) 
 
 	cacheKey := fmt.Sprintf("tags:%s:%s:%d:%d", registryName, repository, pageSize, page)
 	if cached, ok := h.cache.Get(cacheKey); ok {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(cached)
+		respond.JSON(w, r, http.StatusOK,cached)
 		return
 	}
 
 	reg := h.manager.Get(registryName)
 	if reg == nil {
-		http.Error(w, "registry not found", http.StatusNotFound)
+		respond.NotFound(w, r, "registry", registryName)
 		return
 	}
 
@@ -366,7 +356,7 @@ func (h *RegistryHandler) ListImageTags(w http.ResponseWriter, r *http.Request) 
 		Page:     page,
 	})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -385,8 +375,7 @@ func (h *RegistryHandler) ListImageTags(w http.ResponseWriter, r *http.Request) 
 
 	h.cache.Set(cacheKey, resp, 2*time.Minute)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	respond.JSON(w, r, http.StatusOK,resp)
 }
 
 func (h *RegistryHandler) ImageRoute(w http.ResponseWriter, r *http.Request) {
@@ -401,7 +390,7 @@ func (h *RegistryHandler) ImageRoute(w http.ResponseWriter, r *http.Request) {
 
 func (h *RegistryHandler) handleListImageTags(w http.ResponseWriter, r *http.Request, registryName, repository string) {
 	if repository == "" {
-		http.Error(w, "repository path required", http.StatusBadRequest)
+		respond.BadRequest(w, r, "repository path required")
 		return
 	}
 
@@ -410,14 +399,13 @@ func (h *RegistryHandler) handleListImageTags(w http.ResponseWriter, r *http.Req
 
 	cacheKey := fmt.Sprintf("tags:%s:%s:%d:%d", registryName, repository, pageSize, page)
 	if cached, ok := h.cache.Get(cacheKey); ok {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(cached)
+		respond.JSON(w, r, http.StatusOK,cached)
 		return
 	}
 
 	reg := h.manager.Get(registryName)
 	if reg == nil {
-		http.Error(w, "registry not found", http.StatusNotFound)
+		respond.NotFound(w, r, "registry", registryName)
 		return
 	}
 
@@ -426,7 +414,7 @@ func (h *RegistryHandler) handleListImageTags(w http.ResponseWriter, r *http.Req
 		Page:     page,
 	})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -445,6 +433,5 @@ func (h *RegistryHandler) handleListImageTags(w http.ResponseWriter, r *http.Req
 
 	h.cache.Set(cacheKey, resp, 2*time.Minute)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	respond.JSON(w, r, http.StatusOK,resp)
 }
