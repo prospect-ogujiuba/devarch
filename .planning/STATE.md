@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Phase 20: Action Endpoint Consistency & OpenAPI
+**Current focus:** Phase 20 complete — ready for Phase 21
 
 ## Current Position
 
-Phase: 20 of 28 (complete)
-Plan: 02 of 02 complete
-Status: Phase 20 complete
-Last activity: 2026-02-11 — Completed Phase 20-02 OpenAPI Spec & CI Validation
+Phase: 21 of 28
+Plan: 01 of 02 complete
+Status: Phase 21 in progress
+Last activity: 2026-02-11 — Deploy orchestration service created
 
-Progress: Phases 16-20 complete
+Progress: Phases 16-20 complete, Phase 21 in progress (1/2 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) + 2 (v1.1.3) + 4 (v1.1.4) + 2 (v1.1.5) = 54
+- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) + 2 (v1.1.3) + 4 (v1.1.4) + 2 (v1.1.5) + 1 (v1.1.6) = 55
 - Average duration: ~5.0 minutes per plan
-- Total execution time: ~4.27 hours
+- Total execution time: ~4.29 hours
 
 **By Phase:**
 
@@ -34,6 +34,7 @@ Progress: Phases 16-20 complete
 | v1.1.3 (18) | 2 | 302s | 151s |
 | v1.1.4 (19) | 4 | 1392s | 348s |
 | v1.1.5 (20) | 2 | 760s | 380s |
+| v1.1.6 (21) | 1 | 147s | 147s |
 
 **Recent Trend:**
 - v1.0 shipped successfully on 2026-02-09
@@ -51,6 +52,7 @@ Progress: Phases 16-20 complete
 | Phase 19 P04 | 649 | 2 tasks | 11 files |
 | Phase 20 P01 | 240 | 2 tasks | 11 files |
 | Phase 20 P02 | 520 | 2 tasks | 20 files |
+| Phase 21 P01 | 147 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -73,8 +75,10 @@ Recent decisions affecting current work:
 - [Phase 19-01]: RecoverEnvelope replaces chi Recoverer for JSON panic responses
 - [Phase 19-02]: ExportStack YAML response remains exempt from envelope (retains application/x-yaml content-type)
 - [Phase 19-04]: Auth Validate endpoint returns JSON envelope {"valid": true} instead of empty 204 for parseable client responses
-- [Phase 20-02]: Partial annotation strategy — 35 core endpoints annotated (stacks, auth, status, nginx, websocket). Remaining 45+ endpoints (services, instances, projects) can be added incrementally.
+- [Phase 20-02]: Full annotation coverage — 143 routes annotated across 24 handler files (120 unique spec paths)
 - [Phase 20-02]: Envelope response syntax uses swaggo nested `respond.SuccessEnvelope{data=TYPE}` for data and `{data=respond.ActionResponse}` for actions
+- [Phase 21-01]: Service layer accepts Go types only — no net/http imports for transport independence
+- [Phase 21-01]: Sentinel errors enable handlers to map service errors to HTTP status codes
 
 ### Pending Todos
 
@@ -87,9 +91,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed Phase 20-02 OpenAPI Spec & CI Validation
+Stopped at: Completed 21-01-PLAN.md
 Resume file: None
-Next: Phase 20 complete — proceed to next phase
+Next: Phase 21-02 — Refactor handlers to use orchestration service
 
 ---
 *Last updated: 2026-02-11*
