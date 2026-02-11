@@ -17,12 +17,27 @@ type WebSocketHandler struct {
 	mu          sync.RWMutex
 }
 
-func NewWebSocketHandler(sm *devsync.Manager) *WebSocketHandler {
+func NewWebSocketHandler(sm *devsync.Manager, allowedOrigins []string) *WebSocketHandler {
 	h := &WebSocketHandler{
 		syncManager: sm,
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
-				return true
+				// Wildcard: allow all
+				if len(allowedOrigins) == 0 || (len(allowedOrigins) == 1 && allowedOrigins[0] == "*") {
+					return true
+				}
+				origin := r.Header.Get("Origin")
+				if origin == "" {
+					// No Origin header (e.g. non-browser clients) — allow
+					return true
+				}
+				for _, allowed := range allowedOrigins {
+					if origin == allowed {
+						return true
+					}
+				}
+				log.Printf("websocket: rejected connection from origin %q", origin)
+				return false
 			},
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
