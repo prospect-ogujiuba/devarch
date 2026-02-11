@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/priz/devarch-api/internal/api/respond"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -29,11 +30,11 @@ func (h *InstanceHandler) UpdatePorts(w http.ResponseWriter, r *http.Request) {
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
@@ -41,20 +42,20 @@ func (h *InstanceHandler) UpdatePorts(w http.ResponseWriter, r *http.Request) {
 		Ports []models.ServicePort `json:"ports"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to begin transaction: %w", err))
 		return
 	}
 	defer tx.Rollback()
 
 	_, err = tx.Exec("DELETE FROM instance_ports WHERE instance_id = $1", instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete existing ports: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to delete existing ports: %w", err))
 		return
 	}
 
@@ -64,18 +65,17 @@ func (h *InstanceHandler) UpdatePorts(w http.ResponseWriter, r *http.Request) {
 			instanceID, p.HostIP, p.HostPort, p.ContainerPort, p.Protocol,
 		)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to insert port: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, fmt.Errorf("failed to insert port: %w", err))
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to commit transaction: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *InstanceHandler) UpdateVolumes(w http.ResponseWriter, r *http.Request) {
@@ -84,11 +84,11 @@ func (h *InstanceHandler) UpdateVolumes(w http.ResponseWriter, r *http.Request) 
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
@@ -96,20 +96,20 @@ func (h *InstanceHandler) UpdateVolumes(w http.ResponseWriter, r *http.Request) 
 		Volumes []models.ServiceVolume `json:"volumes"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to begin transaction: %w", err))
 		return
 	}
 	defer tx.Rollback()
 
 	_, err = tx.Exec("DELETE FROM instance_volumes WHERE instance_id = $1", instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete existing volumes: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to delete existing volumes: %w", err))
 		return
 	}
 
@@ -119,18 +119,17 @@ func (h *InstanceHandler) UpdateVolumes(w http.ResponseWriter, r *http.Request) 
 			instanceID, v.VolumeType, v.Source, v.Target, v.ReadOnly, v.IsExternal,
 		)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to insert volume: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, fmt.Errorf("failed to insert volume: %w", err))
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to commit transaction: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *InstanceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) {
@@ -139,11 +138,11 @@ func (h *InstanceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) 
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
@@ -151,13 +150,13 @@ func (h *InstanceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) 
 		EnvVars []models.ServiceEnvVar `json:"env_vars"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to begin transaction: %w", err))
 		return
 	}
 	defer tx.Rollback()
@@ -169,7 +168,7 @@ func (h *InstanceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) 
 	existingSecrets := map[string]existingSecret{}
 	rows, err := tx.Query("SELECT key, encrypted_value, encryption_version FROM instance_env_vars WHERE instance_id = $1 AND is_secret = true", instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to query existing secrets: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to query existing secrets: %w", err))
 		return
 	}
 	for rows.Next() {
@@ -177,7 +176,7 @@ func (h *InstanceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) 
 		var secret existingSecret
 		if err := rows.Scan(&key, &secret.encryptedValue, &secret.encryptionVersion); err != nil {
 			rows.Close()
-			http.Error(w, fmt.Sprintf("failed to scan existing secret: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, fmt.Errorf("failed to scan existing secret: %w", err))
 			return
 		}
 		existingSecrets[key] = secret
@@ -186,7 +185,7 @@ func (h *InstanceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) 
 
 	_, err = tx.Exec("DELETE FROM instance_env_vars WHERE instance_id = $1", instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete existing env vars: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to delete existing env vars: %w", err))
 		return
 	}
 
@@ -205,7 +204,7 @@ func (h *InstanceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) 
 			} else {
 				encrypted, err := h.cipher.Encrypt(e.Value)
 				if err != nil {
-					http.Error(w, fmt.Sprintf("failed to encrypt secret: %v", err), http.StatusInternalServerError)
+					respond.InternalError(w, r, fmt.Errorf("failed to encrypt secret: %w", err))
 					return
 				}
 				encryptedValue = sql.NullString{String: encrypted, Valid: true}
@@ -219,18 +218,17 @@ func (h *InstanceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) 
 			instanceID, e.Key, value, e.IsSecret, encryptedValue, encryptionVersion,
 		)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to insert env var: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, fmt.Errorf("failed to insert env var: %w", err))
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to commit transaction: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *InstanceHandler) UpdateLabels(w http.ResponseWriter, r *http.Request) {
@@ -239,11 +237,11 @@ func (h *InstanceHandler) UpdateLabels(w http.ResponseWriter, r *http.Request) {
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
@@ -251,27 +249,27 @@ func (h *InstanceHandler) UpdateLabels(w http.ResponseWriter, r *http.Request) {
 		Labels []models.ServiceLabel `json:"labels"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	for _, l := range req.Labels {
 		if strings.HasPrefix(l.Key, "devarch.") {
-			http.Error(w, fmt.Sprintf("label key %q cannot start with 'devarch.' - this prefix is reserved for system labels", l.Key), http.StatusBadRequest)
+			respond.BadRequest(w, r, fmt.Sprintf("label key %q cannot start with 'devarch.' - this prefix is reserved for system labels", l.Key))
 			return
 		}
 	}
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to begin transaction: %w", err))
 		return
 	}
 	defer tx.Rollback()
 
 	_, err = tx.Exec("DELETE FROM instance_labels WHERE instance_id = $1", instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete existing labels: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to delete existing labels: %w", err))
 		return
 	}
 
@@ -281,18 +279,17 @@ func (h *InstanceHandler) UpdateLabels(w http.ResponseWriter, r *http.Request) {
 			instanceID, l.Key, l.Value,
 		)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to insert label: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, fmt.Errorf("failed to insert label: %w", err))
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to commit transaction: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *InstanceHandler) UpdateDomains(w http.ResponseWriter, r *http.Request) {
@@ -301,11 +298,11 @@ func (h *InstanceHandler) UpdateDomains(w http.ResponseWriter, r *http.Request) 
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
@@ -313,20 +310,20 @@ func (h *InstanceHandler) UpdateDomains(w http.ResponseWriter, r *http.Request) 
 		Domains []models.ServiceDomain `json:"domains"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to begin transaction: %w", err))
 		return
 	}
 	defer tx.Rollback()
 
 	_, err = tx.Exec("DELETE FROM instance_domains WHERE instance_id = $1", instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete existing domains: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to delete existing domains: %w", err))
 		return
 	}
 
@@ -336,18 +333,17 @@ func (h *InstanceHandler) UpdateDomains(w http.ResponseWriter, r *http.Request) 
 			instanceID, d.Domain, d.ProxyPort,
 		)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to insert domain: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, fmt.Errorf("failed to insert domain: %w", err))
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to commit transaction: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *InstanceHandler) UpdateHealthcheck(w http.ResponseWriter, r *http.Request) {
@@ -356,23 +352,23 @@ func (h *InstanceHandler) UpdateHealthcheck(w http.ResponseWriter, r *http.Reque
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
 	var req *models.ServiceHealthcheck
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	_, err = h.db.Exec("DELETE FROM instance_healthchecks WHERE instance_id = $1", instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete existing healthcheck: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to delete existing healthcheck: %w", err))
 		return
 	}
 
@@ -382,13 +378,12 @@ func (h *InstanceHandler) UpdateHealthcheck(w http.ResponseWriter, r *http.Reque
 			instanceID, req.Test, req.IntervalSeconds, req.TimeoutSeconds, req.Retries, req.StartPeriodSeconds,
 		)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to insert healthcheck: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, fmt.Errorf("failed to insert healthcheck: %w", err))
 			return
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *InstanceHandler) UpdateDependencies(w http.ResponseWriter, r *http.Request) {
@@ -397,11 +392,11 @@ func (h *InstanceHandler) UpdateDependencies(w http.ResponseWriter, r *http.Requ
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
@@ -412,20 +407,20 @@ func (h *InstanceHandler) UpdateDependencies(w http.ResponseWriter, r *http.Requ
 		} `json:"dependencies"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to begin transaction: %w", err))
 		return
 	}
 	defer tx.Rollback()
 
 	_, err = tx.Exec("DELETE FROM instance_dependencies WHERE instance_id = $1", instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete existing dependencies: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to delete existing dependencies: %w", err))
 		return
 	}
 
@@ -439,18 +434,17 @@ func (h *InstanceHandler) UpdateDependencies(w http.ResponseWriter, r *http.Requ
 			instanceID, d.DependsOn, condition,
 		)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to insert dependency: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, fmt.Errorf("failed to insert dependency: %w", err))
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to commit transaction: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *InstanceHandler) ListConfigFiles(w http.ResponseWriter, r *http.Request) {
@@ -459,11 +453,11 @@ func (h *InstanceHandler) ListConfigFiles(w http.ResponseWriter, r *http.Request
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
@@ -472,7 +466,7 @@ func (h *InstanceHandler) ListConfigFiles(w http.ResponseWriter, r *http.Request
 		FROM instance_config_files WHERE instance_id = $1 ORDER BY file_path
 	`, instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to query config files: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to query config files: %w", err))
 		return
 	}
 	defer rows.Close()
@@ -491,19 +485,18 @@ func (h *InstanceHandler) ListConfigFiles(w http.ResponseWriter, r *http.Request
 	for rows.Next() {
 		var f configFileResponse
 		if err := rows.Scan(&f.ID, &f.InstanceID, &f.FilePath, &f.FileMode, &f.IsTemplate, &f.CreatedAt, &f.UpdatedAt); err != nil {
-			http.Error(w, fmt.Sprintf("failed to scan config file: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, fmt.Errorf("failed to scan config file: %w", err))
 			return
 		}
 		files = append(files, f)
 	}
 
 	if err := rows.Err(); err != nil {
-		http.Error(w, fmt.Sprintf("error iterating config files: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("error iterating config files: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(files)
+	respond.JSON(w, r, http.StatusOK, files)
 }
 
 func (h *InstanceHandler) GetConfigFile(w http.ResponseWriter, r *http.Request) {
@@ -513,11 +506,11 @@ func (h *InstanceHandler) GetConfigFile(w http.ResponseWriter, r *http.Request) 
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
@@ -539,16 +532,15 @@ func (h *InstanceHandler) GetConfigFile(w http.ResponseWriter, r *http.Request) 
 	`, instanceID, filePath).Scan(&f.ID, &f.InstanceID, &f.FilePath, &f.Content, &f.FileMode, &f.IsTemplate, &f.CreatedAt, &f.UpdatedAt)
 
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("config file %q not found", filePath), http.StatusNotFound)
+		respond.NotFound(w, r, "config file", filePath)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get config file: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get config file: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(f)
+	respond.JSON(w, r, http.StatusOK, f)
 }
 
 func (h *InstanceHandler) PutConfigFile(w http.ResponseWriter, r *http.Request) {
@@ -558,11 +550,11 @@ func (h *InstanceHandler) PutConfigFile(w http.ResponseWriter, r *http.Request) 
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
@@ -572,7 +564,7 @@ func (h *InstanceHandler) PutConfigFile(w http.ResponseWriter, r *http.Request) 
 		IsTemplate bool   `json:"is_template"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
@@ -599,12 +591,11 @@ func (h *InstanceHandler) PutConfigFile(w http.ResponseWriter, r *http.Request) 
 	)
 
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to upsert config file: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to upsert config file: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(f)
+	respond.JSON(w, r, http.StatusOK, f)
 }
 
 func (h *InstanceHandler) DeleteConfigFile(w http.ResponseWriter, r *http.Request) {
@@ -614,32 +605,32 @@ func (h *InstanceHandler) DeleteConfigFile(w http.ResponseWriter, r *http.Reques
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
 	result, err := h.db.Exec("DELETE FROM instance_config_files WHERE instance_id = $1 AND file_path = $2", instanceID, filePath)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete config file: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to delete config file: %w", err))
 		return
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get rows affected: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get rows affected: %w", err))
 		return
 	}
 
 	if rowsAffected == 0 {
-		http.Error(w, fmt.Sprintf("config file %q not found", filePath), http.StatusNotFound)
+		respond.NotFound(w, r, "config file", filePath)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	respond.NoContent(w, r)
 }
 
 func (h *InstanceHandler) GetResourceLimits(w http.ResponseWriter, r *http.Request) {
@@ -648,11 +639,11 @@ func (h *InstanceHandler) GetResourceLimits(w http.ResponseWriter, r *http.Reque
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
@@ -675,16 +666,15 @@ func (h *InstanceHandler) GetResourceLimits(w http.ResponseWriter, r *http.Reque
 	)
 
 	if err == sql.ErrNoRows {
-		http.Error(w, "no resource limits configured", http.StatusNotFound)
+		respond.NotFound(w, r, "resource limits", "")
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get resource limits: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get resource limits: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	respond.JSON(w, r, http.StatusOK, resp)
 }
 
 func (h *InstanceHandler) UpdateResourceLimits(w http.ResponseWriter, r *http.Request) {
@@ -693,11 +683,11 @@ func (h *InstanceHandler) UpdateResourceLimits(w http.ResponseWriter, r *http.Re
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
@@ -708,7 +698,7 @@ func (h *InstanceHandler) UpdateResourceLimits(w http.ResponseWriter, r *http.Re
 		MemoryReservation string `json:"memory_reservation"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
@@ -717,7 +707,7 @@ func (h *InstanceHandler) UpdateResourceLimits(w http.ResponseWriter, r *http.Re
 	if req.MemoryLimit != "" {
 		bytes, err := parseMemoryString(req.MemoryLimit)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("invalid memory_limit: %v", err), http.StatusBadRequest)
+			respond.BadRequest(w, r, fmt.Sprintf("invalid memory_limit: %v", err))
 			return
 		}
 		if bytes < 4*1024*1024 {
@@ -728,7 +718,7 @@ func (h *InstanceHandler) UpdateResourceLimits(w http.ResponseWriter, r *http.Re
 	if req.CPULimit != "" {
 		cpuLimit, err := strconv.ParseFloat(req.CPULimit, 64)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("invalid cpu_limit: must be numeric, got %q", req.CPULimit), http.StatusBadRequest)
+			respond.BadRequest(w, r, fmt.Sprintf("invalid cpu_limit: must be numeric, got %q", req.CPULimit))
 			return
 		}
 		if cpuLimit < 0.01 {
@@ -740,11 +730,10 @@ func (h *InstanceHandler) UpdateResourceLimits(w http.ResponseWriter, r *http.Re
 	if allEmpty {
 		_, err := h.db.Exec("DELETE FROM instance_resource_limits WHERE instance_id = $1", instanceID)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to delete resource limits: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, fmt.Errorf("failed to delete resource limits: %w", err))
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		respond.JSON(w, r, http.StatusOK, map[string]interface{}{
 			"status": "deleted",
 		})
 		return
@@ -761,12 +750,11 @@ func (h *InstanceHandler) UpdateResourceLimits(w http.ResponseWriter, r *http.Re
 	`, instanceID, req.CPULimit, req.CPUReservation, req.MemoryLimit, req.MemoryReservation)
 
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to save resource limits: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to save resource limits: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	respond.JSON(w, r, http.StatusOK, map[string]interface{}{
 		"status":             "updated",
 		"cpu_limit":          req.CPULimit,
 		"cpu_reservation":    req.CPUReservation,
@@ -782,11 +770,11 @@ func (h *InstanceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request)
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
@@ -794,31 +782,31 @@ func (h *InstanceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request)
 		EnvFiles []string `json:"env_files"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to begin transaction: %w", err))
 		return
 	}
 	defer tx.Rollback()
 
 	for _, path := range req.EnvFiles {
 		if strings.TrimSpace(path) == "" {
-			http.Error(w, "env_file path cannot be empty", http.StatusBadRequest)
+			respond.BadRequest(w, r, "env_file path cannot be empty")
 			return
 		}
 		if strings.Contains(path, "..") || strings.HasPrefix(path, "/") {
-			http.Error(w, "env_file path must be relative and cannot contain '..'", http.StatusBadRequest)
+			respond.BadRequest(w, r, "env_file path must be relative and cannot contain '..'")
 			return
 		}
 	}
 
 	_, err = tx.Exec("DELETE FROM instance_env_files WHERE instance_id = $1", instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete existing env_files: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to delete existing env_files: %w", err))
 		return
 	}
 
@@ -828,18 +816,17 @@ func (h *InstanceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request)
 			instanceID, path, idx,
 		)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to insert env_file: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, fmt.Errorf("failed to insert env_file: %w", err))
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to commit transaction: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *InstanceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request) {
@@ -848,11 +835,11 @@ func (h *InstanceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request)
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
@@ -860,32 +847,32 @@ func (h *InstanceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request)
 		Networks []string `json:"networks"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	for _, name := range req.Networks {
 		trimmed := strings.TrimSpace(name)
 		if trimmed == "" {
-			http.Error(w, "network name cannot be empty", http.StatusBadRequest)
+			respond.BadRequest(w, r, "network name cannot be empty")
 			return
 		}
 		if strings.ContainsAny(trimmed, " \t/\\:") {
-			http.Error(w, fmt.Sprintf("invalid network name %q: contains disallowed characters", trimmed), http.StatusBadRequest)
+			respond.BadRequest(w, r, fmt.Sprintf("invalid network name %q: contains disallowed characters", trimmed))
 			return
 		}
 	}
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to begin transaction: %w", err))
 		return
 	}
 	defer tx.Rollback()
 
 	_, err = tx.Exec("DELETE FROM instance_networks WHERE instance_id = $1", instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete existing networks: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to delete existing networks: %w", err))
 		return
 	}
 
@@ -895,18 +882,17 @@ func (h *InstanceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request)
 			instanceID, name,
 		)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to insert network: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, fmt.Errorf("failed to insert network: %w", err))
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to commit transaction: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *InstanceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Request) {
@@ -915,11 +901,11 @@ func (h *InstanceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Requ
 
 	instanceID, _, err := h.getInstanceByName(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
@@ -927,31 +913,31 @@ func (h *InstanceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Requ
 		ConfigMounts []models.ServiceConfigMount `json:"config_mounts"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	for _, m := range req.ConfigMounts {
 		if strings.TrimSpace(m.TargetPath) == "" {
-			http.Error(w, "config mount target_path cannot be empty", http.StatusBadRequest)
+			respond.BadRequest(w, r, "config mount target_path cannot be empty")
 			return
 		}
 		if strings.Contains(m.SourcePath, "..") {
-			http.Error(w, "config mount source_path cannot contain '..'", http.StatusBadRequest)
+			respond.BadRequest(w, r, "config mount source_path cannot contain '..'")
 			return
 		}
 	}
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to begin transaction: %w", err))
 		return
 	}
 	defer tx.Rollback()
 
 	_, err = tx.Exec("DELETE FROM instance_config_mounts WHERE instance_id = $1", instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete existing config_mounts: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to delete existing config_mounts: %w", err))
 		return
 	}
 
@@ -965,18 +951,17 @@ func (h *InstanceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Requ
 			instanceID, cfgFileID, m.SourcePath, m.TargetPath, m.ReadOnly,
 		)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to insert config_mount: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, fmt.Errorf("failed to insert config_mount: %w", err))
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to commit transaction: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func parseMemoryString(s string) (int64, error) {

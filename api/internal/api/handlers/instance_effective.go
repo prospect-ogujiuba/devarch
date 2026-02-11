@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/priz/devarch-api/internal/api/respond"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -65,11 +66,11 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 	`, stackName, instanceName).Scan(&instanceID, &stackID, &templateServiceID)
 
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
 	}
 
@@ -83,7 +84,7 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 	`, templateServiceID).Scan(&resp.TemplateName, &resp.ImageName, &resp.ImageTag, &resp.RestartPolicy, &command, &userSpec)
 
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get template service: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to get template service: %w", err))
 		return
 	}
 
@@ -96,13 +97,13 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 
 	templatePorts, err := h.loadServicePorts(templateServiceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load template ports: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load template ports: %w", err))
 		return
 	}
 
 	instancePorts, err := h.loadInstancePorts(instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load instance ports: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load instance ports: %w", err))
 		return
 	}
 
@@ -115,13 +116,13 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 
 	templateVolumes, err := h.loadServiceVolumes(templateServiceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load template volumes: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load template volumes: %w", err))
 		return
 	}
 
 	instanceVolumes, err := h.loadInstanceVolumes(instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load instance volumes: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load instance volumes: %w", err))
 		return
 	}
 
@@ -134,19 +135,19 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 
 	templateEnvVars, err := h.loadServiceEnvVars(templateServiceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load template env vars: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load template env vars: %w", err))
 		return
 	}
 
 	wiredEnvVars, err := h.loadWiredEnvVarsForEffective(instanceID, stackName)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load wired env vars: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load wired env vars: %w", err))
 		return
 	}
 
 	instanceEnvVars, err := h.loadInstanceEnvVars(instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load instance env vars: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load instance env vars: %w", err))
 		return
 	}
 
@@ -156,13 +157,13 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 
 	templateLabels, err := h.loadServiceLabels(templateServiceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load template labels: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load template labels: %w", err))
 		return
 	}
 
 	instanceLabels, err := h.loadInstanceLabels(instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load instance labels: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load instance labels: %w", err))
 		return
 	}
 
@@ -184,13 +185,13 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 
 	templateDomains, err := h.loadServiceDomains(templateServiceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load template domains: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load template domains: %w", err))
 		return
 	}
 
 	instanceDomains, err := h.loadInstanceDomains(instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load instance domains: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load instance domains: %w", err))
 		return
 	}
 
@@ -203,13 +204,13 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 
 	templateHealthcheck, err := h.loadServiceHealthcheck(templateServiceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load template healthcheck: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load template healthcheck: %w", err))
 		return
 	}
 
 	instanceHealthcheck, err := h.loadInstanceHealthcheck(instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load instance healthcheck: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load instance healthcheck: %w", err))
 		return
 	}
 
@@ -222,13 +223,13 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 
 	templateDeps, err := h.loadServiceDependencies(templateServiceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load template dependencies: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load template dependencies: %w", err))
 		return
 	}
 
 	instanceDeps, err := h.loadInstanceDependencies(instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load instance dependencies: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load instance dependencies: %w", err))
 		return
 	}
 
@@ -241,13 +242,13 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 
 	templateConfigFiles, err := h.loadServiceConfigFiles(templateServiceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load template config files: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load template config files: %w", err))
 		return
 	}
 
 	instanceConfigFiles, err := h.loadInstanceConfigFiles(instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load instance config files: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load instance config files: %w", err))
 		return
 	}
 
@@ -256,13 +257,13 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 
 	templateEnvFiles, err := h.loadServiceEnvFiles(templateServiceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load template env_files: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load template env_files: %w", err))
 		return
 	}
 
 	instanceEnvFiles, err := h.loadInstanceEnvFiles(instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load instance env_files: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load instance env_files: %w", err))
 		return
 	}
 
@@ -275,13 +276,13 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 
 	templateNetworks, err := h.loadServiceNetworks(templateServiceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load template networks: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load template networks: %w", err))
 		return
 	}
 
 	instanceNetworks, err := h.loadInstanceNetworks(instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load instance networks: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load instance networks: %w", err))
 		return
 	}
 
@@ -294,13 +295,13 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 
 	templateConfigMounts, err := h.loadServiceConfigMounts(templateServiceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load template config_mounts: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load template config_mounts: %w", err))
 		return
 	}
 
 	instanceConfigMounts, err := h.loadInstanceConfigMounts(instanceID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load instance config_mounts: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to load instance config_mounts: %w", err))
 		return
 	}
 
@@ -311,8 +312,7 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 		resp.ConfigMounts = templateConfigMounts
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	respond.JSON(w, r, http.StatusOK, resp)
 }
 
 func (h *InstanceHandler) loadServicePorts(serviceID int) ([]models.ServicePort, error) {

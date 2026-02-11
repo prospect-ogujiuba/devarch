@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/lib/pq"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
 )
@@ -115,13 +116,13 @@ type updateStackRequest struct {
 func (h *StackHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createStackRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	// Validate name using existing container validation
 	if err := container.ValidateName(req.Name); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, err.Error())
 		return
 	}
 
@@ -130,7 +131,7 @@ func (h *StackHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if req.NetworkName != nil && *req.NetworkName != "" {
 		// User provided custom network name, validate it
 		if err := container.ValidateName(*req.NetworkName); err != nil {
-			http.Error(w, fmt.Sprintf("invalid network_name: %v", err), http.StatusBadRequest)
+			respond.BadRequest(w, r, fmt.Sprintf("invalid network_name: %v", err))
 			return
 		}
 		networkName = *req.NetworkName
@@ -155,10 +156,10 @@ func (h *StackHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Handle unique constraint violation with prescriptive error
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
-			http.Error(w, fmt.Sprintf("stack name %q already exists", req.Name), http.StatusConflict)
+			respond.Conflict(w, r, fmt.Sprintf("stack name %q already exists", req.Name))
 			return
 		}
-		http.Error(w, fmt.Sprintf("failed to create stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -166,9 +167,7 @@ func (h *StackHandler) Create(w http.ResponseWriter, r *http.Request) {
 	stack.InstanceCount = 0
 	stack.RunningCount = 0
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(stack)
+	respond.JSON(w, r, http.StatusCreated, stack)
 }
 
 // List handles GET /stacks
@@ -195,7 +194,7 @@ func (h *StackHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.db.Query(query)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to query stacks: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -216,7 +215,7 @@ func (h *StackHandler) List(w http.ResponseWriter, r *http.Request) {
 			&stack.ProjectName,
 		)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to scan stack: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 
@@ -227,12 +226,11 @@ func (h *StackHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := rows.Err(); err != nil {
-		http.Error(w, fmt.Sprintf("error iterating stacks: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stacks)
+	respond.JSON(w, r, http.StatusOK, stacks)
 }
 
 // Get handles GET /stacks/{name}
@@ -271,19 +269,18 @@ func (h *StackHandler) Get(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	stack.RunningCount = h.runningCount(stack.Name)
 	stack.NetworkActive = h.networkActive(stack.NetworkName, stack.Name)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stack)
+	respond.JSON(w, r, http.StatusOK, stack)
 }
 
 // Update handles PUT /stacks/{name}
@@ -292,7 +289,7 @@ func (h *StackHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	var req updateStackRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
@@ -314,11 +311,11 @@ func (h *StackHandler) Update(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to update stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -332,8 +329,7 @@ func (h *StackHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	stack.RunningCount = h.runningCount(stack.Name)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stack)
+	respond.JSON(w, r, http.StatusOK, stack)
 }
 
 func (h *StackHandler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -346,16 +342,16 @@ func (h *StackHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	`, name).Scan(&stackID, &projectID)
 
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if projectID != nil {
-		http.Error(w, "this stack is managed by a project — delete the project instead", http.StatusConflict)
+		respond.Conflict(w, r, "this stack is managed by a project — delete the project instead")
 		return
 	}
 
@@ -375,12 +371,11 @@ func (h *StackHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	`, name)
 
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	respond.JSON(w, r, http.StatusOK, map[string]string{
 		"message": fmt.Sprintf("stack %q deleted successfully", name),
 	})
 }
@@ -406,11 +401,11 @@ func (h *StackHandler) Enable(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to enable stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -424,8 +419,7 @@ func (h *StackHandler) Enable(w http.ResponseWriter, r *http.Request) {
 
 	stack.RunningCount = h.runningCount(stack.Name)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stack)
+	respond.JSON(w, r, http.StatusOK, stack)
 }
 
 type networkStatusResponse struct {
@@ -447,11 +441,11 @@ func (h *StackHandler) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 	`, name).Scan(&networkName)
 
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -480,8 +474,7 @@ func (h *StackHandler) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 		response.Status = "not_created"
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	respond.JSON(w, r, http.StatusOK, response)
 }
 
 func (h *StackHandler) CreateNetwork(w http.ResponseWriter, r *http.Request) {
@@ -492,11 +485,11 @@ func (h *StackHandler) CreateNetwork(w http.ResponseWriter, r *http.Request) {
 		SELECT network_name FROM stacks WHERE name = $1 AND deleted_at IS NULL
 	`, name).Scan(&networkName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -510,12 +503,11 @@ func (h *StackHandler) CreateNetwork(w http.ResponseWriter, r *http.Request) {
 		"devarch.stack":      name,
 	}
 	if err := h.containerClient.CreateNetwork(netName, labels); err != nil {
-		http.Error(w, fmt.Sprintf("failed to create network: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "created", "network": netName})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "created", "network": netName})
 }
 
 func (h *StackHandler) RemoveNetwork(w http.ResponseWriter, r *http.Request) {
@@ -526,11 +518,11 @@ func (h *StackHandler) RemoveNetwork(w http.ResponseWriter, r *http.Request) {
 		SELECT network_name FROM stacks WHERE name = $1 AND deleted_at IS NULL
 	`, name).Scan(&networkName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -540,12 +532,11 @@ func (h *StackHandler) RemoveNetwork(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.containerClient.RemoveNetwork(netName); err != nil {
-		http.Error(w, fmt.Sprintf("failed to remove network: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "removed", "network": netName})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "removed", "network": netName})
 }
 
 type disableResponse struct {
@@ -562,11 +553,11 @@ func (h *StackHandler) Disable(w http.ResponseWriter, r *http.Request) {
 	`, name).Scan(&stackID)
 
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -601,7 +592,7 @@ func (h *StackHandler) Disable(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to disable stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -614,8 +605,7 @@ func (h *StackHandler) Disable(w http.ResponseWriter, r *http.Request) {
 
 	stack.RunningCount = h.runningCount(stack.Name)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(disableResponse{
+	respond.JSON(w, r, http.StatusOK, disableResponse{
 		Stack:             stack,
 		StoppedContainers: stoppedContainers,
 	})
@@ -715,26 +705,26 @@ func (h *StackHandler) Clone(w http.ResponseWriter, r *http.Request) {
 	var projectID *int
 	err := h.db.QueryRow(`SELECT project_id FROM stacks WHERE name = $1 AND deleted_at IS NULL`, name).Scan(&projectID)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	if projectID != nil {
-		http.Error(w, "clone is not supported for project-backed stacks", http.StatusConflict)
+		respond.Conflict(w, r, "clone is not supported for project-backed stacks")
 		return
 	}
 
 	var req cloneRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	if err := container.ValidateName(req.Name); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, err.Error())
 		return
 	}
 
@@ -743,7 +733,7 @@ func (h *StackHandler) Clone(w http.ResponseWriter, r *http.Request) {
 	// Begin transaction
 	tx, err := h.db.BeginTx(r.Context(), nil)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -768,25 +758,25 @@ func (h *StackHandler) Clone(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
-			http.Error(w, fmt.Sprintf("stack name %q already exists", req.Name), http.StatusConflict)
+			respond.Conflict(w, r, fmt.Sprintf("stack name %q already exists", req.Name))
 			return
 		}
 		if err == sql.ErrNoRows {
-			http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+			respond.NotFound(w, r, "stack", name)
 			return
 		}
-		http.Error(w, fmt.Sprintf("failed to clone stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if err := h.cloneInstancesWithOverrides(tx, name, newStack.ID); err != nil {
-		http.Error(w, fmt.Sprintf("failed to clone instances: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
-		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -800,9 +790,7 @@ func (h *StackHandler) Clone(w http.ResponseWriter, r *http.Request) {
 
 	newStack.RunningCount = 0
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newStack)
+	respond.JSON(w, r, http.StatusCreated, newStack)
 }
 
 type renameRequest struct {
@@ -816,26 +804,26 @@ func (h *StackHandler) Rename(w http.ResponseWriter, r *http.Request) {
 	var projectID *int
 	err := h.db.QueryRow(`SELECT project_id FROM stacks WHERE name = $1 AND deleted_at IS NULL`, name).Scan(&projectID)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	if projectID != nil {
-		http.Error(w, "rename is not supported for project-backed stacks", http.StatusConflict)
+		respond.Conflict(w, r, "rename is not supported for project-backed stacks")
 		return
 	}
 
 	var req renameRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	if err := container.ValidateName(req.Name); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, err.Error())
 		return
 	}
 
@@ -844,7 +832,7 @@ func (h *StackHandler) Rename(w http.ResponseWriter, r *http.Request) {
 	// Begin transaction - rename is clone + soft-delete in single tx
 	tx, err := h.db.BeginTx(r.Context(), nil)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to begin transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -869,19 +857,19 @@ func (h *StackHandler) Rename(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
-			http.Error(w, fmt.Sprintf("stack name %q already exists", req.Name), http.StatusConflict)
+			respond.Conflict(w, r, fmt.Sprintf("stack name %q already exists", req.Name))
 			return
 		}
 		if err == sql.ErrNoRows {
-			http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+			respond.NotFound(w, r, "stack", name)
 			return
 		}
-		http.Error(w, fmt.Sprintf("failed to rename stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if err := h.cloneInstancesWithOverrides(tx, name, newStack.ID); err != nil {
-		http.Error(w, fmt.Sprintf("failed to copy instances: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -893,13 +881,13 @@ func (h *StackHandler) Rename(w http.ResponseWriter, r *http.Request) {
 	`, name)
 
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete original stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
-		http.Error(w, fmt.Sprintf("failed to commit transaction: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -913,8 +901,7 @@ func (h *StackHandler) Rename(w http.ResponseWriter, r *http.Request) {
 
 	newStack.RunningCount = 0
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(newStack)
+	respond.JSON(w, r, http.StatusOK, newStack)
 }
 
 type deletePreviewResponse struct {
@@ -934,11 +921,11 @@ func (h *StackHandler) DeletePreview(w http.ResponseWriter, r *http.Request) {
 	`, name).Scan(&stackID)
 
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -947,7 +934,7 @@ func (h *StackHandler) DeletePreview(w http.ResponseWriter, r *http.Request) {
 		SELECT id FROM service_instances WHERE stack_id = $1
 	`, stackID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to query instances: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -963,8 +950,7 @@ func (h *StackHandler) DeletePreview(w http.ResponseWriter, r *http.Request) {
 		containerNames = append(containerNames, container.ContainerName(name, fmt.Sprintf("%d", instanceID)))
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(deletePreviewResponse{
+	respond.JSON(w, r, http.StatusOK, deletePreviewResponse{
 		StackName:      name,
 		InstanceCount:  instanceCount,
 		ContainerNames: containerNames,
@@ -1005,7 +991,7 @@ func (h *StackHandler) ListTrash(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.db.Query(query)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to query trash: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -1025,7 +1011,7 @@ func (h *StackHandler) ListTrash(w http.ResponseWriter, r *http.Request) {
 			&stack.InstanceCount,
 		)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to scan stack: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 
@@ -1033,12 +1019,11 @@ func (h *StackHandler) ListTrash(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := rows.Err(); err != nil {
-		http.Error(w, fmt.Sprintf("error iterating trash: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stacks)
+	respond.JSON(w, r, http.StatusOK, stacks)
 }
 
 // Restore handles POST /stacks/trash/{name}/restore
@@ -1052,11 +1037,11 @@ func (h *StackHandler) Restore(w http.ResponseWriter, r *http.Request) {
 	`, name).Scan(&existingID)
 
 	if err == nil {
-		http.Error(w, fmt.Sprintf("Stack name %q is already in use. Rename before restoring.", name), http.StatusConflict)
+		respond.Conflict(w, r, fmt.Sprintf("Stack name %q is already in use. Rename before restoring.", name))
 		return
 	}
 	if err != sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("failed to check name conflict: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -1078,11 +1063,11 @@ func (h *StackHandler) Restore(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("stack %q not found in trash", name), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to restore stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -1096,8 +1081,7 @@ func (h *StackHandler) Restore(w http.ResponseWriter, r *http.Request) {
 
 	stack.RunningCount = h.runningCount(stack.Name)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stack)
+	respond.JSON(w, r, http.StatusOK, stack)
 }
 
 // PermanentDelete handles DELETE /stacks/trash/{name}
@@ -1110,23 +1094,22 @@ func (h *StackHandler) PermanentDelete(w http.ResponseWriter, r *http.Request) {
 	`, name)
 
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to permanently delete stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get rows affected: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if rowsAffected == 0 {
-		http.Error(w, fmt.Sprintf("stack %q not found in trash", name), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", name)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	respond.JSON(w, r, http.StatusOK, map[string]string{
 		"message": fmt.Sprintf("stack %q permanently deleted", name),
 	})
 }

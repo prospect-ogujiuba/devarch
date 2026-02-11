@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/lib/pq"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/project"
 	"github.com/priz/devarch-api/internal/scanner"
@@ -23,6 +24,10 @@ type ProjectHandler struct {
 
 func NewProjectHandler(db *sql.DB, s *scanner.Scanner, c *project.Controller, cc *container.Client) *ProjectHandler {
 	return &ProjectHandler{db: db, scanner: s, controller: c, containerClient: cc}
+}
+
+func decodeJSON(r *http.Request, v interface{}) error {
+	return json.NewDecoder(r.Body).Decode(v)
 }
 
 const projectColumns = `p.id, p.name, p.path, p.project_type, p.framework, p.language, p.package_manager,
@@ -87,7 +92,7 @@ func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.db.Query(query, args...)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -96,7 +101,7 @@ func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		p, err := scanProject(rows)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		h.enrichRunningCount(&p)
@@ -107,8 +112,7 @@ func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 		projects = []models.Project{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(projects)
+	respond.JSON(w, r, http.StatusOK, projects)
 }
 
 func (h *ProjectHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -117,17 +121,16 @@ func (h *ProjectHandler) Get(w http.ResponseWriter, r *http.Request) {
 	row := h.db.QueryRow(`SELECT `+projectColumns+projectFrom+` WHERE p.name = $1 AND s.deleted_at IS NULL`, name)
 	p, err := scanProject(row)
 	if err == sql.ErrNoRows {
-		http.Error(w, "project not found", http.StatusNotFound)
+		respond.NotFound(w, r, "project", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	h.enrichRunningCount(&p)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(p)
+	respond.JSON(w, r, http.StatusOK, p)
 }
 
 type createProjectRequest struct {
@@ -143,17 +146,17 @@ type createProjectRequest struct {
 
 func (h *ProjectHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createProjectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	if err := decodeJSON(r, &req); err != nil {
+		respond.BadRequest(w, r, "invalid request body")
 		return
 	}
 
 	if req.Name == "" {
-		http.Error(w, "name is required", http.StatusBadRequest)
+		respond.BadRequest(w, r, "name is required")
 		return
 	}
 	if err := container.ValidateName(req.Name); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, err.Error())
 		return
 	}
 	if req.Path == "" {
@@ -165,7 +168,7 @@ func (h *ProjectHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.db.BeginTx(r.Context(), nil)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -181,14 +184,14 @@ func (h *ProjectHandler) Create(w http.ResponseWriter, r *http.Request) {
 		`, req.Name, networkName).Scan(&stackID)
 		if err != nil {
 			if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
-				http.Error(w, fmt.Sprintf("name %q already exists", req.Name), http.StatusConflict)
+				respond.Conflict(w, r, fmt.Sprintf("name %q already exists", req.Name))
 				return
 			}
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	} else if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -200,34 +203,32 @@ func (h *ProjectHandler) Create(w http.ResponseWriter, r *http.Request) {
 	`, req.Name, req.Path, req.ProjectType, req.Framework, req.Language, req.Description, req.Domain, req.ProxyPort, stackID).Scan(&projectID)
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
-			http.Error(w, fmt.Sprintf("project %q already exists", req.Name), http.StatusConflict)
+			respond.Conflict(w, r, fmt.Sprintf("project %q already exists", req.Name))
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	_, err = tx.Exec(`UPDATE stacks SET project_id = $1 WHERE id = $2`, projectID, stackID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	row := h.db.QueryRow(`SELECT `+projectColumns+projectFrom+` WHERE p.id = $1`, projectID)
 	p, err := scanProject(row)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(p)
+	respond.JSON(w, r, http.StatusCreated, p)
 }
 
 type updateProjectRequest struct {
@@ -244,8 +245,8 @@ func (h *ProjectHandler) Update(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	var req updateProjectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	if err := decodeJSON(r, &req); err != nil {
+		respond.BadRequest(w, r, "invalid request body")
 		return
 	}
 
@@ -262,25 +263,24 @@ func (h *ProjectHandler) Update(w http.ResponseWriter, r *http.Request) {
 		WHERE name = $1
 	`, name, req.Path, req.ProjectType, req.Framework, req.Language, req.Description, req.Domain, req.ProxyPort)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		http.Error(w, "project not found", http.StatusNotFound)
+		respond.NotFound(w, r, "project", name)
 		return
 	}
 
 	row := h.db.QueryRow(`SELECT `+projectColumns+projectFrom+` WHERE p.name = $1 AND s.deleted_at IS NULL`, name)
 	p, err := scanProject(row)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	h.enrichRunningCount(&p)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(p)
+	respond.JSON(w, r, http.StatusOK, p)
 }
 
 func (h *ProjectHandler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -289,28 +289,27 @@ func (h *ProjectHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	var stackID int
 	err := h.db.QueryRow(`SELECT stack_id FROM projects WHERE name = $1`, name).Scan(&stackID)
 	if err == sql.ErrNoRows {
-		http.Error(w, "project not found", http.StatusNotFound)
+		respond.NotFound(w, r, "project", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	_, err = h.db.Exec(`UPDATE stacks SET deleted_at = NOW(), updated_at = NOW(), project_id = NULL WHERE id = $1`, stackID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	_, err = h.db.Exec(`DELETE FROM projects WHERE name = $1`, name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	respond.JSON(w, r, http.StatusOK, map[string]string{
 		"message": fmt.Sprintf("project %q deleted, stack moved to trash", name),
 	})
 }
@@ -318,12 +317,11 @@ func (h *ProjectHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *ProjectHandler) Scan(w http.ResponseWriter, r *http.Request) {
 	projects, err := h.scanner.ScanAndPersist()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	respond.JSON(w, r, http.StatusOK, map[string]interface{}{
 		"scanned":  len(projects),
 		"projects": projects,
 	})
@@ -335,17 +333,17 @@ func (h *ProjectHandler) Services(w http.ResponseWriter, r *http.Request) {
 	var stackID int
 	if err := h.db.QueryRow(`SELECT stack_id FROM projects WHERE name = $1`, name).Scan(&stackID); err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "project not found", http.StatusNotFound)
+			respond.NotFound(w, r, "project", name)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
-	h.stackServices(w, stackID)
+	h.stackServices(w, r, stackID)
 }
 
-func (h *ProjectHandler) stackServices(w http.ResponseWriter, stackID int) {
+func (h *ProjectHandler) stackServices(w http.ResponseWriter, r *http.Request, stackID int) {
 	rows, err := h.db.Query(`
 		SELECT si.id, si.instance_id, si.container_name, si.enabled,
 			svc.name AS template_name, svc.image_name, svc.image_tag
@@ -354,7 +352,7 @@ func (h *ProjectHandler) stackServices(w http.ResponseWriter, stackID int) {
 		WHERE si.stack_id = $1 AND si.deleted_at IS NULL
 		ORDER BY si.instance_id`, stackID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -374,7 +372,7 @@ func (h *ProjectHandler) stackServices(w http.ResponseWriter, stackID int) {
 		var imageName, imageTag string
 		if err := rows.Scan(&s.ID, &s.InstanceID, &s.ContainerName, &s.Enabled,
 			&s.TemplateName, &imageName, &imageTag); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		s.Image = imageName + ":" + imageTag
@@ -385,89 +383,75 @@ func (h *ProjectHandler) stackServices(w http.ResponseWriter, stackID int) {
 		services = []stackSvc{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(services)
+	respond.JSON(w, r, http.StatusOK, services)
 }
 
 func (h *ProjectHandler) Start(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	output, err := h.controller.Start(r.Context(), name)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error(), "output": output})
+		respond.JSON(w, r, http.StatusInternalServerError, map[string]string{"error": err.Error(), "output": output})
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "started", "output": output})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "started", "output": output})
 }
 
 func (h *ProjectHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	output, err := h.controller.Stop(r.Context(), name)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error(), "output": output})
+		respond.JSON(w, r, http.StatusInternalServerError, map[string]string{"error": err.Error(), "output": output})
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "stopped", "output": output})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "stopped", "output": output})
 }
 
 func (h *ProjectHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	output, err := h.controller.Restart(r.Context(), name)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error(), "output": output})
+		respond.JSON(w, r, http.StatusInternalServerError, map[string]string{"error": err.Error(), "output": output})
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "restarted", "output": output})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "restarted", "output": output})
 }
 
 func (h *ProjectHandler) StartService(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	service := chi.URLParam(r, "service")
 	if err := h.controller.StartService(r.Context(), name, service); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "started"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "started"})
 }
 
 func (h *ProjectHandler) StopService(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	service := chi.URLParam(r, "service")
 	if err := h.controller.StopService(r.Context(), name, service); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "stopped"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "stopped"})
 }
 
 func (h *ProjectHandler) RestartService(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	service := chi.URLParam(r, "service")
 	if err := h.controller.RestartService(r.Context(), name, service); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "restarted"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "restarted"})
 }
 
 func (h *ProjectHandler) Status(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	statuses, err := h.controller.Status(r.Context(), name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(statuses)
+	respond.JSON(w, r, http.StatusOK, statuses)
 }
