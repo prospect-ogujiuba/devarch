@@ -3,11 +3,12 @@ package middleware
 import (
 	"crypto/subtle"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/priz/devarch-api/internal/security"
 )
 
 func JSONContentType(next http.Handler) http.Handler {
@@ -26,28 +27,24 @@ func CacheControl(maxAge time.Duration) func(http.Handler) http.Handler {
 	}
 }
 
-var apiKeyWarningLogged bool
-
-func APIKeyAuth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		apiKey := os.Getenv("DEVARCH_API_KEY")
-		if apiKey == "" {
-			if !apiKeyWarningLogged {
-				log.Println("WARNING: DEVARCH_API_KEY is not set — API authentication is disabled. Set DEVARCH_API_KEY to enable auth.")
-				apiKeyWarningLogged = true
+func APIKeyAuth(mode security.Mode) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if !mode.RequiresAPIKey() {
+				next.ServeHTTP(w, r)
+				return
 			}
+
+			apiKey := os.Getenv("DEVARCH_API_KEY")
+			provided := r.Header.Get("X-API-Key")
+			if subtle.ConstantTimeCompare([]byte(provided), []byte(apiKey)) != 1 {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+
 			next.ServeHTTP(w, r)
-			return
-		}
-
-		provided := r.Header.Get("X-API-Key")
-		if subtle.ConstantTimeCompare([]byte(provided), []byte(apiKey)) != 1 {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
+		})
+	}
 }
 
 type rateLimiter struct {

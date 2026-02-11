@@ -17,6 +17,7 @@ import (
 	"github.com/priz/devarch-api/internal/podman"
 	"github.com/priz/devarch-api/internal/project"
 	"github.com/priz/devarch-api/internal/scanner"
+	"github.com/priz/devarch-api/internal/security"
 	"github.com/priz/devarch-api/internal/sync"
 	"github.com/priz/devarch-api/pkg/registry"
 	"github.com/priz/devarch-api/pkg/registry/dockerhub"
@@ -102,8 +103,17 @@ func main() {
 	registryManager.Register(dockerhub.NewClient())
 	registryManager.Register(ghcr.NewClient())
 
+	secMode, err := security.ParseMode(os.Getenv("SECURITY_MODE"))
+	if err != nil {
+		log.Fatalf("security configuration error: %v", err)
+	}
+	if err := security.ValidateConfig(secMode); err != nil {
+		log.Fatalf("security configuration error: %v", err)
+	}
+	log.Printf("security mode: %s", secMode)
+
 	syncManager := sync.NewManager(db, podmanClient, registryManager)
-	router := api.NewRouter(db, containerClient, podmanClient, syncManager, projectScanner, nginxGenerator, projectController, registryManager, cipher)
+	router := api.NewRouter(db, containerClient, podmanClient, syncManager, projectScanner, nginxGenerator, projectController, registryManager, cipher, secMode)
 
 	port := os.Getenv("PORT")
 	if port == "" {

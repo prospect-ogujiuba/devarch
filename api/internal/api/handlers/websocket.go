@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/priz/devarch-api/internal/security"
 	devsync "github.com/priz/devarch-api/internal/sync"
 )
 
@@ -15,11 +16,13 @@ type WebSocketHandler struct {
 	upgrader    websocket.Upgrader
 	clients     map[*websocket.Conn]bool
 	mu          sync.RWMutex
+	secMode     security.Mode
 }
 
-func NewWebSocketHandler(sm *devsync.Manager, allowedOrigins []string) *WebSocketHandler {
+func NewWebSocketHandler(sm *devsync.Manager, allowedOrigins []string, secMode security.Mode) *WebSocketHandler {
 	h := &WebSocketHandler{
 		syncManager: sm,
+		secMode:     secMode,
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				// Wildcard: allow all
