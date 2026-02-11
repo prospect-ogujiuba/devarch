@@ -227,31 +227,36 @@ func (h *InstanceHandler) List(w http.ResponseWriter, r *http.Request) {
 			si.enabled,
 			si.created_at,
 			si.updated_at,
-			(
-				SELECT COUNT(*) FROM instance_ports WHERE instance_id = si.id
-			) + (
-				SELECT COUNT(*) FROM instance_volumes WHERE instance_id = si.id
-			) + (
-				SELECT COUNT(*) FROM instance_env_vars WHERE instance_id = si.id
-			) + (
-				SELECT COUNT(*) FROM instance_labels WHERE instance_id = si.id
-			) + (
-				SELECT COUNT(*) FROM instance_domains WHERE instance_id = si.id
-			) + (
-				SELECT COUNT(*) FROM instance_healthchecks WHERE instance_id = si.id
-			) + (
-				SELECT COUNT(*) FROM instance_dependencies WHERE instance_id = si.id
-			) + (
-				SELECT COUNT(*) FROM instance_config_files WHERE instance_id = si.id
-			) + (
-				SELECT COUNT(*) FROM instance_env_files WHERE instance_id = si.id
-			) + (
-				SELECT COUNT(*) FROM instance_networks WHERE instance_id = si.id
-			) + (
-				SELECT COUNT(*) FROM instance_config_mounts WHERE instance_id = si.id
-			) as override_count
+			COALESCE(oc.total, 0) as override_count
 		FROM service_instances si
 		JOIN services s ON s.id = si.template_service_id
+		LEFT JOIN (
+			SELECT instance_id, COUNT(*) as total
+			FROM (
+				SELECT instance_id FROM instance_ports
+				UNION ALL
+				SELECT instance_id FROM instance_volumes
+				UNION ALL
+				SELECT instance_id FROM instance_env_vars
+				UNION ALL
+				SELECT instance_id FROM instance_labels
+				UNION ALL
+				SELECT instance_id FROM instance_domains
+				UNION ALL
+				SELECT instance_id FROM instance_healthchecks
+				UNION ALL
+				SELECT instance_id FROM instance_dependencies
+				UNION ALL
+				SELECT instance_id FROM instance_config_files
+				UNION ALL
+				SELECT instance_id FROM instance_env_files
+				UNION ALL
+				SELECT instance_id FROM instance_networks
+				UNION ALL
+				SELECT instance_id FROM instance_config_mounts
+			) all_overrides
+			GROUP BY instance_id
+		) oc ON oc.instance_id = si.id
 		WHERE si.stack_id = $1 AND si.deleted_at IS NULL
 	`
 
