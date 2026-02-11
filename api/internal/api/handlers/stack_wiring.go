@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/wiring"
 )
 
@@ -59,11 +60,11 @@ func (h *StackHandler) ListWires(w http.ResponseWriter, r *http.Request) {
 		SELECT id FROM stacks WHERE name = $1 AND deleted_at IS NULL
 	`, stackName).Scan(&stackID)
 	if err == sql.ErrNoRows {
-		http.Error(w, "stack not found", http.StatusNotFound)
+		respond.NotFound(w, r, "stack", stackName)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -84,7 +85,7 @@ func (h *StackHandler) ListWires(w http.ResponseWriter, r *http.Request) {
 		ORDER BY ci.instance_id, ic.name
 	`, stackID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -103,7 +104,7 @@ func (h *StackHandler) ListWires(w http.ResponseWriter, r *http.Request) {
 			&wr.ContractName, &wr.ContractType,
 			&envVarsJSON, &port, &protocol,
 		); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 
@@ -112,7 +113,7 @@ func (h *StackHandler) ListWires(w http.ResponseWriter, r *http.Request) {
 
 		var envVars map[string]string
 		if err := json.Unmarshal(envVarsJSON, &envVars); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 
@@ -155,7 +156,7 @@ func (h *StackHandler) ListWires(w http.ResponseWriter, r *http.Request) {
 		ORDER BY si.instance_id, ic.name
 	`, stackID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer unresolvedRows.Close()
@@ -164,7 +165,7 @@ func (h *StackHandler) ListWires(w http.ResponseWriter, r *http.Request) {
 	for unresolvedRows.Next() {
 		var ui unresolvedImport
 		if err := unresolvedRows.Scan(&ui.Instance, &ui.ContractName, &ui.ContractType, &ui.Required); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		ui.Reason = "no matching provider found or ambiguous"
@@ -180,8 +181,7 @@ func (h *StackHandler) ListWires(w http.ResponseWriter, r *http.Request) {
 		Unresolved: unresolved,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	respond.JSON(w, r, http.StatusOK, resp)
 }
 
 func (h *StackHandler) ResolveWires(w http.ResponseWriter, r *http.Request) {
@@ -192,11 +192,11 @@ func (h *StackHandler) ResolveWires(w http.ResponseWriter, r *http.Request) {
 		SELECT id FROM stacks WHERE name = $1 AND deleted_at IS NULL
 	`, stackName).Scan(&stackID)
 	if err == sql.ErrNoRows {
-		http.Error(w, "stack not found", http.StatusNotFound)
+		respond.NotFound(w, r, "stack", stackName)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -208,7 +208,7 @@ func (h *StackHandler) ResolveWires(w http.ResponseWriter, r *http.Request) {
 		ORDER BY si.instance_id, se.name
 	`, stackID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer providerRows.Close()
@@ -217,7 +217,7 @@ func (h *StackHandler) ResolveWires(w http.ResponseWriter, r *http.Request) {
 	for providerRows.Next() {
 		var p wiring.Provider
 		if err := providerRows.Scan(&p.InstanceID, &p.InstanceName, &p.ExportContractID, &p.ContractName, &p.ContractType, &p.Port, &p.Protocol); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		providers = append(providers, p)
@@ -231,7 +231,7 @@ func (h *StackHandler) ResolveWires(w http.ResponseWriter, r *http.Request) {
 		ORDER BY si.instance_id, ic.name
 	`, stackID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer consumerRows.Close()
@@ -241,11 +241,11 @@ func (h *StackHandler) ResolveWires(w http.ResponseWriter, r *http.Request) {
 		var c wiring.Consumer
 		var envVarsJSON []byte
 		if err := consumerRows.Scan(&c.InstanceID, &c.InstanceName, &c.ImportContractID, &c.ContractName, &c.ContractType, &c.Required, &envVarsJSON); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		if err := json.Unmarshal(envVarsJSON, &c.EnvVars); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		consumers = append(consumers, c)
@@ -257,7 +257,7 @@ func (h *StackHandler) ResolveWires(w http.ResponseWriter, r *http.Request) {
 		WHERE stack_id = $1
 	`, stackID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer wireRows.Close()
@@ -266,7 +266,7 @@ func (h *StackHandler) ResolveWires(w http.ResponseWriter, r *http.Request) {
 	for wireRows.Next() {
 		var ew wiring.ExistingWire
 		if err := wireRows.Scan(&ew.ID, &ew.ConsumerInstanceID, &ew.ProviderInstanceID, &ew.ImportContractID, &ew.Source); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		existingWires = append(existingWires, ew)
@@ -276,20 +276,20 @@ func (h *StackHandler) ResolveWires(w http.ResponseWriter, r *http.Request) {
 
 	validationWarnings, err := wiring.ValidateWiring(candidates, existingWires)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, err.Error())
 		return
 	}
 	warnings = append(warnings, validationWarnings...)
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
 
 	if _, err := tx.Exec(`DELETE FROM service_instance_wires WHERE stack_id = $1 AND source = 'auto'`, stackID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -299,13 +299,13 @@ func (h *StackHandler) ResolveWires(w http.ResponseWriter, r *http.Request) {
 			VALUES ($1, $2, $3, $4, $5, $6)
 		`, stackID, candidate.ConsumerInstanceID, candidate.ProviderInstanceID, candidate.ImportContractID, candidate.ExportContractID, candidate.Source)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -314,8 +314,7 @@ func (h *StackHandler) ResolveWires(w http.ResponseWriter, r *http.Request) {
 		Warnings: warnings,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	respond.JSON(w, r, http.StatusOK, resp)
 }
 
 func (h *StackHandler) CreateWire(w http.ResponseWriter, r *http.Request) {
@@ -323,7 +322,7 @@ func (h *StackHandler) CreateWire(w http.ResponseWriter, r *http.Request) {
 
 	var req createWireRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, err.Error())
 		return
 	}
 
@@ -332,11 +331,11 @@ func (h *StackHandler) CreateWire(w http.ResponseWriter, r *http.Request) {
 		SELECT id FROM stacks WHERE name = $1 AND deleted_at IS NULL
 	`, stackName).Scan(&stackID)
 	if err == sql.ErrNoRows {
-		http.Error(w, "stack not found", http.StatusNotFound)
+		respond.NotFound(w, r, "stack", stackName)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -346,11 +345,11 @@ func (h *StackHandler) CreateWire(w http.ResponseWriter, r *http.Request) {
 		WHERE instance_id = $1 AND stack_id = $2 AND deleted_at IS NULL
 	`, req.ConsumerInstance, stackID).Scan(&consumerInstanceID, &consumerServiceID)
 	if err == sql.ErrNoRows {
-		http.Error(w, "consumer instance not found", http.StatusNotFound)
+		respond.NotFound(w, r, "consumer instance", req.ConsumerInstance)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -360,11 +359,11 @@ func (h *StackHandler) CreateWire(w http.ResponseWriter, r *http.Request) {
 		WHERE instance_id = $1 AND stack_id = $2 AND deleted_at IS NULL
 	`, req.ProviderInstance, stackID).Scan(&providerInstanceID, &providerServiceID)
 	if err == sql.ErrNoRows {
-		http.Error(w, "provider instance not found", http.StatusNotFound)
+		respond.NotFound(w, r, "provider instance", req.ProviderInstance)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -375,11 +374,11 @@ func (h *StackHandler) CreateWire(w http.ResponseWriter, r *http.Request) {
 		WHERE name = $1 AND service_id = $2
 	`, req.ImportContract, consumerServiceID).Scan(&importContractID, &importType)
 	if err == sql.ErrNoRows {
-		http.Error(w, "import contract not found", http.StatusNotFound)
+		respond.NotFound(w, r, "import contract", req.ImportContract)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -389,22 +388,22 @@ func (h *StackHandler) CreateWire(w http.ResponseWriter, r *http.Request) {
 		WHERE type = $1 AND service_id = $2
 	`, importType, providerServiceID).Scan(&exportContractID)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("provider has no matching export of type %s", importType), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("provider has no matching export of type %s", importType))
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if consumerInstanceID == providerInstanceID {
-		http.Error(w, "cannot wire instance to itself", http.StatusBadRequest)
+		respond.BadRequest(w, r, "cannot wire instance to itself")
 		return
 	}
 
 	tx, err := h.db.Begin()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -414,7 +413,7 @@ func (h *StackHandler) CreateWire(w http.ResponseWriter, r *http.Request) {
 		WHERE consumer_instance_id = $1 AND import_contract_id = $2
 	`, consumerInstanceID, importContractID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -425,19 +424,19 @@ func (h *StackHandler) CreateWire(w http.ResponseWriter, r *http.Request) {
 		RETURNING id
 	`, stackID, consumerInstanceID, providerInstanceID, importContractID, exportContractID).Scan(&wireID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	var createdAt time.Time
 	err = h.db.QueryRow(`SELECT created_at FROM service_instance_wires WHERE id = $1`, wireID).Scan(&createdAt)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -452,9 +451,7 @@ func (h *StackHandler) CreateWire(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:        createdAt,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(resp)
+	respond.JSON(w, r, http.StatusCreated, resp)
 }
 
 func (h *StackHandler) DeleteWire(w http.ResponseWriter, r *http.Request) {
@@ -463,7 +460,7 @@ func (h *StackHandler) DeleteWire(w http.ResponseWriter, r *http.Request) {
 
 	wireID, err := strconv.Atoi(wireIDStr)
 	if err != nil {
-		http.Error(w, "invalid wire ID", http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid wire ID")
 		return
 	}
 
@@ -472,11 +469,11 @@ func (h *StackHandler) DeleteWire(w http.ResponseWriter, r *http.Request) {
 		SELECT id FROM stacks WHERE name = $1 AND deleted_at IS NULL
 	`, stackName).Scan(&stackID)
 	if err == sql.ErrNoRows {
-		http.Error(w, "stack not found", http.StatusNotFound)
+		respond.NotFound(w, r, "stack", stackName)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -484,18 +481,18 @@ func (h *StackHandler) DeleteWire(w http.ResponseWriter, r *http.Request) {
 		DELETE FROM service_instance_wires WHERE id = $1 AND stack_id = $2
 	`, wireID, stackID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if rows == 0 {
-		http.Error(w, "wire not found", http.StatusNotFound)
+		respond.NotFound(w, r, "wire", wireIDStr)
 		return
 	}
 
@@ -510,24 +507,23 @@ func (h *StackHandler) CleanupOrphanedWires(w http.ResponseWriter, r *http.Reque
 		SELECT id FROM stacks WHERE name = $1 AND deleted_at IS NULL
 	`, stackName).Scan(&stackID)
 	if err == sql.ErrNoRows {
-		http.Error(w, "stack not found", http.StatusNotFound)
+		respond.NotFound(w, r, "stack", stackName)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	orphanedIDs, err := wiring.FindOrphanedWires(h.db, stackID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if len(orphanedIDs) == 0 {
 		resp := cleanupWiresResponse{Deleted: 0}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		respond.JSON(w, r, http.StatusOK, resp)
 		return
 	}
 
@@ -544,13 +540,12 @@ func (h *StackHandler) CleanupOrphanedWires(w http.ResponseWriter, r *http.Reque
 	query := fmt.Sprintf("DELETE FROM service_instance_wires WHERE stack_id = $1 AND id IN (%s)", placeholders)
 	result, err := h.db.Exec(query, args...)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	deleted, _ := result.RowsAffected()
 
 	resp := cleanupWiresResponse{Deleted: int(deleted)}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	respond.JSON(w, r, http.StatusOK, resp)
 }

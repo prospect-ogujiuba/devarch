@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/export"
 )
 
@@ -15,10 +16,10 @@ func (h *StackHandler) ExportStack(w http.ResponseWriter, r *http.Request) {
 	yamlBytes, err := exporter.Export(stackName)
 	if err != nil {
 		if err.Error() == fmt.Sprintf("stack %q not found", stackName) {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			respond.NotFound(w, r, "stack", stackName)
 			return
 		}
-		http.Error(w, fmt.Sprintf("export failed: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
