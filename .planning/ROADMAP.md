@@ -116,8 +116,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 20-01-PLAN.md — Standardize action endpoints with ActionResponse struct
-- [ ] 20-02-PLAN.md — OpenAPI annotations, spec generation, CI validation
+- [x] 20-01-PLAN.md — Standardize action endpoints with ActionResponse struct
+- [x] 20-02-PLAN.md — OpenAPI annotations, spec generation, CI validation
 
 #### Phase 21: Deploy Orchestration Service
 **Goal**: Deploy orchestration logic (plan/apply/wiring) extracted from handlers into application service
@@ -129,10 +129,11 @@ Plans:
   3. Wiring logic lives in orchestration service, not handler
   4. Handlers delegate to service layer for all orchestration operations
   5. Plan/apply tests pass with new service layer
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 21-01-PLAN.md — Create orchestration service package (GeneratePlan, ApplyPlan, ResolveWiring)
+- [ ] 21-02-PLAN.md — Refactor handlers to delegate to orchestration service + wire into server
 
 #### Phase 22: Identity Service & Naming Consolidation
 **Goal**: All naming logic (stack/instance/network/container) consolidated in identity service
@@ -249,7 +250,7 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 | 17. CORS & Origin Hardening | 1/1 | ✓ Complete | 2026-02-11 |
 | 18. WebSocket Authentication & Security Modes | 2/2 | ✓ Complete | 2026-02-11 |
 | 19. API Response Normalization | 4/4 | ✓ Complete | 2026-02-11 |
-| 20. Action Endpoint Consistency & OpenAPI | 0/TBD | Not started | - |
+| 20. Action Endpoint Consistency & OpenAPI | 2/2 | ✓ Complete | 2026-02-11 |
 | 21. Deploy Orchestration Service | 0/TBD | Not started | - |
 | 22. Identity Service & Naming Consolidation | 0/TBD | Not started | - |
 | 23. Performance Optimization | 0/TBD | Not started | - |
@@ -261,4 +262,4 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-11 — Phase 19 complete*
+*Last updated: 2026-02-11 — Phase 20 complete*
