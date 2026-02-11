@@ -38,6 +38,15 @@ type networkListItem struct {
 	Created        time.Time         `json:"created"`
 }
 
+// List godoc
+// @Summary      List container networks
+// @Description  Returns all container networks with metadata including managed status, containers, and orphan detection
+// @Tags         networks
+// @Produce      json
+// @Success      200 {object} respond.SuccessEnvelope{data=[]networkListItem}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /networks [get]
+// @Security     ApiKeyAuth
 func (h *NetworkHandler) List(w http.ResponseWriter, r *http.Request) {
 	names, err := h.containerClient.ListAllNetworks()
 	if err != nil {
@@ -108,6 +117,18 @@ type createNetworkRequest struct {
 
 var networkNameRe = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`)
 
+// Create godoc
+// @Summary      Create container network
+// @Description  Creates a new container network with DevArch management labels
+// @Tags         networks
+// @Accept       json
+// @Produce      json
+// @Param        request body createNetworkRequest true "Network creation request"
+// @Success      201 {object} respond.SuccessEnvelope{data=networkListItem}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /networks [post]
+// @Security     ApiKeyAuth
 func (h *NetworkHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createNetworkRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -160,6 +181,18 @@ func (h *NetworkHandler) Create(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Remove godoc
+// @Summary      Remove container network
+// @Description  Removes a container network by name (must have no connected containers)
+// @Tags         networks
+// @Produce      json
+// @Param        name path string true "Network name"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /networks/{name} [delete]
+// @Security     ApiKeyAuth
 func (h *NetworkHandler) Remove(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -199,6 +232,17 @@ type bulkError struct {
 	Error string `json:"error"`
 }
 
+// BulkRemove godoc
+// @Summary      Remove multiple networks
+// @Description  Removes multiple container networks by name with partial success handling
+// @Tags         networks
+// @Accept       json
+// @Produce      json
+// @Param        request body bulkRemoveRequest true "Bulk remove request"
+// @Success      200 {object} respond.SuccessEnvelope{data=bulkRemoveResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Router       /networks/bulk-remove [post]
+// @Security     ApiKeyAuth
 func (h *NetworkHandler) BulkRemove(w http.ResponseWriter, r *http.Request) {
 	var req bulkRemoveRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

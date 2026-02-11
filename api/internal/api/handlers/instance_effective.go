@@ -52,6 +52,17 @@ type overrideMetadata struct {
 	ConfigFiles  bool `json:"config_files"`
 }
 
+// EffectiveConfig godoc
+// @Summary      Get effective instance configuration (template merged with overrides)
+// @Tags         instances
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Success      200 {object} respond.SuccessEnvelope{data=effectiveConfigResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/effective-config [get]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")

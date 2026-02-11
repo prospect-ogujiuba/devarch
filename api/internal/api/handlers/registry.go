@@ -37,6 +37,17 @@ type imageResponse struct {
 	Registry    string `json:"registry"`
 }
 
+// GetImage godoc
+// @Summary      Get service image metadata
+// @Description  Returns cached registry metadata for a service's container image
+// @Tags         registries
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope{data=imageResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/image [get]
+// @Security     ApiKeyAuth
 func (h *RegistryHandler) GetImage(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -96,6 +107,17 @@ type tagResponse struct {
 	PushedAt  string `json:"pushed_at,omitempty"`
 }
 
+// GetTags godoc
+// @Summary      Get service image tags
+// @Description  Returns cached tags for a service's container image (up to 20 most recent)
+// @Tags         registries
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope{data=[]tagResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/tags [get]
+// @Security     ApiKeyAuth
 func (h *RegistryHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -159,6 +181,17 @@ type vulnResponse struct {
 	FixedVersion     string   `json:"fixed_version,omitempty"`
 }
 
+// GetVulnerabilities godoc
+// @Summary      Get service image vulnerabilities
+// @Description  Returns cached CVE vulnerabilities for a service's image tag
+// @Tags         registries
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope{data=[]vulnResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/vulnerabilities [get]
+// @Security     ApiKeyAuth
 func (h *RegistryHandler) GetVulnerabilities(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -220,6 +253,15 @@ type registryListItem struct {
 	Enabled bool   `json:"enabled"`
 }
 
+// ListRegistries godoc
+// @Summary      List container registries
+// @Description  Returns all configured container registries with base URLs and enabled status
+// @Tags         registries
+// @Produce      json
+// @Success      200 {object} respond.SuccessEnvelope{data=[]registryListItem}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /registries [get]
+// @Security     ApiKeyAuth
 func (h *RegistryHandler) ListRegistries(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.db.Query("SELECT name, base_url, enabled FROM registries ORDER BY name")
 	if err != nil {
@@ -244,6 +286,22 @@ func (h *RegistryHandler) ListRegistries(w http.ResponseWriter, r *http.Request)
 	respond.JSON(w, r, http.StatusOK,registries)
 }
 
+// SearchImages godoc
+// @Summary      Search registry for images
+// @Description  Searches a container registry for images matching a query string with pagination
+// @Tags         registries
+// @Produce      json
+// @Param        registry path string true "Registry name"
+// @Param        q query string true "Search query"
+// @Param        page_size query int false "Page size"
+// @Param        page query int false "Page number"
+// @Success      200 {object} respond.SuccessEnvelope{data=[]registry.SearchResult}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      501 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /registries/{registry}/search [get]
+// @Security     ApiKeyAuth
 func (h *RegistryHandler) SearchImages(w http.ResponseWriter, r *http.Request) {
 	registryName := chi.URLParam(r, "registry")
 	query := r.URL.Query().Get("q")
@@ -378,6 +436,19 @@ func (h *RegistryHandler) ListImageTags(w http.ResponseWriter, r *http.Request) 
 	respond.JSON(w, r, http.StatusOK,resp)
 }
 
+// ImageRoute godoc
+// @Summary      Get live image info or tags
+// @Description  Routes to image info or tags list based on path suffix (live registry data, not cached)
+// @Tags         registries
+// @Produce      json
+// @Param        registry path string true "Registry name"
+// @Param        path path string true "Image path (e.g., library/nginx or library/nginx/tags)"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /registries/{registry}/images/{path} [get]
+// @Security     ApiKeyAuth
 func (h *RegistryHandler) ImageRoute(w http.ResponseWriter, r *http.Request) {
 	wildcard := chi.URLParam(r, "*")
 	if strings.HasSuffix(wildcard, "/tags") {

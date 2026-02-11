@@ -44,6 +44,15 @@ type runtimeStatusResponse struct {
 	} `json:"microservices"`
 }
 
+// Status godoc
+// @Summary      Get runtime status
+// @Description  Returns current container runtime status (Docker/Podman) including availability, running containers, and network status
+// @Tags         runtime
+// @Produce      json
+// @Success      200 {object} respond.SuccessEnvelope{data=runtimeStatusResponse}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /runtime/status [get]
+// @Security     ApiKeyAuth
 func (h *RuntimeHandler) Status(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -121,6 +130,18 @@ type switchOptions struct {
 	UpdateConfig bool `json:"update_config"`
 }
 
+// Switch godoc
+// @Summary      Switch container runtime
+// @Description  Switches between Docker and Podman runtimes with options to stop services and preserve data
+// @Tags         runtime
+// @Accept       json
+// @Produce      json
+// @Param        request body switchRequest true "Switch request"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      503 {object} respond.ErrorEnvelope
+// @Router       /runtime/switch [post]
+// @Security     ApiKeyAuth
 func (h *RuntimeHandler) Switch(w http.ResponseWriter, r *http.Request) {
 	var req switchRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -218,6 +239,15 @@ type socketInfo struct {
 	Connectivity string `json:"connectivity"`
 }
 
+// SocketStatus godoc
+// @Summary      Get Podman socket status
+// @Description  Returns detailed status of Podman rootless and rootful sockets including connectivity and environment info
+// @Tags         runtime
+// @Produce      json
+// @Success      200 {object} respond.SuccessEnvelope{data=socketStatusResponse}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /socket/status [get]
+// @Security     ApiKeyAuth
 func (h *RuntimeHandler) SocketStatus(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -294,6 +324,18 @@ type socketStartOptions struct {
 	StopConflicting bool `json:"stop_conflicting"`
 }
 
+// SocketStart godoc
+// @Summary      Start Podman socket
+// @Description  Starts a Podman socket (rootless or rootful) via systemd with options to enable lingering and stop conflicting sockets
+// @Tags         runtime
+// @Accept       json
+// @Produce      json
+// @Param        request body socketStartRequest true "Socket start request"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /socket/start [post]
+// @Security     ApiKeyAuth
 func (h *RuntimeHandler) SocketStart(w http.ResponseWriter, r *http.Request) {
 	var req socketStartRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

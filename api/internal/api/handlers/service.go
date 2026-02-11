@@ -55,6 +55,23 @@ func NewServiceHandler(db *sql.DB, cc *container.Client, pc *podman.Client, ciph
 	}
 }
 
+// List godoc
+// @Summary      List services
+// @Description  List all services with optional filtering and pagination
+// @Tags         services
+// @Produce      json
+// @Param        category query string false "Filter by category name"
+// @Param        search query string false "Search by service name"
+// @Param        enabled query string false "Filter by enabled status"
+// @Param        sort query string false "Sort column (name, image_name, created_at, updated_at, category)"
+// @Param        order query string false "Sort order (asc, desc)"
+// @Param        limit query int false "Page limit (max 500)"
+// @Param        page query int false "Page number"
+// @Param        include query string false "Include related data (status, metrics, all)"
+// @Success      200 {object} respond.SuccessEnvelope{data=[]models.Service}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services [get]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 	query := `
 		SELECT s.id, s.name, s.category_id, s.image_name, s.image_tag,
@@ -223,6 +240,18 @@ func containsInclude(includes, target string) bool {
 	return false
 }
 
+// Get godoc
+// @Summary      Get service
+// @Description  Get a single service by name
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        include query string false "Include related data (status, metrics, all)"
+// @Success      200 {object} respond.SuccessEnvelope{data=models.Service}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name} [get]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -484,6 +513,18 @@ type createServiceRequest struct {
 	Healthcheck   *models.ServiceHealthcheck `json:"healthcheck"`
 }
 
+// Create godoc
+// @Summary      Create service
+// @Description  Create a new service
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        service body createServiceRequest true "Service definition"
+// @Success      201 {object} respond.SuccessEnvelope{data=map[string]int}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services [post]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createServiceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -631,6 +672,20 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusCreated, map[string]int{"id": serviceID})
 }
 
+// Update godoc
+// @Summary      Update service
+// @Description  Update service basic configuration
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        service body createServiceRequest true "Service updates"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name} [put]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -722,6 +777,17 @@ func (h *ServiceHandler) snapshotConfig(s *models.Service, summary string) {
 	}
 }
 
+// Delete godoc
+// @Summary      Delete service
+// @Description  Delete a service by name
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name} [delete]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -744,6 +810,18 @@ func (h *ServiceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
+// Start godoc
+// @Summary      Start service
+// @Description  Start a service container
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Failure      503 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/start [post]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Start(w http.ResponseWriter, r *http.Request) {
 	if h.containerClient == nil {
 		respond.Error(w, r, http.StatusServiceUnavailable, "service_unavailable", "compose operations unavailable", nil)
@@ -784,6 +862,18 @@ func (h *ServiceHandler) Start(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "started")
 }
 
+// Stop godoc
+// @Summary      Stop service
+// @Description  Stop a service container
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Failure      503 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/stop [post]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	if h.containerClient == nil {
 		respond.Error(w, r, http.StatusServiceUnavailable, "service_unavailable", "compose operations unavailable", nil)
@@ -816,6 +906,18 @@ func (h *ServiceHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "stopped")
 }
 
+// Restart godoc
+// @Summary      Restart service
+// @Description  Restart a service container
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Failure      503 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/restart [post]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	if h.containerClient == nil {
 		respond.Error(w, r, http.StatusServiceUnavailable, "service_unavailable", "compose operations unavailable", nil)
@@ -848,6 +950,19 @@ func (h *ServiceHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "restarted")
 }
 
+// Rebuild godoc
+// @Summary      Rebuild service
+// @Description  Rebuild a service container with optional no-cache
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        no_cache query bool false "Rebuild without cache"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Failure      503 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/rebuild [post]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Rebuild(w http.ResponseWriter, r *http.Request) {
 	if h.containerClient == nil {
 		respond.Error(w, r, http.StatusServiceUnavailable, "service_unavailable", "compose operations unavailable", nil)
@@ -889,6 +1004,16 @@ func (h *ServiceHandler) Rebuild(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "rebuilt")
 }
 
+// Status godoc
+// @Summary      Get service status
+// @Description  Get container status for a service
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/status [get]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Status(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -901,6 +1026,17 @@ func (h *ServiceHandler) Status(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, status)
 }
 
+// Logs godoc
+// @Summary      Get service logs
+// @Description  Get container logs for a service
+// @Tags         services
+// @Produce      text/plain
+// @Param        name path string true "Service name"
+// @Param        tail query int false "Number of log lines to return" default(100)
+// @Success      200 {string} string
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/logs [get]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Logs(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	tailStr := r.URL.Query().Get("tail")
@@ -921,6 +1057,16 @@ func (h *ServiceHandler) Logs(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(logs))
 }
 
+// Metrics godoc
+// @Summary      Get service metrics
+// @Description  Get container metrics for a service
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/metrics [get]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Metrics(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -933,6 +1079,17 @@ func (h *ServiceHandler) Metrics(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, metrics)
 }
 
+// Compose godoc
+// @Summary      Get service compose YAML
+// @Description  Generate and return docker-compose YAML for a service
+// @Tags         services
+// @Produce      text/yaml
+// @Param        name path string true "Service name"
+// @Success      200 {string} string
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/compose [get]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Compose(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -961,6 +1118,18 @@ type bulkRequest struct {
 	Services []string `json:"services"`
 }
 
+// Bulk godoc
+// @Summary      Bulk service action
+// @Description  Perform action on multiple services (start, stop, restart)
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        request body bulkRequest true "Bulk action request"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      503 {object} respond.ErrorEnvelope
+// @Router       /services/bulk [post]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Bulk(w http.ResponseWriter, r *http.Request) {
 	if h.containerClient == nil {
 		respond.Error(w, r, http.StatusServiceUnavailable, "service_unavailable", "compose operations unavailable", nil)
@@ -1010,6 +1179,17 @@ func (h *ServiceHandler) Bulk(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, results)
 }
 
+// Versions godoc
+// @Summary      List service config versions
+// @Description  Get configuration version history for a service
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope{data=[]models.ConfigVersion}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/versions [get]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Versions(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -1047,6 +1227,19 @@ func (h *ServiceHandler) Versions(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, versions)
 }
 
+// GetVersion godoc
+// @Summary      Get service config version
+// @Description  Get a specific configuration version for a service
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        version path int true "Version number"
+// @Success      200 {object} respond.SuccessEnvelope{data=models.ConfigVersion}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/versions/{version} [get]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) GetVersion(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	versionStr := chi.URLParam(r, "version")
@@ -1083,6 +1276,17 @@ func (h *ServiceHandler) GetVersion(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, v)
 }
 
+// Validate godoc
+// @Summary      Validate service config
+// @Description  Validate service configuration and update validation status
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/validate [post]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Validate(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -1113,6 +1317,17 @@ func (h *ServiceHandler) Validate(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, result)
 }
 
+// Export godoc
+// @Summary      Export service
+// @Description  Export service as compose YAML with metadata
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]interface{}}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/export [post]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Export(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -1142,7 +1357,17 @@ func (h *ServiceHandler) Export(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Materialize writes config files to disk without starting the service
+// Materialize godoc
+// @Summary      Materialize service config files
+// @Description  Write service config files to disk without starting the service
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/materialize [post]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) Materialize(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -1169,7 +1394,17 @@ func (h *ServiceHandler) Materialize(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "materialized"})
 }
 
-// ListConfigFiles returns config files for a service
+// ListConfigFiles godoc
+// @Summary      List service config files
+// @Description  Get list of config files for a service
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope{data=[]models.ServiceConfigFile}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/files [get]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) ListConfigFiles(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -1209,7 +1444,18 @@ func (h *ServiceHandler) ListConfigFiles(w http.ResponseWriter, r *http.Request)
 	respond.JSON(w, r, http.StatusOK, files)
 }
 
-// GetConfigFile returns a single config file's content
+// GetConfigFile godoc
+// @Summary      Get service config file
+// @Description  Get a single config file's content by path
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        path path string true "File path"
+// @Success      200 {object} respond.SuccessEnvelope{data=models.ServiceConfigFile}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/files/{path} [get]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) GetConfigFile(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	filePath := chi.URLParam(r, "*")
@@ -1240,7 +1486,21 @@ func (h *ServiceHandler) GetConfigFile(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, f)
 }
 
-// PutConfigFile creates or updates a config file
+// PutConfigFile godoc
+// @Summary      Create or update service config file
+// @Description  Create or update a config file for a service
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        path path string true "File path"
+// @Param        file body object{content=string,file_mode=string} true "File content and mode"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/files/{path} [put]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) PutConfigFile(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	filePath := chi.URLParam(r, "*")
@@ -1310,6 +1570,20 @@ func (h *ServiceHandler) snapshotAndUpdate(serviceID int) {
 	h.db.Exec(`UPDATE services SET config_status = 'modified', updated_at = NOW() WHERE id = $1`, serviceID)
 }
 
+// UpdatePorts godoc
+// @Summary      Update service ports
+// @Description  Replace all port mappings for a service
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        ports body object{ports=[]models.ServicePort} true "Port mappings"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/ports [put]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) UpdatePorts(w http.ResponseWriter, r *http.Request) {
 	serviceID, ok := h.lookupServiceID(w, r)
 	if !ok {
@@ -1353,6 +1627,20 @@ func (h *ServiceHandler) UpdatePorts(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateVolumes godoc
+// @Summary      Update service volumes
+// @Description  Replace all volume mounts for a service
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        volumes body object{volumes=[]models.ServiceVolume} true "Volume mounts"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/volumes [put]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) UpdateVolumes(w http.ResponseWriter, r *http.Request) {
 	serviceID, ok := h.lookupServiceID(w, r)
 	if !ok {
@@ -1396,6 +1684,20 @@ func (h *ServiceHandler) UpdateVolumes(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateEnvVars godoc
+// @Summary      Update service environment variables
+// @Description  Replace all environment variables for a service
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        env_vars body object{env_vars=[]models.ServiceEnvVar} true "Environment variables"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/env-vars [put]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) {
 	serviceID, ok := h.lookupServiceID(w, r)
 	if !ok {
@@ -1484,6 +1786,20 @@ func (h *ServiceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateDependencies godoc
+// @Summary      Update service dependencies
+// @Description  Replace all dependencies for a service
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        dependencies body object{dependencies=[]string} true "Service dependencies"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/dependencies [put]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) UpdateDependencies(w http.ResponseWriter, r *http.Request) {
 	serviceID, ok := h.lookupServiceID(w, r)
 	if !ok {
@@ -1533,6 +1849,20 @@ func (h *ServiceHandler) UpdateDependencies(w http.ResponseWriter, r *http.Reque
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateHealthcheck godoc
+// @Summary      Update service healthcheck
+// @Description  Update healthcheck configuration for a service
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        healthcheck body models.ServiceHealthcheck true "Healthcheck configuration"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/healthcheck [put]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) UpdateHealthcheck(w http.ResponseWriter, r *http.Request) {
 	serviceID, ok := h.lookupServiceID(w, r)
 	if !ok {
@@ -1563,6 +1893,20 @@ func (h *ServiceHandler) UpdateHealthcheck(w http.ResponseWriter, r *http.Reques
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateLabels godoc
+// @Summary      Update service labels
+// @Description  Replace all labels for a service
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        labels body object{labels=[]models.ServiceLabel} true "Service labels"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/labels [put]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) UpdateLabels(w http.ResponseWriter, r *http.Request) {
 	serviceID, ok := h.lookupServiceID(w, r)
 	if !ok {
@@ -1606,6 +1950,20 @@ func (h *ServiceHandler) UpdateLabels(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateDomains godoc
+// @Summary      Update service domains
+// @Description  Replace all domain mappings for a service
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        domains body object{domains=[]models.ServiceDomain} true "Service domains"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/domains [put]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) UpdateDomains(w http.ResponseWriter, r *http.Request) {
 	serviceID, ok := h.lookupServiceID(w, r)
 	if !ok {
@@ -1649,6 +2007,20 @@ func (h *ServiceHandler) UpdateDomains(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateEnvFiles godoc
+// @Summary      Update service env files
+// @Description  Replace all env file paths for a service
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        env_files body object{env_files=[]string} true "Env file paths"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/env-files [put]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request) {
 	serviceID, ok := h.lookupServiceID(w, r)
 	if !ok {
@@ -1703,6 +2075,20 @@ func (h *ServiceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request) 
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateNetworks godoc
+// @Summary      Update service networks
+// @Description  Replace all network attachments for a service
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        networks body object{networks=[]string} true "Network names"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/networks [put]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request) {
 	serviceID, ok := h.lookupServiceID(w, r)
 	if !ok {
@@ -1758,6 +2144,20 @@ func (h *ServiceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request) 
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateConfigMounts godoc
+// @Summary      Update service config mounts
+// @Description  Replace all config file mounts for a service
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        config_mounts body object{config_mounts=[]models.ServiceConfigMount} true "Config mounts"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/config-mounts [put]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Request) {
 	serviceID, ok := h.lookupServiceID(w, r)
 	if !ok {
@@ -1816,7 +2216,18 @@ func (h *ServiceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Reque
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
-// DeleteConfigFile removes a config file
+// DeleteConfigFile godoc
+// @Summary      Delete service config file
+// @Description  Remove a config file from a service
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        path path string true "File path"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/files/{path} [delete]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) DeleteConfigFile(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	filePath := chi.URLParam(r, "*")
@@ -1849,7 +2260,17 @@ func (h *ServiceHandler) DeleteConfigFile(w http.ResponseWriter, r *http.Request
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
-// ListExports returns export contracts for a service template
+// ListExports godoc
+// @Summary      List service exports
+// @Description  Get export contracts for a service template
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/exports [get]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) ListExports(w http.ResponseWriter, r *http.Request) {
 	serviceID, ok := h.lookupServiceID(w, r)
 	if !ok {
@@ -1893,7 +2314,20 @@ func (h *ServiceHandler) ListExports(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, exports)
 }
 
-// UpdateExports replaces all export contracts for a service template
+// UpdateExports godoc
+// @Summary      Update service exports
+// @Description  Replace all export contracts for a service template
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        exports body object{exports=[]object} true "Export contracts"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/exports [put]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) UpdateExports(w http.ResponseWriter, r *http.Request) {
 	serviceID, ok := h.lookupServiceID(w, r)
 	if !ok {
@@ -1946,7 +2380,17 @@ func (h *ServiceHandler) UpdateExports(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
-// ListImports returns import contracts for a service template
+// ListImports godoc
+// @Summary      List service imports
+// @Description  Get import contracts for a service template
+// @Tags         services
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/imports [get]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) ListImports(w http.ResponseWriter, r *http.Request) {
 	serviceID, ok := h.lookupServiceID(w, r)
 	if !ok {
@@ -1995,7 +2439,20 @@ func (h *ServiceHandler) ListImports(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, imports)
 }
 
-// UpdateImports replaces all import contracts for a service template
+// UpdateImports godoc
+// @Summary      Update service imports
+// @Description  Replace all import contracts for a service template
+// @Tags         services
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        imports body object{imports=[]object} true "Import contracts"
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]string}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/imports [put]
+// @Security     ApiKeyAuth
 func (h *ServiceHandler) UpdateImports(w http.ResponseWriter, r *http.Request) {
 	serviceID, ok := h.lookupServiceID(w, r)
 	if !ok {

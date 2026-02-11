@@ -69,6 +69,17 @@ func (h *ProjectHandler) enrichRunningCount(p *models.Project) {
 	}
 }
 
+// List godoc
+// @Summary      List all projects
+// @Description  Returns all projects with optional type and language filters
+// @Tags         projects
+// @Produce      json
+// @Param        type query string false "Filter by project type"
+// @Param        language query string false "Filter by programming language"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /projects [get]
+// @Security     ApiKeyAuth
 func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 	typeFilter := r.URL.Query().Get("type")
 	langFilter := r.URL.Query().Get("language")
@@ -115,6 +126,17 @@ func (h *ProjectHandler) List(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, projects)
 }
 
+// Get godoc
+// @Summary      Get project by name
+// @Description  Returns a single project by its name
+// @Tags         projects
+// @Produce      json
+// @Param        name path string true "Project name"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /projects/{name} [get]
+// @Security     ApiKeyAuth
 func (h *ProjectHandler) Get(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -144,6 +166,19 @@ type createProjectRequest struct {
 	ProxyPort   *int   `json:"proxy_port"`
 }
 
+// Create godoc
+// @Summary      Create a new project
+// @Description  Creates a new project with associated stack
+// @Tags         projects
+// @Accept       json
+// @Produce      json
+// @Param        project body createProjectRequest true "Project details"
+// @Success      201 {object} respond.SuccessEnvelope
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /projects [post]
+// @Security     ApiKeyAuth
 func (h *ProjectHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createProjectRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -241,6 +276,20 @@ type updateProjectRequest struct {
 	ProxyPort   *int    `json:"proxy_port"`
 }
 
+// Update godoc
+// @Summary      Update project
+// @Description  Updates an existing project's properties
+// @Tags         projects
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Project name"
+// @Param        project body updateProjectRequest true "Updated project details"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /projects/{name} [put]
+// @Security     ApiKeyAuth
 func (h *ProjectHandler) Update(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -283,6 +332,17 @@ func (h *ProjectHandler) Update(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, p)
 }
 
+// Delete godoc
+// @Summary      Delete project
+// @Description  Deletes a project and moves its stack to trash
+// @Tags         projects
+// @Produce      json
+// @Param        name path string true "Project name"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /projects/{name} [delete]
+// @Security     ApiKeyAuth
 func (h *ProjectHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -314,6 +374,15 @@ func (h *ProjectHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Scan godoc
+// @Summary      Scan for projects
+// @Description  Scans filesystem for projects and persists them to database
+// @Tags         projects
+// @Produce      json
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /projects/scan [post]
+// @Security     ApiKeyAuth
 func (h *ProjectHandler) Scan(w http.ResponseWriter, r *http.Request) {
 	projects, err := h.scanner.ScanAndPersist()
 	if err != nil {
@@ -327,6 +396,17 @@ func (h *ProjectHandler) Scan(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Services godoc
+// @Summary      List project services
+// @Description  Returns all service instances that belong to the project's stack
+// @Tags         projects
+// @Produce      json
+// @Param        name path string true "Project name"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /projects/{name}/services [get]
+// @Security     ApiKeyAuth
 func (h *ProjectHandler) Services(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -386,6 +466,16 @@ func (h *ProjectHandler) stackServices(w http.ResponseWriter, r *http.Request, s
 	respond.JSON(w, r, http.StatusOK, services)
 }
 
+// Start godoc
+// @Summary      Start project
+// @Description  Starts all services in the project's stack
+// @Tags         projects
+// @Produce      json
+// @Param        name path string true "Project name"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /projects/{name}/start [post]
+// @Security     ApiKeyAuth
 func (h *ProjectHandler) Start(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	output, err := h.controller.Start(r.Context(), name)
@@ -396,6 +486,16 @@ func (h *ProjectHandler) Start(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "started", respond.WithOutput(output))
 }
 
+// Stop godoc
+// @Summary      Stop project
+// @Description  Stops all services in the project's stack
+// @Tags         projects
+// @Produce      json
+// @Param        name path string true "Project name"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /projects/{name}/stop [post]
+// @Security     ApiKeyAuth
 func (h *ProjectHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	output, err := h.controller.Stop(r.Context(), name)
@@ -406,6 +506,16 @@ func (h *ProjectHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "stopped", respond.WithOutput(output))
 }
 
+// Restart godoc
+// @Summary      Restart project
+// @Description  Restarts all services in the project's stack
+// @Tags         projects
+// @Produce      json
+// @Param        name path string true "Project name"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /projects/{name}/restart [post]
+// @Security     ApiKeyAuth
 func (h *ProjectHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	output, err := h.controller.Restart(r.Context(), name)
@@ -416,6 +526,17 @@ func (h *ProjectHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "restarted", respond.WithOutput(output))
 }
 
+// StartService godoc
+// @Summary      Start project service
+// @Description  Starts a specific service within the project's stack
+// @Tags         projects
+// @Produce      json
+// @Param        name path string true "Project name"
+// @Param        service path string true "Service instance ID"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /projects/{name}/services/{service}/start [post]
+// @Security     ApiKeyAuth
 func (h *ProjectHandler) StartService(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	service := chi.URLParam(r, "service")
@@ -426,6 +547,17 @@ func (h *ProjectHandler) StartService(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "started")
 }
 
+// StopService godoc
+// @Summary      Stop project service
+// @Description  Stops a specific service within the project's stack
+// @Tags         projects
+// @Produce      json
+// @Param        name path string true "Project name"
+// @Param        service path string true "Service instance ID"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /projects/{name}/services/{service}/stop [post]
+// @Security     ApiKeyAuth
 func (h *ProjectHandler) StopService(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	service := chi.URLParam(r, "service")
@@ -436,6 +568,17 @@ func (h *ProjectHandler) StopService(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "stopped")
 }
 
+// RestartService godoc
+// @Summary      Restart project service
+// @Description  Restarts a specific service within the project's stack
+// @Tags         projects
+// @Produce      json
+// @Param        name path string true "Project name"
+// @Param        service path string true "Service instance ID"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /projects/{name}/services/{service}/restart [post]
+// @Security     ApiKeyAuth
 func (h *ProjectHandler) RestartService(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	service := chi.URLParam(r, "service")
@@ -446,6 +589,16 @@ func (h *ProjectHandler) RestartService(w http.ResponseWriter, r *http.Request) 
 	respond.Action(w, r, http.StatusOK, "restarted")
 }
 
+// Status godoc
+// @Summary      Get project status
+// @Description  Returns runtime status of all services in the project's stack
+// @Tags         projects
+// @Produce      json
+// @Param        name path string true "Project name"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /projects/{name}/status [get]
+// @Security     ApiKeyAuth
 func (h *ProjectHandler) Status(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	statuses, err := h.controller.Status(r.Context(), name)

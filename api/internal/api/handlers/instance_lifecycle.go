@@ -61,6 +61,17 @@ func (h *InstanceHandler) instanceCompose(stackName string) (projectName string,
 	return "devarch-" + stackName, yaml, nil
 }
 
+// Stop godoc
+// @Summary      Stop instance
+// @Tags         instances
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/stop [post]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -83,6 +94,18 @@ func (h *InstanceHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "stopped")
 }
 
+// Start godoc
+// @Summary      Start instance
+// @Tags         instances
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/start [post]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) Start(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -115,6 +138,18 @@ func (h *InstanceHandler) Start(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "started")
 }
 
+// Restart godoc
+// @Summary      Restart instance
+// @Tags         instances
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/restart [post]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
