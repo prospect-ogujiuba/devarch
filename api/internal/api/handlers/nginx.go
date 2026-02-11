@@ -1,10 +1,11 @@
 package handlers
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/nginx"
 )
@@ -20,29 +21,26 @@ func NewNginxHandler(g *nginx.Generator, containerClient *container.Client) *Ngi
 
 func (h *NginxHandler) GenerateAll(w http.ResponseWriter, r *http.Request) {
 	if err := h.generator.GenerateAll(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "generated"})
+	respond.JSON(w, r, http.StatusOK,map[string]string{"status": "generated"})
 }
 
 func (h *NginxHandler) GenerateOne(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	if err := h.generator.GenerateProject(name); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "generated", "project": name})
+	respond.JSON(w, r, http.StatusOK,map[string]string{"status": "generated", "project": name})
 }
 
 func (h *NginxHandler) Reload(w http.ResponseWriter, r *http.Request) {
 	out, err := h.containerClient.Exec("nginx-proxy-manager", []string{"nginx", "-s", "reload"})
 	if err != nil {
-		http.Error(w, out, http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("%s", out))
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "reloaded"})
+	respond.JSON(w, r, http.StatusOK,map[string]string{"status": "reloaded"})
 }

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/proxy"
 )
 
@@ -31,8 +32,7 @@ func (h *ProxyHandler) ListTypes(w http.ResponseWriter, r *http.Request) {
 			"name": proxyDisplayName(t),
 		}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	respond.JSON(w, r, http.StatusOK,resp)
 }
 
 // GenerateForService generates proxy config for a standalone service.
@@ -40,18 +40,17 @@ func (h *ProxyHandler) GenerateForService(w http.ResponseWriter, r *http.Request
 	name := chi.URLParam(r, "name")
 	proxyType, err := parseProxyType(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, err.Error())
 		return
 	}
 
 	result, err := h.generator.GenerateForService(proxyType, name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		respond.Error(w, r, http.StatusUnprocessableEntity, "unprocessable_entity", err.Error(), nil)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	respond.JSON(w, r, http.StatusOK,result)
 }
 
 // GenerateForStack generates proxy config for all instances in a stack.
@@ -59,18 +58,17 @@ func (h *ProxyHandler) GenerateForStack(w http.ResponseWriter, r *http.Request) 
 	name := chi.URLParam(r, "name")
 	proxyType, err := parseProxyType(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, err.Error())
 		return
 	}
 
 	result, err := h.generator.GenerateForStack(proxyType, name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		respond.Error(w, r, http.StatusUnprocessableEntity, "unprocessable_entity", err.Error(), nil)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	respond.JSON(w, r, http.StatusOK,result)
 }
 
 // GenerateForProject generates proxy config for a project.
@@ -78,18 +76,17 @@ func (h *ProxyHandler) GenerateForProject(w http.ResponseWriter, r *http.Request
 	name := chi.URLParam(r, "name")
 	proxyType, err := parseProxyType(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respond.BadRequest(w, r, err.Error())
 		return
 	}
 
 	result, err := h.generator.GenerateForProject(proxyType, name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		respond.Error(w, r, http.StatusUnprocessableEntity, "unprocessable_entity", err.Error(), nil)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	respond.JSON(w, r, http.StatusOK,result)
 }
 
 func parseProxyType(r *http.Request) (proxy.ProxyType, error) {
