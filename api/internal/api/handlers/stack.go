@@ -67,6 +67,9 @@ func (h *StackHandler) stackCompose(stackName string) ([]byte, error) {
 	if hostRoot := os.Getenv("HOST_PROJECT_ROOT"); hostRoot != "" {
 		gen.SetHostProjectRoot(hostRoot)
 	}
+	if ws := os.Getenv("WORKSPACE_ROOT"); ws != "" {
+		gen.SetWorkspaceRoot(ws)
+	}
 
 	projectRoot := os.Getenv("PROJECT_ROOT")
 	if projectRoot != "" {

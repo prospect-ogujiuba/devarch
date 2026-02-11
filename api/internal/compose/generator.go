@@ -18,6 +18,7 @@ type Generator struct {
 	networkName     string
 	projectRoot     string
 	hostProjectRoot string
+	workspaceRoot   string
 }
 
 func NewGenerator(db *sql.DB, networkName string) *Generator {
@@ -33,6 +34,10 @@ func (g *Generator) SetProjectRoot(root string) {
 
 func (g *Generator) SetHostProjectRoot(root string) {
 	g.hostProjectRoot = root
+}
+
+func (g *Generator) SetWorkspaceRoot(root string) {
+	g.workspaceRoot = root
 }
 
 type generatedCompose struct {
@@ -486,15 +491,29 @@ func parseFileMode(mode string) os.FileMode {
 	return os.FileMode(m)
 }
 
-// resolveRelativePath resolves a relative path against the host project root.
-// Paths starting with ".runtime/compose/" are resolved against {hostProjectRoot}/api/.
-// Other relative paths are resolved against {hostProjectRoot}/apps/{category}/.
+func (g *Generator) rewriteContainerPath(source string) string {
+	if g.workspaceRoot == "" || g.hostProjectRoot == "" {
+		return source
+	}
+	prefix := g.workspaceRoot + "/"
+	if strings.HasPrefix(source, prefix) {
+		return filepath.Join(g.hostProjectRoot, source[len(prefix):])
+	}
+	if source == g.workspaceRoot {
+		return g.hostProjectRoot
+	}
+	return source
+}
+
 func (g *Generator) resolveRelativePath(source, categoryName string) string {
 	if g.hostProjectRoot == "" {
 		return source
 	}
-	if filepath.IsAbs(source) || source == "" {
+	if source == "" {
 		return source
+	}
+	if filepath.IsAbs(source) {
+		return g.rewriteContainerPath(source)
 	}
 	// Skip named-volume-style sources (no dots or slashes at start)
 	if !strings.HasPrefix(source, ".") && !strings.Contains(source, "/") {

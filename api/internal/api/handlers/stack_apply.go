@@ -109,6 +109,9 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	if hostRoot := os.Getenv("HOST_PROJECT_ROOT"); hostRoot != "" {
 		gen.SetHostProjectRoot(hostRoot)
 	}
+	if ws := os.Getenv("WORKSPACE_ROOT"); ws != "" {
+		gen.SetWorkspaceRoot(ws)
+	}
 
 	if err := gen.MaterializeStackConfigs(stackName, projectRoot); err != nil {
 		configDir := filepath.Join(projectRoot, ".runtime", "compose", "stacks", stackName)

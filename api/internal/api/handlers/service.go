@@ -40,6 +40,9 @@ func NewServiceHandler(db *sql.DB, cc *container.Client, pc *podman.Client, ciph
 	if hostRoot := os.Getenv("HOST_PROJECT_ROOT"); hostRoot != "" {
 		gen.SetHostProjectRoot(hostRoot)
 	}
+	if ws := os.Getenv("WORKSPACE_ROOT"); ws != "" {
+		gen.SetWorkspaceRoot(ws)
+	}
 	return &ServiceHandler{
 		db:              db,
 		containerClient: cc,
