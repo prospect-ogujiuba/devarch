@@ -10,6 +10,19 @@ Portability promise: `devarch.yml` (intent) + `devarch.lock` (resolved ports/dig
 
 Two stacks using the same service template must never collide. Isolation (naming, networking, ports) is the primitive everything else depends on.
 
+## Current Milestone: v1.5 Architecture Hardening
+
+**Goal:** Harden security model, normalize API contracts, decompose monolithic handlers, optimize query paths, extract frontend controllers, and establish test/observability baselines.
+
+**Target features:**
+- Security modes (dev-open/dev-keyed/strict), CORS allowlist, WS auth, secret hygiene
+- Unified API response envelopes and error normalization
+- Deploy orchestration and identity domain services extracted from handlers
+- Batch status/metrics retrieval, filtered count fixes, query optimization
+- Frontend controller hooks for stacks/services/instances, shared mutation helpers
+- API integration tests, frontend controller tests, OpenAPI spec generation
+- Structured logging, persisted sync job history
+
 ## Current State (v1.1 shipped 2026-02-10)
 
 - 172+ service templates across 24 categories, 1:1 legacy parity verified
@@ -67,7 +80,13 @@ Two stacks using the same service template must never collide. Isolation (naming
 
 ### Active
 
-(No active milestone — run `/gsd:new-milestone` to start next)
+- [ ] Security hardening: CORS allowlist, WS origin checks, WS auth tokens, security modes, secret hygiene
+- [ ] API contract normalization: shared responder envelopes, standardized error payloads, action conventions
+- [ ] Backend decomposition: deploy orchestration service, identity domain service, naming deduplication
+- [ ] Performance optimization: batch status/metrics, filtered count fix, override-count query optimization
+- [ ] Frontend extraction: stack/instance/service detail controllers, shared mutation helpers, WS invalidation expansion
+- [ ] Test coverage: API integration tests (CRUD, plan/apply), frontend controller tests
+- [ ] Observability: structured log fields, persisted sync job history, OpenAPI spec generation
 
 ### Out of Scope
 
@@ -119,4 +138,4 @@ Two stacks using the same service template must never collide. Isolation (naming
 | Whitelist governance for parity exceptions | Expected differences documented with reason, golden services never whitelisted | ✓ Good |
 
 ---
-*Last updated: 2026-02-10 after v1.1 milestone*
+*Last updated: 2026-02-11 after v1.5 milestone start*

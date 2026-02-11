@@ -2,19 +2,17 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-10)
+See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Planning next milestone
+**Current focus:** v1.5 Architecture Hardening
 
 ## Current Position
 
-Phase: 15 of 15 (Validation & Parity) — COMPLETE
-Plan: 2 of 2
-Status: Milestone v1.1 complete
-Last activity: 2026-02-10 — Phase 15 verified, v1.1 shipped
-
-Progress: [██████████] 100% (15/15 phases complete, 41 plans total)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-11 — Milestone v1.5 started
 
 ## Performance Metrics
 
@@ -107,7 +105,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-10
-Stopped at: v1.1 milestone complete — all 6 phases shipped
+Last session: 2026-02-11
+Stopped at: Milestone v1.5 initialized — defining requirements
 Resume file: None
-Next: /gsd:complete-milestone
+Next: Complete requirements and roadmap
