@@ -73,6 +73,30 @@ func NewServiceHandler(db *sql.DB, cc *container.Client, pc *podman.Client, ciph
 // @Router       /services [get]
 // @Security     ApiKeyAuth
 func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
+	// Build filter clause shared by both data and count queries
+	filterClause := " WHERE 1=1"
+	filterArgs := []interface{}{}
+	filterArgIdx := 1
+
+	if cat := r.URL.Query().Get("category"); cat != "" {
+		filterClause += " AND c.name = $" + strconv.Itoa(filterArgIdx)
+		filterArgs = append(filterArgs, cat)
+		filterArgIdx++
+	}
+
+	if search := r.URL.Query().Get("search"); search != "" {
+		filterClause += " AND s.name ILIKE $" + strconv.Itoa(filterArgIdx)
+		filterArgs = append(filterArgs, "%"+search+"%")
+		filterArgIdx++
+	}
+
+	if enabled := r.URL.Query().Get("enabled"); enabled != "" {
+		filterClause += " AND s.enabled = $" + strconv.Itoa(filterArgIdx)
+		filterArgs = append(filterArgs, enabled == "true")
+		filterArgIdx++
+	}
+
+	// Build data query
 	query := `
 		SELECT s.id, s.name, s.category_id, s.image_name, s.image_tag,
 			s.restart_policy, s.command, s.user_spec, s.enabled,
@@ -80,28 +104,7 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 			COALESCE(s.compose_overrides, '{}')
 		FROM services s
 		JOIN categories c ON s.category_id = c.id
-		WHERE 1=1
-	`
-	args := []interface{}{}
-	argIdx := 1
-
-	if cat := r.URL.Query().Get("category"); cat != "" {
-		query += " AND c.name = $" + strconv.Itoa(argIdx)
-		args = append(args, cat)
-		argIdx++
-	}
-
-	if search := r.URL.Query().Get("search"); search != "" {
-		query += " AND s.name ILIKE $" + strconv.Itoa(argIdx)
-		args = append(args, "%"+search+"%")
-		argIdx++
-	}
-
-	if enabled := r.URL.Query().Get("enabled"); enabled != "" {
-		query += " AND s.enabled = $" + strconv.Itoa(argIdx)
-		args = append(args, enabled == "true")
-		argIdx++
-	}
+	` + filterClause
 
 	sortCol := "s.name"
 	if sort := r.URL.Query().Get("sort"); sort != "" {
@@ -124,6 +127,12 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 			limit = parsed
 		}
 	}
+
+	// Build args for data query by extending filterArgs
+	args := make([]interface{}, len(filterArgs))
+	copy(args, filterArgs)
+	argIdx := filterArgIdx
+
 	query += " LIMIT $" + strconv.Itoa(argIdx)
 	args = append(args, limit)
 	argIdx++
@@ -170,15 +179,40 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.URL.Query().Get("include") != "" {
-		ctx := r.Context()
+	// Batch load includes for all services
+	includes := r.URL.Query().Get("include")
+	if includes != "" {
+		names := make([]string, len(services))
 		for i := range services {
-			h.loadServiceIncludes(ctx, &services[i], r.URL.Query().Get("include"))
+			names[i] = services[i].Name
+		}
+
+		needStatus := containsInclude(includes, "status")
+		needMetrics := containsInclude(includes, "metrics")
+
+		if needStatus || needMetrics {
+			batch, err := h.podmanClient.GetBatchServiceData(r.Context(), names)
+			if err == nil {
+				for i := range services {
+					if needStatus {
+						if state, ok := batch.States[services[i].Name]; ok {
+							services[i].Status = state
+						}
+					}
+					if needMetrics {
+						if metrics, ok := batch.Metrics[services[i].Name]; ok {
+							services[i].Metrics = metrics
+						}
+					}
+				}
+			}
 		}
 	}
 
+	// Use filtered count query
 	var total int
-	h.db.QueryRow("SELECT COUNT(*) FROM services s JOIN categories c ON s.category_id = c.id WHERE 1=1").Scan(&total)
+	countQuery := "SELECT COUNT(*) FROM services s JOIN categories c ON s.category_id = c.id" + filterClause
+	h.db.QueryRow(countQuery, filterArgs...).Scan(&total)
 
 	page := 1
 	if p := r.URL.Query().Get("page"); p != "" {
