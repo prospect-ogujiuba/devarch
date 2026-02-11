@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Phase 24 in progress — frontend controller extraction
+**Current focus:** Phase 24 complete — frontend controller extraction
 
 ## Current Position
 
@@ -61,9 +61,8 @@ Progress: Phases 16-24 complete
 | Phase 22 P02 | 517 | 2 tasks | 20 files |
 | Phase 23 P01 | 116 | 2 tasks | 2 files |
 | Phase 24 P01 | 393 | 2 tasks | 4 files |
-| Phase 24 P02 | (tbd) | 2 tasks | (tbd) files |
-| Phase 24 P03 | 557 | 2 tasks | 10 files |
 | Phase 24 P02 | 287 | 2 tasks | 3 files |
+| Phase 24 P03 | 557 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
