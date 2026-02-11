@@ -14,7 +14,7 @@ Current milestone: **Stacks & Instances** — isolated, composable service group
 ```bash
 go run ./cmd/server                              # start API server
 go run ./cmd/migrate -migrations ./migrations     # run migrations
-go run ./cmd/import -compose-dir ../apps          # import service templates
+go run ./cmd/import -compose-dir ../services-library  # import service templates
 ```
 
 ### Dashboard (from `dashboard/`)
@@ -43,7 +43,7 @@ docker compose up      # postgres :5433, api :8550
 - `internal/podman/` — Podman-specific implementation
 - `internal/nginx/` — nginx config generation
 - `internal/project/` — project controller
-- `migrations/` — 12 SQL migrations (001-012)
+- `migrations/` — 11 SQL migrations (001-011)
 
 **Dashboard** (`dashboard/`): React 19, Vite, TanStack Router (file-based) + Query, Tailwind 4, Radix UI, Zod, CodeMirror
 - `src/routes/` — page components (services, projects, categories, settings)
