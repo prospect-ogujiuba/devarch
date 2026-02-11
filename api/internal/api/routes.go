@@ -75,6 +75,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	authHandler := handlers.NewAuthHandler()
 
 	r.Post("/api/v1/auth/validate", authHandler.Validate)
+	r.Post("/api/v1/auth/ws-token", authHandler.WSToken)
 
 	// Stack import with large body limit - registered before main route group to avoid 10MB default
 	r.With(mw.APIKeyAuth(secMode), mw.RateLimit(10, 50), mw.MaxBodySize(importMaxBytes)).Post("/api/v1/stacks/import", stackHandler.ImportStack)
