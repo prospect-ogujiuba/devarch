@@ -7,7 +7,7 @@ prompts/
 api/server
 api/verify-parity
 api/tmp/
-api/compose/stacks/
+api/compose/
 
 # Other ignores
 .env
