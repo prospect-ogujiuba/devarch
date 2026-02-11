@@ -52,7 +52,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	statusHandler := handlers.NewStatusHandler(db, podmanClient, syncManager)
 	registryHandler := handlers.NewRegistryHandler(db, registryManager)
 	wsHandler := handlers.NewWebSocketHandler(syncManager)
-	projectHandler := handlers.NewProjectHandler(db, projectScanner, projectController)
+	projectHandler := handlers.NewProjectHandler(db, projectScanner, projectController, containerClient)
 	runtimeHandler := handlers.NewRuntimeHandler(containerClient, podmanClient)
 	nginxHandler := handlers.NewNginxHandler(nginxGenerator, containerClient)
 	stackHandler := handlers.NewStackHandler(db, containerClient)
@@ -136,10 +136,12 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 
 		r.Route("/projects", func(r chi.Router) {
 			r.Get("/", projectHandler.List)
+			r.Post("/", projectHandler.Create)
 			r.Post("/scan", projectHandler.Scan)
 			r.Route("/{name}", func(r chi.Router) {
 				r.Get("/", projectHandler.Get)
-				r.Put("/stack", projectHandler.LinkStack)
+				r.Put("/", projectHandler.Update)
+				r.Delete("/", projectHandler.Delete)
 				r.Get("/services", projectHandler.Services)
 				r.Get("/status", projectHandler.Status)
 				r.Post("/start", projectHandler.Start)

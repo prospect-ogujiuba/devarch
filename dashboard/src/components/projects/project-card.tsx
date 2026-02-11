@@ -47,6 +47,11 @@ export function ProjectCard({ project }: { project: Project }) {
               <CardTitle className="text-base">{project.name}</CardTitle>
             </div>
             <div className="flex items-center gap-2">
+              {project.running_count > 0 && (
+                <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
+                  {project.running_count}/{project.instance_count}
+                </Badge>
+              )}
               {project.version && (
                 <Badge variant="secondary" className="text-xs font-mono">
                   v{project.version}

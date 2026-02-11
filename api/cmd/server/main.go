@@ -64,16 +64,26 @@ func main() {
 		log.Printf("warning: container client unavailable (compose operations disabled): %v", err)
 	}
 
+	projectController := project.NewController(db, containerClient)
+
 	appsDir := os.Getenv("APPS_DIR")
 	if appsDir == "" {
 		appsDir = "/workspace/apps"
 	}
 	projectScanner := scanner.NewScanner(db, appsDir)
 
-	if _, err := projectScanner.ScanAndPersist(); err != nil {
+	if projects, err := projectScanner.ScanAndPersist(); err != nil {
 		log.Printf("initial project scan failed: %v", err)
 	} else {
 		log.Println("initial project scan complete")
+		for _, p := range projects {
+			if p.ComposePath != "" {
+				if err := projectController.EnsureStack(p.Name); err != nil {
+					log.Printf("failed to import compose for project %s: %v", p.Name, err)
+				}
+			}
+		}
+		log.Println("project compose import complete")
 	}
 
 	nginxOutputDir := os.Getenv("NGINX_GENERATED_DIR")
@@ -87,8 +97,6 @@ func main() {
 	} else {
 		log.Println("initial nginx config generation complete")
 	}
-
-	projectController := project.NewController(db, containerClient)
 
 	registryManager := registry.NewManager()
 	registryManager.Register(dockerhub.NewClient())

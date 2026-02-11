@@ -1,11 +1,12 @@
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
-import { Loader2, RefreshCw, FolderOpen, Package, Code, Globe } from 'lucide-react'
+import { Loader2, RefreshCw, FolderOpen, Package, Code, Globe, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useProjects, useScanProjects } from '@/features/projects/queries'
 import { ProjectCard } from '@/components/projects/project-card'
 import { ProjectTable } from '@/components/projects/project-table'
+import { CreateProjectDialog } from '@/components/projects/create-project-dialog'
 import { FilterBar, type FilterOption } from '@/components/ui/filter-bar'
 import { ListPageScaffold } from '@/components/ui/list-page-scaffold'
 import { PaginationControls } from '@/components/ui/pagination-controls'
@@ -62,6 +63,7 @@ function ProjectsPage() {
   const routeSearch = Route.useSearch()
   const navigate = Route.useNavigate()
   const scanMutation = useScanProjects()
+  const [createOpen, setCreateOpen] = useState(false)
   const items = useMemo(() => projects ?? [], [projects])
 
   const controls = useUrlSyncedListControls(
@@ -146,20 +148,30 @@ function ProjectsPage() {
       sortOptions={sortOptions}
       searchPlaceholder="Search projects..."
       actionButton={
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full sm:w-auto"
-          onClick={() => scanMutation.mutate()}
-          disabled={scanMutation.isPending}
-        >
-          {scanMutation.isPending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <RefreshCw className="size-4" />
-          )}
-          Rescan
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button
+            size="sm"
+            className="w-full sm:w-auto"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="size-4" />
+            Create
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto"
+            onClick={() => scanMutation.mutate()}
+            disabled={scanMutation.isPending}
+          >
+            {scanMutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="size-4" />
+            )}
+            Rescan
+          </Button>
+        </div>
       }
       emptyIcon={FolderOpen}
       emptyMessage="No projects found"
@@ -202,6 +214,7 @@ function ProjectsPage() {
           itemLabel="projects"
         />
       )}
+      <CreateProjectDialog open={createOpen} onOpenChange={setCreateOpen} />
     </ListPageScaffold>
   )
 }

@@ -68,14 +68,10 @@ func (c *Controller) Stop(ctx context.Context, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if si != nil {
-		return c.stopStack(si)
+	if si == nil {
+		return "", fmt.Errorf("no stack found for project %q", name)
 	}
-	composePath, err := c.getComposePath(name)
-	if err != nil {
-		return "", err
-	}
-	return c.runCompose(composePath, "down")
+	return c.stopStack(si)
 }
 
 func (c *Controller) Restart(ctx context.Context, name string) (string, error) {
@@ -92,10 +88,10 @@ func (c *Controller) Status(ctx context.Context, name string) ([]ServiceStatus, 
 	if err != nil {
 		return nil, err
 	}
-	if si != nil {
-		return c.stackStatus(si)
+	if si == nil {
+		return []ServiceStatus{}, nil
 	}
-	return c.legacyStatus(name)
+	return c.stackStatus(si)
 }
 
 func (c *Controller) startStack(si *stackInfo) (string, error) {
@@ -167,56 +163,6 @@ func (c *Controller) stackStatus(si *stackInfo) ([]ServiceStatus, error) {
 	return statuses, nil
 }
 
-func (c *Controller) legacyStatus(name string) ([]ServiceStatus, error) {
-	rows, err := c.db.Query(`
-		SELECT ps.service_name, ps.container_name, ps.service_type
-		FROM project_services ps
-		JOIN projects p ON p.id = ps.project_id
-		WHERE p.name = $1`, name)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var statuses []ServiceStatus
-	for rows.Next() {
-		var svcName string
-		var containerName sql.NullString
-		var svcType sql.NullString
-
-		if err := rows.Scan(&svcName, &containerName, &svcType); err != nil {
-			continue
-		}
-
-		cName := containerName.String
-		if cName == "" {
-			cName = svcName
-		}
-
-		status := "unknown"
-		state, err := c.containerClient.GetStatus(cName)
-		if err == nil && state != nil {
-			status = state.Status
-		} else {
-			status = "not-created"
-		}
-
-		st := ServiceStatus{
-			Name:   svcName,
-			Status: status,
-		}
-		if svcType.Valid {
-			st.Type = svcType.String
-		}
-		statuses = append(statuses, st)
-	}
-
-	if statuses == nil {
-		statuses = []ServiceStatus{}
-	}
-	return statuses, nil
-}
-
 func (c *Controller) stackCompose(si *stackInfo) (string, []byte, error) {
 	gen := compose.NewGenerator(c.db, si.networkName)
 	if root := os.Getenv("PROJECT_ROOT"); root != "" {
@@ -282,19 +228,11 @@ func (c *Controller) StartService(ctx context.Context, projectName, service stri
 }
 
 func (c *Controller) StopService(ctx context.Context, projectName, service string) error {
-	si, _, containerName, _, err := c.getInstanceInfo(projectName, service)
+	_, _, containerName, _, err := c.getInstanceInfo(projectName, service)
 	if err != nil {
 		return err
 	}
-	if si != nil {
-		return c.containerClient.StopContainer(containerName)
-	}
-	composePath, err := c.getComposePath(projectName)
-	if err != nil {
-		return err
-	}
-	_, err = c.containerClient.RunCompose(composePath, "stop", service)
-	return err
+	return c.containerClient.StopContainer(containerName)
 }
 
 func (c *Controller) RestartService(ctx context.Context, projectName, service string) error {
@@ -314,25 +252,6 @@ func (c *Controller) RestartService(ctx context.Context, projectName, service st
 		return err
 	}
 	return c.containerClient.RestartComposeService(projName, yamlBytes, instanceID)
-}
-
-func (c *Controller) getComposePath(name string) (string, error) {
-	var composePath sql.NullString
-	err := c.db.QueryRow(`SELECT compose_path FROM projects WHERE name = $1`, name).Scan(&composePath)
-	if err == sql.ErrNoRows {
-		return "", fmt.Errorf("project not found: %s", name)
-	}
-	if err != nil {
-		return "", err
-	}
-	if !composePath.Valid || composePath.String == "" {
-		return "", fmt.Errorf("no compose file for project: %s", name)
-	}
-	return composePath.String, nil
-}
-
-func (c *Controller) runCompose(composePath string, args ...string) (string, error) {
-	return c.containerClient.RunCompose(composePath, args...)
 }
 
 func (c *Controller) StatusJSON(ctx context.Context, name string) (json.RawMessage, error) {
