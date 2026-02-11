@@ -40,6 +40,8 @@ podman compose up
 
 The API entrypoint automatically runs migrations and starts the server with hot-reload via air. No manual migration step needed when using compose.
 
+> **Note:** Update `HOST_PROJECT_ROOT` in `compose.yml` to match your local project path. This is used by the compose generator to rewrite container paths to host-resolvable paths for bind mounts.
+
 ### Import the service catalog
 
 ```bash
@@ -574,7 +576,8 @@ Import flags:
 | `DEVARCH_USE_SUDO` | `false` | Run container commands with sudo |
 | `CONTAINER_HOST` | (auto-detect) | Podman socket path |
 | `PROJECT_ROOT` | `/app` | Project root inside container |
-| `HOST_PROJECT_ROOT` | — | Host machine project path |
+| `HOST_PROJECT_ROOT` | — | Host machine project path (for container-to-host path rewriting) |
+| `WORKSPACE_ROOT` | `/workspace` | Root for workspace mounts (services-library, apps) |
 | `APPS_DIR` | `/workspace/apps` | Directory with project apps |
 | `NGINX_GENERATED_DIR` | `/workspace/config/nginx/generated` | Output for nginx configs |
 | `STACK_IMPORT_MAX_BYTES` | `268435456` (256MB) | Max stack import file size |
@@ -723,6 +726,24 @@ The plan differ matches running containers to instances using `devarch.stack_id`
 6. Runs `podman compose -f generated.yml up -d`
 7. Updates container state in DB
 
+### Runtime Output Directory
+
+All generated compose YAML and materialized config files are written to `api/.runtime/compose/` (gitignored). The directory is organized by mode:
+
+```
+api/.runtime/compose/
+├── preview/           # Single-service previews
+│   └── {category}/{service}/
+│       ├── compose.yml
+│       └── {config files}
+└── stacks/            # Stack deployments
+    └── {stackName}/
+        ├── compose.yml
+        └── {instanceID}/{config files}
+```
+
+Container paths are rewritten to host paths using `HOST_PROJECT_ROOT` so Docker/Podman can resolve bind mounts correctly from the host filesystem.
+
 ### Lock Files
 
 Lock files capture a snapshot of running state:
@@ -783,7 +804,7 @@ Manual sync can be triggered via `POST /api/v1/sync`. Job status visible at `GET
 
 ## 15. Key Things to Know
 
-1. **Compose YAML is never stored** — always generated on-the-fly from DB. If something looks wrong in the compose, the issue is in the DB state or generator.
+1. **Compose YAML is never stored in the DB** — always generated on-the-fly from DB state into `api/.runtime/compose/` (gitignored). If something looks wrong in the compose, the issue is in the DB state or generator.
 
 2. **Instance overrides always win** over template values. Check the "Effective Config" tab to see the merged result.
 
