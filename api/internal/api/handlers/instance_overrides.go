@@ -24,6 +24,20 @@ func (h *InstanceHandler) getInstanceByName(stackName, instanceName string) (int
 	return instanceID, stackID, err
 }
 
+// UpdatePorts godoc
+// @Summary      Update instance port overrides
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        body body object true "Ports array"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/ports [put]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) UpdatePorts(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -78,6 +92,20 @@ func (h *InstanceHandler) UpdatePorts(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateVolumes godoc
+// @Summary      Update instance volume overrides
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        body body object true "Volumes array"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/volumes [put]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) UpdateVolumes(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -132,6 +160,20 @@ func (h *InstanceHandler) UpdateVolumes(w http.ResponseWriter, r *http.Request) 
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateEnvVars godoc
+// @Summary      Update instance environment variable overrides
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        body body object true "Environment variables array"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/env-vars [put]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -231,6 +273,20 @@ func (h *InstanceHandler) UpdateEnvVars(w http.ResponseWriter, r *http.Request) 
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateLabels godoc
+// @Summary      Update instance label overrides
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        body body object true "Labels array"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/labels [put]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) UpdateLabels(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -292,6 +348,20 @@ func (h *InstanceHandler) UpdateLabels(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateDomains godoc
+// @Summary      Update instance domain overrides
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        body body object true "Domains array"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/domains [put]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) UpdateDomains(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -346,6 +416,20 @@ func (h *InstanceHandler) UpdateDomains(w http.ResponseWriter, r *http.Request) 
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateHealthcheck godoc
+// @Summary      Update instance healthcheck override
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        body body models.ServiceHealthcheck true "Healthcheck configuration"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/healthcheck [put]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) UpdateHealthcheck(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -386,6 +470,20 @@ func (h *InstanceHandler) UpdateHealthcheck(w http.ResponseWriter, r *http.Reque
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateDependencies godoc
+// @Summary      Update instance dependency overrides
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        body body object true "Dependencies array"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/dependencies [put]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) UpdateDependencies(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -447,6 +545,17 @@ func (h *InstanceHandler) UpdateDependencies(w http.ResponseWriter, r *http.Requ
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// ListConfigFiles godoc
+// @Summary      List instance config files
+// @Tags         instances
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/files [get]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) ListConfigFiles(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -499,6 +608,18 @@ func (h *InstanceHandler) ListConfigFiles(w http.ResponseWriter, r *http.Request
 	respond.JSON(w, r, http.StatusOK, files)
 }
 
+// GetConfigFile godoc
+// @Summary      Get instance config file
+// @Tags         instances
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        filepath path string true "File path"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/files/{filepath} [get]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) GetConfigFile(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -543,6 +664,21 @@ func (h *InstanceHandler) GetConfigFile(w http.ResponseWriter, r *http.Request) 
 	respond.JSON(w, r, http.StatusOK, f)
 }
 
+// PutConfigFile godoc
+// @Summary      Create or update instance config file
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        filepath path string true "File path"
+// @Param        body body object true "Config file content"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/files/{filepath} [put]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) PutConfigFile(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -598,6 +734,17 @@ func (h *InstanceHandler) PutConfigFile(w http.ResponseWriter, r *http.Request) 
 	respond.JSON(w, r, http.StatusOK, f)
 }
 
+// DeleteConfigFile godoc
+// @Summary      Delete instance config file
+// @Tags         instances
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        filepath path string true "File path"
+// @Success      204
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/files/{filepath} [delete]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) DeleteConfigFile(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -633,6 +780,17 @@ func (h *InstanceHandler) DeleteConfigFile(w http.ResponseWriter, r *http.Reques
 	respond.NoContent(w, r)
 }
 
+// GetResourceLimits godoc
+// @Summary      Get instance resource limits
+// @Tags         instances
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/resources [get]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) GetResourceLimits(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -677,6 +835,20 @@ func (h *InstanceHandler) GetResourceLimits(w http.ResponseWriter, r *http.Reque
 	respond.JSON(w, r, http.StatusOK, resp)
 }
 
+// UpdateResourceLimits godoc
+// @Summary      Update instance resource limits
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        body body object true "Resource limits"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/resources [put]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) UpdateResourceLimits(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -764,6 +936,20 @@ func (h *InstanceHandler) UpdateResourceLimits(w http.ResponseWriter, r *http.Re
 	})
 }
 
+// UpdateEnvFiles godoc
+// @Summary      Update instance env_files overrides
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        body body object true "Env files array"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/env-files [put]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -829,6 +1015,20 @@ func (h *InstanceHandler) UpdateEnvFiles(w http.ResponseWriter, r *http.Request)
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateNetworks godoc
+// @Summary      Update instance network overrides
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        body body object true "Networks array"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/networks [put]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -895,6 +1095,20 @@ func (h *InstanceHandler) UpdateNetworks(w http.ResponseWriter, r *http.Request)
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+// UpdateConfigMounts godoc
+// @Summary      Update instance config mount overrides
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        body body object true "Config mounts array"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/config-mounts [put]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) UpdateConfigMounts(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")

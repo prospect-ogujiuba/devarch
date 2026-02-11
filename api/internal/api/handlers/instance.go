@@ -93,6 +93,20 @@ func (h *InstanceHandler) getStackByName(stackName string) (int, string, error) 
 	return stackID, stackActualName, err
 }
 
+// Create godoc
+// @Summary      Create instance in stack
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        body body createInstanceRequest true "Instance creation request"
+// @Success      201 {object} respond.SuccessEnvelope{data=instanceResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances [post]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 
@@ -172,6 +186,18 @@ func (h *InstanceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusCreated, instance)
 }
 
+// List godoc
+// @Summary      List instances in stack
+// @Tags         instances
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        search query string false "Search by instance ID"
+// @Param        enabled query boolean false "Filter by enabled status"
+// @Success      200 {object} respond.SuccessEnvelope{data=[]instanceResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances [get]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) List(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 
@@ -283,6 +309,17 @@ func (h *InstanceHandler) List(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, instances)
 }
 
+// Get godoc
+// @Summary      Get instance details
+// @Tags         instances
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Success      200 {object} respond.SuccessEnvelope{data=instanceDetailResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance} [get]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) Get(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -402,6 +439,20 @@ func (h *InstanceHandler) Get(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, detail)
 }
 
+// Update godoc
+// @Summary      Update instance
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        body body updateInstanceRequest true "Instance update request"
+// @Success      200 {object} respond.SuccessEnvelope{data=instanceResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance} [put]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -511,6 +562,16 @@ func (h *InstanceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, instance)
 }
 
+// Delete godoc
+// @Summary      Delete instance (soft delete)
+// @Tags         instances
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Success      204
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance} [delete]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")
@@ -545,6 +606,21 @@ func (h *InstanceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	respond.NoContent(w, r)
 }
 
+// Duplicate godoc
+// @Summary      Duplicate instance with all overrides
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Source instance ID"
+// @Param        body body duplicateInstanceRequest true "Duplicate request"
+// @Success      201 {object} respond.SuccessEnvelope{data=instanceResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/duplicate [post]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) Duplicate(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	sourceInstanceName := chi.URLParam(r, "instance")
@@ -742,6 +818,21 @@ func (h *InstanceHandler) Duplicate(w http.ResponseWriter, r *http.Request) {
 		respond.JSON(w, r, http.StatusCreated, newInstance)
 }
 
+// Rename godoc
+// @Summary      Rename instance
+// @Tags         instances
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Current instance ID"
+// @Param        body body renameInstanceRequest true "Rename request"
+// @Success      200 {object} respond.SuccessEnvelope{data=instanceResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/rename [put]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) Rename(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	oldInstanceName := chi.URLParam(r, "instance")
@@ -848,6 +939,17 @@ func (h *InstanceHandler) Rename(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, instance)
 }
 
+// DeletePreview godoc
+// @Summary      Preview instance deletion impact
+// @Tags         instances
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Success      200 {object} respond.SuccessEnvelope{data=instanceDeletePreviewResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/delete-preview [get]
+// @Security     ApiKeyAuth
 func (h *InstanceHandler) DeletePreview(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	instanceName := chi.URLParam(r, "instance")

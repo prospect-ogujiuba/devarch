@@ -30,6 +30,15 @@ func NewCategoryHandler(db *sql.DB, cc *container.Client, pc *podman.Client) *Ca
 	}
 }
 
+// List godoc
+// @Summary      List all categories
+// @Description  Returns all categories with service counts and running container counts
+// @Tags         categories
+// @Produce      json
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /categories [get]
+// @Security     ApiKeyAuth
 func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -92,6 +101,17 @@ func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK,categories)
 }
 
+// Get godoc
+// @Summary      Get category by name
+// @Description  Returns a single category by its name
+// @Tags         categories
+// @Produce      json
+// @Param        name path string true "Category name"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /categories/{name} [get]
+// @Security     ApiKeyAuth
 func (h *CategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -120,6 +140,17 @@ func (h *CategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK,c)
 }
 
+// Services godoc
+// @Summary      List services in category
+// @Description  Returns all services that belong to the specified category
+// @Tags         categories
+// @Produce      json
+// @Param        name path string true "Category name"
+// @Success      200 {object} respond.SuccessEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /categories/{name}/services [get]
+// @Security     ApiKeyAuth
 func (h *CategoryHandler) Services(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -160,6 +191,17 @@ func (h *CategoryHandler) Services(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK,services)
 }
 
+// Start godoc
+// @Summary      Start all services in category
+// @Description  Starts all enabled services that belong to the specified category
+// @Tags         categories
+// @Produce      json
+// @Param        name path string true "Category name"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /categories/{name}/start [post]
+// @Security     ApiKeyAuth
 func (h *CategoryHandler) Start(w http.ResponseWriter, r *http.Request) {
 	if h.containerClient == nil {
 		respond.InternalError(w, r, fmt.Errorf("container client not initialized"))
@@ -214,6 +256,17 @@ func (h *CategoryHandler) Start(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+// Stop godoc
+// @Summary      Stop all services in category
+// @Description  Stops all services that belong to the specified category
+// @Tags         categories
+// @Produce      json
+// @Param        name path string true "Category name"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /categories/{name}/stop [post]
+// @Security     ApiKeyAuth
 func (h *CategoryHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	if h.containerClient == nil {
 		respond.InternalError(w, r, fmt.Errorf("container client not initialized"))

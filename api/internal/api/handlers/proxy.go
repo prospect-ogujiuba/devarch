@@ -22,7 +22,14 @@ type generateProxyRequest struct {
 	ProxyType string `json:"proxy_type"`
 }
 
-// ListTypes returns supported proxy types.
+// ListTypes godoc
+// @Summary      List supported proxy types
+// @Description  Returns all supported reverse proxy types (nginx, caddy, traefik, haproxy, apache)
+// @Tags         proxy
+// @Produce      json
+// @Success      200 {object} respond.SuccessEnvelope{data=[]map[string]string}
+// @Router       /proxy/types [get]
+// @Security     ApiKeyAuth
 func (h *ProxyHandler) ListTypes(w http.ResponseWriter, r *http.Request) {
 	types := proxy.SupportedTypes()
 	resp := make([]map[string]string, len(types))
@@ -35,7 +42,19 @@ func (h *ProxyHandler) ListTypes(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK,resp)
 }
 
-// GenerateForService generates proxy config for a standalone service.
+// GenerateForService godoc
+// @Summary      Generate proxy config for service
+// @Description  Generates reverse proxy configuration for a standalone service
+// @Tags         proxy
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Service name"
+// @Param        request body generateProxyRequest true "Proxy generation request"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      422 {object} respond.ErrorEnvelope
+// @Router       /services/{name}/proxy-config [post]
+// @Security     ApiKeyAuth
 func (h *ProxyHandler) GenerateForService(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	proxyType, err := parseProxyType(r)
@@ -53,7 +72,19 @@ func (h *ProxyHandler) GenerateForService(w http.ResponseWriter, r *http.Request
 	respond.JSON(w, r, http.StatusOK,result)
 }
 
-// GenerateForStack generates proxy config for all instances in a stack.
+// GenerateForStack godoc
+// @Summary      Generate proxy config for stack
+// @Description  Generates reverse proxy configuration for all instances in a stack
+// @Tags         proxy
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        request body generateProxyRequest true "Proxy generation request"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      422 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/proxy-config [post]
+// @Security     ApiKeyAuth
 func (h *ProxyHandler) GenerateForStack(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	proxyType, err := parseProxyType(r)
@@ -71,7 +102,19 @@ func (h *ProxyHandler) GenerateForStack(w http.ResponseWriter, r *http.Request) 
 	respond.JSON(w, r, http.StatusOK,result)
 }
 
-// GenerateForProject generates proxy config for a project.
+// GenerateForProject godoc
+// @Summary      Generate proxy config for project
+// @Description  Generates reverse proxy configuration for all services in a project
+// @Tags         proxy
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Project name"
+// @Param        request body generateProxyRequest true "Proxy generation request"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      422 {object} respond.ErrorEnvelope
+// @Router       /projects/{name}/proxy-config [post]
+// @Security     ApiKeyAuth
 func (h *ProxyHandler) GenerateForProject(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	proxyType, err := parseProxyType(r)
