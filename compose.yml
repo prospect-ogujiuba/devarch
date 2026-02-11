@@ -44,6 +44,7 @@ services:
       - DEVARCH_API_KEY=682408a4c0435038e6e5085ec1f0562716ce01c7bb6cc20b53d0926430227b6d
       - PROJECT_ROOT=/app
       - HOST_PROJECT_ROOT=/home/priz/projects/devarch
+      - WORKSPACE_ROOT=/workspace
     ports:
       - "127.0.0.1:8550:8080"
     volumes:
