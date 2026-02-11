@@ -63,14 +63,20 @@ go run ./cmd/import -compose-dir ../services-library -config-dir ../services-lib
 podman compose up devarch-db
 
 # Run API directly (from api/)
-cd api && go run ./cmd/server
+# Note: compose exposes postgres on host port 5433, but the API default
+# DATABASE_URL uses port 5432. Override it when running outside compose:
+cd api && DATABASE_URL="postgres://devarch:devarch@localhost:5433/devarch?sslmode=disable" go run ./cmd/server
 
 # Run migrations manually (from api/)
-go run ./cmd/migrate -migrations ./migrations
+DATABASE_URL="postgres://devarch:devarch@localhost:5433/devarch?sslmode=disable" go run ./cmd/migrate -migrations ./migrations
 
 # Start the dashboard dev server (from dashboard/)
 cd dashboard && npm run dev
 # Dashboard at http://localhost:5174
+
+# Optional dashboard scripts
+npm run test:unit
+npm run preview
 ```
 
 ### Authentication
@@ -78,7 +84,7 @@ cd dashboard && npm run dev
 - Set `DEVARCH_API_KEY` env var on the API to enable auth
 - If `DEVARCH_API_KEY` is unset, authentication is disabled entirely (warning logged once)
 - Uses constant-time comparison on the `X-API-Key` header
-- The dashboard login page prompts for the key and stores it in session storage
+- The dashboard login page prompts for the key and stores it in localStorage
 - The compose.yml ships with a pre-configured API key
 
 ---
@@ -87,7 +93,7 @@ cd dashboard && npm run dev
 
 ### Services (Templates)
 
-173 pre-built container definitions across 23 categories. Each service template defines: image (or custom Dockerfile via build context), ports, volumes, env vars, healthchecks, labels, domains, dependencies, config files, networks, restart policy, and command.
+Pre-built container definitions across 23 categories. Each service template defines: image (or custom Dockerfile via build context), ports, volumes, env vars, healthchecks, labels, domains, dependencies, config files, networks, restart policy, and command.
 
 You **don't run services directly** — you instantiate them inside stacks. Services also support `compose_overrides` (JSONB) for non-standard compose keys like `build:`, `user:`, `cap_add:`, etc.
 
@@ -128,7 +134,7 @@ Organizational groups for services. 23 categories: ai, analytics, backend, ci, c
 Navigate via the left sidebar. All list pages sync state to URL for bookmarkability (search, sort, pagination, filters, active tab).
 
 ### Login (`/login`)
-API key entry form. Key stored in session storage for subsequent requests.
+API key entry form. Key stored in localStorage for subsequent requests.
 
 ### Overview (`/`)
 Stat cards: total services, running/stopped counts, categories. Browse categories with search, sort, and status filters.
@@ -250,6 +256,8 @@ devarch init devarch.yml
 ## 5. API Reference
 
 All endpoints under `/api/v1/` require `X-API-Key` header (when auth is enabled). Rate limited: 10 req/sec, burst 50 per IP. Default body size limit: 10MB (stack import: 256MB, configurable via `STACK_IMPORT_MAX_BYTES`).
+
+> Paths below are relative to `/api/v1` unless otherwise noted.
 
 ### Health & Auth
 | Method | Path | Purpose |
@@ -376,10 +384,9 @@ All endpoints under `/api/v1/` require `X-API-Key` header (when auth is enabled)
 ### Projects
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/projects` | List all |
+| GET/POST | `/projects` | List / Create |
 | POST | `/projects/scan` | Rescan apps directory |
-| GET | `/projects/{name}` | Get project |
-| PUT | `/projects/{name}/stack` | Link to stack |
+| GET/PUT/DELETE | `/projects/{name}` | Get / Update / Delete |
 | GET | `/projects/{name}/services` | Project services |
 | GET | `/projects/{name}/status` | Project status |
 | POST | `/projects/{name}/start\|stop\|restart` | Lifecycle |
@@ -541,6 +548,8 @@ The API ships with several CLI tools (available as binaries in the container or 
 | `cmd/migrate` | `go run ./cmd/migrate -migrations ./migrations` | Run database migrations |
 | `cmd/import` | `go run ./cmd/import -compose-dir <path> -config-dir <path>` | Import service templates from YAML |
 | `cmd/export` | `go run ./cmd/export -out seed.sql` | Export DB state as SQL seed file |
+| `cmd/verify-boundary` | `go run ./cmd/verify-boundary -api-url http://localhost:8550` | Verify stack import body-size boundary behavior |
+| `cmd/verify-parity` | `go run ./cmd/verify-parity -compose-dir ../services-library -project-root ..` | Verify imported data parity against compose templates |
 
 Import flags:
 - `-compose-dir` — path to service YAML directory (required)
@@ -751,7 +760,7 @@ Manual sync can be triggered via `POST /api/v1/sync`. Job status visible at `GET
 
 ## 14. Database Schema
 
-10 migration files (001-010) creating ~40 tables:
+11 migration files (001-011) creating ~40 tables:
 
 | Migration | Tables Created |
 |-----------|---------------|
@@ -759,12 +768,13 @@ Manual sync can be triggered via `POST /api/v1/sync`. Job status visible at `GET
 | 002 | `service_ports`, `service_volumes`, `service_env_vars`, `service_env_files`, `service_dependencies`, `service_healthchecks`, `service_labels`, `service_domains`, `service_networks` |
 | 003 | `service_config_files`, `service_config_mounts`, `service_config_versions` |
 | 004 | `registries`, `images`, `image_tags`, `image_architectures`, `vulnerabilities`, `image_tag_vulnerabilities` |
-| 005 | `projects`, `project_services` |
+| 005 | `projects` |
 | 006 | `stacks`, `service_instances` |
 | 007 | `instance_ports`, `instance_volumes`, `instance_env_vars`, `instance_env_files`, `instance_labels`, `instance_domains`, `instance_healthchecks`, `instance_config_files`, `instance_dependencies`, `instance_resource_limits` |
 | 008 | `service_exports`, `service_import_contracts`, `service_instance_wires`, `sync_state`, `container_states`, `container_metrics` |
 | 009 | Performance indexes |
 | 010 | Additional instance override tables |
+| 011 | Drops `project_services`, adds `stacks.project_id`, makes `projects.stack_id NOT NULL` |
 
 ---
 
@@ -801,7 +811,8 @@ Manual sync can be triggered via `POST /api/v1/sync`. Job status visible at `GET
 | Component | Technology |
 |-----------|------------|
 | **API** | Go 1.22, chi router, lib/pq, gorilla/websocket, yaml.v3 |
-| **Dashboard** | React 19, Vite 7, TanStack Router + Query, Tailwind CSS 4, Radix UI, CodeMirror 6, Zod, Axios, Sonner |
+| **Dashboard** | React 19, Vite 7, TanStack Router + Query, Tailwind CSS 4, Radix UI, CodeMirror 6, Zod, Axios, Sonner, cmdk, lucide-react |
+| **Dashboard Testing** | Vitest + Testing Library |
 | **Database** | PostgreSQL 16 |
 | **Container Runtime** | Docker or Podman (auto-detect, switchable) |
 | **CLI** | Bash/Zsh scripts |
