@@ -84,8 +84,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 18-01-PLAN.md — Security mode profiles (dev-open/dev-keyed/strict) with startup validation
-- [ ] 18-02-PLAN.md — HMAC-signed WS token auth with dashboard integration
+- [x] 18-01-PLAN.md — Security mode profiles (dev-open/dev-keyed/strict) with startup validation
+- [x] 18-02-PLAN.md — HMAC-signed WS token auth with dashboard integration
 
 #### Phase 19: API Response Normalization
 **Goal**: All endpoints return consistent JSON envelopes for success and errors
@@ -243,7 +243,7 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 |-------|----------------|--------|-----------|
 | 16. Security Configuration | 1/1 | ✓ Complete | 2026-02-11 |
 | 17. CORS & Origin Hardening | 1/1 | ✓ Complete | 2026-02-11 |
-| 18. WebSocket Authentication & Security Modes | 0/2 | Not started | - |
+| 18. WebSocket Authentication & Security Modes | 2/2 | ✓ Complete | 2026-02-11 |
 | 19. API Response Normalization | 0/TBD | Not started | - |
 | 20. Action Endpoint Consistency & OpenAPI | 0/TBD | Not started | - |
 | 21. Deploy Orchestration Service | 0/TBD | Not started | - |
@@ -257,4 +257,4 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-11 — Phase 17 complete*
+*Last updated: 2026-02-11 — Phase 18 complete*
