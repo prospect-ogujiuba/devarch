@@ -9,6 +9,7 @@ import (
 
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/identity"
 )
 
 type Controller struct {
@@ -48,7 +49,7 @@ func (c *Controller) getStackInfo(projectName string) (*stackInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	info.networkName = fmt.Sprintf("devarch-%s-net", info.stackName)
+	info.networkName = identity.NetworkName(info.stackName)
 	if networkNameNull.Valid && networkNameNull.String != "" {
 		info.networkName = networkNameNull.String
 	}

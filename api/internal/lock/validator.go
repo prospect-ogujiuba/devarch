@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/identity"
 )
 
 type Validator struct {
@@ -53,7 +54,7 @@ func (v *Validator) Validate(lock *LockFile, stackName string) (*ValidationResul
 
 	runningInstances := make(map[string]string)
 	for _, containerName := range containers {
-		instanceName := extractInstanceName(stackName, containerName)
+		instanceName := identity.ExtractInstanceName(stackName, containerName)
 		if instanceName != "" {
 			runningInstances[instanceName] = containerName
 		}

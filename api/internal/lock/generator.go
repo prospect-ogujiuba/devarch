@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/identity"
 )
 
 type Generator struct {
@@ -42,7 +43,7 @@ func (g *Generator) Generate(stackName string, ymlContent []byte) (*LockFile, er
 		return nil, fmt.Errorf("query stack: %w", err)
 	}
 
-	netName := fmt.Sprintf("devarch-%s-net", stackName)
+	netName := identity.NetworkName(stackName)
 	if networkName.Valid && networkName.String != "" {
 		netName = networkName.String
 	}
@@ -58,14 +59,14 @@ func (g *Generator) Generate(stackName string, ymlContent []byte) (*LockFile, er
 	}
 
 	containers, err := g.containerClient.ListContainersWithLabels(map[string]string{
-		"devarch.stack_id": stackName,
+		identity.LabelStackID: stackName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("list containers: %w", err)
 	}
 
 	for _, containerName := range containers {
-		instanceName := extractInstanceName(stackName, containerName)
+		instanceName := identity.ExtractInstanceName(stackName, containerName)
 		if instanceName == "" {
 			continue
 		}
@@ -81,13 +82,6 @@ func (g *Generator) Generate(stackName string, ymlContent []byte) (*LockFile, er
 	return lock, nil
 }
 
-func extractInstanceName(stackName, containerName string) string {
-	prefix := fmt.Sprintf("devarch-%s-", stackName)
-	if !strings.HasPrefix(containerName, prefix) {
-		return ""
-	}
-	return strings.TrimPrefix(containerName, prefix)
-}
 
 func (g *Generator) buildInstanceLock(stackName, instanceName, containerName string) (InstLock, error) {
 	var templateName string

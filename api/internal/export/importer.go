@@ -6,6 +6,8 @@ import (
 	"log"
 	"strings"
 	"time"
+
+	"github.com/priz/devarch-api/internal/identity"
 )
 
 type ImportResult struct {
@@ -71,7 +73,7 @@ func (imp *Importer) Import(file *DevArchFile) (*ImportResult, error) {
 	// Upsert stack
 	networkName := file.Stack.NetworkName
 	if networkName == "" {
-		networkName = fmt.Sprintf("devarch-%s-net", file.Stack.Name)
+		networkName = identity.NetworkName(file.Stack.Name)
 	}
 
 	var stackID int
@@ -219,7 +221,7 @@ func (imp *Importer) Import(file *DevArchFile) (*ImportResult, error) {
 			return nil, fmt.Errorf("get template service ID for %q: %w", inst.Template, err)
 		}
 
-		containerName := fmt.Sprintf("devarch-%s-%s", file.Stack.Name, instanceName)
+		containerName := identity.ContainerName(file.Stack.Name, instanceName)
 
 		// Upsert instance
 		var instanceID int
@@ -390,7 +392,7 @@ func (imp *Importer) insertOverridesWithStmts(instanceID, templateServiceID int,
 	}
 
 	for key, value := range inst.Labels {
-		if strings.HasPrefix(key, "devarch.") {
+		if strings.HasPrefix(key, identity.LabelPrefix) {
 			continue
 		}
 		_, err := labelStmt.Exec(instanceID, key, value)
