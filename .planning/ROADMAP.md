@@ -96,10 +96,13 @@ Plans:
   2. Error responses use `{"error": {"code", "message", "details"}}` structure
   3. No plain-text http.Error responses remain on core endpoints
   4. Shared responder functions enforce envelope consistency
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] TBD
+- [ ] 19-01-PLAN.md — Create respond package + panic recovery middleware
+- [ ] 19-02-PLAN.md — Migrate stack handlers to response envelopes
+- [ ] 19-03-PLAN.md — Migrate instance + service handlers to response envelopes
+- [ ] 19-04-PLAN.md — Migrate remaining handlers + final audit
 
 #### Phase 20: Action Endpoint Consistency & OpenAPI
 **Goal**: Action endpoints share consistent response fields; OpenAPI spec documents all routes
@@ -244,7 +247,7 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 | 16. Security Configuration | 1/1 | ✓ Complete | 2026-02-11 |
 | 17. CORS & Origin Hardening | 1/1 | ✓ Complete | 2026-02-11 |
 | 18. WebSocket Authentication & Security Modes | 2/2 | ✓ Complete | 2026-02-11 |
-| 19. API Response Normalization | 0/TBD | Not started | - |
+| 19. API Response Normalization | 0/4 | Not started | - |
 | 20. Action Endpoint Consistency & OpenAPI | 0/TBD | Not started | - |
 | 21. Deploy Orchestration Service | 0/TBD | Not started | - |
 | 22. Identity Service & Naming Consolidation | 0/TBD | Not started | - |
