@@ -12,11 +12,10 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { LifecycleButtons, EnableToggle, MoreActionsMenu } from '@/components/ui/entity-actions'
-import { useStack, useEnableStack, useDisableStack, useStopStack, useStartStack, useRestartStack, useStackNetwork, useStackCompose, useGeneratePlan, useApplyPlan, useCreateNetwork, useRemoveNetwork, useExportStack, useImportStack } from '@/features/stacks/queries'
-import { useGenerateStackProxyConfig } from '@/features/proxy/queries'
+import { useStackDetailController } from '@/features/stacks/useStackDetailController'
 import { ProxyConfigPanel } from '@/components/proxy/proxy-config-panel'
 import { CodeEditor } from '@/components/services/code-editor'
-import { useInstances, useUpdateInstance, useStopInstance, useStartInstance, useRestartInstance } from '@/features/instances/queries'
+import { useUpdateInstance, useStopInstance, useStartInstance, useRestartInstance } from '@/features/instances/queries'
 import { EditStackDialog } from '@/components/stacks/edit-stack-dialog'
 import { DeleteStackDialog } from '@/components/stacks/delete-stack-dialog'
 import { CloneStackDialog } from '@/components/stacks/clone-stack-dialog'
@@ -172,24 +171,7 @@ function StackDetailPage() {
   const routeSearch = Route.useSearch()
   const routeNavigate = Route.useNavigate()
   const navigate = useNavigate()
-  const { data: stack, isLoading } = useStack(name)
-  const { data: instances = [] } = useInstances(name)
-  const { data: networkStatus } = useStackNetwork(name)
-  const { data: composeData, isLoading: composeLoading } = useStackCompose(name)
-  const connectedContainers = networkStatus?.containers ?? []
-  const runningContainerNames = new Set(connectedContainers)
-  const enableStack = useEnableStack()
-  const disableStack = useDisableStack()
-  const stopStack = useStopStack()
-  const startStack = useStartStack()
-  const restartStack = useRestartStack()
-  const generatePlan = useGeneratePlan(name)
-  const applyPlan = useApplyPlan(name)
-  const createNetwork = useCreateNetwork()
-  const removeNetwork = useRemoveNetwork()
-  const exportStack = useExportStack(name)
-  const importStack = useImportStack()
-  const generateProxyConfig = useGenerateStackProxyConfig(name)
+  const ctrl = useStackDetailController(name)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [editOpen, setEditOpen] = useState(false)
@@ -205,11 +187,11 @@ function StackDetailPage() {
   const [currentPlan, setCurrentPlan] = useState<StackPlan | null>(null)
 
   const handleToggleEnabled = () => {
-    if (!stack) return
-    if (stack.enabled) {
+    if (!ctrl.stack) return
+    if (ctrl.ctrl.stack.enabled) {
       setDisableDialogOpen(true)
     } else {
-      enableStack.mutate(stack.name)
+      ctrl.ctrl.enableStack.mutate(ctrl.ctrl.stack.name)
     }
   }
 
@@ -228,8 +210,8 @@ function StackDetailPage() {
   }
 
   const handleDownload = () => {
-    if (!composeData?.yaml) return
-    const blob = new Blob([composeData.yaml], { type: 'text/yaml' })
+    if (!ctrl.ctrl.composeData?.yaml) return
+    const blob = new Blob([ctrl.ctrl.composeData.yaml], { type: 'text/yaml' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -241,14 +223,14 @@ function StackDetailPage() {
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      importStack.mutate(file)
+      ctrl.importStack.mutate(file)
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
     }
   }
 
-  if (isLoading) {
+  if (ctrl.isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
@@ -256,7 +238,7 @@ function StackDetailPage() {
     )
   }
 
-  if (!stack) {
+  if (!ctrl.stack) {
     return (
       <div className="space-y-4">
         <Link to="/stacks" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground">
@@ -270,10 +252,10 @@ function StackDetailPage() {
     )
   }
 
-  const updatedAgo = timeAgo(stack.updated_at)
+  const updatedAgo = timeAgo(ctrl.stack.updated_at)
   const activeTab: StackTab = routeSearch.tab ?? 'instances'
   const stackTabItems = [
-    { value: 'instances', label: `Instances (${instances.length})` },
+    { value: 'instances', label: `Instances (${ctrl.ctrl.instances.length})` },
     { value: 'compose', label: 'Compose' },
     { value: 'wiring', label: 'Wiring' },
     { value: 'deploy', label: 'Deploy' },
@@ -291,34 +273,34 @@ function StackDetailPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <h1 className="truncate text-xl font-bold sm:text-2xl">{stack.name}</h1>
-              <Badge variant={stack.enabled ? 'success' : 'outline'}>
-                {stack.enabled ? 'Enabled' : 'Disabled'}
+              <h1 className="truncate text-xl font-bold sm:text-2xl">{ctrl.stack.name}</h1>
+              <Badge variant={ctrl.stack.enabled ? 'success' : 'outline'}>
+                {ctrl.stack.enabled ? 'Enabled' : 'Disabled'}
               </Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-              {stack.description || `Manage ${stack.instance_count} instance${stack.instance_count === 1 ? '' : 's'} in this stack`}
+              {ctrl.stack.description || `Manage ${ctrl.stack.instance_count} instance${ctrl.stack.instance_count === 1 ? '' : 's'} in this stack`}
             </p>
           </div>
           <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
-          {stack.enabled && (
+          {ctrl.stack.enabled && (
             <LifecycleButtons
-              isRunning={stack.running_count > 0}
-              onStart={() => startStack.mutate(stack.name)}
-              onStop={() => stopStack.mutate(stack.name)}
-              onRestart={() => restartStack.mutate(stack.name)}
-              isStartPending={startStack.isPending}
-              isStopPending={stopStack.isPending}
-              isRestartPending={restartStack.isPending}
+              isRunning={ctrl.stack.running_count > 0}
+              onStart={() => ctrl.startStack.mutate(ctrl.stack.name)}
+              onStop={() => ctrl.stopStack.mutate(ctrl.stack.name)}
+              onRestart={() => rectrl.startStack.mutate(ctrl.stack.name)}
+              isStartPending={ctrl.startStack.isPending}
+              isStopPending={ctrl.stopStack.isPending}
+              isRestartPending={ctrl.rectrl.startStack.isPending}
               showRestart
               className="col-span-2"
               buttonClassName="w-full sm:w-auto"
             />
           )}
           <EnableToggle
-            enabled={stack.enabled}
+            enabled={ctrl.stack.enabled}
             onToggle={handleToggleEnabled}
-            isPending={enableStack.isPending || disableStack.isPending}
+            isPending={ctrl.enableStack.isPending || ctrl.disableStack.isPending}
             className="w-full sm:w-auto"
           />
           <MoreActionsMenu triggerClassName="w-full sm:w-auto" mobileLabel="Actions">
@@ -335,11 +317,11 @@ function StackDetailPage() {
               Rename
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => exportStack.mutate()} disabled={exportStack.isPending}>
+            <DropdownMenuItem onClick={() => ctrl.exportStack.mutate()} disabled={ctrl.exportStack.isPending}>
               <Download className="size-4" />
               Export
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => fileInputRef.current?.click()} disabled={importStack.isPending}>
+            <DropdownMenuItem onClick={() => fileInputRef.current?.click()} disabled={ctrl.importStack.isPending}>
               <Upload className="size-4" />
               Import
             </DropdownMenuItem>
@@ -357,15 +339,15 @@ function StackDetailPage() {
         <StatCard
           icon={Power}
           label="Status"
-          value={stack.enabled ? 'Enabled' : 'Disabled'}
-          color={stack.enabled ? 'text-green-500' : 'text-muted-foreground'}
+          value={ctrl.stack.enabled ? 'Enabled' : 'Disabled'}
+          color={ctrl.stack.enabled ? 'text-green-500' : 'text-muted-foreground'}
         />
-        <StatCard icon={Layers} label="Instances" value={stack.instance_count} />
+        <StatCard icon={Layers} label="Instances" value={ctrl.stack.instance_count} />
         <StatCard
           icon={Play}
           label="Running"
-          value={`${stack.running_count} / ${stack.instance_count}`}
-          color={stack.running_count > 0 ? 'text-green-500' : 'text-muted-foreground'}
+          value={`${ctrl.stack.running_count} / ${ctrl.stack.instance_count}`}
+          color={ctrl.stack.running_count > 0 ? 'text-green-500' : 'text-muted-foreground'}
         />
         <StatCard icon={Clock3} label="Updated" value={updatedAgo} />
       </div>
@@ -392,7 +374,7 @@ function StackDetailPage() {
             <CardHeader>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="text-base">
-                  Instances ({instances.length})
+                  Instances ({ctrl.instances.length})
                 </CardTitle>
                 <Button size="sm" className="w-full sm:w-auto" onClick={() => setAddInstanceOpen(true)}>
                   <Plus className="size-4" />
@@ -401,7 +383,7 @@ function StackDetailPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {instances.length === 0 ? (
+              {ctrl.instances.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="rounded-full bg-muted p-3 mb-4">
                     <Layers className="size-8 text-muted-foreground" />
@@ -417,12 +399,12 @@ function StackDetailPage() {
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {instances.map((instance) => (
+                  {ctrl.instances.map((instance) => (
                     <InstanceCard
                       key={instance.id}
                       instance={instance}
                       stackName={name}
-                      runningContainerNames={runningContainerNames}
+                      runningContainerNames={ctrl.runningContainerNames}
                       onDelete={openInstanceDelete}
                       onDuplicate={openInstanceDuplicate}
                     />
@@ -439,38 +421,38 @@ function StackDetailPage() {
                   <Globe className="size-4 text-blue-500" />
                   <CardTitle className="text-base">Network</CardTitle>
                 </div>
-                {networkStatus?.status === 'not_created' && (
+                {ctrl.networkStatus?.status === 'not_created' && (
                   <Button
                     size="sm"
                     variant="outline"
                     className="w-full sm:w-auto"
-                    onClick={() => createNetwork.mutate(name)}
-                    disabled={createNetwork.isPending}
+                    onClick={() => ctrl.createNetwork.mutate(name)}
+                    disabled={ctrl.createNetwork.isPending}
                   >
-                    {createNetwork.isPending ? <Loader2 className="size-4 animate-spin" /> : <Network className="size-4" />}
+                    {ctrl.createNetwork.isPending ? <Loader2 className="size-4 animate-spin" /> : <Network className="size-4" />}
                     Create Network
                   </Button>
                 )}
-                {networkStatus?.status === 'active' && (
+                {ctrl.networkStatus?.status === 'active' && (
                   <Button
                     size="sm"
                     variant="outline"
                     className="w-full sm:w-auto"
-                    onClick={() => removeNetwork.mutate(name)}
-                    disabled={removeNetwork.isPending}
+                    onClick={() => ctrl.removeNetwork.mutate(name)}
+                    disabled={ctrl.removeNetwork.isPending}
                   >
-                    {removeNetwork.isPending ? <Loader2 className="size-4 animate-spin" /> : <Unplug className="size-4" />}
+                    {ctrl.removeNetwork.isPending ? <Loader2 className="size-4 animate-spin" /> : <Unplug className="size-4" />}
                     Remove Network
                   </Button>
                 )}
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {networkStatus ? (
+              {ctrl.networkStatus ? (
                 <>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Name:</span>
-                    <code className="bg-muted px-2 py-1 rounded text-sm font-mono">{networkStatus.network_name}</code>
+                    <code className="bg-muted px-2 py-1 rounded text-sm font-mono">{ctrl.networkStatus.network_name}</code>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Status:</span>
@@ -482,13 +464,13 @@ function StackDetailPage() {
                     <>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">Driver:</span>
-                        <span className="text-sm">{networkStatus.driver}</span>
+                        <span className="text-sm">{ctrl.networkStatus.driver}</span>
                       </div>
-                      {connectedContainers.length > 0 && (
+                      {ctrl.connectedContainers.length > 0 && (
                         <div>
                           <div className="text-sm text-muted-foreground mb-1">Connected containers:</div>
                           <div className="flex flex-wrap gap-1">
-                            {connectedContainers.map((container) => (
+                            {ctrl.connectedContainers.map((container) => (
                               <code key={container} className="bg-muted px-2 py-0.5 rounded text-xs font-mono">
                                 {container}
                               </code>
@@ -518,11 +500,11 @@ function StackDetailPage() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="text-base">Generated Compose YAML</CardTitle>
                 <div className="flex w-full items-center gap-2 sm:w-auto">
-                  <Button size="sm" variant="outline" className="flex-1 sm:flex-none" onClick={() => setComposeExpanded(!composeExpanded)} disabled={!composeData?.yaml}>
+                  <Button size="sm" variant="outline" className="flex-1 sm:flex-none" onClick={() => setComposeExpanded(!composeExpanded)} disabled={!ctrl.composeData?.yaml}>
                     {composeExpanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
                     {composeExpanded ? 'Collapse' : 'Expand'}
                   </Button>
-                  <Button size="sm" variant="outline" className="flex-1 sm:flex-none" onClick={handleDownload} disabled={!composeData?.yaml}>
+                  <Button size="sm" variant="outline" className="flex-1 sm:flex-none" onClick={handleDownload} disabled={!ctrl.composeData?.yaml}>
                     <Download className="size-4" />
                     Download
                   </Button>
@@ -530,12 +512,12 @@ function StackDetailPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {composeLoading ? (
+              {ctrl.composeLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="size-6 animate-spin text-muted-foreground" />
                 </div>
-              ) : composeData?.yaml ? (
-                <CodeEditor value={composeData.yaml} onChange={() => {}} language="yaml" readOnly autoHeight={composeExpanded} />
+              ) : ctrl.composeData?.yaml ? (
+                <CodeEditor value={ctrl.composeData.yaml} onChange={() => {}} language="yaml" readOnly autoHeight={composeExpanded} />
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>No compose YAML available</p>
@@ -543,14 +525,14 @@ function StackDetailPage() {
                 </div>
               )}
 
-              {composeData?.warnings && composeData.warnings.length > 0 && (
+              {ctrl.composeData?.warnings && ctrl.composeData.warnings.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium flex items-center gap-2">
                     <AlertTriangle className="size-4 text-yellow-500" />
-                    Warnings ({composeData.warnings.length})
+                    Warnings ({ctrl.composeData.warnings.length})
                   </h4>
                   <div className="space-y-1">
-                    {composeData.warnings.map((warning, i) => (
+                    {ctrl.composeData.warnings.map((warning, i) => (
                       <div key={i} className="text-sm text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950/20 px-3 py-2 rounded-md">
                         {warning}
                       </div>
@@ -567,7 +549,7 @@ function StackDetailPage() {
         </TabsContent>
 
         <TabsContent value="proxy">
-          <ProxyConfigPanel scope="stack" name={name} generateMutation={generateProxyConfig} />
+          <ProxyConfigPanel scope="stack" name={name} generateMutation={ctrl.generateProxyConfig} />
         </TabsContent>
 
         <TabsContent value="deploy">
@@ -578,10 +560,10 @@ function StackDetailPage() {
                 <Button
                   size="sm"
                   className="w-full sm:w-auto"
-                  onClick={() => generatePlan.mutate(undefined, { onSuccess: (data) => setCurrentPlan(data.data) })}
-                  disabled={generatePlan.isPending || applyPlan.isPending}
+                  onClick={() => ctrl.generatePlan.mutate(undefined, { onSuccess: (data) => setCurrentPlan(data.data) })}
+                  disabled={ctrl.generatePlan.isPending || ctrl.applyPlan.isPending}
                 >
-                  {generatePlan.isPending ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
+                  {ctrl.generatePlan.isPending ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
                   Generate Plan
                 </Button>
               </div>
@@ -653,16 +635,16 @@ function StackDetailPage() {
                   </div>
                   <div className="flex items-center gap-2 pt-2">
                     <Button
-                      onClick={() => applyPlan.mutate({ token: currentPlan.token }, { onSuccess: () => setCurrentPlan(null) })}
-                      disabled={applyPlan.isPending}
+                      onClick={() => ctrl.applyPlan.mutate({ token: currentPlan.token }, { onSuccess: () => setCurrentPlan(null) })}
+                      disabled={ctrl.applyPlan.isPending}
                     >
-                      {applyPlan.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+                      {ctrl.applyPlan.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
                       Apply Changes
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => generatePlan.mutate(undefined, { onSuccess: (data) => setCurrentPlan(data.data) })}
-                      disabled={generatePlan.isPending || applyPlan.isPending}
+                      onClick={() => ctrl.generatePlan.mutate(undefined, { onSuccess: (data) => setCurrentPlan(data.data) })}
+                      disabled={ctrl.generatePlan.isPending || ctrl.applyPlan.isPending}
                     >
                       Regenerate Plan
                     </Button>
@@ -698,13 +680,13 @@ function StackDetailPage() {
         onChange={handleImport}
       />
 
-      {stack && (
+      {ctrl.stack && (
         <>
-          <EditStackDialog stack={stack} open={editOpen} onOpenChange={setEditOpen} />
-          <DeleteStackDialog stack={stack} open={deleteOpen} onOpenChange={setDeleteOpen} onSuccess={handleDeleteSuccess} />
-          <CloneStackDialog stack={stack} open={cloneOpen} onOpenChange={setCloneOpen} />
-          <RenameStackDialog stack={stack} open={renameOpen} onOpenChange={setRenameOpen} />
-          <DisableStackDialog stack={stack} open={disableDialogOpen} onOpenChange={setDisableDialogOpen} />
+          <EditStackDialog stack={ctrl.stack} open={editOpen} onOpenChange={setEditOpen} />
+          <DeleteStackDialog stack={ctrl.stack} open={deleteOpen} onOpenChange={setDeleteOpen} onSuccess={handleDeleteSuccess} />
+          <CloneStackDialog stack={ctrl.stack} open={cloneOpen} onOpenChange={setCloneOpen} />
+          <RenameStackDialog stack={ctrl.stack} open={renameOpen} onOpenChange={setRenameOpen} />
+          <DisableStackDialog stack={ctrl.stack} open={disableDialogOpen} onOpenChange={setDisableDialogOpen} />
           <AddInstanceDialog stackName={name} open={addInstanceOpen} onOpenChange={setAddInstanceOpen} />
         </>
       )}
