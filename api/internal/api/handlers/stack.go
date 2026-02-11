@@ -14,17 +14,20 @@ import (
 	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/orchestration"
 )
 
 type StackHandler struct {
-	db              *sql.DB
-	containerClient *container.Client
+	db                   *sql.DB
+	containerClient      *container.Client
+	orchestrationService *orchestration.Service
 }
 
-func NewStackHandler(db *sql.DB, cc *container.Client) *StackHandler {
+func NewStackHandler(db *sql.DB, cc *container.Client, os *orchestration.Service) *StackHandler {
 	return &StackHandler{
-		db:              db,
-		containerClient: cc,
+		db:                   db,
+		containerClient:      cc,
+		orchestrationService: os,
 	}
 }
 

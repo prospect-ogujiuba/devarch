@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/priz/devarch-api/internal/api/respond"
+	"github.com/priz/devarch-api/internal/orchestration"
 	"github.com/priz/devarch-api/internal/wiring"
 )
 
@@ -200,131 +202,22 @@ func (h *StackHandler) ListWires(w http.ResponseWriter, r *http.Request) {
 func (h *StackHandler) ResolveWires(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 
-	var stackID int
-	err := h.db.QueryRow(`
-		SELECT id FROM stacks WHERE name = $1 AND deleted_at IS NULL
-	`, stackName).Scan(&stackID)
-	if err == sql.ErrNoRows {
-		respond.NotFound(w, r, "stack", stackName)
-		return
-	}
+	result, err := h.orchestrationService.ResolveWiring(stackName)
 	if err != nil {
-		respond.InternalError(w, r, err)
-		return
-	}
-
-	providerRows, err := h.db.Query(`
-		SELECT si.id, si.instance_id, se.id, se.name, se.type, se.port, se.protocol
-		FROM service_instances si
-		JOIN service_exports se ON se.service_id = si.service_id
-		WHERE si.stack_id = $1 AND si.deleted_at IS NULL
-		ORDER BY si.instance_id, se.name
-	`, stackID)
-	if err != nil {
-		respond.InternalError(w, r, err)
-		return
-	}
-	defer providerRows.Close()
-
-	var providers []wiring.Provider
-	for providerRows.Next() {
-		var p wiring.Provider
-		if err := providerRows.Scan(&p.InstanceID, &p.InstanceName, &p.ExportContractID, &p.ContractName, &p.ContractType, &p.Port, &p.Protocol); err != nil {
+		switch {
+		case errors.Is(err, orchestration.ErrStackNotFound):
+			respond.NotFound(w, r, "stack", stackName)
+		case errors.Is(err, orchestration.ErrValidation):
+			respond.BadRequest(w, r, err.Error())
+		default:
 			respond.InternalError(w, r, err)
-			return
 		}
-		providers = append(providers, p)
-	}
-
-	consumerRows, err := h.db.Query(`
-		SELECT si.id, si.instance_id, ic.id, ic.name, ic.type, ic.required, COALESCE(ic.env_vars, '{}')
-		FROM service_instances si
-		JOIN service_import_contracts ic ON ic.service_id = si.service_id
-		WHERE si.stack_id = $1 AND si.deleted_at IS NULL
-		ORDER BY si.instance_id, ic.name
-	`, stackID)
-	if err != nil {
-		respond.InternalError(w, r, err)
-		return
-	}
-	defer consumerRows.Close()
-
-	var consumers []wiring.Consumer
-	for consumerRows.Next() {
-		var c wiring.Consumer
-		var envVarsJSON []byte
-		if err := consumerRows.Scan(&c.InstanceID, &c.InstanceName, &c.ImportContractID, &c.ContractName, &c.ContractType, &c.Required, &envVarsJSON); err != nil {
-			respond.InternalError(w, r, err)
-			return
-		}
-		if err := json.Unmarshal(envVarsJSON, &c.EnvVars); err != nil {
-			respond.InternalError(w, r, err)
-			return
-		}
-		consumers = append(consumers, c)
-	}
-
-	wireRows, err := h.db.Query(`
-		SELECT id, consumer_instance_id, provider_instance_id, import_contract_id, source
-		FROM service_instance_wires
-		WHERE stack_id = $1
-	`, stackID)
-	if err != nil {
-		respond.InternalError(w, r, err)
-		return
-	}
-	defer wireRows.Close()
-
-	var existingWires []wiring.ExistingWire
-	for wireRows.Next() {
-		var ew wiring.ExistingWire
-		if err := wireRows.Scan(&ew.ID, &ew.ConsumerInstanceID, &ew.ProviderInstanceID, &ew.ImportContractID, &ew.Source); err != nil {
-			respond.InternalError(w, r, err)
-			return
-		}
-		existingWires = append(existingWires, ew)
-	}
-
-	candidates, warnings := wiring.ResolveAutoWires(stackName, providers, consumers, existingWires)
-
-	validationWarnings, err := wiring.ValidateWiring(candidates, existingWires)
-	if err != nil {
-		respond.BadRequest(w, r, err.Error())
-		return
-	}
-	warnings = append(warnings, validationWarnings...)
-
-	tx, err := h.db.Begin()
-	if err != nil {
-		respond.InternalError(w, r, err)
-		return
-	}
-	defer tx.Rollback()
-
-	if _, err := tx.Exec(`DELETE FROM service_instance_wires WHERE stack_id = $1 AND source = 'auto'`, stackID); err != nil {
-		respond.InternalError(w, r, err)
-		return
-	}
-
-	for _, candidate := range candidates {
-		_, err := tx.Exec(`
-			INSERT INTO service_instance_wires (stack_id, consumer_instance_id, provider_instance_id, import_contract_id, export_contract_id, source)
-			VALUES ($1, $2, $3, $4, $5, $6)
-		`, stackID, candidate.ConsumerInstanceID, candidate.ProviderInstanceID, candidate.ImportContractID, candidate.ExportContractID, candidate.Source)
-		if err != nil {
-			respond.InternalError(w, r, err)
-			return
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		respond.InternalError(w, r, err)
 		return
 	}
 
 	respond.Action(w, r, http.StatusOK, "resolved",
-		respond.WithMetadata("resolved_count", len(candidates)),
-		respond.WithWarnings(warnings),
+		respond.WithMetadata("resolved_count", result.ResolvedCount),
+		respond.WithWarnings(result.Warnings),
 	)
 }
 
