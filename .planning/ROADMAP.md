@@ -178,9 +178,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 24-01-PLAN.md — Create shared mutation helper + stack detail controller extraction
-- [ ] 24-02-PLAN.md — Instance mutation refactor + instance detail controller extraction
-- [ ] 24-03-PLAN.md — Service + remaining feature mutation refactor + service detail controller extraction
+- [x] 24-01-PLAN.md — Create shared mutation helper + stack detail controller extraction
+- [x] 24-02-PLAN.md — Instance mutation refactor + instance detail controller extraction
+- [x] 24-03-PLAN.md — Service + remaining feature mutation refactor + service detail controller extraction
 
 #### Phase 25: WebSocket Expansion & Frontend Auth
 **Goal**: WebSocket invalidates stack/instance queries; browser clients authenticate WS connections
@@ -256,8 +256,8 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 | 20. Action Endpoint Consistency & OpenAPI | 2/2 | ✓ Complete | 2026-02-11 |
 | 21. Deploy Orchestration Service | 2/2 | ✓ Complete | 2026-02-11 |
 | 22. Identity Service & Naming Consolidation | 2/2 | ✓ Complete | 2026-02-11 |
-| 23. Performance Optimization | 0/TBD | Not started | - |
-| 24. Frontend Controller Extraction | 0/TBD | Not started | - |
+| 23. Performance Optimization | 1/1 | ✓ Complete | 2026-02-11 |
+| 24. Frontend Controller Extraction | 3/3 | ✓ Complete | 2026-02-11 |
 | 25. WebSocket Expansion & Frontend Auth | 0/TBD | Not started | - |
 | 26. API Integration Tests | 0/TBD | Not started | - |
 | 27. Frontend Controller Tests | 0/TBD | Not started | - |
@@ -265,4 +265,4 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-11 — Phase 22 complete*
+*Last updated: 2026-02-11 — Phase 24 complete*
