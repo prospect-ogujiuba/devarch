@@ -2,11 +2,12 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/lib/pq"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/podman"
@@ -51,7 +52,7 @@ func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 		ORDER BY c.startup_order
 	`)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -71,7 +72,7 @@ func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 			&c.ID, &c.Name, &displayName, &color, &c.StartupOrder,
 			&c.CreatedAt, &c.UpdatedAt, &c.ServiceCount, pq.Array(&serviceNames),
 		); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		if displayName.Valid {
@@ -88,8 +89,7 @@ func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 		categories = append(categories, c)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(categories)
+	respond.JSON(w, r, http.StatusOK,categories)
 }
 
 func (h *CategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -102,11 +102,11 @@ func (h *CategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 		FROM categories WHERE name = $1
 	`, name).Scan(&c.ID, &c.Name, &displayName, &color, &c.StartupOrder, &c.CreatedAt, &c.UpdatedAt)
 	if err == sql.ErrNoRows {
-		http.Error(w, "category not found", http.StatusNotFound)
+		respond.NotFound(w, r, "category", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -117,8 +117,7 @@ func (h *CategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 		c.Color = color.String
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(c)
+	respond.JSON(w, r, http.StatusOK,c)
 }
 
 func (h *CategoryHandler) Services(w http.ResponseWriter, r *http.Request) {
@@ -127,11 +126,11 @@ func (h *CategoryHandler) Services(w http.ResponseWriter, r *http.Request) {
 	var categoryID int
 	err := h.db.QueryRow("SELECT id FROM categories WHERE name = $1", name).Scan(&categoryID)
 	if err == sql.ErrNoRows {
-		http.Error(w, "category not found", http.StatusNotFound)
+		respond.NotFound(w, r, "category", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -140,7 +139,7 @@ func (h *CategoryHandler) Services(w http.ResponseWriter, r *http.Request) {
 		FROM services WHERE category_id = $1 ORDER BY name
 	`, categoryID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -152,19 +151,18 @@ func (h *CategoryHandler) Services(w http.ResponseWriter, r *http.Request) {
 			&s.ID, &s.Name, &s.ImageName, &s.ImageTag,
 			&s.RestartPolicy, &s.Enabled, &s.CreatedAt, &s.UpdatedAt,
 		); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 		services = append(services, s)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(services)
+	respond.JSON(w, r, http.StatusOK,services)
 }
 
 func (h *CategoryHandler) Start(w http.ResponseWriter, r *http.Request) {
 	if h.containerClient == nil {
-		http.Error(w, "container client not initialized", http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("container client not initialized"))
 		return
 	}
 
@@ -173,11 +171,11 @@ func (h *CategoryHandler) Start(w http.ResponseWriter, r *http.Request) {
 	var categoryID int
 	err := h.db.QueryRow("SELECT id FROM categories WHERE name = $1", name).Scan(&categoryID)
 	if err == sql.ErrNoRows {
-		http.Error(w, "category not found", http.StatusNotFound)
+		respond.NotFound(w, r, "category", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -186,7 +184,7 @@ func (h *CategoryHandler) Start(w http.ResponseWriter, r *http.Request) {
 		FROM services WHERE category_id = $1 AND enabled = true ORDER BY name
 	`, categoryID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -211,13 +209,12 @@ func (h *CategoryHandler) Start(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(results)
+	respond.JSON(w, r, http.StatusOK,results)
 }
 
 func (h *CategoryHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	if h.containerClient == nil {
-		http.Error(w, "container client not initialized", http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("container client not initialized"))
 		return
 	}
 
@@ -226,11 +223,11 @@ func (h *CategoryHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	var categoryID int
 	err := h.db.QueryRow("SELECT id FROM categories WHERE name = $1", name).Scan(&categoryID)
 	if err == sql.ErrNoRows {
-		http.Error(w, "category not found", http.StatusNotFound)
+		respond.NotFound(w, r, "category", name)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -239,7 +236,7 @@ func (h *CategoryHandler) Stop(w http.ResponseWriter, r *http.Request) {
 		FROM services WHERE category_id = $1 ORDER BY name
 	`, categoryID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -264,6 +261,5 @@ func (h *CategoryHandler) Stop(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(results)
+	respond.JSON(w, r, http.StatusOK,results)
 }

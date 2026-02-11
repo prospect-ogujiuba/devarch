@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"github.com/priz/devarch-api/internal/api/respond"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -67,21 +67,20 @@ func (h *InstanceHandler) Stop(w http.ResponseWriter, r *http.Request) {
 
 	_, containerName, err := h.getInstanceRuntimeInfo(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to query instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to query instance: %w", err))
 		return
 	}
 
 	if err := h.containerClient.StopContainer(containerName); err != nil {
-		http.Error(w, fmt.Sprintf("failed to stop instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to stop instance: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "stopped"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "stopped"})
 }
 
 func (h *InstanceHandler) Start(w http.ResponseWriter, r *http.Request) {
@@ -90,31 +89,30 @@ func (h *InstanceHandler) Start(w http.ResponseWriter, r *http.Request) {
 
 	enabled, _, err := h.getInstanceRuntimeInfo(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to query instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to query instance: %w", err))
 		return
 	}
 	if !enabled {
-		http.Error(w, "instance is disabled — enable it first", http.StatusConflict)
+		respond.Conflict(w, r, "instance is disabled — enable it first")
 		return
 	}
 
 	projectName, yamlBytes, err := h.instanceCompose(stackName)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to generate compose: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to generate compose: %w", err))
 		return
 	}
 
 	if err := h.containerClient.StartComposeService(projectName, yamlBytes, instanceName); err != nil {
-		http.Error(w, fmt.Sprintf("failed to start instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to start instance: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "started"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "started"})
 }
 
 func (h *InstanceHandler) Restart(w http.ResponseWriter, r *http.Request) {
@@ -123,29 +121,28 @@ func (h *InstanceHandler) Restart(w http.ResponseWriter, r *http.Request) {
 
 	enabled, _, err := h.getInstanceRuntimeInfo(stackName, instanceName)
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("instance %q not found in stack %q", instanceName, stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "instance", instanceName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to query instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to query instance: %w", err))
 		return
 	}
 	if !enabled {
-		http.Error(w, "instance is disabled — enable it first", http.StatusConflict)
+		respond.Conflict(w, r, "instance is disabled — enable it first")
 		return
 	}
 
 	projectName, yamlBytes, err := h.instanceCompose(stackName)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to generate compose: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to generate compose: %w", err))
 		return
 	}
 
 	if err := h.containerClient.RestartComposeService(projectName, yamlBytes, instanceName); err != nil {
-		http.Error(w, fmt.Sprintf("failed to restart instance: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("failed to restart instance: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "restarted"})
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "restarted"})
 }

@@ -1,14 +1,15 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"regexp"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/container"
 )
 
@@ -40,14 +41,14 @@ type networkListItem struct {
 func (h *NetworkHandler) List(w http.ResponseWriter, r *http.Request) {
 	names, err := h.containerClient.ListAllNetworks()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("list networks: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("list networks: %w", err))
 		return
 	}
 
 	stackSet := map[string]bool{}
 	rows, err := h.db.Query(`SELECT name FROM stacks WHERE deleted_at IS NULL`)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("query stacks: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("query stacks: %w", err))
 		return
 	}
 	defer rows.Close()
@@ -97,8 +98,7 @@ func (h *NetworkHandler) List(w http.ResponseWriter, r *http.Request) {
 		items = append(items, item)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(items)
+	respond.JSON(w, r, http.StatusOK,items)
 }
 
 type createNetworkRequest struct {
@@ -111,17 +111,17 @@ var networkNameRe = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`)
 func (h *NetworkHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createNetworkRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid request body")
 		return
 	}
 
 	if req.Name == "" {
-		http.Error(w, "name is required", http.StatusBadRequest)
+		respond.BadRequest(w, r, "name is required")
 		return
 	}
 
 	if !networkNameRe.MatchString(req.Name) {
-		http.Error(w, "invalid network name", http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid network name")
 		return
 	}
 
@@ -130,7 +130,7 @@ func (h *NetworkHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.containerClient.CreateNetwork(req.Name, labels); err != nil {
-		http.Error(w, fmt.Sprintf("create network: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("create network: %w", err))
 		return
 	}
 
@@ -169,22 +169,21 @@ func (h *NetworkHandler) Remove(w http.ResponseWriter, r *http.Request) {
 
 	info, err := h.containerClient.InspectNetwork(name)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("network not found: %v", err), http.StatusNotFound)
+		respond.NotFound(w, r, "network", name)
 		return
 	}
 
 	if len(info.Containers) > 0 {
-		http.Error(w, "network has connected containers", http.StatusConflict)
+		respond.Conflict(w, r, "network has connected containers")
 		return
 	}
 
 	if err := h.containerClient.RemoveNetwork(name); err != nil {
-		http.Error(w, fmt.Sprintf("remove network: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("remove network: %w", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	respond.JSON(w, r, http.StatusOK,map[string]string{
 		"status":  "removed",
 		"network": name,
 	})
@@ -207,7 +206,7 @@ type bulkError struct {
 func (h *NetworkHandler) BulkRemove(w http.ResponseWriter, r *http.Request) {
 	var req bulkRemoveRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		respond.BadRequest(w, r, "invalid request body")
 		return
 	}
 
@@ -236,6 +235,5 @@ func (h *NetworkHandler) BulkRemove(w http.ResponseWriter, r *http.Request) {
 		resp.Removed = append(resp.Removed, name)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	respond.JSON(w, r, http.StatusOK,resp)
 }
