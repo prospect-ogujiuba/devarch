@@ -3,9 +3,9 @@
 **Defined:** 2026-02-11
 **Core Value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
 
-## v1.5 Requirements
+## v1.1.1 Requirements
 
-Requirements for v1.5 Architecture Hardening. Each maps to roadmap phases.
+Requirements for v1.1.1 Architecture Hardening. Each maps to roadmap phases.
 
 ### Security
 
@@ -71,7 +71,7 @@ Requirements for v1.5 Architecture Hardening. Each maps to roadmap phases.
 | Feature | Reason |
 |---------|--------|
 | Full RBAC/role matrix | API-key auth sufficient for local dev tool; v2+ consideration |
-| Distributed tracing pipeline | Structured logs cover v1.5 needs; full tracing is over-engineering |
+| Distributed tracing pipeline | Structured logs cover v1.1.1 needs; full tracing is over-engineering |
 | Event-driven WS (replacing polling) | Polling works; event-first is optimization for future |
 | OpenAPI client SDK generation | Spec generation is sufficient; SDK gen adds maintenance burden |
 | Bootstrap package restructure | Boot sequence works; phased startup is over-engineering for single-process |
@@ -82,37 +82,52 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEC-01 | — | Pending |
-| SEC-02 | — | Pending |
-| SEC-03 | — | Pending |
-| SEC-04 | — | Pending |
-| SEC-05 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| API-04 | — | Pending |
-| BE-01 | — | Pending |
-| BE-02 | — | Pending |
-| BE-03 | — | Pending |
-| PERF-01 | — | Pending |
-| PERF-02 | — | Pending |
-| PERF-03 | — | Pending |
-| FE-01 | — | Pending |
-| FE-02 | — | Pending |
-| FE-03 | — | Pending |
-| FE-04 | — | Pending |
-| FE-05 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| OPS-01 | — | Pending |
-| OPS-02 | — | Pending |
+| SEC-01 | Phase 16 | Pending |
+| SEC-02 | Phase 17 | Pending |
+| SEC-03 | Phase 17 | Pending |
+| SEC-04 | Phase 18 | Pending |
+| SEC-05 | Phase 18 | Pending |
+| API-01 | Phase 19 | Pending |
+| API-02 | Phase 19 | Pending |
+| API-03 | Phase 20 | Pending |
+| API-04 | Phase 20 | Pending |
+| BE-01 | Phase 21 | Pending |
+| BE-02 | Phase 22 | Pending |
+| BE-03 | Phase 22 | Pending |
+| PERF-01 | Phase 23 | Pending |
+| PERF-02 | Phase 23 | Pending |
+| PERF-03 | Phase 23 | Pending |
+| FE-01 | Phase 24 | Pending |
+| FE-02 | Phase 24 | Pending |
+| FE-03 | Phase 24 | Pending |
+| FE-04 | Phase 24 | Pending |
+| FE-05 | Phase 25 | Pending |
+| TEST-01 | Phase 26 | Pending |
+| TEST-02 | Phase 26 | Pending |
+| TEST-03 | Phase 27 | Pending |
+| OPS-01 | Phase 28 | Pending |
+| OPS-02 | Phase 28 | Pending |
 
 **Coverage:**
-- v1.5 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 (pending roadmap creation)
+- v1.1.1 requirements: 25 total
+- Mapped to phases: 25
+- Unmapped: 0
+
+**Distribution:**
+- Phase 16: 1 requirement (SEC-01)
+- Phase 17: 2 requirements (SEC-02, SEC-03)
+- Phase 18: 2 requirements (SEC-04, SEC-05)
+- Phase 19: 2 requirements (API-01, API-02)
+- Phase 20: 2 requirements (API-03, API-04)
+- Phase 21: 1 requirement (BE-01)
+- Phase 22: 2 requirements (BE-02, BE-03)
+- Phase 23: 3 requirements (PERF-01, PERF-02, PERF-03)
+- Phase 24: 4 requirements (FE-01, FE-02, FE-03, FE-04)
+- Phase 25: 1 requirement (FE-05)
+- Phase 26: 2 requirements (TEST-01, TEST-02)
+- Phase 27: 1 requirement (TEST-03)
+- Phase 28: 2 requirements (OPS-01, OPS-02)
 
 ---
 *Requirements defined: 2026-02-11*
-*Last updated: 2026-02-11 after initial definition*
+*Last updated: 2026-02-11 after v1.1.1 roadmap creation*

@@ -10,7 +10,7 @@ Portability promise: `devarch.yml` (intent) + `devarch.lock` (resolved ports/dig
 
 Two stacks using the same service template must never collide. Isolation (naming, networking, ports) is the primitive everything else depends on.
 
-## Current Milestone: v1.5 Architecture Hardening
+## Current Milestone: v1.1.1 Architecture Hardening
 
 **Goal:** Harden security model, normalize API contracts, decompose monolithic handlers, optimize query paths, extract frontend controllers, and establish test/observability baselines.
 
@@ -138,4 +138,4 @@ Two stacks using the same service template must never collide. Isolation (naming
 | Whitelist governance for parity exceptions | Expected differences documented with reason, golden services never whitelisted | ✓ Good |
 
 ---
-*Last updated: 2026-02-11 after v1.5 milestone start*
+*Last updated: 2026-02-11 after v1.1.1 milestone start*
