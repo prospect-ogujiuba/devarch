@@ -3,6 +3,7 @@ import { isAxiosError } from 'axios'
 import { api, getErrorMessage } from '@/lib/api'
 import type { Stack, DeletePreview, NetworkStatus, StackCompose, StackPlan, ApplyResult, ImportResult, Wire } from '@/types/api'
 import { toast } from 'sonner'
+import { useMutationHelper } from '@/lib/mutations'
 
 interface UnresolvedContract {
   instance: string
@@ -96,19 +97,14 @@ interface CreateStackRequest {
 }
 
 export function useCreateStack() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (data: CreateStackRequest) => {
       const response = await api.post('/stacks', data)
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Stack created')
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to create stack'))
-    },
+    successMessage: 'Stack created',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to create stack'),
+    invalidate: [['stacks']],
   })
 }
 
@@ -118,231 +114,176 @@ interface UpdateStackRequest {
 
 export function useUpdateStack() {
   const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async ({ name, data }: { name: string; data: UpdateStackRequest }) => {
       const response = await api.put(`/stacks/${name}`, data)
       return response.data
     },
+    successMessage: 'Stack updated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to update stack'),
+    invalidate: [['stacks']],
     onSuccess: (_data, { name }) => {
-      toast.success('Stack updated')
       queryClient.invalidateQueries({ queryKey: ['stacks', name] })
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to update stack'))
     },
   })
 }
 
 export function useDeleteStack() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.delete(`/stacks/${name}`)
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Stack deleted')
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to delete stack'))
-    },
+    successMessage: 'Stack deleted',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to delete stack'),
+    invalidate: [['stacks']],
   })
 }
 
 export function useEnableStack() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.post(`/stacks/${name}/enable`)
       return response.data
     },
-    onSuccess: (_data, name) => {
-      toast.success(`Enabled ${name}`)
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error, name) => {
-      toast.error(getErrorMessage(error, `Failed to enable ${name}`))
-    },
+    successMessage: (name) => `Enabled ${name}`,
+    errorMessage: (error, name) => getErrorMessage(error, `Failed to enable ${name}`),
+    invalidate: [['stacks']],
   })
 }
 
 export function useDisableStack() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.post(`/stacks/${name}/disable`)
       return response.data
     },
-    onSuccess: (_data, name) => {
-      toast.success(`Disabled ${name}`)
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error, name) => {
-      toast.error(getErrorMessage(error, `Failed to disable ${name}`))
-    },
+    successMessage: (name) => `Disabled ${name}`,
+    errorMessage: (error, name) => getErrorMessage(error, `Failed to disable ${name}`),
+    invalidate: [['stacks']],
   })
 }
 
 export function useCloneStack() {
   const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async ({ name, newName }: { name: string; newName: string }) => {
       const response = await api.post(`/stacks/${name}/clone`, { name: newName })
       return response.data
     },
+    successMessage: 'Stack cloned',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to clone stack'),
+    invalidate: [['stacks']],
     onSuccess: (_data, { name, newName }) => {
-      toast.success('Stack cloned')
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', name] })
       queryClient.invalidateQueries({ queryKey: ['stacks', newName] })
       queryClient.invalidateQueries({ queryKey: ['stacks', newName, 'instances'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to clone stack'))
     },
   })
 }
 
 export function useRenameStack() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async ({ name, newName }: { name: string; newName: string }) => {
       const response = await api.post(`/stacks/${name}/rename`, { name: newName })
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Stack renamed')
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to rename stack'))
-    },
+    successMessage: 'Stack renamed',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to rename stack'),
+    invalidate: [['stacks']],
   })
 }
 
 export function useRestoreStack() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.post(`/stacks/trash/${name}/restore`)
       return response.data
     },
-    onSuccess: (_data, name) => {
-      toast.success(`Restored ${name}`)
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', 'trash'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to restore stack'))
-    },
+    successMessage: (name) => `Restored ${name}`,
+    errorMessage: (error) => getErrorMessage(error, 'Failed to restore stack'),
+    invalidate: [['stacks'], ['stacks', 'trash']],
   })
 }
 
 export function usePermanentDeleteStack() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.delete(`/stacks/trash/${name}`)
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Stack permanently deleted')
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', 'trash'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to permanently delete stack'))
-    },
+    successMessage: 'Stack permanently deleted',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to permanently delete stack'),
+    invalidate: [['stacks'], ['stacks', 'trash']],
   })
 }
 
 export function useStopStack() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.post(`/stacks/${name}/stop`)
       return response.data
     },
-    onSuccess: (_data, name) => {
-      toast.success(`Stopped ${name}`)
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error, name) => {
-      toast.error(getErrorMessage(error, `Failed to stop ${name}`))
-    },
+    successMessage: (name) => `Stopped ${name}`,
+    errorMessage: (error, name) => getErrorMessage(error, `Failed to stop ${name}`),
+    invalidate: [['stacks']],
   })
 }
 
 export function useStartStack() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.post(`/stacks/${name}/start`)
       return response.data
     },
-    onSuccess: (_data, name) => {
-      toast.success(`Started ${name}`)
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error, name) => {
-      toast.error(getErrorMessage(error, `Failed to start ${name}`))
-    },
+    successMessage: (name) => `Started ${name}`,
+    errorMessage: (error, name) => getErrorMessage(error, `Failed to start ${name}`),
+    invalidate: [['stacks']],
   })
 }
 
 export function useRestartStack() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.post(`/stacks/${name}/restart`)
       return response.data
     },
-    onSuccess: (_data, name) => {
-      toast.success(`Restarted ${name}`)
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error, name) => {
-      toast.error(getErrorMessage(error, `Failed to restart ${name}`))
-    },
+    successMessage: (name) => `Restarted ${name}`,
+    errorMessage: (error, name) => getErrorMessage(error, `Failed to restart ${name}`),
+    invalidate: [['stacks']],
   })
 }
 
 export function useCreateNetwork() {
   const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.post(`/stacks/${name}/network`)
       return response.data
     },
+    successMessage: (name) => `Network created for ${name}`,
+    errorMessage: (error, name) => getErrorMessage(error, `Failed to create network for ${name}`),
+    invalidate: [['stacks']],
     onSuccess: (_data, name) => {
-      toast.success(`Network created for ${name}`)
       queryClient.invalidateQueries({ queryKey: ['stacks', name, 'network'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', name] })
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error, name) => {
-      toast.error(getErrorMessage(error, `Failed to create network for ${name}`))
     },
   })
 }
 
 export function useRemoveNetwork() {
   const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.delete(`/stacks/${name}/network`)
       return response.data
     },
+    successMessage: (name) => `Network removed for ${name}`,
+    errorMessage: (error, name) => getErrorMessage(error, `Failed to remove network for ${name}`),
+    invalidate: [['stacks']],
     onSuccess: (_data, name) => {
-      toast.success(`Network removed for ${name}`)
       queryClient.invalidateQueries({ queryKey: ['stacks', name, 'network'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', name] })
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error, name) => {
-      toast.error(getErrorMessage(error, `Failed to remove network for ${name}`))
     },
   })
 }
@@ -489,11 +430,12 @@ export function useStackWires(name: string) {
 
 export function useResolveWires(name: string) {
   const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async () => {
       const response = await api.post<{ resolved: number; warnings: string[] }>(`/stacks/${name}/wires/resolve`)
       return response.data
     },
+    errorMessage: (error) => getErrorMessage(error, 'Failed to resolve wires'),
     onSuccess: (data) => {
       if (data.resolved > 0) {
         toast.success(`Resolved ${data.resolved} wire${data.resolved === 1 ? '' : 's'}`)
@@ -502,59 +444,50 @@ export function useResolveWires(name: string) {
       }
       queryClient.invalidateQueries({ queryKey: ['stacks', name, 'wires'] })
     },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to resolve wires'))
-    },
   })
 }
 
 export function useCreateWire(name: string) {
   const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (data: { consumer_instance_id: string; provider_instance_id: string; import_contract_name: string }) => {
       const response = await api.post(`/stacks/${name}/wires`, data)
       return response.data
     },
+    successMessage: 'Wire created',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to create wire'),
     onSuccess: () => {
-      toast.success('Wire created')
       queryClient.invalidateQueries({ queryKey: ['stacks', name, 'wires'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to create wire'))
     },
   })
 }
 
 export function useDeleteWire(name: string) {
   const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (wireId: number) => {
       const response = await api.delete(`/stacks/${name}/wires/${wireId}`)
       return response.data
     },
+    successMessage: 'Wire disconnected',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to disconnect wire'),
     onSuccess: () => {
-      toast.success('Wire disconnected')
       queryClient.invalidateQueries({ queryKey: ['stacks', name, 'wires'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to disconnect wire'))
     },
   })
 }
 
 export function useCleanupOrphanedWires(name: string) {
   const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async () => {
       const response = await api.post<{ deleted: number }>(`/stacks/${name}/wires/cleanup`)
       return response.data
     },
+    errorMessage: (error) => getErrorMessage(error, 'Failed to cleanup wires'),
     onSuccess: (data) => {
       toast.success(`Cleaned up ${data.deleted} orphaned wire${data.deleted === 1 ? '' : 's'}`)
       queryClient.invalidateQueries({ queryKey: ['stacks', name, 'wires'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to cleanup wires'))
     },
   })
 }
