@@ -113,10 +113,11 @@ Plans:
   2. OpenAPI spec generated from router definitions
   3. CI pipeline fails when undocumented endpoint changes detected
   4. Spec includes all route paths, methods, request/response schemas
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 20-01-PLAN.md — Standardize action endpoints with ActionResponse struct
+- [ ] 20-02-PLAN.md — OpenAPI annotations, spec generation, CI validation
 
 #### Phase 21: Deploy Orchestration Service
 **Goal**: Deploy orchestration logic (plan/apply/wiring) extracted from handlers into application service
