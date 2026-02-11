@@ -141,11 +141,10 @@ func (h *RuntimeHandler) Switch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if current == req.Runtime {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"message":           fmt.Sprintf("Already running on %s", req.Runtime),
-			"current":           req.Runtime,
-			"previous":          req.Runtime,
+		respond.JSON(w, r, http.StatusOK, map[string]interface{}{
+			"message":            fmt.Sprintf("Already running on %s", req.Runtime),
+			"current":            req.Runtime,
+			"previous":           req.Runtime,
 			"no_change_required": true,
 		})
 		return
