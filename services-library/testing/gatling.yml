@@ -1,0 +1,24 @@
+services:
+  gatling:
+    image: denvazh/gatling:3.12
+    restart: 'no'
+    ports:
+    - 127.0.0.1:10130:8080
+    volumes:
+    - gatling_results:/opt/gatling/results
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - ls /opt/gatling/results
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: gatling
+volumes:
+  gatling_results: null
+networks:
+  microservices-net:
+    external: true

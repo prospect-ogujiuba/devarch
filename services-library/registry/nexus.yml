@@ -1,0 +1,27 @@
+services:
+  nexus:
+    image: sonatype/nexus3:3
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9810:8081
+    - 127.0.0.1:9811:8082
+    environment:
+      INSTALL4J_ADD_VM_PARAMS: -Xms512m -Xmx512m
+    volumes:
+    - nexus_data:/nexus-data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:8081/service/rest/v1/status || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    networks:
+    - microservices-net
+    container_name: nexus
+volumes:
+  nexus_data: null
+networks:
+  microservices-net:
+    external: true

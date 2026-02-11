@@ -1,0 +1,23 @@
+services:
+  gravitee:
+    image: graviteeio/apim-gateway:4.6
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8093:8082
+    environment:
+      gravitee_management_mongodb_uri: mongodb://root:devarch@mongodb:27017/gravitee
+      gravitee_ratelimit_mongodb_uri: mongodb://root:devarch@mongodb:27017/gravitee
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:18082/_node/health
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: gravitee
+networks:
+  microservices-net:
+    external: true

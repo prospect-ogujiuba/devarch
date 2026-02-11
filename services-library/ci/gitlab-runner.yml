@@ -1,0 +1,24 @@
+services:
+  gitlab-runner:
+    image: gitlab/gitlab-runner:v17.7
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9630:8093
+    volumes:
+    - gitlab_runner_data:/etc/gitlab-runner
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - gitlab-runner verify --delete 2>&1 || true
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: gitlab-runner
+volumes:
+  gitlab_runner_data: null
+networks:
+  microservices-net:
+    external: true

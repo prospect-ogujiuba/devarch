@@ -1,0 +1,31 @@
+services:
+  gitea:
+    image: gitea/gitea:1.25
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9210:3000
+    - 127.0.0.1:2222:22
+    environment:
+      GITEA__database__DB_TYPE: postgres
+      GITEA__database__HOST: postgres:5432
+      GITEA__database__NAME: gitea
+      GITEA__database__USER: postgres
+      GITEA__database__PASSWD: devarch
+    volumes:
+    - gitea_data:/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:3000/api/healthz || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: gitea
+volumes:
+  gitea_data: null
+networks:
+  microservices-net:
+    external: true

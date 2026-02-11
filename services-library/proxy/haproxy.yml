@@ -1,0 +1,26 @@
+services:
+  haproxy:
+    image: haproxy:3.0-alpine
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8002:80
+    - 127.0.0.1:8003:443
+    - 127.0.0.1:8004:8404
+    volumes:
+    - haproxy_data:/usr/local/etc/haproxy
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - haproxy -c -f /usr/local/etc/haproxy/haproxy.cfg || true
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: haproxy
+volumes:
+  haproxy_data: null
+networks:
+  microservices-net:
+    external: true

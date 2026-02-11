@@ -1,0 +1,39 @@
+{
+  "$schema": "https://www.krakend.io/schema/v2.7/krakend.json",
+  "version": 3,
+  "name": "devarch-gateway",
+  "port": 8080,
+  "timeout": "3s",
+  "cache_ttl": "300s",
+  "output_encoding": "json",
+  "endpoints": [
+    {
+      "endpoint": "/api/health",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/health",
+          "host": ["http://app:8080"]
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/{path}",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://app:8080"]
+        }
+      ]
+    }
+  ],
+  "extra_config": {
+    "telemetry/logging": {
+      "level": "INFO",
+      "prefix": "[DEVARCH]",
+      "syslog": false,
+      "stdout": true
+    }
+  }
+}

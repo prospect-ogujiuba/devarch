@@ -1,0 +1,19 @@
+services:
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.49
+    restart: unless-stopped
+    command: sleep infinity
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - node -e 'process.exit(0)'
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: playwright
+networks:
+  microservices-net:
+    external: true

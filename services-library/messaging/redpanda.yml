@@ -1,0 +1,30 @@
+services:
+  redpanda:
+    image: redpandadata/redpanda:v25.3
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:19092:19092
+    - 127.0.0.1:18081:18081
+    - 127.0.0.1:18082:18082
+    - 127.0.0.1:9644:9644
+    command: redpanda start --smp 1 --memory 512M --overprovisioned --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092 --schema-registry-addr
+      internal://0.0.0.0:8081,external://0.0.0.0:18081 --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
+    volumes:
+    - redpanda_data:/var/lib/redpanda/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:9644/v1/status/ready
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: redpanda
+volumes:
+  redpanda_data: null
+networks:
+  microservices-net:
+    external: true

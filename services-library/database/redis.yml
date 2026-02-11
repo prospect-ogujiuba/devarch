@@ -1,0 +1,28 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8504:6379
+    command: redis-server --requirepass devarch
+    volumes:
+    - redis_data:/data
+    healthcheck:
+      test:
+      - CMD
+      - redis-cli
+      - -a
+      - devarch
+      - ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+    - microservices-net
+    container_name: redis
+volumes:
+  redis_data: null
+networks:
+  microservices-net:
+    external: true

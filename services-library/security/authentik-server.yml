@@ -1,0 +1,29 @@
+services:
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2025.12
+    restart: unless-stopped
+    command: server
+    ports:
+    - 127.0.0.1:9720:9000
+    - 127.0.0.1:9721:9443
+    environment:
+      AUTHENTIK_SECRET_KEY: devarch-secret-key-change-me
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: postgres
+      AUTHENTIK_POSTGRESQL__USER: postgres
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: devarch
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - ak healthcheck || curl -f http://localhost:9000/-/health/live/
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+    - microservices-net
+    container_name: authentik-server
+networks:
+  microservices-net:
+    external: true

@@ -1,0 +1,35 @@
+services:
+  concourse-web:
+    image: concourse/concourse:7.12
+    restart: unless-stopped
+    command: web
+    ports:
+    - 127.0.0.1:9640:8080
+    - 127.0.0.1:9641:2222
+    environment:
+      CONCOURSE_EXTERNAL_URL: http://localhost:9640
+      CONCOURSE_POSTGRES_HOST: postgres
+      CONCOURSE_POSTGRES_USER: postgres
+      CONCOURSE_POSTGRES_PASSWORD: devarch
+      CONCOURSE_POSTGRES_DATABASE: concourse
+      CONCOURSE_ADD_LOCAL_USER: admin:devarch
+      CONCOURSE_MAIN_TEAM_LOCAL_USER: admin
+      CONCOURSE_CLUSTER_NAME: devarch
+    volumes:
+    - concourse_web_data:/concourse-keys
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:8080/api/v1/info
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: concourse-web
+volumes:
+  concourse_web_data: null
+networks:
+  microservices-net:
+    external: true

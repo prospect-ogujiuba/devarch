@@ -1,0 +1,26 @@
+services:
+  apisix:
+    image: apache/apisix:3.11
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9080:9080
+    - 127.0.0.1:9091:9091
+    - 127.0.0.1:9447:9443
+    volumes:
+    - apisix_data:/usr/local/apisix
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:9080/apisix/status || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: apisix
+volumes:
+  apisix_data: null
+networks:
+  microservices-net:
+    external: true

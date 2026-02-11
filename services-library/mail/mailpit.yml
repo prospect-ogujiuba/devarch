@@ -1,0 +1,29 @@
+services:
+  mailpit:
+    image: axllent/mailpit:v1.22
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9200:8025
+    - 127.0.0.1:9201:1025
+    environment:
+      MP_DATABASE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 'true'
+      MP_SMTP_AUTH_ALLOW_INSECURE: 'true'
+    volumes:
+    - mailpit_data:/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:8025/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: mailpit
+volumes:
+  mailpit_data: null
+networks:
+  microservices-net:
+    external: true

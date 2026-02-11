@@ -1,0 +1,30 @@
+services:
+  openproject-web:
+    image: openproject/openproject:15
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8090:80
+    environment:
+      OPENPROJECT_SECRET_KEY_BASE: devarch-secret-key-base-minimum-length
+      OPENPROJECT_HOST__NAME: localhost:8090
+      OPENPROJECT_HTTPS: 'false'
+    volumes:
+    - openproject_data:/var/openproject/assets
+    - openproject_pgdata:/var/openproject/pgdata
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:80/health_checks/default || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+    networks:
+    - microservices-net
+    container_name: openproject-web
+volumes:
+  openproject_data: null
+  openproject_pgdata: null
+networks:
+  microservices-net:
+    external: true

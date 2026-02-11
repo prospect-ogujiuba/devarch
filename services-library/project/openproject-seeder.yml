@@ -1,0 +1,13 @@
+services:
+  openproject-seeder:
+    image: openproject/openproject:15
+    restart: 'no'
+    command: ./docker/prod/seeder
+    environment:
+      OPENPROJECT_SECRET_KEY_BASE: devarch-secret-key-base-minimum-length
+    networks:
+    - microservices-net
+    container_name: openproject-seeder
+networks:
+  microservices-net:
+    external: true

@@ -1,0 +1,27 @@
+services:
+  sqlpad:
+    image: sqlpad/sqlpad:7
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8609:3000
+    volumes:
+    - sqlpad_data:/var/lib/sqlpad
+    environment:
+      SQLPAD_ADMIN: admin@devarch.test
+      SQLPAD_ADMIN_PASSWORD: devarch
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:3000/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: sqlpad
+volumes:
+  sqlpad_data: null
+networks:
+  microservices-net:
+    external: true

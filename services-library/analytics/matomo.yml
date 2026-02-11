@@ -1,0 +1,27 @@
+networks:
+  microservices-net:
+    external: true
+volumes:
+  matomo_data:
+services:
+  matomo:
+    container_name: matomo
+    image: matomo:5-apache
+    restart: unless-stopped
+    environment:
+      MATOMO_DATABASE_HOST: mariadb
+      MATOMO_DATABASE_DBNAME: matomo
+      MATOMO_DATABASE_USERNAME: root
+      MATOMO_DATABASE_PASSWORD: devarch
+    ports:
+      - "127.0.0.1:9010:80"
+    volumes:
+      - matomo_data:/var/www/html
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - microservices-net

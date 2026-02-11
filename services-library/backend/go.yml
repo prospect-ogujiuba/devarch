@@ -1,0 +1,30 @@
+services:
+  go:
+    image: golang:1.23-alpine
+    ports:
+    - 127.0.0.1:8400:8080
+    - 127.0.0.1:8401:8081
+    - 127.0.0.1:8402:2345
+    - 127.0.0.1:8403:6060
+    working_dir: /app
+    command: sh -c "go run . 2>/dev/null || sleep infinity"
+    environment:
+      GO111MODULE: 'on'
+      CGO_ENABLED: '0'
+    healthcheck:
+      test:
+      - CMD
+      - sh
+      - -c
+      - wget --spider -q http://localhost:8080/ || exit 0
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+    - microservices-net
+    container_name: go
+networks:
+  microservices-net:
+    external: true

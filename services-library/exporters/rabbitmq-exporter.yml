@@ -1,0 +1,24 @@
+services:
+  rabbitmq-exporter:
+    image: kbudde/rabbitmq-exporter:v1.0
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9419:9419
+    environment:
+      RABBIT_URL: http://rabbitmq:15672
+      RABBIT_USER: admin
+      RABBIT_PASSWORD: devarch
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:9419/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: rabbitmq-exporter
+networks:
+  microservices-net:
+    external: true

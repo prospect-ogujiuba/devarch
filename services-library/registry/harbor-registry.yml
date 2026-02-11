@@ -1,0 +1,24 @@
+services:
+  harbor-registry:
+    image: goharbor/registry-photon:v2.11.0
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9801:5000
+    volumes:
+    - harbor_registry_data:/storage
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:5000/v2/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: harbor-registry
+volumes:
+  harbor_registry_data: null
+networks:
+  microservices-net:
+    external: true

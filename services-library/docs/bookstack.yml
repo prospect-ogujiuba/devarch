@@ -1,0 +1,31 @@
+services:
+  bookstack:
+    image: lscr.io/linuxserver/bookstack:24.12
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:10010:80
+    environment:
+      APP_URL: http://localhost:10010
+      DB_HOST: mariadb
+      DB_PORT: '3306'
+      DB_USER: root
+      DB_PASS: devarch
+      DB_DATABASE: bookstack
+    volumes:
+    - bookstack_data:/config
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:80/status || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+    - microservices-net
+    container_name: bookstack
+volumes:
+  bookstack_data: null
+networks:
+  microservices-net:
+    external: true

@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8502:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: devarch
+      POSTGRES_DB: devarch
+    volumes:
+    - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U postgres
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: postgres
+volumes:
+  postgres_data: null
+networks:
+  microservices-net:
+    external: true

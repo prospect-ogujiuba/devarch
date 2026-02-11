@@ -1,0 +1,27 @@
+services:
+  docusaurus:
+    image: node:22-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npx create-docusaurus@latest my-site classic --skip-install 2>/dev/null;
+      cd my-site && npm install && npm start -- --host 0.0.0.0"
+    ports:
+    - 127.0.0.1:10030:3000
+    volumes:
+    - docusaurus_data:/app
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:3000/ || exit 0
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    networks:
+    - microservices-net
+    container_name: docusaurus
+volumes:
+  docusaurus_data: null
+networks:
+  microservices-net:
+    external: true

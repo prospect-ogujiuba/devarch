@@ -1,0 +1,35 @@
+services:
+  node:
+    image: node:22-alpine
+    ports:
+    - 127.0.0.1:8205:3000
+    - 127.0.0.1:8201:3001
+    - 127.0.0.1:9229:9229
+    - 127.0.0.1:8203:4000
+    - 127.0.0.1:8202:5173
+    volumes:
+    - node_modules:/app/node_modules
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      NODE_ENV: development
+      PORT: '3000'
+    healthcheck:
+      test:
+      - CMD
+      - sh
+      - -c
+      - wget --spider -q http://localhost:3000/ || exit 0
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+    - microservices-net
+    container_name: node
+volumes:
+  node_modules: null
+networks:
+  microservices-net:
+    external: true

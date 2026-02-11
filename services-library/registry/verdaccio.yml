@@ -1,0 +1,24 @@
+services:
+  verdaccio:
+    image: verdaccio/verdaccio:6
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9820:4873
+    volumes:
+    - verdaccio_data:/verdaccio/storage
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:4873/-/ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: verdaccio
+volumes:
+  verdaccio_data: null
+networks:
+  microservices-net:
+    external: true

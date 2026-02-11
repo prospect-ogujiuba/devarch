@@ -1,0 +1,28 @@
+services:
+  java:
+    image: openjdk:21-slim
+    ports:
+    - 127.0.0.1:4010:8080
+    - 127.0.0.1:4011:8081
+    - 127.0.0.1:4012:5005
+    working_dir: /app
+    command: sh -c "java -jar app.jar 2>/dev/null || sleep infinity"
+    environment:
+      JAVA_OPTS: -Xms256m -Xmx512m
+    healthcheck:
+      test:
+      - CMD
+      - sh
+      - -c
+      - curl -f http://localhost:8080/ || exit 0
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+    - microservices-net
+    container_name: java
+networks:
+  microservices-net:
+    external: true

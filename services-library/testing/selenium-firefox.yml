@@ -1,0 +1,24 @@
+services:
+  selenium-firefox:
+    image: selenium/node-firefox:4.27
+    restart: unless-stopped
+    environment:
+      SE_EVENT_BUS_HOST: selenium-hub
+      SE_EVENT_BUS_PUBLISH_PORT: '4442'
+      SE_EVENT_BUS_SUBSCRIBE_PORT: '4443'
+    depends_on:
+    - selenium-hub
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:5555/status || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: selenium-firefox
+networks:
+  microservices-net:
+    external: true

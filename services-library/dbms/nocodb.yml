@@ -1,0 +1,26 @@
+services:
+  nocodb:
+    image: nocodb/nocodb:0.260
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8086:8080
+    volumes:
+    - nocodb_data:/usr/app/data
+    environment:
+      NC_DB: pg://postgres:5432?u=postgres&p=devarch&d=nocodb
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:8080/api/v1/health
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: nocodb
+volumes:
+  nocodb_data: null
+networks:
+  microservices-net:
+    external: true

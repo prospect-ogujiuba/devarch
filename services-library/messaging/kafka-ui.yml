@@ -1,0 +1,24 @@
+services:
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8091:8080
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      DYNAMIC_CONFIG_ENABLED: 'true'
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:8080/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: kafka-ui
+networks:
+  microservices-net:
+    external: true

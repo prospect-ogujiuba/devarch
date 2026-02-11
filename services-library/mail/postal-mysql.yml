@@ -1,0 +1,25 @@
+services:
+  postal-mysql:
+    image: mariadb:10.6
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: devarch
+      MARIADB_DATABASE: postal
+    volumes:
+    - postal_mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - healthcheck.sh --connect --innodb_initialized
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: postal-mysql
+volumes:
+  postal_mysql_data: null
+networks:
+  microservices-net:
+    external: true

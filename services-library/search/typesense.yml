@@ -1,0 +1,25 @@
+services:
+  typesense:
+    image: typesense/typesense:27.1
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8108:8108
+    command: --data-dir /data --api-key=devarch-api-key --enable-cors
+    volumes:
+    - typesense_data:/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:8108/health
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: typesense
+volumes:
+  typesense_data: null
+networks:
+  microservices-net:
+    external: true

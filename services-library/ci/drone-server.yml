@@ -1,0 +1,29 @@
+services:
+  drone-server:
+    image: drone/drone:2
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9610:80
+    environment:
+      DRONE_GITEA_SERVER: http://gitea:3000
+      DRONE_RPC_SECRET: devarch-rpc-secret
+      DRONE_SERVER_HOST: localhost:9610
+      DRONE_SERVER_PROTO: http
+    volumes:
+    - drone_data:/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:80/healthz
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: drone-server
+volumes:
+  drone_data: null
+networks:
+  microservices-net:
+    external: true

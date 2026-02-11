@@ -1,0 +1,30 @@
+services:
+  woodpecker-server:
+    image: woodpeckerci/woodpecker-server:2.8
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9620:8000
+    environment:
+      WOODPECKER_OPEN: 'true'
+      WOODPECKER_HOST: http://localhost:9620
+      WOODPECKER_GITEA: 'true'
+      WOODPECKER_GITEA_URL: http://gitea:3000
+      WOODPECKER_AGENT_SECRET: devarch-agent-secret
+    volumes:
+    - woodpecker_server_data:/var/lib/woodpecker
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:8000/healthz
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: woodpecker-server
+volumes:
+  woodpecker_server_data: null
+networks:
+  microservices-net:
+    external: true

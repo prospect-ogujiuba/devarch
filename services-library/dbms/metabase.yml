@@ -1,0 +1,31 @@
+services:
+  metabase:
+    image: metabase/metabase:v0.52
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8085:3000
+    volumes:
+    - metabase_data:/metabase-data
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: '5432'
+      MB_DB_USER: postgres
+      MB_DB_PASS: devarch
+      MB_DB_HOST: postgres
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:3000/api/health
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: metabase
+volumes:
+  metabase_data: null
+networks:
+  microservices-net:
+    external: true

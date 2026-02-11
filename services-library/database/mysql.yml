@@ -1,0 +1,33 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8505:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: devarch
+      MYSQL_DATABASE: devarch
+    volumes:
+    - mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+      - CMD
+      - mysqladmin
+      - ping
+      - -h
+      - localhost
+      - -u
+      - root
+      - -pdevarch
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+    - microservices-net
+    container_name: mysql
+volumes:
+  mysql_data: null
+networks:
+  microservices-net:
+    external: true

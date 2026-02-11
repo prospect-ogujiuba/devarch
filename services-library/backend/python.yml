@@ -1,0 +1,31 @@
+services:
+  python:
+    image: python:3.12-slim
+    ports:
+    - 127.0.0.1:8300:8000
+    - 127.0.0.1:8301:8001
+    - 127.0.0.1:8302:5555
+    - 127.0.0.1:8303:8888
+    working_dir: /app
+    command: sh -c "pip install -r requirements.txt 2>/dev/null; python -m http.server
+      8000"
+    environment:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONUNBUFFERED: '1'
+    healthcheck:
+      test:
+      - CMD
+      - sh
+      - -c
+      - curl -f http://localhost:8000/ || exit 0
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+    - microservices-net
+    container_name: python
+networks:
+  microservices-net:
+    external: true

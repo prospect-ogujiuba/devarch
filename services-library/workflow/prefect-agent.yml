@@ -1,0 +1,21 @@
+services:
+  prefect-agent:
+    image: prefecthq/prefect:3-latest
+    restart: unless-stopped
+    command: prefect agent start -q default
+    environment:
+      PREFECT_API_URL: http://prefect:4200/api
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - prefect version
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: prefect-agent
+networks:
+  microservices-net:
+    external: true

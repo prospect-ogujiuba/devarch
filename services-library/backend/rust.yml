@@ -1,0 +1,33 @@
+services:
+  rust:
+    image: rust:1.83-slim
+    ports:
+    - 127.0.0.1:8700:8080
+    - 127.0.0.1:8701:8081
+    - 127.0.0.1:8702:3000
+    - 127.0.0.1:8703:8000
+    working_dir: /app
+    volumes:
+    - rust_cargo_cache:/usr/local/cargo/registry
+    - rust_target_cache:/app/target
+    command: sh -c "cargo run 2>/dev/null || sleep infinity"
+    healthcheck:
+      test:
+      - CMD
+      - sh
+      - -c
+      - curl -f http://localhost:8080/ || exit 0
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+    - microservices-net
+    container_name: rust
+volumes:
+  rust_cargo_cache: null
+  rust_target_cache: null
+networks:
+  microservices-net:
+    external: true

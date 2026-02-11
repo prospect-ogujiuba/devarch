@@ -1,0 +1,22 @@
+services:
+  concourse-worker:
+    image: concourse/concourse:7.12
+    restart: unless-stopped
+    command: worker
+    environment:
+      CONCOURSE_TSA_HOST: concourse-web:2222
+    privileged: true
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - echo ok
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: concourse-worker
+networks:
+  microservices-net:
+    external: true

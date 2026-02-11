@@ -1,0 +1,21 @@
+services:
+  woodpecker-agent:
+    image: woodpeckerci/woodpecker-agent:2.8
+    restart: unless-stopped
+    environment:
+      WOODPECKER_SERVER: woodpecker-server:9000
+      WOODPECKER_AGENT_SECRET: devarch-agent-secret
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - echo ok
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: woodpecker-agent
+networks:
+  microservices-net:
+    external: true

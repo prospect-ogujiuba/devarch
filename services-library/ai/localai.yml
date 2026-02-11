@@ -1,0 +1,27 @@
+services:
+  localai:
+    image: localai/localai:v2.25-cpu
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8880:8080
+    environment:
+      THREADS: '4'
+      CONTEXT_SIZE: '512'
+    volumes:
+    - localai_data:/build/models
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:8080/readyz
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: localai
+volumes:
+  localai_data: null
+networks:
+  microservices-net:
+    external: true

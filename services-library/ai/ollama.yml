@@ -1,0 +1,24 @@
+services:
+  ollama:
+    image: ollama/ollama:0.15
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:11434:11434
+    volumes:
+    - ollama_data:/root/.ollama
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:11434/ || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: ollama
+volumes:
+  ollama_data: null
+networks:
+  microservices-net:
+    external: true

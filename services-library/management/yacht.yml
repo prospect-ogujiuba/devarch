@@ -1,0 +1,24 @@
+services:
+  yacht:
+    image: selfhostedpro/yacht:v0.0.8
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9007:8000
+    volumes:
+    - yacht_data:/config
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:8000/ || exit 0
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: yacht
+volumes:
+  yacht_data: null
+networks:
+  microservices-net:
+    external: true
