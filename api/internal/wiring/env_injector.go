@@ -4,11 +4,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/identity"
 )
 
 func InjectEnvVars(stackName string, provider Provider, consumer Consumer) map[string]string {
-	hostname := container.ContainerName(stackName, provider.InstanceName)
+	hostname := identity.ContainerName(stackName, provider.InstanceName)
 	portStr := strconv.Itoa(provider.Port)
 	protocol := provider.Protocol
 	name := provider.ContractName

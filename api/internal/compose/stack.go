@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/identity"
 	"github.com/priz/devarch-api/internal/wiring"
 	"gopkg.in/yaml.v3"
 )
@@ -448,7 +448,7 @@ func (g *Generator) loadStackInstances(stackName string) ([]stackInstance, error
 		if containerName.Valid && containerName.String != "" {
 			inst.containerName = containerName.String
 		} else {
-			inst.containerName = container.ContainerName(stackName, inst.instanceID)
+			inst.containerName = identity.ContainerName(stackName, inst.instanceID)
 		}
 		instances = append(instances, inst)
 	}
@@ -807,7 +807,7 @@ func (g *Generator) loadEffectiveLabels(instancePK, templateServiceID int, stack
 		return nil, err
 	}
 
-	identityLabels := container.BuildLabels(stackName, instanceID, strconv.Itoa(templateServiceID))
+	identityLabels := identity.BuildLabels(stackName, instanceID, strconv.Itoa(templateServiceID))
 	for k, v := range identityLabels {
 		if _, exists := merged[k]; !exists {
 			merged[k] = v

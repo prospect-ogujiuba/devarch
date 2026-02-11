@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/identity"
 	"gopkg.in/yaml.v3"
 )
 
@@ -41,7 +41,7 @@ func (e *Exporter) Export(stackName string) ([]byte, error) {
 		return nil, fmt.Errorf("query stack: %w", err)
 	}
 
-	netName := fmt.Sprintf("devarch-%s-net", stackName)
+	netName := identity.NetworkName(stackName)
 	if networkName.Valid && networkName.String != "" {
 		netName = networkName.String
 	}
@@ -455,7 +455,7 @@ func (e *Exporter) loadEffectiveLabels(instancePK, templateServiceID int, stackN
 		return nil, err
 	}
 
-	identityLabels := container.BuildLabels(stackName, instanceID, strconv.Itoa(templateServiceID))
+	identityLabels := identity.BuildLabels(stackName, instanceID, strconv.Itoa(templateServiceID))
 	for k, v := range identityLabels {
 		if _, exists := merged[k]; !exists {
 			merged[k] = v

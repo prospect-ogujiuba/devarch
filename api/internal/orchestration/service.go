@@ -13,6 +13,7 @@ import (
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/export"
+	"github.com/priz/devarch-api/internal/identity"
 	"github.com/priz/devarch-api/internal/lock"
 	"github.com/priz/devarch-api/internal/plan"
 	"github.com/priz/devarch-api/internal/wiring"
@@ -91,7 +92,7 @@ func (s *Service) GeneratePlan(stackName string) (*plan.Plan, error) {
 		if containerName.Valid && containerName.String != "" {
 			name = containerName.String
 		} else {
-			name = container.ContainerName(stackName, instanceID)
+			name = identity.ContainerName(stackName, instanceID)
 		}
 
 		desired = append(desired, plan.DesiredInstance{
@@ -198,7 +199,7 @@ func (s *Service) ApplyPlan(ctx context.Context, stackName string, token string,
 	if networkName.Valid && networkName.String != "" {
 		netName = networkName.String
 	} else {
-		netName = fmt.Sprintf("devarch-%s-net", stackName)
+		netName = identity.NetworkName(stackName)
 	}
 
 	labels := map[string]string{
