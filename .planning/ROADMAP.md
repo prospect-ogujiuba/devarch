@@ -66,10 +66,10 @@ Plans:
   2. HTTP requests from disallowed origins receive 403 responses
   3. WebSocket upgrade rejects connections from disallowed origins
   4. Dashboard can connect when running on allowed origin
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD
+- [ ] 17-01-PLAN.md — Wire ALLOWED_ORIGINS into CORS middleware and WebSocket upgrader
 
 #### Phase 18: WebSocket Authentication & Security Modes
 **Goal**: WebSocket connections authenticate when API auth enabled; security profiles control auth behavior
