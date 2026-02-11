@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { api, getErrorMessage } from '@/lib/api'
 import type {
   Instance,
@@ -16,7 +16,7 @@ import type {
   ResourceLimitsResponse,
   ServiceConfigMount,
 } from '@/types/api'
-import { toast } from 'sonner'
+import { useMutationHelper } from '@/lib/mutations'
 
 export function useInstances(stackName: string) {
   return useQuery({
@@ -89,21 +89,18 @@ interface CreateInstanceRequest {
 }
 
 export function useCreateInstance(stackName: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (data: CreateInstanceRequest) => {
       const response = await api.post(`/stacks/${stackName}/instances`, data)
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Instance created')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to create instance'))
-    },
+    successMessage: 'Instance created',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to create instance'),
+    invalidate: [
+      ['stacks', stackName, 'instances'],
+      ['stacks', stackName],
+      ['stacks'],
+    ],
   })
 }
 
@@ -113,61 +110,52 @@ interface UpdateInstanceRequest {
 }
 
 export function useUpdateInstance(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (data: UpdateInstanceRequest) => {
       const response = await api.put(`/stacks/${stackName}/instances/${instanceId}`, data)
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Instance updated')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to update instance'))
-    },
+    successMessage: 'Instance updated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to update instance'),
+    invalidate: [
+      ['stacks', stackName, 'instances', instanceId],
+      ['stacks', stackName, 'instances'],
+      ['stacks', stackName],
+    ],
   })
 }
 
 export function useDeleteInstance(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async () => {
       const response = await api.delete(`/stacks/${stackName}/instances/${instanceId}`)
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Instance deleted')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to delete instance'))
-    },
+    successMessage: 'Instance deleted',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to delete instance'),
+    invalidate: [
+      ['stacks', stackName, 'instances'],
+      ['stacks', stackName],
+      ['stacks'],
+    ],
   })
 }
 
 export function useDuplicateInstance(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (newInstanceId: string) => {
       const response = await api.post(`/stacks/${stackName}/instances/${instanceId}/duplicate`, {
         instance_id: newInstanceId,
       })
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Instance duplicated')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to duplicate instance'))
-    },
+    successMessage: 'Instance duplicated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to duplicate instance'),
+    invalidate: [
+      ['stacks', stackName, 'instances'],
+      ['stacks', stackName],
+      ['stacks'],
+    ],
   })
 }
 
@@ -176,208 +164,175 @@ interface RenameInstanceRequest {
 }
 
 export function useRenameInstance(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (data: RenameInstanceRequest) => {
       const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/rename`, data)
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Instance renamed')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to rename instance'))
-    },
+    successMessage: 'Instance renamed',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to rename instance'),
+    invalidate: [
+      ['stacks', stackName, 'instances'],
+      ['stacks', stackName],
+      ['stacks'],
+    ],
   })
 }
 
 export function useStopInstance(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async () => {
       const response = await api.post(`/stacks/${stackName}/instances/${instanceId}/stop`)
       return response.data
     },
-    onSuccess: () => {
-      toast.success(`Stopped ${instanceId}`)
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, `Failed to stop ${instanceId}`))
-    },
+    successMessage: `Stopped ${instanceId}`,
+    errorMessage: (error) => getErrorMessage(error, `Failed to stop ${instanceId}`),
+    invalidate: [
+      ['stacks', stackName],
+      ['stacks'],
+    ],
   })
 }
 
 export function useStartInstance(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async () => {
       const response = await api.post(`/stacks/${stackName}/instances/${instanceId}/start`)
       return response.data
     },
-    onSuccess: () => {
-      toast.success(`Started ${instanceId}`)
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, `Failed to start ${instanceId}`))
-    },
+    successMessage: `Started ${instanceId}`,
+    errorMessage: (error) => getErrorMessage(error, `Failed to start ${instanceId}`),
+    invalidate: [
+      ['stacks', stackName],
+      ['stacks'],
+    ],
   })
 }
 
 export function useRestartInstance(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async () => {
       const response = await api.post(`/stacks/${stackName}/instances/${instanceId}/restart`)
       return response.data
     },
-    onSuccess: () => {
-      toast.success(`Restarted ${instanceId}`)
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName] })
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, `Failed to restart ${instanceId}`))
-    },
+    successMessage: `Restarted ${instanceId}`,
+    errorMessage: (error) => getErrorMessage(error, `Failed to restart ${instanceId}`),
+    invalidate: [
+      ['stacks', stackName],
+      ['stacks'],
+    ],
   })
 }
 
 export function useUpdateInstancePorts(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (ports: Omit<InstancePort, 'id' | 'instance_id'>[]) => {
       const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/ports`, { ports })
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Ports updated')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to update ports'))
-    },
+    successMessage: 'Ports updated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to update ports'),
+    invalidate: [
+      ['stacks', stackName, 'instances', instanceId],
+      ['stacks', stackName, 'instances', instanceId, 'effective-config'],
+      ['stacks', stackName, 'instances'],
+    ],
   })
 }
 
 export function useUpdateInstanceVolumes(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (volumes: Omit<InstanceVolume, 'id' | 'instance_id'>[]) => {
       const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/volumes`, { volumes })
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Volumes updated')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to update volumes'))
-    },
+    successMessage: 'Volumes updated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to update volumes'),
+    invalidate: [
+      ['stacks', stackName, 'instances', instanceId],
+      ['stacks', stackName, 'instances', instanceId, 'effective-config'],
+      ['stacks', stackName, 'instances'],
+    ],
   })
 }
 
 export function useUpdateInstanceEnvVars(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (env_vars: Omit<InstanceEnvVar, 'id' | 'instance_id'>[]) => {
       const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/env-vars`, { env_vars })
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Environment variables updated')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to update environment variables'))
-    },
+    successMessage: 'Environment variables updated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to update environment variables'),
+    invalidate: [
+      ['stacks', stackName, 'instances', instanceId],
+      ['stacks', stackName, 'instances', instanceId, 'effective-config'],
+      ['stacks', stackName, 'instances'],
+    ],
   })
 }
 
 export function useUpdateInstanceLabels(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (labels: Omit<InstanceLabel, 'id' | 'instance_id'>[]) => {
       const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/labels`, { labels })
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Labels updated')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to update labels'))
-    },
+    successMessage: 'Labels updated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to update labels'),
+    invalidate: [
+      ['stacks', stackName, 'instances', instanceId],
+      ['stacks', stackName, 'instances', instanceId, 'effective-config'],
+      ['stacks', stackName, 'instances'],
+    ],
   })
 }
 
 export function useUpdateInstanceDomains(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (domains: Omit<InstanceDomain, 'id' | 'instance_id'>[]) => {
       const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/domains`, { domains })
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Domains updated')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to update domains'))
-    },
+    successMessage: 'Domains updated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to update domains'),
+    invalidate: [
+      ['stacks', stackName, 'instances', instanceId],
+      ['stacks', stackName, 'instances', instanceId, 'effective-config'],
+      ['stacks', stackName, 'instances'],
+    ],
   })
 }
 
 export function useUpdateInstanceHealthcheck(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (healthcheck: Omit<InstanceHealthcheck, 'id' | 'instance_id'> | null) => {
       const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/healthcheck`, healthcheck)
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Healthcheck updated')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to update healthcheck'))
-    },
+    successMessage: 'Healthcheck updated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to update healthcheck'),
+    invalidate: [
+      ['stacks', stackName, 'instances', instanceId],
+      ['stacks', stackName, 'instances', instanceId, 'effective-config'],
+      ['stacks', stackName, 'instances'],
+    ],
   })
 }
 
 export function useUpdateInstanceDependencies(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (dependencies: Omit<InstanceDependency, 'id' | 'instance_id'>[]) => {
       const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/dependencies`, { dependencies })
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Dependencies updated')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to update dependencies'))
-    },
+    successMessage: 'Dependencies updated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to update dependencies'),
+    invalidate: [
+      ['stacks', stackName, 'instances', instanceId],
+      ['stacks', stackName, 'instances', instanceId, 'effective-config'],
+      ['stacks', stackName, 'instances'],
+    ],
   })
 }
 
@@ -387,38 +342,32 @@ interface SaveConfigFileRequest {
 }
 
 export function useSaveConfigFile(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async ({ filePath, data }: { filePath: string; data: SaveConfigFileRequest }) => {
       const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/files/${filePath}`, data)
       return response.data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to save file'))
-    },
+    errorMessage: (error) => getErrorMessage(error, 'Failed to save file'),
+    invalidate: [
+      ['stacks', stackName, 'instances', instanceId],
+      ['stacks', stackName, 'instances', instanceId, 'effective-config'],
+      ['stacks', stackName, 'instances'],
+    ],
   })
 }
 
 export function useDeleteConfigFile(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (filePath: string) => {
       const response = await api.delete(`/stacks/${stackName}/instances/${instanceId}/files/${filePath}`)
       return response.data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to delete file'))
-    },
+    errorMessage: (error) => getErrorMessage(error, 'Failed to delete file'),
+    invalidate: [
+      ['stacks', stackName, 'instances', instanceId],
+      ['stacks', stackName, 'instances', instanceId, 'effective-config'],
+      ['stacks', stackName, 'instances'],
+    ],
   })
 }
 
@@ -444,77 +393,65 @@ export function useResourceLimits(stackName: string, instanceId: string) {
 }
 
 export function useUpdateResourceLimits(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (limits: ResourceLimits) => {
       const response = await api.put<ResourceLimitsResponse>(`/stacks/${stackName}/instances/${instanceId}/resources`, limits)
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Resource limits updated')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'resources'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to update resource limits'))
-    },
+    successMessage: 'Resource limits updated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to update resource limits'),
+    invalidate: [
+      ['stacks', stackName, 'instances', instanceId, 'resources'],
+      ['stacks', stackName, 'instances', instanceId],
+      ['stacks', stackName, 'instances', instanceId, 'effective-config'],
+    ],
   })
 }
 
 export function useUpdateInstanceEnvFiles(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (env_files: string[]) => {
       const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/env-files`, { env_files })
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Env files updated')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to update env files'))
-    },
+    successMessage: 'Env files updated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to update env files'),
+    invalidate: [
+      ['stacks', stackName, 'instances', instanceId],
+      ['stacks', stackName, 'instances', instanceId, 'effective-config'],
+      ['stacks', stackName, 'instances'],
+    ],
   })
 }
 
 export function useUpdateInstanceNetworks(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (networks: string[]) => {
       const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/networks`, { networks })
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Networks updated')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to update networks'))
-    },
+    successMessage: 'Networks updated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to update networks'),
+    invalidate: [
+      ['stacks', stackName, 'instances', instanceId],
+      ['stacks', stackName, 'instances', instanceId, 'effective-config'],
+      ['stacks', stackName, 'instances'],
+    ],
   })
 }
 
 export function useUpdateInstanceConfigMounts(stackName: string, instanceId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (config_mounts: Omit<ServiceConfigMount, 'id' | 'service_id'>[]) => {
       const response = await api.put(`/stacks/${stackName}/instances/${instanceId}/config-mounts`, { config_mounts })
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Config mounts updated')
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances', instanceId, 'effective-config'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', stackName, 'instances'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to update config mounts'))
-    },
+    successMessage: 'Config mounts updated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to update config mounts'),
+    invalidate: [
+      ['stacks', stackName, 'instances', instanceId],
+      ['stacks', stackName, 'instances', instanceId, 'effective-config'],
+      ['stacks', stackName, 'instances'],
+    ],
   })
 }
