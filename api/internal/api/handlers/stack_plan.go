@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/export"
 	"github.com/priz/devarch-api/internal/plan"
@@ -28,16 +29,16 @@ func (h *StackHandler) Plan(w http.ResponseWriter, r *http.Request) {
 	`, stackName).Scan(&stackID, &networkName, &stackUpdatedAt, &enabled)
 
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("stack %q not found", stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", stackName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if !enabled {
-		http.Error(w, "stack is disabled — enable it first", http.StatusConflict)
+		respond.Conflict(w, r, "stack is disabled — enable it first")
 		return
 	}
 
@@ -49,7 +50,7 @@ func (h *StackHandler) Plan(w http.ResponseWriter, r *http.Request) {
 		ORDER BY si.instance_id
 	`, stackID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to query instances: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -63,7 +64,7 @@ func (h *StackHandler) Plan(w http.ResponseWriter, r *http.Request) {
 		var updatedAt time.Time
 
 		if err := rows.Scan(&instanceID, &templateName, &containerName, &enabled, &updatedAt); err != nil {
-			http.Error(w, fmt.Sprintf("failed to scan instance: %v", err), http.StatusInternalServerError)
+			respond.InternalError(w, r, err)
 			return
 		}
 
@@ -87,7 +88,7 @@ func (h *StackHandler) Plan(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	if err := rows.Err(); err != nil {
-		http.Error(w, fmt.Sprintf("failed to iterate instances: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -116,7 +117,7 @@ func (h *StackHandler) Plan(w http.ResponseWriter, r *http.Request) {
 
 	wiringSection, wiringWarnings, err := h.resolveAndBuildWiring(stackID, stackName)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to resolve wiring: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	if wiringSection != nil {
@@ -126,7 +127,7 @@ func (h *StackHandler) Plan(w http.ResponseWriter, r *http.Request) {
 
 	resourceLimits, resourceWarnings, err := h.loadResourceLimitsForStack(stackID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load resource limits: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	if len(resourceLimits) > 0 {
@@ -134,8 +135,7 @@ func (h *StackHandler) Plan(w http.ResponseWriter, r *http.Request) {
 		planResp.Warnings = append(planResp.Warnings, resourceWarnings...)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(planResp)
+	respond.JSON(w, r, http.StatusOK, planResp)
 }
 
 func (h *StackHandler) loadResourceLimitsForStack(stackID int) (map[string]plan.ResourceLimitEntry, []string, error) {

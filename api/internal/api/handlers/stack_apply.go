@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/lock"
 	"github.com/priz/devarch-api/internal/plan"
@@ -27,12 +28,12 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 
 	var req applyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		respond.BadRequest(w, r, fmt.Sprintf("invalid request body: %v", err))
 		return
 	}
 
 	if req.Token == "" {
-		http.Error(w, "token is required", http.StatusBadRequest)
+		respond.BadRequest(w, r, "token is required")
 		return
 	}
 
@@ -46,23 +47,23 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	`, stackName).Scan(&stackID, &networkName, &enabled)
 
 	if err == sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("stack %q not found", stackName), http.StatusNotFound)
+		respond.NotFound(w, r, "stack", stackName)
 		return
 	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	if !enabled {
-		http.Error(w, "stack is disabled — enable it first", http.StatusConflict)
+		respond.Conflict(w, r, "stack is disabled — enable it first")
 		return
 	}
 
 	var acquired bool
 	err = h.db.QueryRowContext(r.Context(), "SELECT pg_try_advisory_lock($1)", stackID).Scan(&acquired)
 	if err != nil || !acquired {
-		http.Error(w, "Stack is being applied by another session", http.StatusConflict)
+		respond.Conflict(w, r, "Stack is being applied by another session")
 		return
 	}
 	defer func() {
@@ -73,10 +74,10 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 
 	if err := plan.ValidateToken(h.db, stackID, req.Token); err != nil {
 		if errors.Is(err, plan.ErrStalePlan) {
-			http.Error(w, "Plan is stale — stack was modified since plan was generated. Regenerate plan.", http.StatusConflict)
+			respond.Conflict(w, r, "Plan is stale — stack was modified since plan was generated. Regenerate plan.")
 			return
 		}
-		http.Error(w, fmt.Sprintf("failed to validate token: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -92,13 +93,13 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 		"devarch.stack":      stackName,
 	}
 	if err := h.containerClient.CreateNetwork(netName, labels); err != nil {
-		http.Error(w, fmt.Sprintf("failed to create network: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
 	projectRoot := os.Getenv("PROJECT_ROOT")
 	if projectRoot == "" {
-		http.Error(w, "PROJECT_ROOT environment variable not set", http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("PROJECT_ROOT environment variable not set"))
 		return
 	}
 
@@ -116,7 +117,7 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	if err := gen.MaterializeStackConfigs(stackName, projectRoot); err != nil {
 		configDir := filepath.Join(projectRoot, ".runtime", "compose", "stacks", stackName)
 		os.RemoveAll(configDir)
-		http.Error(w, fmt.Sprintf("failed to materialize config files: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -124,7 +125,7 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		configDir := filepath.Join(projectRoot, ".runtime", "compose", "stacks", stackName)
 		os.RemoveAll(configDir)
-		http.Error(w, fmt.Sprintf("failed to generate compose: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 
@@ -132,7 +133,7 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		configDir := filepath.Join(projectRoot, ".runtime", "compose", "stacks", stackName)
 		os.RemoveAll(configDir)
-		http.Error(w, fmt.Sprintf("failed to create temp file: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer os.Remove(tmpFile.Name())
@@ -141,14 +142,14 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 		tmpFile.Close()
 		configDir := filepath.Join(projectRoot, ".runtime", "compose", "stacks", stackName)
 		os.RemoveAll(configDir)
-		http.Error(w, fmt.Sprintf("failed to write compose file: %v", err), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	tmpFile.Close()
 
 	output, err := h.containerClient.RunCompose(tmpFile.Name(), "--project-name", "devarch-"+stackName, "up", "-d")
 	if err != nil {
-		http.Error(w, fmt.Sprintf("compose up failed: %v\n%s", err, output), http.StatusInternalServerError)
+		respond.InternalError(w, r, fmt.Errorf("compose up failed: %v\n%s", err, output))
 		return
 	}
 
@@ -165,6 +166,5 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	respond.JSON(w, r, http.StatusOK, response)
 }
