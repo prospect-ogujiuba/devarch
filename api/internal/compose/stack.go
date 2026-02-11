@@ -58,6 +58,7 @@ type stackInstance struct {
 	enabled           bool
 	containerName     string
 	templateServiceID int
+	categoryName      string
 }
 
 type stackInstanceConfig struct {
@@ -139,6 +140,7 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 
 	configs := make(map[string]*stackInstanceConfig)
 	secretKeys := make(map[string]map[string]bool)
+	categoryNames := make(map[string]string)
 	for _, inst := range instances {
 		if !inst.enabled {
 			continue
@@ -149,6 +151,7 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 		}
 		configs[inst.instanceID] = cfg
 		secretKeys[inst.instanceID] = secrets
+		categoryNames[inst.instanceID] = inst.categoryName
 	}
 
 	// Build networks map from all instances' networks
@@ -208,7 +211,7 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 		}
 
 		for _, v := range cfg.volumes {
-			source := g.resolveStackVolumePath(v.source, stackName, inst.instanceID)
+			source := g.resolveStackVolumePath(v.source, stackName, inst.instanceID, inst.categoryName)
 			volStr := fmt.Sprintf("%s:%s", source, v.target)
 			if v.readOnly {
 				volStr += ":ro"
@@ -247,12 +250,12 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 		for _, mount := range cfg.configMounts {
 			var resolvedSource string
 			if mount.configFilePath.Valid {
-				// Resolve to materialized path: compose/stacks/{stackName}/{instanceID}/{file_path}
-				resolvedSource = filepath.Join("compose", "stacks", stackName, inst.instanceID, mount.configFilePath.String)
-				resolvedSource = g.resolveStackVolumePath(resolvedSource, stackName, inst.instanceID)
+				// Resolve to materialized path: .runtime/compose/stacks/{stackName}/{instanceID}/{file_path}
+				resolvedSource = filepath.Join(".runtime", "compose", "stacks", stackName, inst.instanceID, mount.configFilePath.String)
+				resolvedSource = g.resolveStackVolumePath(resolvedSource, stackName, inst.instanceID, inst.categoryName)
 			} else {
 				// Use raw source_path for NULL config_file_id
-				resolvedSource = g.resolveStackVolumePath(mount.sourcePath, stackName, inst.instanceID)
+				resolvedSource = g.resolveStackVolumePath(mount.sourcePath, stackName, inst.instanceID, inst.categoryName)
 			}
 
 			mountStr := fmt.Sprintf("%s:%s", resolvedSource, mount.targetPath)
@@ -333,7 +336,7 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 						if volName != "" && namedVolumes[volName] == nil {
 							namedVolumes[volName] = nil
 						}
-						volList[i] = g.resolveStackVolumePath(volStr, stackName, id)
+						volList[i] = g.resolveStackVolumePath(volStr, stackName, id, categoryNames[id])
 					}
 				}
 			}
@@ -341,10 +344,10 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 		if build, ok := overrides["build"]; ok {
 			if buildMap, ok := build.(map[string]interface{}); ok {
 				if ctx, ok := buildMap["context"].(string); ok {
-					buildMap["context"] = g.resolveRelativePath(ctx, "")
+					buildMap["context"] = g.resolveRelativePath(ctx, categoryNames[id])
 				}
 			} else if ctx, ok := build.(string); ok {
-				overrides["build"] = g.resolveRelativePath(ctx, "")
+				overrides["build"] = g.resolveRelativePath(ctx, categoryNames[id])
 			}
 		}
 
@@ -421,9 +424,12 @@ func (g *Generator) buildDependsOn(instanceID string, deps []string, enabledMap,
 
 func (g *Generator) loadStackInstances(stackName string) ([]stackInstance, error) {
 	rows, err := g.db.Query(`
-		SELECT si.id, si.instance_id, si.enabled, si.container_name, si.template_service_id
+		SELECT si.id, si.instance_id, si.enabled, si.container_name, si.template_service_id,
+		       COALESCE(c.name, '')
 		FROM service_instances si
 		JOIN stacks st ON st.id = si.stack_id
+		JOIN services s ON s.id = si.template_service_id
+		LEFT JOIN categories c ON c.id = s.category_id
 		WHERE st.name = $1 AND si.deleted_at IS NULL AND st.deleted_at IS NULL
 		ORDER BY si.instance_id
 	`, stackName)
@@ -436,7 +442,7 @@ func (g *Generator) loadStackInstances(stackName string) ([]stackInstance, error
 	for rows.Next() {
 		var inst stackInstance
 		var containerName sql.NullString
-		if err := rows.Scan(&inst.id, &inst.instanceID, &inst.enabled, &containerName, &inst.templateServiceID); err != nil {
+		if err := rows.Scan(&inst.id, &inst.instanceID, &inst.enabled, &containerName, &inst.templateServiceID, &inst.categoryName); err != nil {
 			return nil, err
 		}
 		if containerName.Valid && containerName.String != "" {
@@ -1125,14 +1131,14 @@ func (g *Generator) loadEffectiveConfigMounts(instancePK, templateServiceID int)
 	return mounts, rows.Err()
 }
 
-func (g *Generator) resolveStackVolumePath(source, stackName, instanceID string) string {
-	if strings.HasPrefix(source, "compose/stacks/") {
+func (g *Generator) resolveStackVolumePath(source, stackName, instanceID, categoryName string) string {
+	if strings.HasPrefix(source, ".runtime/compose/stacks/") {
 		if g.hostProjectRoot != "" {
 			return filepath.Join(g.hostProjectRoot, "api", source)
 		}
 		return source
 	}
-	return g.resolveRelativePath(source, "")
+	return g.resolveRelativePath(source, categoryName)
 }
 
 func (g *Generator) loadResourceLimits(instancePK int) (*deployConfig, error) {
@@ -1190,8 +1196,8 @@ func (g *Generator) MaterializeStackConfigs(stackName, baseDir string) error {
 		return fmt.Errorf("load instances: %w", err)
 	}
 
-	tmpDir := filepath.Join(baseDir, "compose", "stacks", ".tmp-"+stackName)
-	finalDir := filepath.Join(baseDir, "compose", "stacks", stackName)
+	tmpDir := filepath.Join(baseDir, ".runtime", "compose", "stacks", ".tmp-"+stackName)
+	finalDir := filepath.Join(baseDir, ".runtime", "compose", "stacks", stackName)
 
 	if err := os.MkdirAll(filepath.Dir(tmpDir), 0755); err != nil {
 		return fmt.Errorf("mkdir parent: %w", err)
