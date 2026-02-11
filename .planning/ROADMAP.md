@@ -81,10 +81,11 @@ Plans:
   3. Security mode (dev-open/dev-keyed/strict) configurable via environment
   4. API startup validation fails fast if security mode config invalid
   5. Dev-open mode skips auth checks; dev-keyed validates API key; strict enforces all checks
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 18-01-PLAN.md — Security mode profiles (dev-open/dev-keyed/strict) with startup validation
+- [ ] 18-02-PLAN.md — HMAC-signed WS token auth with dashboard integration
 
 #### Phase 19: API Response Normalization
 **Goal**: All endpoints return consistent JSON envelopes for success and errors
@@ -242,7 +243,7 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 |-------|----------------|--------|-----------|
 | 16. Security Configuration | 1/1 | ✓ Complete | 2026-02-11 |
 | 17. CORS & Origin Hardening | 1/1 | ✓ Complete | 2026-02-11 |
-| 18. WebSocket Authentication & Security Modes | 0/TBD | Not started | - |
+| 18. WebSocket Authentication & Security Modes | 0/2 | Not started | - |
 | 19. API Response Normalization | 0/TBD | Not started | - |
 | 20. Action Endpoint Consistency & OpenAPI | 0/TBD | Not started | - |
 | 21. Deploy Orchestration Service | 0/TBD | Not started | - |
