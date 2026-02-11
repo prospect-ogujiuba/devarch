@@ -188,10 +188,10 @@ function StackDetailPage() {
 
   const handleToggleEnabled = () => {
     if (!ctrl.stack) return
-    if (ctrl.ctrl.stack.enabled) {
+    if (ctrl.stack.enabled) {
       setDisableDialogOpen(true)
     } else {
-      ctrl.ctrl.enableStack.mutate(ctrl.ctrl.stack.name)
+      ctrl.enableStack.mutate(ctrl.stack.name)
     }
   }
 
@@ -210,8 +210,8 @@ function StackDetailPage() {
   }
 
   const handleDownload = () => {
-    if (!ctrl.ctrl.composeData?.yaml) return
-    const blob = new Blob([ctrl.ctrl.composeData.yaml], { type: 'text/yaml' })
+    if (!ctrl.composeData?.yaml) return
+    const blob = new Blob([ctrl.composeData.yaml], { type: 'text/yaml' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -255,7 +255,7 @@ function StackDetailPage() {
   const updatedAgo = timeAgo(ctrl.stack.updated_at)
   const activeTab: StackTab = routeSearch.tab ?? 'instances'
   const stackTabItems = [
-    { value: 'instances', label: `Instances (${ctrl.ctrl.instances.length})` },
+    { value: 'instances', label: `Instances (${ctrl.instances.length})` },
     { value: 'compose', label: 'Compose' },
     { value: 'wiring', label: 'Wiring' },
     { value: 'deploy', label: 'Deploy' },
@@ -288,10 +288,10 @@ function StackDetailPage() {
               isRunning={ctrl.stack.running_count > 0}
               onStart={() => ctrl.startStack.mutate(ctrl.stack.name)}
               onStop={() => ctrl.stopStack.mutate(ctrl.stack.name)}
-              onRestart={() => rectrl.startStack.mutate(ctrl.stack.name)}
+              onRestart={() => ctrl.restartStack.mutate(ctrl.stack.name)}
               isStartPending={ctrl.startStack.isPending}
               isStopPending={ctrl.stopStack.isPending}
-              isRestartPending={ctrl.rectrl.startStack.isPending}
+              isRestartPending={ctrl.restartStack.isPending}
               showRestart
               className="col-span-2"
               buttonClassName="w-full sm:w-auto"
