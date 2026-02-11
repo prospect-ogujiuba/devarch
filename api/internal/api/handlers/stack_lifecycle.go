@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/compose"
+	"github.com/priz/devarch-api/internal/identity"
 )
 
 // Stop godoc
@@ -68,7 +68,7 @@ func (h *StackHandler) Start(w http.ResponseWriter, r *http.Request) {
 	var networkName *string
 	h.db.QueryRow(`SELECT network_name FROM stacks WHERE name = $1 AND deleted_at IS NULL`, name).Scan(&networkName)
 
-	netName := fmt.Sprintf("devarch-%s-net", name)
+	netName := identity.NetworkName(name)
 	if networkName != nil && *networkName != "" {
 		netName = *networkName
 	}
@@ -154,7 +154,7 @@ func (h *StackHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	var networkName *string
 	h.db.QueryRow(`SELECT network_name FROM stacks WHERE name = $1 AND deleted_at IS NULL`, name).Scan(&networkName)
 
-	netName := fmt.Sprintf("devarch-%s-net", name)
+	netName := identity.NetworkName(name)
 	if networkName != nil && *networkName != "" {
 		netName = *networkName
 	}

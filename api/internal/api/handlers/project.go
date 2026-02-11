@@ -10,6 +10,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/identity"
 	"github.com/priz/devarch-api/internal/project"
 	"github.com/priz/devarch-api/internal/scanner"
 	"github.com/priz/devarch-api/pkg/models"
@@ -62,7 +63,7 @@ func scanProject(rows interface{ Scan(dest ...interface{}) error }) (models.Proj
 
 func (h *ProjectHandler) enrichRunningCount(p *models.Project) {
 	count, err := h.containerClient.CountRunningWithLabels(map[string]string{
-		container.LabelStackID: p.StackName,
+		identity.LabelStackID: p.StackName,
 	})
 	if err == nil {
 		p.RunningCount = count
@@ -190,7 +191,7 @@ func (h *ProjectHandler) Create(w http.ResponseWriter, r *http.Request) {
 		respond.BadRequest(w, r, "name is required")
 		return
 	}
-	if err := container.ValidateName(req.Name); err != nil {
+	if err := identity.ValidateName(req.Name); err != nil {
 		respond.BadRequest(w, r, err.Error())
 		return
 	}
@@ -211,7 +212,7 @@ func (h *ProjectHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var stackID int
 	err = tx.QueryRow(`SELECT id FROM stacks WHERE name = $1 AND deleted_at IS NULL`, req.Name).Scan(&stackID)
 	if err == sql.ErrNoRows {
-		networkName := container.NetworkName(req.Name)
+		networkName := identity.NetworkName(req.Name)
 		err = tx.QueryRow(`
 			INSERT INTO stacks (name, network_name, source)
 			VALUES ($1, $2, 'project')

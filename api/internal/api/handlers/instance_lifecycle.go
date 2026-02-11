@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/priz/devarch-api/internal/compose"
+	"github.com/priz/devarch-api/internal/identity"
 )
 
 func (h *InstanceHandler) getInstanceRuntimeInfo(stackName string, instanceName string) (enabled bool, containerName string, err error) {
@@ -30,7 +31,7 @@ func (h *InstanceHandler) instanceCompose(stackName string) (projectName string,
 		return "", nil, fmt.Errorf("lookup stack: %w", err)
 	}
 
-	netName := fmt.Sprintf("devarch-%s-net", stackName)
+	netName := identity.NetworkName(stackName)
 	if networkName.Valid && networkName.String != "" {
 		netName = networkName.String
 	}

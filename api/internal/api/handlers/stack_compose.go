@@ -2,13 +2,13 @@ package handlers
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/compose"
+	"github.com/priz/devarch-api/internal/identity"
 )
 
 // Compose godoc
@@ -43,7 +43,7 @@ func (h *StackHandler) Compose(w http.ResponseWriter, r *http.Request) {
 	if networkName.Valid && networkName.String != "" {
 		netName = networkName.String
 	} else {
-		netName = fmt.Sprintf("devarch-%s-net", stackName)
+		netName = identity.NetworkName(stackName)
 	}
 
 	gen := compose.NewGenerator(h.db, netName)
