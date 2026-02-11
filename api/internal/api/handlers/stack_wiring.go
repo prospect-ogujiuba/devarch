@@ -43,15 +43,6 @@ type createWireRequest struct {
 	ImportContract   string `json:"import_contract_name"`
 }
 
-type resolveWiresResponse struct {
-	Resolved int      `json:"resolved"`
-	Warnings []string `json:"warnings"`
-}
-
-type cleanupWiresResponse struct {
-	Deleted int `json:"deleted"`
-}
-
 func (h *StackHandler) ListWires(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 
@@ -309,12 +300,10 @@ func (h *StackHandler) ResolveWires(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := resolveWiresResponse{
-		Resolved: len(candidates),
-		Warnings: warnings,
-	}
-
-	respond.JSON(w, r, http.StatusOK, resp)
+	respond.Action(w, r, http.StatusOK, "resolved",
+		respond.WithMetadata("resolved_count", len(candidates)),
+		respond.WithWarnings(warnings),
+	)
 }
 
 func (h *StackHandler) CreateWire(w http.ResponseWriter, r *http.Request) {
@@ -522,8 +511,9 @@ func (h *StackHandler) CleanupOrphanedWires(w http.ResponseWriter, r *http.Reque
 	}
 
 	if len(orphanedIDs) == 0 {
-		resp := cleanupWiresResponse{Deleted: 0}
-		respond.JSON(w, r, http.StatusOK, resp)
+		respond.Action(w, r, http.StatusOK, "cleaned",
+			respond.WithMetadata("deleted_count", 0),
+		)
 		return
 	}
 
@@ -546,6 +536,7 @@ func (h *StackHandler) CleanupOrphanedWires(w http.ResponseWriter, r *http.Reque
 
 	deleted, _ := result.RowsAffected()
 
-	resp := cleanupWiresResponse{Deleted: int(deleted)}
-	respond.JSON(w, r, http.StatusOK, resp)
+	respond.Action(w, r, http.StatusOK, "cleaned",
+		respond.WithMetadata("deleted_count", int(deleted)),
+	)
 }

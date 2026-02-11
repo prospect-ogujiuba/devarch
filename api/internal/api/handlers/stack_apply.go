@@ -153,18 +153,15 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := map[string]interface{}{
-		"status": "applied",
-		"output": output,
+	opts := []func(*respond.ActionResponse){
+		respond.WithOutput(output),
 	}
-
 	if req.Lock != nil {
 		validator := lock.NewValidator(h.db, h.containerClient)
 		result, err := validator.Validate(req.Lock, stackName)
 		if err == nil && len(result.Warnings) > 0 {
-			response["lock_warnings"] = result.Warnings
+			opts = append(opts, respond.WithMetadata("lock_warnings", result.Warnings))
 		}
 	}
-
-	respond.JSON(w, r, http.StatusOK, response)
+	respond.Action(w, r, http.StatusOK, "applied", opts...)
 }

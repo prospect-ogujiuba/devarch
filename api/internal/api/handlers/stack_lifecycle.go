@@ -24,7 +24,7 @@ func (h *StackHandler) Stop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "stopped"})
+	respond.Action(w, r, http.StatusOK, "stopped")
 }
 
 func (h *StackHandler) Start(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +90,7 @@ func (h *StackHandler) Start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "started"})
+	respond.Action(w, r, http.StatusOK, "started")
 }
 
 func (h *StackHandler) Restart(w http.ResponseWriter, r *http.Request) {
@@ -164,5 +164,5 @@ func (h *StackHandler) Restart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "restarted"})
+	respond.Action(w, r, http.StatusOK, "restarted")
 }

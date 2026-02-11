@@ -24,7 +24,7 @@ func (h *NginxHandler) GenerateAll(w http.ResponseWriter, r *http.Request) {
 		respond.InternalError(w, r, err)
 		return
 	}
-	respond.JSON(w, r, http.StatusOK,map[string]string{"status": "generated"})
+	respond.Action(w, r, http.StatusOK, "generated")
 }
 
 func (h *NginxHandler) GenerateOne(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +33,7 @@ func (h *NginxHandler) GenerateOne(w http.ResponseWriter, r *http.Request) {
 		respond.InternalError(w, r, err)
 		return
 	}
-	respond.JSON(w, r, http.StatusOK,map[string]string{"status": "generated", "project": name})
+	respond.Action(w, r, http.StatusOK, "generated", respond.WithMetadata("project", name))
 }
 
 func (h *NginxHandler) Reload(w http.ResponseWriter, r *http.Request) {
@@ -42,5 +42,5 @@ func (h *NginxHandler) Reload(w http.ResponseWriter, r *http.Request) {
 		respond.InternalError(w, r, fmt.Errorf("%s", out))
 		return
 	}
-	respond.JSON(w, r, http.StatusOK,map[string]string{"status": "reloaded"})
+	respond.Action(w, r, http.StatusOK, "reloaded")
 }

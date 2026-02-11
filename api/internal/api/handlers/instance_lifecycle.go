@@ -80,7 +80,7 @@ func (h *InstanceHandler) Stop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "stopped"})
+	respond.Action(w, r, http.StatusOK, "stopped")
 }
 
 func (h *InstanceHandler) Start(w http.ResponseWriter, r *http.Request) {
@@ -112,7 +112,7 @@ func (h *InstanceHandler) Start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "started"})
+	respond.Action(w, r, http.StatusOK, "started")
 }
 
 func (h *InstanceHandler) Restart(w http.ResponseWriter, r *http.Request) {
@@ -144,5 +144,5 @@ func (h *InstanceHandler) Restart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "restarted"})
+	respond.Action(w, r, http.StatusOK, "restarted")
 }
