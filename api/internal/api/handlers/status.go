@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"net/http"
 
 	"github.com/lib/pq"
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/podman"
 	"github.com/priz/devarch-api/internal/sync"
 )
@@ -84,7 +84,7 @@ func (h *StatusHandler) Overview(w http.ResponseWriter, r *http.Request) {
 		ORDER BY c.startup_order
 	`)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond.InternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
@@ -114,8 +114,7 @@ func (h *StatusHandler) Overview(w http.ResponseWriter, r *http.Request) {
 		SocketPath:       h.podman.SocketPath(),
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	respond.JSON(w, r, http.StatusOK,resp)
 }
 
 func (h *StatusHandler) TriggerSync(w http.ResponseWriter, r *http.Request) {
@@ -126,8 +125,7 @@ func (h *StatusHandler) TriggerSync(w http.ResponseWriter, r *http.Request) {
 
 	jobID := h.syncManager.TriggerSync(syncType)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	respond.JSON(w, r, http.StatusOK,map[string]string{
 		"job_id": jobID,
 		"status": "started",
 	})
@@ -136,6 +134,5 @@ func (h *StatusHandler) TriggerSync(w http.ResponseWriter, r *http.Request) {
 func (h *StatusHandler) SyncJobs(w http.ResponseWriter, r *http.Request) {
 	jobs := h.syncManager.GetJobs()
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(jobs)
+	respond.JSON(w, r, http.StatusOK,jobs)
 }

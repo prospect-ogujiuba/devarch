@@ -179,10 +179,7 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Page", strconv.Itoa(page))
 	w.Header().Set("X-Per-Page", strconv.Itoa(limit))
 	w.Header().Set("X-Total-Pages", strconv.Itoa(totalPages))
-	if err := json.NewEncoder(w).Encode(services); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	json.NewEncoder(w).Encode(services)
 }
 
 func (h *ServiceHandler) loadServiceIncludes(ctx context.Context, s *models.Service, includes string) {
