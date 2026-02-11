@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { Category, Service } from '@/types/api'
-import { toast } from 'sonner'
+import { useMutationHelper } from '@/lib/mutations'
 
 export function useCategories() {
   return useQuery({
@@ -26,39 +26,25 @@ export function useCategoryServices(category: string) {
 }
 
 export function useStartCategory() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.post(`/categories/${name}/start`)
       return response.data
     },
-    onSuccess: (_data, name) => {
-      toast.success(`Started all services in ${name}`)
-      queryClient.invalidateQueries({ queryKey: ['services'] })
-      queryClient.invalidateQueries({ queryKey: ['categories'] })
-      queryClient.invalidateQueries({ queryKey: ['status'] })
-    },
-    onError: (_error, name) => {
-      toast.error(`Failed to start ${name} category`)
-    },
+    successMessage: (_vars) => `Started all services in ${_vars}`,
+    errorMessage: (_error, vars) => `Failed to start ${vars} category`,
+    invalidate: [['services'], ['categories'], ['status']],
   })
 }
 
 export function useStopCategory() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.post(`/categories/${name}/stop`)
       return response.data
     },
-    onSuccess: (_data, name) => {
-      toast.success(`Stopped all services in ${name}`)
-      queryClient.invalidateQueries({ queryKey: ['services'] })
-      queryClient.invalidateQueries({ queryKey: ['categories'] })
-      queryClient.invalidateQueries({ queryKey: ['status'] })
-    },
-    onError: (_error, name) => {
-      toast.error(`Failed to stop ${name} category`)
-    },
+    successMessage: (_vars) => `Stopped all services in ${_vars}`,
+    errorMessage: (_error, vars) => `Failed to stop ${vars} category`,
+    invalidate: [['services'], ['categories'], ['status']],
   })
 }

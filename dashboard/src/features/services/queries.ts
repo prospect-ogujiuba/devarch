@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, getErrorMessage } from '@/lib/api'
 import type { Service, ServicePort, ServiceVolume, ServiceEnvVar, ServiceHealthcheck, ServiceLabel, ServiceDomain, ServiceConfigFile, ServiceConfigMount } from '@/types/api'
-import { toast } from 'sonner'
+import { useMutationHelper } from '@/lib/mutations'
 
 interface ServicesResult {
   services: Service[]
@@ -76,62 +76,43 @@ export function useServiceCompose(name: string) {
 }
 
 export function useStartService() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.post(`/services/${name}/start`)
       return response.data
     },
-    onSuccess: (_data, name) => {
-      toast.success(`Started ${name}`)
-      queryClient.invalidateQueries({ queryKey: ['services'] })
-      queryClient.invalidateQueries({ queryKey: ['status'] })
-    },
-    onError: (_error, name) => {
-      toast.error(`Failed to start ${name}`)
-    },
+    successMessage: (vars) => `Started ${vars}`,
+    errorMessage: (_error, vars) => `Failed to start ${vars}`,
+    invalidate: [['services'], ['status']],
   })
 }
 
 export function useStopService() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.post(`/services/${name}/stop`)
       return response.data
     },
-    onSuccess: (_data, name) => {
-      toast.success(`Stopped ${name}`)
-      queryClient.invalidateQueries({ queryKey: ['services'] })
-      queryClient.invalidateQueries({ queryKey: ['status'] })
-    },
-    onError: (_error, name) => {
-      toast.error(`Failed to stop ${name}`)
-    },
+    successMessage: (vars) => `Stopped ${vars}`,
+    errorMessage: (_error, vars) => `Failed to stop ${vars}`,
+    invalidate: [['services'], ['status']],
   })
 }
 
 export function useRestartService() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.post(`/services/${name}/restart`)
       return response.data
     },
-    onSuccess: (_data, name) => {
-      toast.success(`Restarted ${name}`)
-      queryClient.invalidateQueries({ queryKey: ['services'] })
-      queryClient.invalidateQueries({ queryKey: ['status'] })
-    },
-    onError: (_error, name) => {
-      toast.error(`Failed to restart ${name}`)
-    },
+    successMessage: (vars) => `Restarted ${vars}`,
+    errorMessage: (_error, vars) => `Failed to restart ${vars}`,
+    invalidate: [['services'], ['status']],
   })
 }
 
 export function useBulkServiceControl() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async ({ names, action }: { names: string[]; action: 'start' | 'stop' | 'restart' }) => {
       const results = await Promise.allSettled(
         names.map((name) => api.post(`/services/${name}/${action}`)),
@@ -139,18 +120,15 @@ export function useBulkServiceControl() {
       const failed = results.filter((r) => r.status === 'rejected').length
       return { total: names.length, failed }
     },
-    onSuccess: ({ total, failed }, { action }) => {
-      if (failed === 0) {
-        toast.success(`Bulk ${action}: ${total} services`)
+    successMessage: (vars, data) => {
+      if (data.failed === 0) {
+        return `Bulk ${vars.action}: ${data.total} services`
       } else {
-        toast.warning(`Bulk ${action}: ${total - failed}/${total} succeeded`)
+        return `Bulk ${vars.action}: ${data.total - data.failed}/${data.total} succeeded`
       }
-      queryClient.invalidateQueries({ queryKey: ['services'] })
-      queryClient.invalidateQueries({ queryKey: ['status'] })
     },
-    onError: (_error, { action }) => {
-      toast.error(`Bulk ${action} failed`)
-    },
+    errorMessage: (_error, vars) => `Bulk ${vars.action} failed`,
+    invalidate: [['services'], ['status']],
   })
 }
 
@@ -172,19 +150,14 @@ interface CreateServicePayload {
 }
 
 export function useCreateService() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (data: CreateServicePayload) => {
       const response = await api.post('/services', data)
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Service created')
-      queryClient.invalidateQueries({ queryKey: ['services'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to create service'))
-    },
+    successMessage: 'Service created',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to create service'),
+    invalidate: [['services']],
   })
 }
 
@@ -198,53 +171,45 @@ interface UpdateServicePayload {
 
 export function useUpdateService() {
   const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async ({ name, data }: { name: string; data: UpdateServicePayload }) => {
       const response = await api.put(`/services/${name}`, data)
       return response.data
     },
+    successMessage: 'Service updated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to update service'),
+    invalidate: [['services']],
     onSuccess: (_data, { name }) => {
-      toast.success('Service updated')
       queryClient.invalidateQueries({ queryKey: ['services', name] })
-      queryClient.invalidateQueries({ queryKey: ['services'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to update service'))
     },
   })
 }
 
 export function useDeleteService() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.delete(`/services/${name}`)
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Service deleted')
-      queryClient.invalidateQueries({ queryKey: ['services'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to delete service'))
-    },
+    successMessage: 'Service deleted',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to delete service'),
+    invalidate: [['services']],
   })
 }
 
 function makeSubResourceMutation<T>(resource: string, label: string) {
   return function useSubResource() {
     const queryClient = useQueryClient()
-    return useMutation({
+    return useMutationHelper({
       mutationFn: async ({ name, data }: { name: string; data: T }) => {
         const response = await api.put(`/services/${name}/${resource}`, data)
         return response.data
       },
+      successMessage: `${label} updated`,
+      errorMessage: (error) => getErrorMessage(error, `Failed to update ${label.toLowerCase()}`),
+      invalidate: [],
       onSuccess: (_data, { name }) => {
-        toast.success(`${label} updated`)
         queryClient.invalidateQueries({ queryKey: ['services', name] })
-      },
-      onError: (error) => {
-        toast.error(getErrorMessage(error, `Failed to update ${label.toLowerCase()}`))
       },
     })
   }
@@ -285,34 +250,32 @@ export function useServiceConfigFile(name: string, filePath: string) {
 
 export function useSaveConfigFile() {
   const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async ({ name, filePath, content, fileMode }: { name: string; filePath: string; content: string; fileMode?: string }) => {
       const response = await api.put(`/services/${name}/files/${filePath}`, { content, file_mode: fileMode || '0644' })
       return response.data
     },
+    successMessage: 'File saved',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to save file'),
+    invalidate: [],
     onSuccess: (_data, { name }) => {
-      toast.success('File saved')
       queryClient.invalidateQueries({ queryKey: ['services', name, 'files'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to save file'))
     },
   })
 }
 
 export function useDeleteConfigFile() {
   const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async ({ name, filePath }: { name: string; filePath: string }) => {
       const response = await api.delete(`/services/${name}/files/${filePath}`)
       return response.data
     },
+    successMessage: 'File deleted',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to delete file'),
+    invalidate: [],
     onSuccess: (_data, { name }) => {
-      toast.success('File deleted')
       queryClient.invalidateQueries({ queryKey: ['services', name, 'files'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to delete file'))
     },
   })
 }

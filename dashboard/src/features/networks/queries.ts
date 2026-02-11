@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { api, getErrorMessage } from '@/lib/api'
 import type { NetworkInfo } from '@/types/api'
-import { toast } from 'sonner'
+import { useMutationHelper } from '@/lib/mutations'
 
 export function useNetworks() {
   return useQuery({
@@ -15,57 +15,45 @@ export function useNetworks() {
 }
 
 export function useCreateNetwork() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.post<NetworkInfo>('/networks', { name })
       return response.data
     },
-    onSuccess: (_data, name) => {
-      toast.success(`Created network ${name}`)
-      queryClient.invalidateQueries({ queryKey: ['networks'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to create network'))
-    },
+    successMessage: (_vars) => `Created network ${_vars}`,
+    errorMessage: (error) => getErrorMessage(error, 'Failed to create network'),
+    invalidate: [['networks']],
   })
 }
 
 export function useRemoveNetwork() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (name: string) => {
       const response = await api.delete(`/networks/${name}`)
       return response.data
     },
-    onSuccess: (_data, name) => {
-      toast.success(`Removed network ${name}`)
-      queryClient.invalidateQueries({ queryKey: ['networks'] })
-    },
-    onError: (error, name) => {
-      toast.error(getErrorMessage(error, `Failed to remove ${name}`))
-    },
+    successMessage: (_vars) => `Removed network ${_vars}`,
+    errorMessage: (error, vars) => getErrorMessage(error, `Failed to remove ${vars}`),
+    invalidate: [['networks']],
   })
 }
 
 export function useBulkRemoveNetworks() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (names: string[]) => {
       const response = await api.post<{ removed: string[]; errors: { name: string; error: string }[] }>('/networks/bulk-remove', { names })
       return response.data
     },
-    onSuccess: (data) => {
-      if (data.removed.length > 0) {
-        toast.success(`Removed ${data.removed.length} network${data.removed.length === 1 ? '' : 's'}`)
+    successMessage: (_vars, data) => {
+      if (data.removed.length > 0 && data.errors.length === 0) {
+        return `Removed ${data.removed.length} network${data.removed.length === 1 ? '' : 's'}`
+      } else if (data.removed.length > 0 && data.errors.length > 0) {
+        return `Removed ${data.removed.length}, ${data.errors.length} failed`
+      } else {
+        return `${data.errors.length} network${data.errors.length === 1 ? '' : 's'} failed to remove`
       }
-      if (data.errors.length > 0) {
-        toast.error(`${data.errors.length} network${data.errors.length === 1 ? '' : 's'} failed to remove`)
-      }
-      queryClient.invalidateQueries({ queryKey: ['networks'] })
     },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Bulk remove failed'))
-    },
+    errorMessage: (error) => getErrorMessage(error, 'Bulk remove failed'),
+    invalidate: [['networks']],
   })
 }

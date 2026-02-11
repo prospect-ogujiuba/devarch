@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { RuntimeStatus, SocketStatus } from '@/types/api'
-import { toast } from 'sonner'
+import { useMutationHelper } from '@/lib/mutations'
 
 export function useRuntimeStatus() {
   return useQuery({
@@ -15,20 +15,14 @@ export function useRuntimeStatus() {
 }
 
 export function useSwitchRuntime() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (params: { runtime: string; options?: { stop_services?: boolean; preserve_data?: boolean; update_config?: boolean } }) => {
       const response = await api.post('/runtime/switch', params)
       return response.data
     },
-    onSuccess: (data) => {
-      toast.success(data.message ?? 'Runtime switched')
-      queryClient.invalidateQueries({ queryKey: ['runtime'] })
-      queryClient.invalidateQueries({ queryKey: ['status'] })
-    },
-    onError: () => {
-      toast.error('Failed to switch runtime')
-    },
+    successMessage: (_vars, data) => data.message ?? 'Runtime switched',
+    errorMessage: 'Failed to switch runtime',
+    invalidate: [['runtime'], ['status']],
   })
 }
 
@@ -44,19 +38,13 @@ export function useSocketStatus() {
 }
 
 export function useStartSocket() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (params: { type: string; options?: { enable_lingering?: boolean; stop_conflicting?: boolean } }) => {
       const response = await api.post('/socket/start', params)
       return response.data
     },
-    onSuccess: (data) => {
-      toast.success(data.message ?? 'Socket started')
-      queryClient.invalidateQueries({ queryKey: ['socket'] })
-      queryClient.invalidateQueries({ queryKey: ['runtime'] })
-    },
-    onError: () => {
-      toast.error('Failed to start socket')
-    },
+    successMessage: (_vars, data) => data.message ?? 'Socket started',
+    errorMessage: 'Failed to start socket',
+    invalidate: [['socket'], ['runtime']],
   })
 }

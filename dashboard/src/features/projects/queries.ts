@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, getErrorMessage } from '@/lib/api'
-import { toast } from 'sonner'
 import type { Project, ProjectScanResponse, ProjectServiceStatus, ControlResponse } from '@/types/api'
+import { useMutationHelper } from '@/lib/mutations'
 
 export function useProjects() {
   return useQuery({
@@ -37,15 +37,12 @@ export function useProjectStatus(name: string, enabled = true) {
 }
 
 export function useScanProjects() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async () => {
       const response = await api.post<ProjectScanResponse>('/projects/scan')
       return response.data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
-    },
+    invalidate: [['projects']],
   })
 }
 
@@ -61,20 +58,14 @@ interface CreateProjectRequest {
 }
 
 export function useCreateProject() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (data: CreateProjectRequest) => {
       const response = await api.post<Project>('/projects', data)
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Project created')
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to create project'))
-    },
+    successMessage: 'Project created',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to create project'),
+    invalidate: [['projects'], ['stacks']],
   })
 }
 
@@ -90,38 +81,29 @@ interface UpdateProjectRequest {
 
 export function useUpdateProject(name: string) {
   const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async (data: UpdateProjectRequest) => {
       const response = await api.put<Project>(`/projects/${name}`, data)
       return response.data
     },
+    successMessage: 'Project updated',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to update project'),
+    invalidate: [['projects']],
     onSuccess: () => {
-      toast.success('Project updated')
       queryClient.invalidateQueries({ queryKey: ['projects', name] })
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to update project'))
     },
   })
 }
 
 export function useDeleteProject(name: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async () => {
       const response = await api.delete(`/projects/${name}`)
       return response.data
     },
-    onSuccess: () => {
-      toast.success('Project deleted')
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks'] })
-      queryClient.invalidateQueries({ queryKey: ['stacks', 'trash'] })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to delete project'))
-    },
+    successMessage: 'Project deleted',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to delete project'),
+    invalidate: [['projects'], ['stacks'], ['stacks', 'trash']],
   })
 }
 

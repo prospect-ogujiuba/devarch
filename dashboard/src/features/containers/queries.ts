@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { ContainersResponse, ControlResponse, LogsResponse } from '@/types/api'
-import { toast } from 'sonner'
+import { useMutationHelper } from '@/lib/mutations'
 
 export function useContainers(filter?: string, search?: string) {
   return useQuery({
@@ -31,43 +31,37 @@ export function useContainerLogs(name: string, lines: number = 100) {
 }
 
 export function useContainerControl() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async ({ container, action }: { container: string; action: 'start' | 'stop' | 'restart' | 'rebuild' }) => {
       const response = await api.post<ControlResponse>(`/containers/${container}/control`, { action })
       return response.data
     },
-    onSuccess: (data, { container, action }) => {
+    successMessage: (vars, data) => {
       if (data.success) {
-        toast.success(`${action} ${container}`)
+        return `${vars.action} ${vars.container}`
       } else {
-        toast.error(data.error || `Failed to ${action} ${container}`)
+        return data.error || `Failed to ${vars.action} ${vars.container}`
       }
-      queryClient.invalidateQueries({ queryKey: ['containers'] })
     },
-    onError: (_error, { container, action }) => {
-      toast.error(`Failed to ${action} ${container}`)
-    },
+    errorMessage: (_error, vars) => `Failed to ${vars.action} ${vars.container}`,
+    invalidate: [['containers']],
   })
 }
 
 export function useBulkControl() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  return useMutationHelper({
     mutationFn: async ({ containers, action }: { containers: string[]; action: 'start' | 'stop' }) => {
       const response = await api.post<ControlResponse>('/bulk', { containers, action })
       return response.data
     },
-    onSuccess: (data, { action }) => {
+    successMessage: (vars, data) => {
       if (data.success) {
-        toast.success(`Bulk ${action} completed`)
+        return `Bulk ${vars.action} completed`
       } else {
-        toast.error(data.error || `Bulk ${action} failed`)
+        return data.error || `Bulk ${vars.action} failed`
       }
-      queryClient.invalidateQueries({ queryKey: ['containers'] })
     },
-    onError: (_error, { action }) => {
-      toast.error(`Bulk ${action} failed`)
-    },
+    errorMessage: (_error, vars) => `Bulk ${vars.action} failed`,
+    invalidate: [['containers']],
   })
 }
