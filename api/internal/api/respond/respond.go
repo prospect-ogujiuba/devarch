@@ -76,3 +76,37 @@ func NoContent(w http.ResponseWriter, r *http.Request) {
 func ValidationError(w http.ResponseWriter, r *http.Request, message string, details interface{}) {
 	Error(w, r, http.StatusBadRequest, "validation_error", message, details)
 }
+
+// Action returns an action response wrapped in success envelope.
+func Action(w http.ResponseWriter, r *http.Request, statusCode int, status string, opts ...func(*ActionResponse)) {
+	resp := &ActionResponse{Status: status}
+	for _, opt := range opts {
+		opt(resp)
+	}
+	JSON(w, r, statusCode, resp)
+}
+
+// WithMessage sets the message field on an ActionResponse.
+func WithMessage(msg string) func(*ActionResponse) {
+	return func(r *ActionResponse) { r.Message = msg }
+}
+
+// WithOutput sets the output field on an ActionResponse.
+func WithOutput(output string) func(*ActionResponse) {
+	return func(r *ActionResponse) { r.Output = output }
+}
+
+// WithWarnings sets the warnings field on an ActionResponse.
+func WithWarnings(warnings []string) func(*ActionResponse) {
+	return func(r *ActionResponse) { r.Warnings = warnings }
+}
+
+// WithMetadata adds a key-value pair to the metadata map.
+func WithMetadata(key string, value interface{}) func(*ActionResponse) {
+	return func(r *ActionResponse) {
+		if r.Metadata == nil {
+			r.Metadata = make(map[string]interface{})
+		}
+		r.Metadata[key] = value
+	}
+}
