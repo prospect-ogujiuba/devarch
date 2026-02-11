@@ -43,6 +43,7 @@ services:
       - CONTAINER_HOST=unix:///run/podman/podman.sock
       - DEVARCH_API_KEY=${DEVARCH_API_KEY}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
+      - SECURITY_MODE=${SECURITY_MODE:-}
       - PROJECT_ROOT=/app
       - HOST_PROJECT_ROOT=/home/priz/projects/devarch
       - WORKSPACE_ROOT=/workspace

@@ -19,11 +19,12 @@ import (
 	"github.com/priz/devarch-api/internal/project"
 	"github.com/priz/devarch-api/internal/proxy"
 	"github.com/priz/devarch-api/internal/scanner"
+	"github.com/priz/devarch-api/internal/security"
 	"github.com/priz/devarch-api/internal/sync"
 	"github.com/priz/devarch-api/pkg/registry"
 )
 
-func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podman.Client, syncManager *sync.Manager, projectScanner *scanner.Scanner, nginxGenerator *nginx.Generator, projectController *project.Controller, registryManager *registry.Manager, cipher *crypto.Cipher) http.Handler {
+func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podman.Client, syncManager *sync.Manager, projectScanner *scanner.Scanner, nginxGenerator *nginx.Generator, projectController *project.Controller, registryManager *registry.Manager, cipher *crypto.Cipher, secMode security.Mode) http.Handler {
 	r := chi.NewRouter()
 
 	// Read stack import size limit from env var (default 256MB)
@@ -62,7 +63,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	categoryHandler := handlers.NewCategoryHandler(db, containerClient, podmanClient)
 	statusHandler := handlers.NewStatusHandler(db, podmanClient, syncManager)
 	registryHandler := handlers.NewRegistryHandler(db, registryManager)
-	wsHandler := handlers.NewWebSocketHandler(syncManager, allowedOrigins)
+	wsHandler := handlers.NewWebSocketHandler(syncManager, allowedOrigins, secMode)
 	projectHandler := handlers.NewProjectHandler(db, projectScanner, projectController, containerClient)
 	runtimeHandler := handlers.NewRuntimeHandler(containerClient, podmanClient)
 	nginxHandler := handlers.NewNginxHandler(nginxGenerator, containerClient)
@@ -76,10 +77,10 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	r.Post("/api/v1/auth/validate", authHandler.Validate)
 
 	// Stack import with large body limit - registered before main route group to avoid 10MB default
-	r.With(mw.APIKeyAuth, mw.RateLimit(10, 50), mw.MaxBodySize(importMaxBytes)).Post("/api/v1/stacks/import", stackHandler.ImportStack)
+	r.With(mw.APIKeyAuth(secMode), mw.RateLimit(10, 50), mw.MaxBodySize(importMaxBytes)).Post("/api/v1/stacks/import", stackHandler.ImportStack)
 
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Use(mw.APIKeyAuth)
+		r.Use(mw.APIKeyAuth(secMode))
 		r.Use(mw.RateLimit(10, 50))
 		r.Use(mw.MaxBodySize(10 << 20)) // Default 10MB for most routes
 		r.Route("/services", func(r chi.Router) {
