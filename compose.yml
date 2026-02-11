@@ -49,6 +49,7 @@ services:
     volumes:
       - /run/user/1000/podman/podman.sock:/run/podman/podman.sock:ro
       - ./apps:/workspace/apps:ro
+      - ./services-library:/workspace/services-library:ro
       - ./api:/app
     networks:
       - microservices-net
