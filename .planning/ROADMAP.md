@@ -55,7 +55,7 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 **Plans**: 1 plan
 
 Plans:
-- [ ] 16-01-PLAN.md — Externalize DEVARCH_API_KEY from compose.yml into .env
+- [x] 16-01-PLAN.md — Externalize DEVARCH_API_KEY from compose.yml into .env
 
 #### Phase 17: CORS & Origin Hardening
 **Goal**: API enforces origin restrictions for HTTP and WebSocket connections
@@ -240,7 +240,7 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 16. Security Configuration | 0/1 | Planned | - |
+| 16. Security Configuration | 1/1 | ✓ Complete | 2026-02-11 |
 | 17. CORS & Origin Hardening | 0/TBD | Not started | - |
 | 18. WebSocket Authentication & Security Modes | 0/TBD | Not started | - |
 | 19. API Response Normalization | 0/TBD | Not started | - |
@@ -256,4 +256,4 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-11 — v1.1.1 milestone roadmap created*
+*Last updated: 2026-02-11 — Phase 16 complete*
