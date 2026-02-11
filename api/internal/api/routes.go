@@ -16,6 +16,7 @@ import (
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/crypto"
 	"github.com/priz/devarch-api/internal/nginx"
+	"github.com/priz/devarch-api/internal/orchestration"
 	"github.com/priz/devarch-api/internal/podman"
 	"github.com/priz/devarch-api/internal/project"
 	"github.com/priz/devarch-api/internal/proxy"
@@ -60,6 +61,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 		MaxAge:           300,
 	}))
 
+	orchestrationService := orchestration.NewService(db, containerClient)
 	serviceHandler := handlers.NewServiceHandler(db, containerClient, podmanClient, cipher)
 	categoryHandler := handlers.NewCategoryHandler(db, containerClient, podmanClient)
 	statusHandler := handlers.NewStatusHandler(db, podmanClient, syncManager)
@@ -68,7 +70,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	projectHandler := handlers.NewProjectHandler(db, projectScanner, projectController, containerClient)
 	runtimeHandler := handlers.NewRuntimeHandler(containerClient, podmanClient)
 	nginxHandler := handlers.NewNginxHandler(nginxGenerator, containerClient)
-	stackHandler := handlers.NewStackHandler(db, containerClient)
+	stackHandler := handlers.NewStackHandler(db, containerClient, orchestrationService)
 	instanceHandler := handlers.NewInstanceHandler(db, containerClient, cipher)
 	networkHandler := handlers.NewNetworkHandler(db, containerClient)
 	proxyGenerator := proxy.NewGenerator(db)
