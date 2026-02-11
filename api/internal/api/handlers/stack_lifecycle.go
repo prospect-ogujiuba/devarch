@@ -10,6 +10,16 @@ import (
 	"github.com/priz/devarch-api/internal/compose"
 )
 
+// Stop godoc
+// @Summary      Stop a stack
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/stop [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -27,6 +37,18 @@ func (h *StackHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "stopped")
 }
 
+// Start godoc
+// @Summary      Start a stack
+// @Description  Start all instances in a stack. Stack must be enabled.
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/start [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) Start(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -93,6 +115,18 @@ func (h *StackHandler) Start(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "started")
 }
 
+// Restart godoc
+// @Summary      Restart a stack
+// @Description  Restart all instances in a stack. Stack must be enabled.
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/restart [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 

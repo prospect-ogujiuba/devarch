@@ -43,6 +43,17 @@ type createWireRequest struct {
 	ImportContract   string `json:"import_contract_name"`
 }
 
+// ListWires godoc
+// @Summary      List stack wires
+// @Description  List service wiring connections and unresolved imports
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=listWiresResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/wires [get]
+// @Security     ApiKeyAuth
 func (h *StackHandler) ListWires(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 
@@ -175,6 +186,17 @@ func (h *StackHandler) ListWires(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, resp)
 }
 
+// ResolveWires godoc
+// @Summary      Auto-resolve stack wires
+// @Description  Automatically create wires for unresolved imports
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=object}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/wires/resolve [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) ResolveWires(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 
@@ -306,6 +328,20 @@ func (h *StackHandler) ResolveWires(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+// CreateWire godoc
+// @Summary      Create a wire
+// @Description  Manually create a wiring connection between instances
+// @Tags         stacks
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        wire body createWireRequest true "Wire details"
+// @Success      201 {object} respond.SuccessEnvelope{data=object}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/wires [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) CreateWire(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 
@@ -443,6 +479,17 @@ func (h *StackHandler) CreateWire(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusCreated, resp)
 }
 
+// DeleteWire godoc
+// @Summary      Delete a wire
+// @Tags         stacks
+// @Param        name path string true "Stack name"
+// @Param        wireId path int true "Wire ID"
+// @Success      204
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/wires/{wireId} [delete]
+// @Security     ApiKeyAuth
 func (h *StackHandler) DeleteWire(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 	wireIDStr := chi.URLParam(r, "wireId")
@@ -488,6 +535,17 @@ func (h *StackHandler) DeleteWire(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// CleanupOrphanedWires godoc
+// @Summary      Cleanup orphaned wires
+// @Description  Remove wires pointing to non-existent instances
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/wires/cleanup [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) CleanupOrphanedWires(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 

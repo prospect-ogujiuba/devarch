@@ -17,6 +17,19 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ImportStack godoc
+// @Summary      Import stack from compose YAML
+// @Description  Import a devarch-compatible compose file to create a new stack
+// @Tags         stacks
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        file formData file true "Compose YAML file"
+// @Success      201 {object} respond.SuccessEnvelope{data=object}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/import [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) ImportStack(w http.ResponseWriter, r *http.Request) {
 	// Extract boundary from Content-Type header
 	contentType := r.Header.Get("Content-Type")

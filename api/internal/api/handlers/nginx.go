@@ -19,6 +19,14 @@ func NewNginxHandler(g *nginx.Generator, containerClient *container.Client) *Ngi
 	return &NginxHandler{generator: g, containerClient: containerClient}
 }
 
+// GenerateAll godoc
+// @Summary      Generate all nginx configs
+// @Tags         nginx
+// @Produce      json
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /nginx/generate [post]
+// @Security     ApiKeyAuth
 func (h *NginxHandler) GenerateAll(w http.ResponseWriter, r *http.Request) {
 	if err := h.generator.GenerateAll(); err != nil {
 		respond.InternalError(w, r, err)
@@ -27,6 +35,15 @@ func (h *NginxHandler) GenerateAll(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "generated")
 }
 
+// GenerateOne godoc
+// @Summary      Generate nginx config for one project
+// @Tags         nginx
+// @Produce      json
+// @Param        name path string true "Project name"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /nginx/generate/{name} [post]
+// @Security     ApiKeyAuth
 func (h *NginxHandler) GenerateOne(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	if err := h.generator.GenerateProject(name); err != nil {
@@ -36,6 +53,14 @@ func (h *NginxHandler) GenerateOne(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "generated", respond.WithMetadata("project", name))
 }
 
+// Reload godoc
+// @Summary      Reload nginx
+// @Tags         nginx
+// @Produce      json
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /nginx/reload [post]
+// @Security     ApiKeyAuth
 func (h *NginxHandler) Reload(w http.ResponseWriter, r *http.Request) {
 	out, err := h.containerClient.Exec("nginx-proxy-manager", []string{"nginx", "-s", "reload"})
 	if err != nil {

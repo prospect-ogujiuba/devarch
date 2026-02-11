@@ -15,6 +15,17 @@ import (
 	"github.com/priz/devarch-api/internal/wiring"
 )
 
+// Plan godoc
+// @Summary      Generate stack deployment plan
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=object}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/plan [get]
+// @Security     ApiKeyAuth
 func (h *StackHandler) Plan(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 

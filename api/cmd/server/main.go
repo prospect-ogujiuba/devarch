@@ -24,8 +24,20 @@ import (
 	"github.com/priz/devarch-api/pkg/registry/ghcr"
 
 	_ "github.com/lib/pq"
+	_ "github.com/priz/devarch-api/docs"
 )
 
+// @title           DevArch API
+// @version         1.0
+// @description     Local microservices development environment API
+
+// @host      localhost:8550
+// @BasePath  /api/v1
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-API-Key
+// @description API key authentication header
 func main() {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {

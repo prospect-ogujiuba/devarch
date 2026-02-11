@@ -112,7 +112,18 @@ type updateStackRequest struct {
 	Description string `json:"description"`
 }
 
-// Create handles POST /stacks
+// Create godoc
+// @Summary      Create a stack
+// @Tags         stacks
+// @Accept       json
+// @Produce      json
+// @Param        stack body createStackRequest true "Stack details"
+// @Success      201 {object} respond.SuccessEnvelope{data=stackResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createStackRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -170,7 +181,15 @@ func (h *StackHandler) Create(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusCreated, stack)
 }
 
-// List handles GET /stacks
+// List godoc
+// @Summary      List stacks
+// @Tags         stacks
+// @Produce      json
+// @Param        include query string false "Comma-separated includes (instances,status)"
+// @Success      200 {object} respond.SuccessEnvelope{data=[]stackResponse}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks [get]
+// @Security     ApiKeyAuth
 func (h *StackHandler) List(w http.ResponseWriter, r *http.Request) {
 	query := `
 		SELECT
@@ -233,7 +252,16 @@ func (h *StackHandler) List(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, stacks)
 }
 
-// Get handles GET /stacks/{name}
+// Get godoc
+// @Summary      Get a stack
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=stackResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name} [get]
+// @Security     ApiKeyAuth
 func (h *StackHandler) Get(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -283,7 +311,19 @@ func (h *StackHandler) Get(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, stack)
 }
 
-// Update handles PUT /stacks/{name}
+// Update godoc
+// @Summary      Update a stack
+// @Tags         stacks
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        stack body updateStackRequest true "Stack update"
+// @Success      200 {object} respond.SuccessEnvelope{data=stackResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name} [put]
+// @Security     ApiKeyAuth
 func (h *StackHandler) Update(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -332,6 +372,17 @@ func (h *StackHandler) Update(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, stack)
 }
 
+// Delete godoc
+// @Summary      Soft-delete a stack
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=object}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name} [delete]
+// @Security     ApiKeyAuth
 func (h *StackHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -380,7 +431,16 @@ func (h *StackHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Enable handles POST /stacks/{name}/enable
+// Enable godoc
+// @Summary      Enable a stack
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=stackResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/enable [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) Enable(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -430,7 +490,16 @@ type networkStatusResponse struct {
 	Labels      map[string]string `json:"labels,omitempty"`
 }
 
-// NetworkStatus handles GET /stacks/{name}/network
+// NetworkStatus godoc
+// @Summary      Get stack network status
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=networkStatusResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/network [get]
+// @Security     ApiKeyAuth
 func (h *StackHandler) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -477,6 +546,16 @@ func (h *StackHandler) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, response)
 }
 
+// CreateNetwork godoc
+// @Summary      Create stack network
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=object}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/network [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) CreateNetwork(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -510,6 +589,16 @@ func (h *StackHandler) CreateNetwork(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "created", "network": netName})
 }
 
+// RemoveNetwork godoc
+// @Summary      Remove stack network
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=object}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/network [delete]
+// @Security     ApiKeyAuth
 func (h *StackHandler) RemoveNetwork(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -544,6 +633,17 @@ type disableResponse struct {
 	StoppedContainers []string      `json:"stopped_containers"`
 }
 
+// Disable godoc
+// @Summary      Disable a stack
+// @Description  Disable stack and stop all running containers
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=disableResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/disable [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) Disable(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -698,7 +798,20 @@ func (h *StackHandler) cloneInstancesWithOverrides(tx *sql.Tx, sourceStackName s
 	return nil
 }
 
-// Clone handles POST /stacks/{name}/clone
+// Clone godoc
+// @Summary      Clone a stack
+// @Tags         stacks
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        clone body cloneRequest true "New stack name"
+// @Success      201 {object} respond.SuccessEnvelope{data=stackResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/clone [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) Clone(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -797,7 +910,20 @@ type renameRequest struct {
 	Name string `json:"name"`
 }
 
-// Rename handles POST /stacks/{name}/rename
+// Rename godoc
+// @Summary      Rename a stack
+// @Tags         stacks
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        rename body renameRequest true "New stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=stackResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/rename [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) Rename(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -910,7 +1036,17 @@ type deletePreviewResponse struct {
 	ContainerNames []string `json:"container_names"`
 }
 
-// DeletePreview handles GET /stacks/{name}/delete-preview
+// DeletePreview godoc
+// @Summary      Preview stack deletion
+// @Description  Show what will be deleted if stack is deleted
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=deletePreviewResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/delete-preview [get]
+// @Security     ApiKeyAuth
 func (h *StackHandler) DeletePreview(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -969,7 +1105,14 @@ type trashStackResponse struct {
 	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
-// ListTrash handles GET /stacks/trash
+// ListTrash godoc
+// @Summary      List deleted stacks
+// @Tags         stacks
+// @Produce      json
+// @Success      200 {object} respond.SuccessEnvelope{data=[]trashStackResponse}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/trash [get]
+// @Security     ApiKeyAuth
 func (h *StackHandler) ListTrash(w http.ResponseWriter, r *http.Request) {
 	query := `
 		SELECT
@@ -1026,7 +1169,17 @@ func (h *StackHandler) ListTrash(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, stacks)
 }
 
-// Restore handles POST /stacks/trash/{name}/restore
+// Restore godoc
+// @Summary      Restore a deleted stack
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=stackResponse}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/trash/{name}/restore [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) Restore(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
@@ -1084,7 +1237,17 @@ func (h *StackHandler) Restore(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, stack)
 }
 
-// PermanentDelete handles DELETE /stacks/trash/{name}
+// PermanentDelete godoc
+// @Summary      Permanently delete a stack
+// @Description  Permanently delete a soft-deleted stack from trash
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=object}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/trash/{name} [delete]
+// @Security     ApiKeyAuth
 func (h *StackHandler) PermanentDelete(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 

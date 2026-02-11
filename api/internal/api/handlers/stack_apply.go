@@ -23,6 +23,21 @@ type applyRequest struct {
 	Lock  *lock.LockFile  `json:"lock,omitempty"`
 }
 
+// Apply godoc
+// @Summary      Apply stack deployment plan
+// @Description  Apply a generated plan to deploy stack changes
+// @Tags         stacks
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        apply body applyRequest true "Apply request with plan token"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      409 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/apply [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 
