@@ -40,6 +40,14 @@ type categoryOverview struct {
 	RunningServices int    `json:"running_services"`
 }
 
+// Overview godoc
+// @Summary      Get system status overview
+// @Tags         status
+// @Produce      json
+// @Success      200 {object} respond.SuccessEnvelope{data=overviewResponse}
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /status [get]
+// @Security     ApiKeyAuth
 func (h *StatusHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -117,6 +125,14 @@ func (h *StatusHandler) Overview(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK,resp)
 }
 
+// TriggerSync godoc
+// @Summary      Trigger container status sync
+// @Tags         status
+// @Produce      json
+// @Param        type query string false "Sync type (default: all)"
+// @Success      200 {object} respond.SuccessEnvelope{data=object}
+// @Router       /sync [post]
+// @Security     ApiKeyAuth
 func (h *StatusHandler) TriggerSync(w http.ResponseWriter, r *http.Request) {
 	syncType := r.URL.Query().Get("type")
 	if syncType == "" {
@@ -131,6 +147,13 @@ func (h *StatusHandler) TriggerSync(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// SyncJobs godoc
+// @Summary      List sync jobs
+// @Tags         status
+// @Produce      json
+// @Success      200 {object} respond.SuccessEnvelope{data=[]object}
+// @Router       /sync/jobs [get]
+// @Security     ApiKeyAuth
 func (h *StatusHandler) SyncJobs(w http.ResponseWriter, r *http.Request) {
 	jobs := h.syncManager.GetJobs()
 

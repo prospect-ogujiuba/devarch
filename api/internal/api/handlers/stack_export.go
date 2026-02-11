@@ -9,6 +9,16 @@ import (
 	"github.com/priz/devarch-api/internal/export"
 )
 
+// ExportStack godoc
+// @Summary      Export stack as compose YAML
+// @Tags         stacks
+// @Produce      application/x-yaml
+// @Param        name path string true "Stack name"
+// @Success      200 {string} string "Compose YAML content"
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/export [get]
+// @Security     ApiKeyAuth
 func (h *StackHandler) ExportStack(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 

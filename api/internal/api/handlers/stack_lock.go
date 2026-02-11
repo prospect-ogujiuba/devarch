@@ -15,6 +15,19 @@ type generateLockRequest struct {
 	YmlContent []byte `json:"yml_content,omitempty"`
 }
 
+// GenerateLock godoc
+// @Summary      Generate stack lock file
+// @Tags         stacks
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        request body generateLockRequest false "Optional YAML content"
+// @Success      200 {object} respond.SuccessEnvelope{data=object}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/lock [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) GenerateLock(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 
@@ -62,6 +75,18 @@ func (h *StackHandler) GenerateLock(w http.ResponseWriter, r *http.Request) {
 	w.Write(lockJSON)
 }
 
+// ValidateLock godoc
+// @Summary      Validate stack lock file
+// @Tags         stacks
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        lock body lock.LockFile true "Lock file to validate"
+// @Success      200 {object} respond.SuccessEnvelope{data=object}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/lock/validate [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) ValidateLock(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 
@@ -81,6 +106,17 @@ func (h *StackHandler) ValidateLock(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, result)
 }
 
+// RefreshLock godoc
+// @Summary      Refresh stack lock file
+// @Description  Regenerate lock file from current stack state
+// @Tags         stacks
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Success      200 {object} respond.SuccessEnvelope{data=object}
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/lock/refresh [post]
+// @Security     ApiKeyAuth
 func (h *StackHandler) RefreshLock(w http.ResponseWriter, r *http.Request) {
 	stackName := chi.URLParam(r, "name")
 

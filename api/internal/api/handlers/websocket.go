@@ -55,6 +55,15 @@ func NewWebSocketHandler(sm *devsync.Manager, allowedOrigins []string, secMode s
 	return h
 }
 
+// Handle godoc
+// @Summary      WebSocket status stream
+// @Description  Upgrades to WebSocket for real-time container status updates
+// @Tags         websocket
+// @Param        token query string false "WS auth token (required when auth enabled)"
+// @Success      101 {string} string "Switching Protocols"
+// @Failure      403 {object} respond.ErrorEnvelope
+// @Router       /ws/status [get]
+// @Security     ApiKeyAuth
 func (h *WebSocketHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	// Validate WS token if required by security mode
 	if h.secMode.RequiresWSAuth() {

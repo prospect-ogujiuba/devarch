@@ -16,6 +16,13 @@ func NewAuthHandler() *AuthHandler {
 	return &AuthHandler{}
 }
 
+// Validate godoc
+// @Summary      Validate API key
+// @Tags         auth
+// @Produce      json
+// @Success      200 {object} respond.SuccessEnvelope{data=object}
+// @Failure      401 {object} respond.ErrorEnvelope
+// @Router       /auth/validate [post]
 func (h *AuthHandler) Validate(w http.ResponseWriter, r *http.Request) {
 	apiKey := os.Getenv("DEVARCH_API_KEY")
 	if apiKey == "" {
@@ -32,6 +39,14 @@ func (h *AuthHandler) Validate(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, map[string]bool{"valid": true})
 }
 
+// WSToken godoc
+// @Summary      Generate WebSocket authentication token
+// @Tags         auth
+// @Produce      json
+// @Success      200 {object} respond.SuccessEnvelope{data=object}
+// @Failure      401 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /auth/ws-token [post]
 func (h *AuthHandler) WSToken(w http.ResponseWriter, r *http.Request) {
 	apiKey := os.Getenv("DEVARCH_API_KEY")
 	if apiKey == "" {

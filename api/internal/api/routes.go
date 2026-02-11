@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"github.com/priz/devarch-api/internal/api/handlers"
 	mw "github.com/priz/devarch-api/internal/api/middleware"
 	"github.com/priz/devarch-api/internal/container"
@@ -73,6 +74,10 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	proxyGenerator := proxy.NewGenerator(db)
 	proxyHandler := handlers.NewProxyHandler(proxyGenerator)
 	authHandler := handlers.NewAuthHandler()
+
+	r.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"),
+	))
 
 	r.Post("/api/v1/auth/validate", authHandler.Validate)
 	r.Post("/api/v1/auth/ws-token", authHandler.WSToken)
