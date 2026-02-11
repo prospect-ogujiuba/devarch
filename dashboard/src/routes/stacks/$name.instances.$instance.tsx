@@ -13,8 +13,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { EnableToggle, MoreActionsMenu } from '@/components/ui/entity-actions'
-import { useInstance, useUpdateInstance } from '@/features/instances/queries'
-import { useService } from '@/features/services/queries'
+import { useInstanceDetailController } from '@/features/instances/useInstanceDetailController'
 import { OverridePorts } from '@/components/instances/override-ports'
 import { OverrideVolumes } from '@/components/instances/override-volumes'
 import { OverrideEnvFiles } from '@/components/instances/override-env-files'
@@ -63,9 +62,7 @@ function InstanceDetailPage() {
   const routeSearch = Route.useSearch()
   const routeNavigate = Route.useNavigate()
   const navigate = useNavigate()
-  const { data: instance, isLoading } = useInstance(stackName, instanceId)
-  const { data: templateService } = useService(instance?.template_name ?? '')
-  const updateInstance = useUpdateInstance(stackName, instanceId)
+  const ctrl = useInstanceDetailController(stackName, instanceId)
 
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -74,18 +71,18 @@ function InstanceDetailPage() {
   const [editDescription, setEditDescription] = useState('')
 
   const openEdit = () => {
-    if (!instance) return
-    setEditDescription(instance.description ?? '')
+    if (!ctrl.instance) return
+    setEditDescription(ctrl.instance.description ?? '')
     setEditOpen(true)
   }
 
   const handleToggleEnabled = () => {
-    if (!instance) return
-    updateInstance.mutate({ enabled: !instance.enabled })
+    if (!ctrl.instance) return
+    ctrl.updateInstance.mutate({ enabled: !ctrl.instance.enabled })
   }
 
   const handleEditSave = () => {
-    updateInstance.mutate({ description: editDescription }, {
+    ctrl.updateInstance.mutate({ description: editDescription }, {
       onSuccess: () => setEditOpen(false),
     })
   }
@@ -102,7 +99,7 @@ function InstanceDetailPage() {
     navigate({ to: '/stacks/$name/instances/$instance', params: { name: stackName, instance: newName } })
   }
 
-  if (isLoading) {
+  if (ctrl.isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
@@ -110,7 +107,7 @@ function InstanceDetailPage() {
     )
   }
 
-  if (!instance) {
+  if (!ctrl.instance) {
     return (
       <div className="space-y-4">
         <Link to="/stacks/$name" params={{ name: stackName }} className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground">
@@ -124,8 +121,8 @@ function InstanceDetailPage() {
     )
   }
 
-  const createdAgo = timeAgo(instance.created_at)
-  const updatedAgo = timeAgo(instance.updated_at)
+  const createdAgo = timeAgo(ctrl.instance.created_at)
+  const updatedAgo = timeAgo(ctrl.instance.updated_at)
   const activeTab: InstanceTab = routeSearch.instanceTab && instanceTabs.includes(routeSearch.instanceTab as InstanceTab)
     ? (routeSearch.instanceTab as InstanceTab)
     : 'info'
@@ -157,19 +154,19 @@ function InstanceDetailPage() {
             Stacks &gt; {stackName} &gt; {instanceId}
           </div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{instance.instance_id}</h1>
-            <div className={cn('size-2 rounded-full', instance.enabled ? 'bg-green-500' : 'bg-muted-foreground')} />
+            <h1 className="text-2xl font-bold">{ctrl.instance.instance_id}</h1>
+            <div className={cn('size-2 rounded-full', ctrl.instance.enabled ? 'bg-green-500' : 'bg-muted-foreground')} />
           </div>
-          <p className="text-muted-foreground">{instance.template_name}</p>
-          {instance.container_name && (
-            <p className="text-xs font-mono text-muted-foreground">{instance.container_name}</p>
+          <p className="text-muted-foreground">{ctrl.instance.template_name}</p>
+          {ctrl.instance.container_name && (
+            <p className="text-xs font-mono text-muted-foreground">{ctrl.instance.container_name}</p>
           )}
         </div>
         <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
           <EnableToggle
-            enabled={instance.enabled}
+            enabled={ctrl.instance.enabled}
             onToggle={handleToggleEnabled}
-            isPending={updateInstance.isPending}
+            isPending={ctrl.updateInstance.isPending}
             className="w-full sm:w-auto"
           />
           <MoreActionsMenu triggerClassName="w-full sm:w-auto" mobileLabel="Actions">
@@ -215,34 +212,34 @@ function InstanceDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-2 text-sm">
-                <div className="flex"><span className="text-muted-foreground w-40">Instance Name:</span> {instance.instance_id}</div>
-                <div className="flex"><span className="text-muted-foreground w-40">Template:</span> {instance.template_name}</div>
-                <div className="flex"><span className="text-muted-foreground w-40">Container Name:</span> <code>{instance.container_name ?? 'not set'}</code></div>
-                <div className="flex"><span className="text-muted-foreground w-40">Enabled:</span> {instance.enabled ? 'Yes' : 'No'}</div>
-                <div className="flex"><span className="text-muted-foreground w-40">Overrides:</span> {instance.override_count}</div>
+                <div className="flex"><span className="text-muted-foreground w-40">Instance Name:</span> {ctrl.instance.instance_id}</div>
+                <div className="flex"><span className="text-muted-foreground w-40">Template:</span> {ctrl.instance.template_name}</div>
+                <div className="flex"><span className="text-muted-foreground w-40">Container Name:</span> <code>{ctrl.instance.container_name ?? 'not set'}</code></div>
+                <div className="flex"><span className="text-muted-foreground w-40">Enabled:</span> {ctrl.instance.enabled ? 'Yes' : 'No'}</div>
+                <div className="flex"><span className="text-muted-foreground w-40">Overrides:</span> {ctrl.instance.override_count}</div>
                 <div className="flex"><span className="text-muted-foreground w-40">Created:</span> {createdAgo}</div>
                 <div className="flex"><span className="text-muted-foreground w-40">Updated:</span> {updatedAgo}</div>
               </div>
             </CardContent>
           </Card>
 
-          {instance.description && (
+          {ctrl.instance.description && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Description</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm">{instance.description}</p>
+                <p className="text-sm">{ctrl.instance.description}</p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
         <TabsContent value="ports">
-          {templateService && (
+          {ctrl.templateService && (
             <OverridePorts
-              instance={instance}
-              templateData={templateService}
+              instance={ctrl.instance}
+              templateData={ctrl.templateService}
               stackName={stackName}
               instanceId={instanceId}
             />
@@ -250,10 +247,10 @@ function InstanceDetailPage() {
         </TabsContent>
 
         <TabsContent value="volumes">
-          {templateService && (
+          {ctrl.templateService && (
             <OverrideVolumes
-              instance={instance}
-              templateData={templateService}
+              instance={ctrl.instance}
+              templateData={ctrl.templateService}
               stackName={stackName}
               instanceId={instanceId}
             />
@@ -261,10 +258,10 @@ function InstanceDetailPage() {
         </TabsContent>
 
         <TabsContent value="env-files">
-          {templateService && (
+          {ctrl.templateService && (
             <OverrideEnvFiles
-              instance={instance}
-              templateData={templateService}
+              instance={ctrl.instance}
+              templateData={ctrl.templateService}
               stackName={stackName}
               instanceId={instanceId}
             />
@@ -272,10 +269,10 @@ function InstanceDetailPage() {
         </TabsContent>
 
         <TabsContent value="environment">
-          {templateService && (
+          {ctrl.templateService && (
             <OverrideEnvVars
-              instance={instance}
-              templateData={templateService}
+              instance={ctrl.instance}
+              templateData={ctrl.templateService}
               stackName={stackName}
               instanceId={instanceId}
             />
@@ -283,10 +280,10 @@ function InstanceDetailPage() {
         </TabsContent>
 
         <TabsContent value="networks">
-          {templateService && (
+          {ctrl.templateService && (
             <OverrideNetworks
-              instance={instance}
-              templateData={templateService}
+              instance={ctrl.instance}
+              templateData={ctrl.templateService}
               stackName={stackName}
               instanceId={instanceId}
             />
@@ -294,10 +291,10 @@ function InstanceDetailPage() {
         </TabsContent>
 
         <TabsContent value="labels">
-          {templateService && (
+          {ctrl.templateService && (
             <OverrideLabels
-              instance={instance}
-              templateData={templateService}
+              instance={ctrl.instance}
+              templateData={ctrl.templateService}
               stackName={stackName}
               instanceId={instanceId}
             />
@@ -305,10 +302,10 @@ function InstanceDetailPage() {
         </TabsContent>
 
         <TabsContent value="domains">
-          {templateService && (
+          {ctrl.templateService && (
             <OverrideDomains
-              instance={instance}
-              templateData={templateService}
+              instance={ctrl.instance}
+              templateData={ctrl.templateService}
               stackName={stackName}
               instanceId={instanceId}
             />
@@ -316,10 +313,10 @@ function InstanceDetailPage() {
         </TabsContent>
 
         <TabsContent value="healthcheck">
-          {templateService && (
+          {ctrl.templateService && (
             <OverrideHealthcheck
-              instance={instance}
-              templateData={templateService}
+              instance={ctrl.instance}
+              templateData={ctrl.templateService}
               stackName={stackName}
               instanceId={instanceId}
             />
@@ -327,10 +324,10 @@ function InstanceDetailPage() {
         </TabsContent>
 
         <TabsContent value="dependencies">
-          {templateService && (
+          {ctrl.templateService && (
             <OverrideDependencies
-              instance={instance}
-              templateData={templateService}
+              instance={ctrl.instance}
+              templateData={ctrl.templateService}
               stackName={stackName}
               instanceId={instanceId}
             />
@@ -338,10 +335,10 @@ function InstanceDetailPage() {
         </TabsContent>
 
         <TabsContent value="config-mounts">
-          {templateService && (
+          {ctrl.templateService && (
             <OverrideConfigMounts
-              instance={instance}
-              templateData={templateService}
+              instance={ctrl.instance}
+              templateData={ctrl.templateService}
               stackName={stackName}
               instanceId={instanceId}
             />
@@ -349,10 +346,10 @@ function InstanceDetailPage() {
         </TabsContent>
 
         <TabsContent value="files">
-          {templateService && (
+          {ctrl.templateService && (
             <OverrideConfigFiles
-              instance={instance}
-              templateData={templateService}
+              instance={ctrl.instance}
+              templateData={ctrl.templateService}
               stackName={stackName}
               instanceId={instanceId}
             />
@@ -381,8 +378,8 @@ function InstanceDetailPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-            <Button onClick={handleEditSave} disabled={updateInstance.isPending}>
-              {updateInstance.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
+            <Button onClick={handleEditSave} disabled={ctrl.updateInstance.isPending}>
+              {ctrl.updateInstance.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
             </Button>
           </DialogFooter>
         </DialogContent>
