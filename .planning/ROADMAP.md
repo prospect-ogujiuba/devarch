@@ -132,8 +132,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 21-01-PLAN.md — Create orchestration service package (GeneratePlan, ApplyPlan, ResolveWiring)
-- [ ] 21-02-PLAN.md — Refactor handlers to delegate to orchestration service + wire into server
+- [x] 21-01-PLAN.md — Create orchestration service package (GeneratePlan, ApplyPlan, ResolveWiring)
+- [x] 21-02-PLAN.md — Refactor handlers to delegate to orchestration service + wire into server
 
 #### Phase 22: Identity Service & Naming Consolidation
 **Goal**: All naming logic (stack/instance/network/container) consolidated in identity service
@@ -148,8 +148,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 22-01-PLAN.md — Create identity package (naming service, validation, labels)
-- [ ] 22-02-PLAN.md — Migrate all callers to identity package, delete container naming/validation
+- [x] 22-01-PLAN.md — Create identity package (naming service, validation, labels)
+- [x] 22-02-PLAN.md — Migrate all callers to identity package, delete container naming/validation
 
 #### Phase 23: Performance Optimization
 **Goal**: Status/metrics batch retrieval, accurate filtered counts, optimized override queries
@@ -160,10 +160,10 @@ Plans:
   2. X-Total-Count header reflects active filters (category, search term)
   3. Instance list uses aggregated query for override counts (no scalar subquery chain)
   4. Performance tests verify batch operations complete in <100ms for 100 services
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD
+- [ ] 23-01-PLAN.md — Batch service includes, filtered count query, aggregated override counts
 
 #### Phase 24: Frontend Controller Extraction
 **Goal**: Stack/instance/service detail pages delegate orchestration to controller hooks
@@ -252,8 +252,8 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 | 18. WebSocket Authentication & Security Modes | 2/2 | ✓ Complete | 2026-02-11 |
 | 19. API Response Normalization | 4/4 | ✓ Complete | 2026-02-11 |
 | 20. Action Endpoint Consistency & OpenAPI | 2/2 | ✓ Complete | 2026-02-11 |
-| 21. Deploy Orchestration Service | 0/TBD | Not started | - |
-| 22. Identity Service & Naming Consolidation | 0/TBD | Not started | - |
+| 21. Deploy Orchestration Service | 2/2 | ✓ Complete | 2026-02-11 |
+| 22. Identity Service & Naming Consolidation | 2/2 | ✓ Complete | 2026-02-11 |
 | 23. Performance Optimization | 0/TBD | Not started | - |
 | 24. Frontend Controller Extraction | 0/TBD | Not started | - |
 | 25. WebSocket Expansion & Frontend Auth | 0/TBD | Not started | - |
@@ -263,4 +263,4 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-11 — Phase 20 complete*
+*Last updated: 2026-02-11 — Phase 22 complete*
