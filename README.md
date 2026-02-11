@@ -116,12 +116,14 @@ Services declare **export contracts** (what they provide, e.g., "postgres") and 
 
 ### Projects
 
-Scanned from the `apps/` directory. The scanner auto-detects project types:
+Projects represent your application codebases in the `apps/` directory. Each project automatically gets a **backing stack** on creation or scan. The stack is an organizational home — projects that need their own services get full stack capabilities (isolated networking, compose generation, deployment plans, wiring), but a project can also be served by a shared general-purpose container (e.g. a PHP server with apps mounted in) without instantiating any stack services.
+
+The scanner auto-detects project types:
 - **WordPress** — detected via `wp-config.php`, extracts plugins/themes
 - **Laravel** — detected via `artisan` file, extracts dependencies
 - **Custom** — parses `package.json`, `composer.json` for metadata
 
-Projects extract: dependencies, scripts, git info, version, language, framework. Projects can be linked to stacks to manage services through the stack workflow.
+Projects extract: dependencies, scripts, git info, version, language, framework. Projects support full CRUD — create, update, delete — with compose auto-import from project compose files into their backing stack.
 
 ### Categories
 
@@ -184,10 +186,10 @@ Browse and manage the service template catalog. Search by name/image, filter by 
 **Create service** (`/services/new`): form with all fields — name, category, image, tag (with tag picker from registry), restart policy, command, ports, volumes, env vars, dependencies, healthcheck, labels, domains.
 
 ### Projects (`/projects`)
-Browse auto-detected projects from `apps/` directory. Search by name/framework/language. Filter by type or language.
+Browse projects from `apps/` directory. Search by name/framework/language. Filter by type or language. Create new projects with automatic backing stack creation and compose auto-import.
 
 **Project detail** (`/projects/{name}`) tabs:
-- **Services**: stack-linked instances or compose services with status/controls
+- **Services**: backing stack instances with status/controls
 - **Info**: path, type, framework, language, package manager, version, domain, proxy port
 - **Dependencies**: project dependencies by type
 - **Plugins/Themes** (WordPress): installed plugins and themes
@@ -195,7 +197,7 @@ Browse auto-detected projects from `apps/` directory. Search by name/framework/l
 - **Git**: remote URL, branch info
 - **Proxy**: reverse proxy config
 
-**Stack linking**: link a project to a stack to manage its services through the stack workflow.
+Each project gets an auto-created **backing stack**. Projects with their own compose files have services imported into the stack; projects served by shared containers may leave the stack empty.
 
 ### Categories (`/categories`)
 Browse service categories with search, sort (by name, service count, startup order), and status filter.
@@ -384,10 +386,10 @@ All endpoints under `/api/v1/` require `X-API-Key` header (when auth is enabled)
 ### Projects
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET/POST | `/projects` | List / Create |
+| GET/POST | `/projects` | List / Create (auto-creates backing stack + imports compose) |
 | POST | `/projects/scan` | Rescan apps directory |
 | GET/PUT/DELETE | `/projects/{name}` | Get / Update / Delete |
-| GET | `/projects/{name}/services` | Project services |
+| GET | `/projects/{name}/services` | Project services (from backing stack) |
 | GET | `/projects/{name}/status` | Project status |
 | POST | `/projects/{name}/start\|stop\|restart` | Lifecycle |
 | POST | `/projects/{name}/services/{svc}/start\|stop\|restart` | Per-service lifecycle |
