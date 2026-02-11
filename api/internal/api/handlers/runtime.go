@@ -141,12 +141,10 @@ func (h *RuntimeHandler) Switch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if current == req.Runtime {
-		respond.JSON(w, r, http.StatusOK, map[string]interface{}{
-			"message":            fmt.Sprintf("Already running on %s", req.Runtime),
-			"current":            req.Runtime,
-			"previous":           req.Runtime,
-			"no_change_required": true,
-		})
+		respond.Action(w, r, http.StatusOK, "no_change",
+			respond.WithMessage(fmt.Sprintf("Already running on %s", req.Runtime)),
+			respond.WithMetadata("current", req.Runtime),
+		)
 		return
 	}
 
@@ -189,13 +187,13 @@ func (h *RuntimeHandler) Switch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	respond.JSON(w, r, http.StatusOK,map[string]interface{}{
-		"previous":         current,
-		"current":          req.Runtime,
-		"services_stopped": servicesStopped,
-		"config_updated":   configUpdated,
-		"message":          fmt.Sprintf("Successfully switched to %s", req.Runtime),
-	})
+	respond.Action(w, r, http.StatusOK, "switched",
+		respond.WithMessage(fmt.Sprintf("Successfully switched to %s", req.Runtime)),
+		respond.WithMetadata("previous", current),
+		respond.WithMetadata("current", req.Runtime),
+		respond.WithMetadata("services_stopped", servicesStopped),
+		respond.WithMetadata("config_updated", configUpdated),
+	)
 }
 
 type socketStatusResponse struct {
@@ -339,12 +337,11 @@ func (h *RuntimeHandler) SocketStart(w http.ResponseWriter, r *http.Request) {
 		socketPath = "/run/podman/podman.sock"
 	}
 
-	respond.JSON(w, r, http.StatusOK,map[string]interface{}{
-		"type":        req.Type,
-		"socket_path": socketPath,
-		"connectivity": "started",
-		"message":     fmt.Sprintf("%s socket started", strings.ToUpper(req.Type[:1])+req.Type[1:]),
-	})
+	respond.Action(w, r, http.StatusOK, "started",
+		respond.WithMessage(fmt.Sprintf("%s socket started", strings.ToUpper(req.Type[:1])+req.Type[1:])),
+		respond.WithMetadata("type", req.Type),
+		respond.WithMetadata("socket_path", socketPath),
+	)
 }
 
 func execRuntime(runtime string, args ...string) (string, error) {

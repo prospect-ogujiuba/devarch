@@ -781,7 +781,7 @@ func (h *ServiceHandler) Start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "started"})
+	respond.Action(w, r, http.StatusOK, "started")
 }
 
 func (h *ServiceHandler) Stop(w http.ResponseWriter, r *http.Request) {
@@ -813,7 +813,7 @@ func (h *ServiceHandler) Stop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "stopped"})
+	respond.Action(w, r, http.StatusOK, "stopped")
 }
 
 func (h *ServiceHandler) Restart(w http.ResponseWriter, r *http.Request) {
@@ -845,7 +845,7 @@ func (h *ServiceHandler) Restart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "restarted"})
+	respond.Action(w, r, http.StatusOK, "restarted")
 }
 
 func (h *ServiceHandler) Rebuild(w http.ResponseWriter, r *http.Request) {
@@ -886,7 +886,7 @@ func (h *ServiceHandler) Rebuild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "rebuilt"})
+	respond.Action(w, r, http.StatusOK, "rebuilt")
 }
 
 func (h *ServiceHandler) Status(w http.ResponseWriter, r *http.Request) {

@@ -209,7 +209,9 @@ func (h *CategoryHandler) Start(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	respond.JSON(w, r, http.StatusOK,results)
+	respond.Action(w, r, http.StatusOK, "completed",
+		respond.WithMetadata("services", results),
+	)
 }
 
 func (h *CategoryHandler) Stop(w http.ResponseWriter, r *http.Request) {
@@ -261,5 +263,7 @@ func (h *CategoryHandler) Stop(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	respond.JSON(w, r, http.StatusOK,results)
+	respond.Action(w, r, http.StatusOK, "completed",
+		respond.WithMetadata("services", results),
+	)
 }

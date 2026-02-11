@@ -390,30 +390,30 @@ func (h *ProjectHandler) Start(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	output, err := h.controller.Start(r.Context(), name)
 	if err != nil {
-		respond.JSON(w, r, http.StatusInternalServerError, map[string]string{"error": err.Error(), "output": output})
+		respond.InternalError(w, r, err)
 		return
 	}
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "started", "output": output})
+	respond.Action(w, r, http.StatusOK, "started", respond.WithOutput(output))
 }
 
 func (h *ProjectHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	output, err := h.controller.Stop(r.Context(), name)
 	if err != nil {
-		respond.JSON(w, r, http.StatusInternalServerError, map[string]string{"error": err.Error(), "output": output})
+		respond.InternalError(w, r, err)
 		return
 	}
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "stopped", "output": output})
+	respond.Action(w, r, http.StatusOK, "stopped", respond.WithOutput(output))
 }
 
 func (h *ProjectHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	output, err := h.controller.Restart(r.Context(), name)
 	if err != nil {
-		respond.JSON(w, r, http.StatusInternalServerError, map[string]string{"error": err.Error(), "output": output})
+		respond.InternalError(w, r, err)
 		return
 	}
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "restarted", "output": output})
+	respond.Action(w, r, http.StatusOK, "restarted", respond.WithOutput(output))
 }
 
 func (h *ProjectHandler) StartService(w http.ResponseWriter, r *http.Request) {
@@ -423,7 +423,7 @@ func (h *ProjectHandler) StartService(w http.ResponseWriter, r *http.Request) {
 		respond.InternalError(w, r, err)
 		return
 	}
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "started"})
+	respond.Action(w, r, http.StatusOK, "started")
 }
 
 func (h *ProjectHandler) StopService(w http.ResponseWriter, r *http.Request) {
@@ -433,7 +433,7 @@ func (h *ProjectHandler) StopService(w http.ResponseWriter, r *http.Request) {
 		respond.InternalError(w, r, err)
 		return
 	}
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "stopped"})
+	respond.Action(w, r, http.StatusOK, "stopped")
 }
 
 func (h *ProjectHandler) RestartService(w http.ResponseWriter, r *http.Request) {
@@ -443,7 +443,7 @@ func (h *ProjectHandler) RestartService(w http.ResponseWriter, r *http.Request) 
 		respond.InternalError(w, r, err)
 		return
 	}
-	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "restarted"})
+	respond.Action(w, r, http.StatusOK, "restarted")
 }
 
 func (h *ProjectHandler) Status(w http.ResponseWriter, r *http.Request) {
