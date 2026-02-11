@@ -69,7 +69,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 17-01-PLAN.md — Wire ALLOWED_ORIGINS into CORS middleware and WebSocket upgrader
+- [x] 17-01-PLAN.md — Wire ALLOWED_ORIGINS into CORS middleware and WebSocket upgrader
 
 #### Phase 18: WebSocket Authentication & Security Modes
 **Goal**: WebSocket connections authenticate when API auth enabled; security profiles control auth behavior
@@ -241,7 +241,7 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 16. Security Configuration | 1/1 | ✓ Complete | 2026-02-11 |
-| 17. CORS & Origin Hardening | 0/TBD | Not started | - |
+| 17. CORS & Origin Hardening | 1/1 | ✓ Complete | 2026-02-11 |
 | 18. WebSocket Authentication & Security Modes | 0/TBD | Not started | - |
 | 19. API Response Normalization | 0/TBD | Not started | - |
 | 20. Action Endpoint Consistency & OpenAPI | 0/TBD | Not started | - |
@@ -256,4 +256,4 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-11 — Phase 16 complete*
+*Last updated: 2026-02-11 — Phase 17 complete*
