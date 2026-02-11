@@ -46,7 +46,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	allowCredentials := len(allowedOrigins) > 0 && allowedOrigins[0] != "*"
 
 	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	r.Use(mw.RecoverEnvelope)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	// MaxBodySize removed from global scope - applied per-route instead

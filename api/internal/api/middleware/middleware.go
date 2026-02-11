@@ -3,11 +3,13 @@ package middleware
 import (
 	"crypto/subtle"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/security"
 )
 
@@ -38,7 +40,7 @@ func APIKeyAuth(mode security.Mode) func(http.Handler) http.Handler {
 			apiKey := os.Getenv("DEVARCH_API_KEY")
 			provided := r.Header.Get("X-API-Key")
 			if subtle.ConstantTimeCompare([]byte(provided), []byte(apiKey)) != 1 {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				respond.Unauthorized(w, r, "unauthorized")
 				return
 			}
 
@@ -84,7 +86,7 @@ func RateLimit(requestsPerSecond float64, burst int) func(http.Handler) http.Han
 			if !exists {
 				if len(rl.visitors) >= maxVisitors {
 					rl.mu.Unlock()
-					http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
+					respond.Error(w, r, http.StatusTooManyRequests, "rate_limit_exceeded", "rate limit exceeded", nil)
 					return
 				}
 				v = &visitor{tokens: float64(burst)}
@@ -100,7 +102,7 @@ func RateLimit(requestsPerSecond float64, burst int) func(http.Handler) http.Han
 
 			if v.tokens < 1 {
 				rl.mu.Unlock()
-				http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
+				respond.Error(w, r, http.StatusTooManyRequests, "rate_limit_exceeded", "rate limit exceeded", nil)
 				return
 			}
 			v.tokens--
@@ -127,4 +129,16 @@ func MaxBodySize(bytes int64) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+func RecoverEnvelope(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Printf("panic recovered: %v", rec)
+				respond.InternalError(w, r, fmt.Errorf("panic: %v", rec))
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
 }
