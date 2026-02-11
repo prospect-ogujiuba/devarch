@@ -1,0 +1,27 @@
+services:
+  jenkins:
+    image: jenkins/jenkins:lts
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9600:8080
+    - 127.0.0.1:9601:50000
+    environment:
+      JAVA_OPTS: -Xmx512m
+    volumes:
+    - jenkins_data:/var/jenkins_home
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:8080/login || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+    - microservices-net
+    container_name: jenkins
+volumes:
+  jenkins_data: null
+networks:
+  microservices-net:
+    external: true

@@ -1,0 +1,39 @@
+services:
+  vite:
+    image: node:22-alpine
+    ports:
+    - 127.0.0.1:5173:5173
+    - 127.0.0.1:5174:5174
+    - 127.0.0.1:5175:5175
+    - 127.0.0.1:5176:5176
+    - 127.0.0.1:5177:5177
+    - 127.0.0.1:5178:5178
+    - 127.0.0.1:5179:5179
+    - 127.0.0.1:5180:5180
+    - 127.0.0.1:5181:5181
+    - 127.0.0.1:5182:5182
+    working_dir: /app
+    volumes:
+    - vite_node_modules:/app/node_modules
+    command: sh -c "npm install && npx vite --host 0.0.0.0"
+    environment:
+      NODE_ENV: development
+    healthcheck:
+      test:
+      - CMD
+      - sh
+      - -c
+      - wget --spider -q http://localhost:5173/ || exit 0
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+    - microservices-net
+    container_name: vite
+volumes:
+  vite_node_modules: null
+networks:
+  microservices-net:
+    external: true

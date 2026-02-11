@@ -1,0 +1,31 @@
+services:
+  outline:
+    image: outlinewiki/outline:0.81
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:10020:3000
+    environment:
+      SECRET_KEY: devarch-secret-key-minimum-32-chars-long
+      UTILS_SECRET: devarch-utils-secret-min-32-chars
+      DATABASE_URL: postgres://postgres:devarch@postgres:5432/outline
+      REDIS_URL: redis://:devarch@redis:6379
+      URL: http://localhost:10020
+      FILE_STORAGE: local
+    volumes:
+    - outline_data:/var/lib/outline/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:3000/_health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+    - microservices-net
+    container_name: outline
+volumes:
+  outline_data: null
+networks:
+  microservices-net:
+    external: true

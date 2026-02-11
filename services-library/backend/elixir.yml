@@ -1,0 +1,27 @@
+services:
+  elixir:
+    image: elixir:1.17-slim
+    ports:
+    - 127.0.0.1:4040:4000
+    - 127.0.0.1:4041:4001
+    working_dir: /app
+    command: sh -c "mix deps.get && mix phx.server 2>/dev/null || sleep infinity"
+    environment:
+      MIX_ENV: dev
+    healthcheck:
+      test:
+      - CMD
+      - sh
+      - -c
+      - curl -f http://localhost:4000/ || exit 0
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+    - microservices-net
+    container_name: elixir
+networks:
+  microservices-net:
+    external: true

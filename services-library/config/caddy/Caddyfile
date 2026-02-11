@@ -1,0 +1,20 @@
+# DevArch Caddy Configuration
+
+{
+	admin 0.0.0.0:2019
+	auto_https off
+}
+
+:80 {
+	respond /health "OK" 200
+
+	# Reverse proxy to backend application
+	# reverse_proxy /api/* app:8080
+
+	respond "devarch caddy is running" 200
+}
+
+:443 {
+	respond /health "OK" 200
+	respond "devarch caddy https is running" 200
+}

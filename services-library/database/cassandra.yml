@@ -1,0 +1,29 @@
+services:
+  cassandra:
+    image: cassandra:5
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9042:9042
+    - 127.0.0.1:7000:7000
+    environment:
+      CASSANDRA_CLUSTER_NAME: devarch
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 128M
+    volumes:
+    - cassandra_data:/var/lib/cassandra
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - cqlsh -e "SELECT now() FROM system.local"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+    - microservices-net
+    container_name: cassandra
+volumes:
+  cassandra_data: null
+networks:
+  microservices-net:
+    external: true

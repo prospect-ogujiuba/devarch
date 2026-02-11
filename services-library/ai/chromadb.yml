@@ -1,0 +1,27 @@
+services:
+  chromadb:
+    image: chromadb/chroma:1.4
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8901:8000
+    environment:
+      ANONYMIZED_TELEMETRY: 'false'
+      IS_PERSISTENT: 'true'
+    volumes:
+    - chromadb_data:/chroma/chroma
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:8000/api/v1/heartbeat
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: chromadb
+volumes:
+  chromadb_data: null
+networks:
+  microservices-net:
+    external: true

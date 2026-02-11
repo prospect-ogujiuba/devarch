@@ -1,0 +1,27 @@
+services:
+  wikijs:
+    image: ghcr.io/requarks/wiki:2
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:10000:3000
+    environment:
+      DB_TYPE: postgres
+      DB_HOST: postgres
+      DB_PORT: '5432'
+      DB_USER: postgres
+      DB_PASS: devarch
+      DB_NAME: wikijs
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:3000/healthz || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+    - microservices-net
+    container_name: wikijs
+networks:
+  microservices-net:
+    external: true

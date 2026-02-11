@@ -1,0 +1,25 @@
+services:
+  portainer:
+    image: portainer/portainer-ce:lts
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9002:9000
+    - 127.0.0.1:9443:9443
+    volumes:
+    - portainer_data:/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:9000/ || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: portainer
+volumes:
+  portainer_data: null
+networks:
+  microservices-net:
+    external: true

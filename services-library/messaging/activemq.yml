@@ -1,0 +1,29 @@
+services:
+  activemq:
+    image: apache/activemq-artemis:2.42
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8161:8161
+    - 127.0.0.1:61616:61616
+    - 127.0.0.1:5673:5672
+    environment:
+      ARTEMIS_USER: admin
+      ARTEMIS_PASSWORD: devarch
+    volumes:
+    - activemq_data:/var/lib/artemis-instance
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:8161/console/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: activemq
+volumes:
+  activemq_data: null
+networks:
+  microservices-net:
+    external: true

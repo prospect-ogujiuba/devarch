@@ -1,0 +1,20 @@
+services:
+  krakend-designer:
+    image: devopsfaith/krakendesigner:1.0
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:4006:80
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:80/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: krakend-designer
+networks:
+  microservices-net:
+    external: true

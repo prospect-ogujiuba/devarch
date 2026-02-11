@@ -1,0 +1,28 @@
+services:
+  edgedb:
+    image: edgedb/edgedb:5
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:5656:5656
+    environment:
+      EDGEDB_SERVER_SECURITY: insecure_dev_mode
+      EDGEDB_SERVER_PASSWORD: devarch
+    volumes:
+    - edgedb_data:/var/lib/edgedb/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - edgedb --port 5656 --tls-security insecure --password-from-stdin query 'SELECT
+        1' <<< devarch
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+    - microservices-net
+    container_name: edgedb
+volumes:
+  edgedb_data: null
+networks:
+  microservices-net:
+    external: true

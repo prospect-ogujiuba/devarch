@@ -1,0 +1,25 @@
+services:
+  devarch-api:
+    image: golang:1.23-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "go run ./cmd/server"
+    ports:
+    - 127.0.0.1:8550:8550
+    environment:
+      PORT: '8550'
+      DATABASE_URL: postgres://postgres:devarch@postgres:5432/devarch?sslmode=disable
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:8550/api/v1/health || exit 0
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: devarch-api
+networks:
+  microservices-net:
+    external: true

@@ -1,0 +1,33 @@
+services:
+  zulip:
+    image: zulip/docker-zulip:9.3
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:10230:80
+    - 127.0.0.1:10231:443
+    environment:
+      SETTING_EXTERNAL_HOST: localhost:10230
+      SETTING_ZULIP_ADMINISTRATOR: admin@devarch.test
+      SECRETS_email_password: devarch
+      SECRETS_rabbitmq_password: devarch
+      SECRETS_postgres_password: devarch
+      SECRETS_secret_key: devarch-secret-key
+      DISABLE_HTTPS: 'true'
+    volumes:
+    - zulip_data:/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:80/api/v1/server_settings || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+    - microservices-net
+    container_name: zulip
+volumes:
+  zulip_data: null
+networks:
+  microservices-net:
+    external: true

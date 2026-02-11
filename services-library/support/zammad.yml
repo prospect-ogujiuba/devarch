@@ -1,0 +1,31 @@
+services:
+  zammad:
+    image: zammad/zammad-docker-compose:6.4
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9850:8080
+    environment:
+      POSTGRESQL_HOST: postgres
+      POSTGRESQL_USER: postgres
+      POSTGRESQL_PASS: devarch
+      POSTGRESQL_DB: zammad
+      MEMCACHE_SERVERS: memcached:11211
+      REDIS_URL: redis://:devarch@redis:6379
+    volumes:
+    - zammad_data:/opt/zammad/storage
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:8080/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+    - microservices-net
+    container_name: zammad
+volumes:
+  zammad_data: null
+networks:
+  microservices-net:
+    external: true

@@ -1,0 +1,26 @@
+services:
+  harbor-core:
+    image: goharbor/harbor-core:v2.11.0
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9800:8080
+    environment:
+      CONFIG_PATH: /etc/core/app.conf
+    volumes:
+    - harbor_core_data:/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:8080/api/v2.0/ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: harbor-core
+volumes:
+  harbor_core_data: null
+networks:
+  microservices-net:
+    external: true

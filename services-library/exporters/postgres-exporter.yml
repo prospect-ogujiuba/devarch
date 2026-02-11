@@ -1,0 +1,22 @@
+services:
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.16
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9187:9187
+    environment:
+      DATA_SOURCE_NAME: postgresql://postgres:devarch@postgres:5432/postgres?sslmode=disable
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:9187/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: postgres-exporter
+networks:
+  microservices-net:
+    external: true

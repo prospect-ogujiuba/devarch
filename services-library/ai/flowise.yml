@@ -1,0 +1,27 @@
+services:
+  flowise:
+    image: flowiseai/flowise:3.0
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:3033:3000
+    environment:
+      FLOWISE_USERNAME: admin
+      FLOWISE_PASSWORD: devarch
+    volumes:
+    - flowise_data:/root/.flowise
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:3000/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: flowise
+volumes:
+  flowise_data: null
+networks:
+  microservices-net:
+    external: true

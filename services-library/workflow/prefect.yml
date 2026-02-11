@@ -1,0 +1,27 @@
+services:
+  prefect:
+    image: prefecthq/prefect:3-latest
+    restart: unless-stopped
+    command: prefect server start --host 0.0.0.0
+    ports:
+    - 127.0.0.1:9920:4200
+    environment:
+      PREFECT_API_URL: http://localhost:9920/api
+    volumes:
+    - prefect_data:/root/.prefect
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:4200/api/health
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: prefect
+volumes:
+  prefect_data: null
+networks:
+  microservices-net:
+    external: true

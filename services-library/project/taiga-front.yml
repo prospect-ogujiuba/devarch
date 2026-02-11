@@ -1,0 +1,21 @@
+services:
+  taiga-front:
+    image: taigaio/taiga-front:6
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9212:80
+    environment:
+      TAIGA_URL: http://localhost:9212
+      TAIGA_WEBSOCKETS_URL: ws://localhost:9212
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: taiga-front
+networks:
+  microservices-net:
+    external: true

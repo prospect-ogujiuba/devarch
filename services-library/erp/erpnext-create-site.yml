@@ -1,0 +1,14 @@
+services:
+  erpnext-create-site:
+    image: frappe/erpnext:v15
+    restart: 'no'
+    command: |
+      bench new-site frontend --mariadb-root-password=devarch --install-app erpnext --admin-password=devarch
+    environment:
+      DB_HOST: mariadb
+    networks:
+    - microservices-net
+    container_name: erpnext-create-site
+networks:
+  microservices-net:
+    external: true

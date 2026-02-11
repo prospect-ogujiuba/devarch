@@ -1,0 +1,34 @@
+# DevArch Apache APISIX Configuration
+
+apisix:
+  node_listen: 9080
+  enable_ipv6: false
+  enable_control: true
+  control:
+    ip: "0.0.0.0"
+    port: 9092
+
+deployment:
+  role: traditional
+  role_traditional:
+    config_provider: etcd
+  admin:
+    admin_key:
+      - name: "admin"
+        key: devarch-apisix-admin-key
+        role: admin
+    enable_admin_cors: true
+    allow_admin:
+      - 0.0.0.0/0
+
+etcd:
+  host:
+    - "http://etcd:2379"
+  prefix: "/apisix"
+  timeout: 30
+
+plugin_attr:
+  prometheus:
+    export_addr:
+      ip: "0.0.0.0"
+      port: 9091

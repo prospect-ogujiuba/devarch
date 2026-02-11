@@ -1,0 +1,20 @@
+services:
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.25
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9115:9115
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:9115/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: blackbox-exporter
+networks:
+  microservices-net:
+    external: true

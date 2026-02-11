@@ -1,0 +1,33 @@
+services:
+  traefik:
+    image: traefik:v3.2
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:4001:80
+    - 127.0.0.1:4443:443
+    - 127.0.0.1:4880:8080
+    command:
+    - --api.dashboard=true
+    - --api.insecure=true
+    - --entrypoints.web.address=:80
+    - --entrypoints.websecure.address=:443
+    - --providers.docker=true
+    - --providers.docker.exposedbydefault=false
+    volumes:
+    - traefik_data:/etc/traefik
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:8080/ping || traefik healthcheck --ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: traefik
+volumes:
+  traefik_data: null
+networks:
+  microservices-net:
+    external: true

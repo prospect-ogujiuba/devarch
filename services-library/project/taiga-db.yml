@@ -1,0 +1,26 @@
+services:
+  taiga-db:
+    image: postgres:12
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: taiga
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: devarch
+    volumes:
+    - taiga_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U postgres
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: taiga-db
+volumes:
+  taiga_db_data: null
+networks:
+  microservices-net:
+    external: true

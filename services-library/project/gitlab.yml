@@ -1,0 +1,32 @@
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:17.7
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8929:80
+    - 127.0.0.1:2224:22
+    environment:
+      GITLAB_OMNIBUS_CONFIG: external_url 'http://localhost:8929'; gitlab_rails['initial_root_password']
+        = 'devarch123'
+    volumes:
+    - gitlab_config:/etc/gitlab
+    - gitlab_data:/var/opt/gitlab
+    - gitlab_logs:/var/log/gitlab
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:80/-/readiness || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    networks:
+    - microservices-net
+    container_name: gitlab
+volumes:
+  gitlab_config: null
+  gitlab_data: null
+  gitlab_logs: null
+networks:
+  microservices-net:
+    external: true

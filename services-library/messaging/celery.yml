@@ -1,0 +1,24 @@
+services:
+  celery:
+    image: python:3.12-slim
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:5555:5555
+    command: bash -c "pip install celery[redis] flower && celery -A tasks flower --port=5555"
+    environment:
+      CELERY_BROKER_URL: redis://:devarch@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:devarch@redis:6379/1
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:5555/ || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: celery
+networks:
+  microservices-net:
+    external: true

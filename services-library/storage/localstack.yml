@@ -1,0 +1,28 @@
+services:
+  localstack:
+    image: localstack/localstack:4.0
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9520:4566
+    - 127.0.0.1:9521:4510-4559
+    environment:
+      SERVICES: s3,sqs,sns,dynamodb,lambda
+      DEBUG: '0'
+    volumes:
+    - localstack_data:/var/lib/localstack
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:4566/_localstack/health
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: localstack
+volumes:
+  localstack_data: null
+networks:
+  microservices-net:
+    external: true

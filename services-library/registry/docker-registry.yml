@@ -1,0 +1,24 @@
+services:
+  docker-registry:
+    image: registry:2
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9830:5000
+    volumes:
+    - registry_data:/var/lib/registry
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:5000/v2/ || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: docker-registry
+volumes:
+  registry_data: null
+networks:
+  microservices-net:
+    external: true

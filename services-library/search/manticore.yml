@@ -1,0 +1,25 @@
+services:
+  manticore:
+    image: manticoresearch/manticore:6.3
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9306:9306
+    - 127.0.0.1:9307:9308
+    volumes:
+    - manticore_data:/var/lib/manticore
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:9308/cli?query=show+status
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: manticore
+volumes:
+  manticore_data: null
+networks:
+  microservices-net:
+    external: true

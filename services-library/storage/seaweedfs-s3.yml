@@ -1,0 +1,24 @@
+services:
+  seaweedfs-s3:
+    image: chrislusf/seaweedfs:3.80
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9513:8333
+    command: s3 -filer=seaweedfs-filer:8888
+    depends_on:
+      seaweedfs-filer:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:8333/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: seaweedfs-s3
+networks:
+  microservices-net:
+    external: true

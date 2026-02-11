@@ -1,0 +1,22 @@
+services:
+  harbor-jobservice:
+    image: goharbor/harbor-jobservice:v2.11.0
+    restart: unless-stopped
+    volumes:
+    - harbor_jobservice_data:/var/log/jobs
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - echo ok
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: harbor-jobservice
+volumes:
+  harbor_jobservice_data: null
+networks:
+  microservices-net:
+    external: true

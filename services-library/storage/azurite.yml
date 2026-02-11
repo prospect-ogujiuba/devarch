@@ -1,0 +1,28 @@
+services:
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.33
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9540:10000
+    - 127.0.0.1:9541:10001
+    - 127.0.0.1:9542:10002
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 -l
+      /data
+    volumes:
+    - azurite_data:/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - nc -z 127.0.0.1 10000
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: azurite
+volumes:
+  azurite_data: null
+networks:
+  microservices-net:
+    external: true

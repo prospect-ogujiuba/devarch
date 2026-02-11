@@ -1,0 +1,28 @@
+services:
+  taiga-back:
+    image: taigaio/taiga-back:6
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: taiga-db
+      POSTGRES_DB: taiga
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: devarch
+      TAIGA_SECRET_KEY: devarch-secret-key
+      TAIGA_SITES_DOMAIN: localhost:9212
+      TAIGA_SITES_SCHEME: http
+    volumes:
+    - taiga_back_data:/taiga-back/media
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+    - microservices-net
+    container_name: taiga-back
+volumes:
+  taiga_back_data: null
+networks:
+  microservices-net:
+    external: true

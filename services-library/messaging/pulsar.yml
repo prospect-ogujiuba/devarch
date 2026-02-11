@@ -1,0 +1,26 @@
+services:
+  pulsar:
+    image: apachepulsar/pulsar:3.3
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:6650:6650
+    - 127.0.0.1:8281:8080
+    command: bin/pulsar standalone
+    volumes:
+    - pulsar_data:/pulsar/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:8080/admin/v2/brokers/healthcheck
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: pulsar
+volumes:
+  pulsar_data: null
+networks:
+  microservices-net:
+    external: true

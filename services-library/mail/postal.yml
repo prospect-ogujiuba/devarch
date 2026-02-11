@@ -1,0 +1,28 @@
+services:
+  postal:
+    image: ghcr.io/postalserver/postal:3.0
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8127:5000
+    environment:
+      POSTAL_FNAME: Admin
+      POSTAL_LNAME: User
+      POSTAL_EMAIL: admin@devarch.test
+    volumes:
+    - postal_data:/opt/postal/config
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:5000/ || exit 0
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: postal
+volumes:
+  postal_data: null
+networks:
+  microservices-net:
+    external: true

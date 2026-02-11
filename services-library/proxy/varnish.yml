@@ -1,0 +1,28 @@
+services:
+  varnish:
+    image: varnish:stable
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8008:80
+    - 127.0.0.1:8009:6082
+    environment:
+      VARNISH_SIZE: 256m
+    volumes:
+    - varnish_data:/var/lib/varnish
+    healthcheck:
+      test:
+      - CMD
+      - varnishadm
+      - ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: varnish
+volumes:
+  varnish_data: null
+networks:
+  microservices-net:
+    external: true

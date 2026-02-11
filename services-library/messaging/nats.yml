@@ -1,0 +1,27 @@
+services:
+  nats:
+    image: nats:2.12
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:4222:4222
+    - 127.0.0.1:8222:8222
+    - 127.0.0.1:6222:6222
+    command: --jetstream --store_dir /data -m 8222
+    volumes:
+    - nats_data:/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:8222/healthz
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+    - microservices-net
+    container_name: nats
+volumes:
+  nats_data: null
+networks:
+  microservices-net:
+    external: true

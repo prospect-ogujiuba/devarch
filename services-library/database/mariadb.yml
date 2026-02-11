@@ -1,0 +1,29 @@
+services:
+  mariadb:
+    image: mariadb:11
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8501:3306
+    environment:
+      MARIADB_ROOT_PASSWORD: devarch
+      MARIADB_DATABASE: devarch
+    volumes:
+    - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test:
+      - CMD
+      - healthcheck.sh
+      - --connect
+      - --innodb_initialized
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+    - microservices-net
+    container_name: mariadb
+volumes:
+  mariadb_data: null
+networks:
+  microservices-net:
+    external: true

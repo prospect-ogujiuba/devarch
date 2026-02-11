@@ -1,0 +1,25 @@
+services:
+  seaweedfs-master:
+    image: chrislusf/seaweedfs:3.80
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9510:9333
+    command: master -ip=seaweedfs-master -ip.bind=0.0.0.0
+    volumes:
+    - seaweedfs_master_data:/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:9333/cluster/status
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: seaweedfs-master
+volumes:
+  seaweedfs_master_data: null
+networks:
+  microservices-net:
+    external: true

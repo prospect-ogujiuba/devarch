@@ -1,0 +1,31 @@
+services:
+  temporal-server:
+    image: temporalio/auto-setup:1.26
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9931:7233
+    environment:
+      DB: postgres12
+      DB_PORT: '5432'
+      POSTGRES_USER: postgres
+      POSTGRES_PWD: devarch
+      POSTGRES_SEEDS: postgres
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+    volumes:
+    - temporal_data:/etc/temporal
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - tctl --address temporal-server:7233 cluster health
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: temporal-server
+volumes:
+  temporal_data: null
+networks:
+  microservices-net:
+    external: true

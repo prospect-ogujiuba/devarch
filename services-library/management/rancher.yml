@@ -1,0 +1,27 @@
+services:
+  rancher:
+    image: rancher/rancher:v2.10
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9006:80
+    - 127.0.0.1:9446:443
+    environment:
+      CATTLE_BOOTSTRAP_PASSWORD: devarch
+    volumes:
+    - rancher_data:/var/lib/rancher
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -fk https://localhost:443/ping || exit 0
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+    - microservices-net
+    container_name: rancher
+volumes:
+  rancher_data: null
+networks:
+  microservices-net:
+    external: true

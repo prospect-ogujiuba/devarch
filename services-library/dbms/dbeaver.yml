@@ -1,0 +1,24 @@
+services:
+  dbeaver:
+    image: dbeaver/cloudbeaver:24.3
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8611:8978
+    volumes:
+    - dbeaver_data:/opt/cloudbeaver/workspace
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:8978/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: dbeaver
+volumes:
+  dbeaver_data: null
+networks:
+  microservices-net:
+    external: true

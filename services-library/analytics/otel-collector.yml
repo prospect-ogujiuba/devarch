@@ -1,0 +1,21 @@
+networks:
+  microservices-net:
+    external: true
+services:
+  otel-collector:
+    container_name: otel-collector
+    image: otel/opentelemetry-collector-contrib:0.117.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:8889:8889"
+      - "127.0.0.1:13133:13133"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:13133"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - microservices-net

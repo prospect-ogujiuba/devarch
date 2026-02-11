@@ -1,0 +1,27 @@
+services:
+  couchdb:
+    image: couchdb:3
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:5984:5984
+    environment:
+      COUCHDB_USER: admin
+      COUCHDB_PASSWORD: devarch
+    volumes:
+    - couchdb_data:/opt/couchdb/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:5984/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: couchdb
+volumes:
+  couchdb_data: null
+networks:
+  microservices-net:
+    external: true

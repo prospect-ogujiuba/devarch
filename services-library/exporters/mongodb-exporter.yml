@@ -1,0 +1,22 @@
+services:
+  mongodb-exporter:
+    image: bitnami/mongodb-exporter:0.43
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9216:9216
+    environment:
+      MONGODB_URI: mongodb://root:devarch@mongodb:27017
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:9216/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: mongodb-exporter
+networks:
+  microservices-net:
+    external: true

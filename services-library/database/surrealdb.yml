@@ -1,0 +1,25 @@
+services:
+  surrealdb:
+    image: surrealdb/surrealdb:v2.6
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:8507:8000
+    command: start --user root --pass devarch file:/data/database.db
+    volumes:
+    - surrealdb_data:/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:8000/health
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: surrealdb
+volumes:
+  surrealdb_data: null
+networks:
+  microservices-net:
+    external: true

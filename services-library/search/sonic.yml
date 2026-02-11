@@ -1,0 +1,24 @@
+services:
+  sonic:
+    image: valeriansaliou/sonic:v1.4.9
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:1491:1491
+    volumes:
+    - sonic_data:/var/lib/sonic/store
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - echo PING | nc localhost 1491 | grep -q PONG
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: sonic
+volumes:
+  sonic_data: null
+networks:
+  microservices-net:
+    external: true

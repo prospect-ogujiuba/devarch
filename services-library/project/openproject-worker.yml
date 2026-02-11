@@ -1,0 +1,19 @@
+services:
+  openproject-worker:
+    image: openproject/openproject:15
+    restart: unless-stopped
+    command: ./docker/prod/worker
+    environment:
+      OPENPROJECT_SECRET_KEY_BASE: devarch-secret-key-base-minimum-length
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: openproject-worker
+networks:
+  microservices-net:
+    external: true

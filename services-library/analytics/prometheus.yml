@@ -1,0 +1,22 @@
+networks:
+  microservices-net:
+    external: true
+volumes:
+  prometheus_data:
+services:
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:v3.5
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - microservices-net

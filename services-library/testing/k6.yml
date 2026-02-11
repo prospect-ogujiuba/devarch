@@ -1,0 +1,25 @@
+services:
+  k6:
+    image: grafana/k6:0.55
+    restart: 'no'
+    command: run --out json=/results/output.json /scripts/test.js
+    ports:
+    - 127.0.0.1:10110:6565
+    volumes:
+    - k6_results:/results
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - k6 version
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: k6
+volumes:
+  k6_results: null
+networks:
+  microservices-net:
+    external: true

@@ -1,0 +1,23 @@
+services:
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.67
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:9121:9121
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD: devarch
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:9121/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+    - microservices-net
+    container_name: redis-exporter
+networks:
+  microservices-net:
+    external: true

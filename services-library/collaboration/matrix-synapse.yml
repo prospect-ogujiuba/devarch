@@ -1,0 +1,27 @@
+services:
+  matrix-synapse:
+    image: matrixdotorg/synapse:v1.146
+    restart: unless-stopped
+    ports:
+    - 127.0.0.1:10241:8008
+    environment:
+      SYNAPSE_SERVER_NAME: localhost
+      SYNAPSE_REPORT_STATS: 'no'
+    volumes:
+    - synapse_data:/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:8008/_matrix/client/versions || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+    - microservices-net
+    container_name: matrix-synapse
+volumes:
+  synapse_data: null
+networks:
+  microservices-net:
+    external: true
