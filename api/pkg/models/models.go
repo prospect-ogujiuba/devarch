@@ -69,7 +69,8 @@ func (n *NullableJSON) Scan(value interface{}) error {
 	n.Valid = true
 	switch v := value.(type) {
 	case []byte:
-		n.Data = json.RawMessage(v)
+		n.Data = make(json.RawMessage, len(v))
+		copy(n.Data, v)
 	case string:
 		n.Data = json.RawMessage(v)
 	}
