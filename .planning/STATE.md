@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 ## Current Position
 
-Phase: 20 of 28 (in progress)
-Plan: 01 of 02 complete
-Status: Phase 20-01 complete
-Last activity: 2026-02-11 — Completed Phase 20-01 Action Endpoint Consistency
+Phase: 20 of 28 (complete)
+Plan: 02 of 02 complete
+Status: Phase 20 complete
+Last activity: 2026-02-11 — Completed Phase 20-02 OpenAPI Spec & CI Validation
 
-Progress: Phases 16-19 complete, Phase 20 in progress (1/2 plans)
+Progress: Phases 16-20 complete
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) + 2 (v1.1.3) + 4 (v1.1.4) + 1 (v1.1.5) = 53
-- Average duration: ~4.8 minutes per plan
-- Total execution time: ~4.12 hours
+- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) + 2 (v1.1.3) + 4 (v1.1.4) + 2 (v1.1.5) = 54
+- Average duration: ~5.0 minutes per plan
+- Total execution time: ~4.27 hours
 
 **By Phase:**
 
@@ -33,7 +33,7 @@ Progress: Phases 16-19 complete, Phase 20 in progress (1/2 plans)
 | v1.1.2 (17) | 1 | 98s | 98s |
 | v1.1.3 (18) | 2 | 302s | 151s |
 | v1.1.4 (19) | 4 | 1392s | 348s |
-| v1.1.5 (20) | 1 | 240s | 240s |
+| v1.1.5 (20) | 2 | 760s | 380s |
 
 **Recent Trend:**
 - v1.0 shipped successfully on 2026-02-09
@@ -50,6 +50,7 @@ Progress: Phases 16-19 complete, Phase 20 in progress (1/2 plans)
 | Phase 19 P03 | 448 | 1 task (partial) | 5 files |
 | Phase 19 P04 | 649 | 2 tasks | 11 files |
 | Phase 20 P01 | 240 | 2 tasks | 11 files |
+| Phase 20 P02 | 520 | 2 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ Recent decisions affecting current work:
 - [Phase 19-01]: RecoverEnvelope replaces chi Recoverer for JSON panic responses
 - [Phase 19-02]: ExportStack YAML response remains exempt from envelope (retains application/x-yaml content-type)
 - [Phase 19-04]: Auth Validate endpoint returns JSON envelope {"valid": true} instead of empty 204 for parseable client responses
+- [Phase 20-02]: Partial annotation strategy — 35 core endpoints annotated (stacks, auth, status, nginx, websocket). Remaining 45+ endpoints (services, instances, projects) can be added incrementally.
+- [Phase 20-02]: Envelope response syntax uses swaggo nested `respond.SuccessEnvelope{data=TYPE}` for data and `{data=respond.ActionResponse}` for actions
 
 ### Pending Todos
 
@@ -84,9 +87,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed Phase 20-01 Action Endpoint Consistency
+Stopped at: Completed Phase 20-02 OpenAPI Spec & CI Validation
 Resume file: None
-Next: Continue with Phase 20-02
+Next: Phase 20 complete — proceed to next phase
 
 ---
 *Last updated: 2026-02-11*
