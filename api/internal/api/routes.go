@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -33,17 +34,27 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 		}
 	}
 
+	// Read ALLOWED_ORIGINS from env var (default wildcard for dev-friendly behavior)
+	allowedOrigins := []string{"*"}
+	if envVal := os.Getenv("ALLOWED_ORIGINS"); envVal != "" {
+		allowedOrigins = strings.Split(envVal, ",")
+		for i := range allowedOrigins {
+			allowedOrigins[i] = strings.TrimSpace(allowedOrigins[i])
+		}
+	}
+	allowCredentials := len(allowedOrigins) > 0 && allowedOrigins[0] != "*"
+
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	// MaxBodySize removed from global scope - applied per-route instead
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-API-Key"},
 		ExposedHeaders:   []string{"Link", "X-Total-Count", "X-Page", "X-Per-Page", "X-Total-Pages"},
-		AllowCredentials: false,
+		AllowCredentials: allowCredentials,
 		MaxAge:           300,
 	}))
 
@@ -51,7 +62,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	categoryHandler := handlers.NewCategoryHandler(db, containerClient, podmanClient)
 	statusHandler := handlers.NewStatusHandler(db, podmanClient, syncManager)
 	registryHandler := handlers.NewRegistryHandler(db, registryManager)
-	wsHandler := handlers.NewWebSocketHandler(syncManager)
+	wsHandler := handlers.NewWebSocketHandler(syncManager, allowedOrigins)
 	projectHandler := handlers.NewProjectHandler(db, projectScanner, projectController, containerClient)
 	runtimeHandler := handlers.NewRuntimeHandler(containerClient, podmanClient)
 	nginxHandler := handlers.NewNginxHandler(nginxGenerator, containerClient)
