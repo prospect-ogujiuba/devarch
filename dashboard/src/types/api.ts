@@ -343,17 +343,6 @@ export interface SocketStatus {
   }
 }
 
-export interface ProjectService {
-  id: number
-  project_id: number
-  service_name: string
-  container_name?: string
-  image?: string
-  service_type?: string
-  ports: string[]
-  depends_on: string[]
-}
-
 export interface ProjectServiceStatus {
   name: string
   status: string
@@ -382,8 +371,10 @@ export interface Project {
   scripts: Record<string, string>
   git_remote?: string
   git_branch?: string
-  stack_id?: number
-  stack_name?: string
+  stack_id: number
+  stack_name: string
+  instance_count: number
+  running_count: number
   last_scanned_at?: string
   created_at: string
   updated_at: string
@@ -403,6 +394,8 @@ export interface Stack {
   instance_count: number
   running_count: number
   network_active: boolean
+  project_id?: number
+  project_name?: string
   created_at: string
   updated_at: string
   deleted_at?: string | null

@@ -92,6 +92,8 @@ type stackResponse struct {
 	InstanceCount int       `json:"instance_count"`
 	RunningCount  int       `json:"running_count"`
 	NetworkActive bool      `json:"network_active"`
+	ProjectID     *int      `json:"project_id,omitempty"`
+	ProjectName   *string   `json:"project_name,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }
@@ -177,11 +179,14 @@ func (h *StackHandler) List(w http.ResponseWriter, r *http.Request) {
 			s.enabled,
 			s.created_at,
 			s.updated_at,
-			COUNT(si.id) AS instance_count
+			COUNT(si.id) AS instance_count,
+			s.project_id,
+			p.name AS project_name
 		FROM stacks s
 		LEFT JOIN service_instances si ON si.stack_id = s.id AND si.deleted_at IS NULL
+		LEFT JOIN projects p ON p.id = s.project_id
 		WHERE s.deleted_at IS NULL
-		GROUP BY s.id
+		GROUP BY s.id, p.name
 		ORDER BY s.name ASC
 	`
 
@@ -204,6 +209,8 @@ func (h *StackHandler) List(w http.ResponseWriter, r *http.Request) {
 			&stack.CreatedAt,
 			&stack.UpdatedAt,
 			&stack.InstanceCount,
+			&stack.ProjectID,
+			&stack.ProjectName,
 		)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to scan stack: %v", err), http.StatusInternalServerError)
@@ -239,11 +246,14 @@ func (h *StackHandler) Get(w http.ResponseWriter, r *http.Request) {
 			s.enabled,
 			s.created_at,
 			s.updated_at,
-			COUNT(si.id) AS instance_count
+			COUNT(si.id) AS instance_count,
+			s.project_id,
+			p.name AS project_name
 		FROM stacks s
 		LEFT JOIN service_instances si ON si.stack_id = s.id AND si.deleted_at IS NULL
+		LEFT JOIN projects p ON p.id = s.project_id
 		WHERE s.name = $1 AND s.deleted_at IS NULL
-		GROUP BY s.id
+		GROUP BY s.id, p.name
 	`, name).Scan(
 		&stack.ID,
 		&stack.Name,
@@ -253,6 +263,8 @@ func (h *StackHandler) Get(w http.ResponseWriter, r *http.Request) {
 		&stack.CreatedAt,
 		&stack.UpdatedAt,
 		&stack.InstanceCount,
+		&stack.ProjectID,
+		&stack.ProjectName,
 	)
 
 	if err == sql.ErrNoRows {
@@ -325,9 +337,10 @@ func (h *StackHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	var stackID int
+	var projectID *int
 	err := h.db.QueryRow(`
-		SELECT id FROM stacks WHERE name = $1 AND deleted_at IS NULL
-	`, name).Scan(&stackID)
+		SELECT id, project_id FROM stacks WHERE name = $1 AND deleted_at IS NULL
+	`, name).Scan(&stackID, &projectID)
 
 	if err == sql.ErrNoRows {
 		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
@@ -335,6 +348,11 @@ func (h *StackHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if projectID != nil {
+		http.Error(w, "this stack is managed by a project — delete the project instead", http.StatusConflict)
 		return
 	}
 
@@ -691,19 +709,32 @@ func (h *StackHandler) cloneInstancesWithOverrides(tx *sql.Tx, sourceStackName s
 func (h *StackHandler) Clone(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
+	var projectID *int
+	err := h.db.QueryRow(`SELECT project_id FROM stacks WHERE name = $1 AND deleted_at IS NULL`, name).Scan(&projectID)
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if projectID != nil {
+		http.Error(w, "clone is not supported for project-backed stacks", http.StatusConflict)
+		return
+	}
+
 	var req cloneRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	// Validate new name
 	if err := container.ValidateName(req.Name); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Compute network_name for cloned stack (not copied from source)
 	newNetworkName := container.NetworkName(req.Name)
 
 	// Begin transaction
@@ -779,19 +810,32 @@ type renameRequest struct {
 func (h *StackHandler) Rename(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
+	var projectID *int
+	err := h.db.QueryRow(`SELECT project_id FROM stacks WHERE name = $1 AND deleted_at IS NULL`, name).Scan(&projectID)
+	if err == sql.ErrNoRows {
+		http.Error(w, fmt.Sprintf("stack %q not found", name), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get stack: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if projectID != nil {
+		http.Error(w, "rename is not supported for project-backed stacks", http.StatusConflict)
+		return
+	}
+
 	var req renameRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	// Validate new name
 	if err := container.ValidateName(req.Name); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Compute network_name for renamed stack
 	newNetworkName := container.NetworkName(req.Name)
 
 	// Begin transaction - rename is clone + soft-delete in single tx

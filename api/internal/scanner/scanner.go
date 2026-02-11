@@ -866,13 +866,26 @@ func detectServiceType(name, image string) string {
 func (s *Scanner) upsert(p ProjectInfo) error {
 	now := time.Now()
 
-	var projectID int
+	networkName := "devarch-" + p.Name + "-net"
+	var stackID int
 	err := s.db.QueryRow(`
+		INSERT INTO stacks (name, network_name, source)
+		VALUES ($1, $2, 'project-scan')
+		ON CONFLICT (name) WHERE deleted_at IS NULL DO UPDATE SET updated_at = NOW()
+		RETURNING id
+	`, p.Name, networkName).Scan(&stackID)
+	if err != nil {
+		return fmt.Errorf("ensure stack for project %s: %w", p.Name, err)
+	}
+
+	var projectID int
+	err = s.db.QueryRow(`
 		INSERT INTO projects (name, path, project_type, framework, language, package_manager,
 			description, version, license, entry_point, has_frontend, frontend_framework,
 			dependencies, scripts, git_remote, git_branch, compose_path, service_count,
-			last_scanned_at, created_at, updated_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+			stack_id, last_scanned_at, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
+			$19,$20,$21,$22)
 		ON CONFLICT (name) DO UPDATE SET
 			path=EXCLUDED.path, project_type=EXCLUDED.project_type, framework=EXCLUDED.framework,
 			language=EXCLUDED.language, package_manager=EXCLUDED.package_manager,
@@ -890,37 +903,15 @@ func (s *Scanner) upsert(p ProjectInfo) error {
 		p.Dependencies, p.Scripts,
 		nullStr(p.GitRemote), nullStr(p.GitBranch),
 		nullStr(p.ComposePath), p.ServiceCount,
-		now, now, now,
+		stackID, now, now, now,
 	).Scan(&projectID)
 	if err != nil {
 		return err
 	}
 
-	if len(p.Services) > 0 {
-		s.upsertServices(projectID, p.Services)
-	}
+	s.db.Exec(`UPDATE stacks SET project_id = $1 WHERE id = $2 AND project_id IS NULL`, projectID, stackID)
 
 	return nil
-}
-
-func (s *Scanner) upsertServices(projectID int, services []ComposeService) {
-	for _, svc := range services {
-		portsJSON, _ := json.Marshal(svc.Ports)
-		depsJSON, _ := json.Marshal(svc.DependsOn)
-
-		_, err := s.db.Exec(`
-			INSERT INTO project_services (project_id, service_name, container_name, image, service_type, ports, depends_on)
-			VALUES ($1,$2,$3,$4,$5,$6,$7)
-			ON CONFLICT (project_id, service_name) DO UPDATE SET
-				container_name=EXCLUDED.container_name, image=EXCLUDED.image,
-				service_type=EXCLUDED.service_type, ports=EXCLUDED.ports, depends_on=EXCLUDED.depends_on`,
-			projectID, svc.Name, nullStr(svc.ContainerName), nullStr(svc.Image),
-			nullStr(svc.ServiceType), portsJSON, depsJSON,
-		)
-		if err != nil {
-			log.Printf("failed to upsert service %s: %v", svc.Name, err)
-		}
-	}
 }
 
 func nullStr(s string) sql.NullString {

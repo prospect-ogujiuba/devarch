@@ -9,29 +9,49 @@ import (
 	"github.com/priz/devarch-api/internal/compose"
 )
 
+func (c *Controller) EnsureStack(projectName string) error {
+	_, err := c.ensureStack(projectName)
+	return err
+}
+
 func (c *Controller) ensureStack(projectName string) (*stackInfo, error) {
 	si, err := c.getStackInfo(projectName)
 	if err != nil {
 		return nil, err
 	}
+
 	if si != nil {
-		return si, nil
+		var count int
+		c.db.QueryRow(`SELECT COUNT(*) FROM service_instances WHERE stack_id = $1 AND deleted_at IS NULL`, si.stackID).Scan(&count)
+		if count > 0 {
+			return si, nil
+		}
 	}
 
-	composePath, err := c.getComposePath(projectName)
+	var composePath sql.NullString
+	err = c.db.QueryRow(`SELECT compose_path FROM projects WHERE name = $1`, projectName).Scan(&composePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("project not found: %s", projectName)
+	}
+	if !composePath.Valid || composePath.String == "" {
+		if si != nil {
+			return si, nil
+		}
+		return nil, fmt.Errorf("no compose file for project: %s", projectName)
 	}
 
-	services, err := compose.ParseFileAll(composePath)
+	services, err := compose.ParseFileAll(composePath.String)
 	if err != nil {
 		return nil, fmt.Errorf("parse compose: %w", err)
 	}
 	if len(services) == 0 {
+		if si != nil {
+			return si, nil
+		}
 		return nil, fmt.Errorf("no services in compose file for %s", projectName)
 	}
 
-	composeDir := filepath.Dir(composePath)
+	composeDir := filepath.Dir(composePath.String)
 	for _, svc := range services {
 		resolveServicePaths(svc, composeDir)
 	}
@@ -49,7 +69,7 @@ func (c *Controller) ensureStack(projectName string) (*stackInfo, error) {
 
 	templateIDs := make(map[string]int, len(services))
 	for _, svc := range services {
-		templateName := projectName + "--" + svc.Name
+		templateName := projectName + "-" + svc.Name
 		id, err := importTemplate(tx, templateName, categoryID, svc)
 		if err != nil {
 			return nil, fmt.Errorf("import template %s: %w", templateName, err)
@@ -75,15 +95,25 @@ func (c *Controller) ensureStack(projectName string) (*stackInfo, error) {
 		}
 	}
 
+	stackID := 0
 	networkName := "devarch-" + projectName + "-net"
-	var stackID int
-	err = tx.QueryRow(`
-		INSERT INTO stacks (name, network_name, source)
-		VALUES ($1, $2, 'project-import')
-		RETURNING id
-	`, projectName, networkName).Scan(&stackID)
-	if err != nil {
-		return nil, fmt.Errorf("create stack: %w", err)
+
+	if si != nil {
+		stackID = si.stackID
+		networkName = si.networkName
+	} else {
+		err = tx.QueryRow(`
+			INSERT INTO stacks (name, network_name, source)
+			VALUES ($1, $2, 'project-import')
+			RETURNING id
+		`, projectName, networkName).Scan(&stackID)
+		if err != nil {
+			return nil, fmt.Errorf("create stack: %w", err)
+		}
+		_, err = tx.Exec(`UPDATE projects SET stack_id = $1 WHERE name = $2`, stackID, projectName)
+		if err != nil {
+			return nil, fmt.Errorf("link project to stack: %w", err)
+		}
 	}
 
 	for _, svc := range services {
@@ -91,6 +121,7 @@ func (c *Controller) ensureStack(projectName string) (*stackInfo, error) {
 		_, err := tx.Exec(`
 			INSERT INTO service_instances (stack_id, instance_id, template_service_id, container_name)
 			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (stack_id, instance_id) WHERE deleted_at IS NULL DO NOTHING
 		`, stackID, svc.Name, templateIDs[svc.Name], containerName)
 		if err != nil {
 			return nil, fmt.Errorf("create instance %s: %w", svc.Name, err)
@@ -112,11 +143,6 @@ func (c *Controller) ensureStack(projectName string) (*stackInfo, error) {
 				return nil, fmt.Errorf("insert instance dep: %w", err)
 			}
 		}
-	}
-
-	_, err = tx.Exec(`UPDATE projects SET stack_id = $1 WHERE name = $2`, stackID, projectName)
-	if err != nil {
-		return nil, fmt.Errorf("link project to stack: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -172,7 +198,7 @@ func importTemplate(tx *sql.Tx, name string, categoryID int, parsed *compose.Par
 		_, err := tx.Exec(`
 			INSERT INTO service_ports (service_id, host_ip, host_port, container_port, protocol)
 			VALUES ($1, $2, $3, $4, $5)
-			ON CONFLICT (host_ip, host_port) DO NOTHING
+			ON CONFLICT (service_id, host_ip, host_port) DO NOTHING
 		`, serviceID, port.HostIP, port.HostPort, port.ContainerPort, port.Protocol)
 		if err != nil {
 			return 0, fmt.Errorf("insert port: %w", err)

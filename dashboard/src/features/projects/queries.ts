@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api'
-import type { Project, ProjectScanResponse, ProjectService, ProjectServiceStatus, ControlResponse } from '@/types/api'
+import { api, getErrorMessage } from '@/lib/api'
+import { toast } from 'sonner'
+import type { Project, ProjectScanResponse, ProjectServiceStatus, ControlResponse } from '@/types/api'
 
 export function useProjects() {
   return useQuery({
@@ -17,17 +18,6 @@ export function useProject(name: string) {
     queryKey: ['projects', name],
     queryFn: async () => {
       const response = await api.get<Project>(`/projects/${name}`)
-      return response.data
-    },
-    enabled: !!name,
-  })
-}
-
-export function useProjectServices(name: string) {
-  return useQuery({
-    queryKey: ['projects', name, 'services'],
-    queryFn: async () => {
-      const response = await api.get<ProjectService[]>(`/projects/${name}/services`)
       return response.data
     },
     enabled: !!name,
@@ -59,17 +49,78 @@ export function useScanProjects() {
   })
 }
 
-export function useLinkStack(name: string) {
+interface CreateProjectRequest {
+  name: string
+  path: string
+  project_type: string
+  framework?: string
+  language?: string
+  description?: string
+  domain?: string
+  proxy_port?: number
+}
+
+export function useCreateProject() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (stackId: number | null) => {
-      const response = await api.put<Project>(`/projects/${name}/stack`, { stack_id: stackId })
+    mutationFn: async (data: CreateProjectRequest) => {
+      const response = await api.post<Project>('/projects', data)
       return response.data
     },
     onSuccess: () => {
+      toast.success('Project created')
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to create project'))
+    },
+  })
+}
+
+interface UpdateProjectRequest {
+  path?: string
+  project_type?: string
+  framework?: string
+  language?: string
+  description?: string
+  domain?: string
+  proxy_port?: number
+}
+
+export function useUpdateProject(name: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (data: UpdateProjectRequest) => {
+      const response = await api.put<Project>(`/projects/${name}`, data)
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Project updated')
       queryClient.invalidateQueries({ queryKey: ['projects', name] })
-      queryClient.invalidateQueries({ queryKey: ['projects', name, 'services'] })
-      queryClient.invalidateQueries({ queryKey: ['projects', name, 'status'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update project'))
+    },
+  })
+}
+
+export function useDeleteProject(name: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.delete(`/projects/${name}`)
+      return response.data
+    },
+    onSuccess: () => {
+      toast.success('Project deleted')
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks'] })
+      queryClient.invalidateQueries({ queryKey: ['stacks', 'trash'] })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to delete project'))
     },
   })
 }
@@ -79,7 +130,6 @@ export function useProjectServiceControl(projectName: string) {
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['projects', projectName] })
-    queryClient.invalidateQueries({ queryKey: ['projects', projectName, 'services'] })
     queryClient.invalidateQueries({ queryKey: ['projects', projectName, 'status'] })
   }
 
@@ -115,7 +165,6 @@ export function useProjectControl(name: string) {
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ['projects', name] })
-    queryClient.invalidateQueries({ queryKey: ['projects', name, 'services'] })
     queryClient.invalidateQueries({ queryKey: ['projects', name, 'status'] })
   }
 

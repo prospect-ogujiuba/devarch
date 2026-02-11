@@ -250,32 +250,6 @@ type ImageTag struct {
 	LastSynced   *time.Time     `json:"last_synced_at,omitempty"`
 }
 
-type ProjectService struct {
-	ID            int             `json:"id"`
-	ProjectID     int             `json:"project_id"`
-	ServiceName   string          `json:"service_name"`
-	ContainerName sql.NullString  `json:"-"`
-	ContainerStr  string          `json:"container_name,omitempty"`
-	Image         sql.NullString  `json:"-"`
-	ImageStr      string          `json:"image,omitempty"`
-	ServiceType   sql.NullString  `json:"-"`
-	ServiceTypeStr string         `json:"service_type,omitempty"`
-	Ports         json.RawMessage `json:"ports"`
-	DependsOn     json.RawMessage `json:"depends_on"`
-}
-
-func (ps *ProjectService) ResolveNulls() {
-	if ps.ContainerName.Valid {
-		ps.ContainerStr = ps.ContainerName.String
-	}
-	if ps.Image.Valid {
-		ps.ImageStr = ps.Image.String
-	}
-	if ps.ServiceType.Valid {
-		ps.ServiceTypeStr = ps.ServiceType.String
-	}
-}
-
 type Project struct {
 	ID                int             `json:"id"`
 	Name              string          `json:"name"`
@@ -311,10 +285,10 @@ type Project struct {
 	GitRemoteStr      string          `json:"git_remote,omitempty"`
 	GitBranch         sql.NullString  `json:"-"`
 	GitBranchStr      string          `json:"git_branch,omitempty"`
-	StackID           sql.NullInt32   `json:"-"`
-	StackIDInt        *int            `json:"stack_id,omitempty"`
-	StackName         sql.NullString  `json:"-"`
-	StackNameStr      string          `json:"stack_name,omitempty"`
+	StackID           int             `json:"stack_id"`
+	StackName         string          `json:"stack_name"`
+	InstanceCount     int             `json:"instance_count"`
+	RunningCount      int             `json:"running_count"`
 	LastScannedAt     sql.NullTime    `json:"-"`
 	LastScannedAtStr  *time.Time      `json:"last_scanned_at,omitempty"`
 	CreatedAt         time.Time       `json:"created_at"`
@@ -361,13 +335,6 @@ func (p *Project) ResolveNulls() {
 	}
 	if p.GitBranch.Valid {
 		p.GitBranchStr = p.GitBranch.String
-	}
-	if p.StackID.Valid {
-		v := int(p.StackID.Int32)
-		p.StackIDInt = &v
-	}
-	if p.StackName.Valid {
-		p.StackNameStr = p.StackName.String
 	}
 	if p.LastScannedAt.Valid {
 		p.LastScannedAtStr = &p.LastScannedAt.Time
