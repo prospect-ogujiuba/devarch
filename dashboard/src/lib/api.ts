@@ -71,6 +71,19 @@ export function clearApiKey() {
   delete api.defaults.headers.common['X-API-Key']
 }
 
+export async function fetchWSToken(): Promise<string> {
+  const key = getApiKey()
+  if (!key) return ''
+  try {
+    const res = await axios.post('/api/v1/auth/ws-token', null, {
+      headers: { 'X-API-Key': key },
+    })
+    return res.data?.token ?? ''
+  } catch {
+    return ''
+  }
+}
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
