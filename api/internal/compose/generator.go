@@ -394,7 +394,7 @@ func (g *Generator) loadConfigMounts(serviceID int, categoryName string) ([]stri
 		// Resolve source path: if config_file_id is resolved, use materialized path
 		var resolvedSource string
 		if configFilePath.Valid {
-			resolvedSource = filepath.Join("compose", categoryName, g.getServiceName(serviceID), configFilePath.String)
+			resolvedSource = filepath.Join(".runtime", "compose", "preview", categoryName, g.getServiceName(serviceID), configFilePath.String)
 			resolvedSource = g.resolveRelativePath(resolvedSource, categoryName)
 		} else {
 			// Use raw source_path for NULL config_file_id
@@ -417,7 +417,7 @@ func (g *Generator) getServiceName(serviceID int) string {
 	return name
 }
 
-// MaterializeConfigFiles writes all config files from DB to compose/{category}/{service}/
+// MaterializeConfigFiles writes all config files from DB to .runtime/compose/preview/{category}/{service}/
 func (g *Generator) MaterializeConfigFiles(service *models.Service, baseDir string) error {
 	var categoryName string
 	err := g.db.QueryRow(`SELECT c.name FROM categories c JOIN services s ON s.category_id = c.id WHERE s.id = $1`, service.ID).Scan(&categoryName)
@@ -434,7 +434,7 @@ func (g *Generator) MaterializeConfigFiles(service *models.Service, baseDir stri
 	}
 	defer rows.Close()
 
-	serviceDir := filepath.Join(baseDir, "compose", categoryName, service.Name)
+	serviceDir := filepath.Join(baseDir, ".runtime", "compose", "preview", categoryName, service.Name)
 
 	for rows.Next() {
 		var filePath, content, fileMode string
@@ -487,7 +487,7 @@ func parseFileMode(mode string) os.FileMode {
 }
 
 // resolveRelativePath resolves a relative path against the host project root.
-// Paths starting with "compose/" are resolved against {hostProjectRoot}/api/.
+// Paths starting with ".runtime/compose/" are resolved against {hostProjectRoot}/api/.
 // Other relative paths are resolved against {hostProjectRoot}/apps/{category}/.
 func (g *Generator) resolveRelativePath(source, categoryName string) string {
 	if g.hostProjectRoot == "" {
@@ -500,8 +500,8 @@ func (g *Generator) resolveRelativePath(source, categoryName string) string {
 	if !strings.HasPrefix(source, ".") && !strings.Contains(source, "/") {
 		return source
 	}
-	// Materialized config paths stored as compose/{category}/{service}/...
-	if strings.HasPrefix(source, "compose/") {
+	// Materialized config paths stored as .runtime/compose/preview/{category}/{service}/...
+	if strings.HasPrefix(source, ".runtime/compose/") {
 		return filepath.Join(g.hostProjectRoot, "api", source)
 	}
 	if categoryName == "" {

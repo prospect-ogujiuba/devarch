@@ -111,7 +111,7 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := gen.MaterializeStackConfigs(stackName, projectRoot); err != nil {
-		configDir := filepath.Join(projectRoot, "compose", "stacks", stackName)
+		configDir := filepath.Join(projectRoot, ".runtime", "compose", "stacks", stackName)
 		os.RemoveAll(configDir)
 		http.Error(w, fmt.Sprintf("failed to materialize config files: %v", err), http.StatusInternalServerError)
 		return
@@ -119,7 +119,7 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 
 	yamlBytes, _, err := gen.GenerateStack(stackName)
 	if err != nil {
-		configDir := filepath.Join(projectRoot, "compose", "stacks", stackName)
+		configDir := filepath.Join(projectRoot, ".runtime", "compose", "stacks", stackName)
 		os.RemoveAll(configDir)
 		http.Error(w, fmt.Sprintf("failed to generate compose: %v", err), http.StatusInternalServerError)
 		return
@@ -127,7 +127,7 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 
 	tmpFile, err := os.CreateTemp("", "devarch-apply-*.yml")
 	if err != nil {
-		configDir := filepath.Join(projectRoot, "compose", "stacks", stackName)
+		configDir := filepath.Join(projectRoot, ".runtime", "compose", "stacks", stackName)
 		os.RemoveAll(configDir)
 		http.Error(w, fmt.Sprintf("failed to create temp file: %v", err), http.StatusInternalServerError)
 		return
@@ -136,7 +136,7 @@ func (h *StackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := tmpFile.Write(yamlBytes); err != nil {
 		tmpFile.Close()
-		configDir := filepath.Join(projectRoot, "compose", "stacks", stackName)
+		configDir := filepath.Join(projectRoot, ".runtime", "compose", "stacks", stackName)
 		os.RemoveAll(configDir)
 		http.Error(w, fmt.Sprintf("failed to write compose file: %v", err), http.StatusInternalServerError)
 		return
