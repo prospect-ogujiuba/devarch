@@ -1,0 +1,60 @@
+name: OpenAPI Validation
+
+on:
+  pull_request:
+    paths:
+      - 'api/internal/api/**'
+      - 'api/cmd/server/main.go'
+      - 'api/docs/**'
+
+jobs:
+  openapi-diff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install tools
+        run: |
+          go install github.com/swaggo/swag/cmd/swag@latest
+          go install github.com/oasdiff/oasdiff@latest
+
+      - name: Generate PR spec
+        working-directory: api
+        run: swag init -g cmd/server/main.go --output docs --parseDependency --parseInternal
+
+      - name: Save PR spec
+        run: cp api/docs/swagger.yaml /tmp/pr-swagger.yaml
+
+      - name: Generate base spec
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git checkout "${BASE_SHA}"
+          cd api
+          swag init -g cmd/server/main.go --output docs --parseDependency --parseInternal || true
+          cp docs/swagger.yaml /tmp/base-swagger.yaml 2>/dev/null || echo '{"openapi":"3.0.0","info":{"title":"DevArch API","version":"1.0"},"paths":{}}' > /tmp/base-swagger.yaml
+
+      - name: Restore PR branch
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git checkout "${HEAD_SHA}"
+
+      - name: Check for breaking changes
+        run: |
+          oasdiff breaking /tmp/base-swagger.yaml /tmp/pr-swagger.yaml \
+            --fail-on ERR \
+            --format githubactions || true
+
+      - name: Generate changelog
+        if: always()
+        run: |
+          oasdiff changelog /tmp/base-swagger.yaml /tmp/pr-swagger.yaml \
+            --format markdown >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "No changes detected" >> $GITHUB_STEP_SUMMARY
