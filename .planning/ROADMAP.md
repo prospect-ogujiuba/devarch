@@ -175,10 +175,12 @@ Plans:
   3. Service detail page uses feature-layer controller hook for orchestration
   4. Mutation boilerplate replaced with shared helper for toast + invalidation
   5. Controller hooks encapsulate query orchestration, state derivation, and action handlers
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD
+- [ ] 24-01-PLAN.md — Create shared mutation helper + stack detail controller extraction
+- [ ] 24-02-PLAN.md — Instance mutation refactor + instance detail controller extraction
+- [ ] 24-03-PLAN.md — Service + remaining feature mutation refactor + service detail controller extraction
 
 #### Phase 25: WebSocket Expansion & Frontend Auth
 **Goal**: WebSocket invalidates stack/instance queries; browser clients authenticate WS connections
