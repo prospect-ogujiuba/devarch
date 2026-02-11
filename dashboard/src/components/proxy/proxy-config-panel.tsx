@@ -12,7 +12,7 @@ import type { UseMutationResult } from '@tanstack/react-query'
 interface ProxyConfigPanelProps {
   scope: string
   name: string
-  generateMutation: UseMutationResult<ProxyConfigResult, Error, string>
+  generateMutation: UseMutationResult<ProxyConfigResult, unknown, string>
 }
 
 const fileExtensions: Record<string, string> = {
