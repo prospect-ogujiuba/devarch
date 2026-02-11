@@ -52,10 +52,10 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
   2. Repository contains .env.example with placeholder values
   3. .env is gitignored and never committed
   4. API container receives TEST_API_KEY via environment variable
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD
+- [ ] 16-01-PLAN.md — Externalize DEVARCH_API_KEY from compose.yml into .env
 
 #### Phase 17: CORS & Origin Hardening
 **Goal**: API enforces origin restrictions for HTTP and WebSocket connections
@@ -240,7 +240,7 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 16. Security Configuration | 0/TBD | Not started | - |
+| 16. Security Configuration | 0/1 | Planned | - |
 | 17. CORS & Origin Hardening | 0/TBD | Not started | - |
 | 18. WebSocket Authentication & Security Modes | 0/TBD | Not started | - |
 | 19. API Response Normalization | 0/TBD | Not started | - |
