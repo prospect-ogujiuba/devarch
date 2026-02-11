@@ -23,8 +23,8 @@ docker compose up
 # Run database migrations (from api/)
 cd api && go run ./cmd/migrate -migrations ./migrations
 
-# Import the service catalog from sample apps (from api/)
-go run ./cmd/import -compose-dir ../apps
+# Import the service catalog and config files (from api/)
+go run ./cmd/import -compose-dir ../services-library -config-dir ../services-library/config
 
 # Start the dashboard (from dashboard/)
 cd dashboard && npm run dev
@@ -41,7 +41,9 @@ cd dashboard && npm run dev
 ## 2. Core Concepts
 
 ### Services (Templates)
-172+ pre-built container definitions across 24 categories (databases, caching, proxy, monitoring, etc.). Each has: image, ports, volumes, env vars, healthchecks, labels, domains, dependencies, config files. You **don't run services directly** — you instantiate them inside stacks.
+173+ pre-built container definitions across 24 categories (databases, caching, proxy, monitoring, etc.). Each has: image (or custom Dockerfile via build context), ports, volumes, env vars, healthchecks, labels, domains, dependencies, config files. You **don't run services directly** — you instantiate them inside stacks.
+
+Services can use pre-built images or custom Dockerfiles. Build contexts and non-standard compose keys are stored in a `compose_overrides` JSONB field and passed through to the generated compose YAML.
 
 ### Stacks
 Isolated environment namespaces. Creating a stack gives you:
@@ -299,3 +301,55 @@ devarch init [devarch.yml]              # Bootstrap from export file
 9. **Import size** — stack imports support up to 256MB; all other endpoints are capped at 10MB.
 
 10. **Runtime switching** — Docker and Podman are interchangeable via Settings. The API uses a container.Client abstraction layer.
+
+---
+
+## 9. Service Library Structure
+
+Service templates live in `services-library/`, organized by category:
+
+```
+services-library/
+├── database/          # postgres.yml, mysql.yml, redis.yml, ...
+├── backend/           # php.yml, node.yml, python.yml, go.yml, ...
+├── proxy/             # nginx.yml, traefik.yml, ...
+├── ...                # 15+ category directories
+└── config/            # config files imported into DB
+    ├── php/           # Dockerfile, php.ini
+    ├── nginx/         # nginx.conf, default.conf
+    └── ...
+```
+
+### Custom Dockerfiles
+
+Services can use `build:` instead of `image:` to build from a custom Dockerfile:
+
+```yaml
+services:
+  php:
+    build:
+      context: ../config/php
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8100:8000"
+    volumes:
+      - php_config_php_ini:/usr/local/etc/php/php.ini:ro
+    depends_on:
+      - mailpit
+```
+
+The importer stores the `build` key in `compose_overrides` and resolves relative paths. The generator includes it in the final compose output.
+
+### Config Files
+
+Config files in `services-library/config/{service-name}/` are imported into the `service_config_files` table. These are materialized to disk during stack apply and mounted into containers. Examples: `php.ini`, `nginx.conf`, Dockerfiles.
+
+### Import
+
+The import command is idempotent — safe to re-run at any time:
+
+```bash
+go run ./cmd/import -compose-dir ../services-library -config-dir ../services-library/config
+```
+
+Services are upserted by name. Child rows (ports, volumes, env vars, etc.) are deleted and re-inserted atomically per service.
