@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Phase 26 complete — API integration tests
+**Current focus:** Phase 27 complete — Frontend controller tests
 
 ## Current Position
 
 Phase: 27 of 28
-Plan: 01 of 02 complete
-Status: Phase 27 in progress
-Last activity: 2026-02-12 — Frontend controller tests (instance + stack hooks)
+Plan: 02 of 02 complete
+Status: Phase 27 complete
+Last activity: 2026-02-12 — Frontend controller tests complete (all 3 hooks + CI workflow)
 
-Progress: Phases 16-26 complete, 27 in progress
+Progress: Phases 16-27 complete
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) + 2 (v1.1.3) + 4 (v1.1.4) + 2 (v1.1.5) + 2 (v1.1.6) + 1 (v1.1.7) + 1 (v1.1.8) + 2 (v1.1.9) + 1 (v1.1.10) + 2 (v1.1.11) + 1 (v1.1.12) = 64
-- Average duration: ~4.6 minutes per plan
+- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) + 2 (v1.1.3) + 4 (v1.1.4) + 2 (v1.1.5) + 2 (v1.1.6) + 1 (v1.1.7) + 1 (v1.1.8) + 2 (v1.1.9) + 1 (v1.1.10) + 2 (v1.1.11) + 2 (v1.1.12) = 65
+- Average duration: ~4.5 minutes per plan
 - Total execution time: ~4.9 hours
 
 **By Phase:**
@@ -40,7 +40,7 @@ Progress: Phases 16-26 complete, 27 in progress
 | v1.1.9 (24) | 2 | 680s | 340s |
 | v1.1.10 (25) | 1 | 32s | 32s |
 | v1.1.11 (26) | 2 | 292s | 146s |
-| v1.1.12 (27) | 1 | 183s | 183s |
+| v1.1.12 (27) | 2 | 308s | 154s |
 
 **Recent Trend:**
 - v1.0 shipped successfully on 2026-02-09
@@ -70,6 +70,7 @@ Progress: Phases 16-26 complete, 27 in progress
 | Phase 26 P01 | 172 | 2 tasks | 4 files |
 | Phase 26 P02 | 120 | 2 tasks | 4 files |
 | Phase 27 P01 | 183 | 2 tasks | 4 files |
+| Phase 27 P02 | 125 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,8 @@ Recent decisions affecting current work:
 - [Phase 27-01]: test-utils.tsx extension required for JSX support in wrapper component
 - [Phase 27-01]: localStorage mock in setup.ts enables testing components importing API module
 - [Phase 27-01]: Mock factory helpers (mockQueryResult, mockMutation) reduce test boilerplate
+- [Phase 27-02]: All 3 controller hooks tested following consistent patterns (TEST-03 complete)
+- [Phase 27-02]: CI workflow triggers only on dashboard/** changes for efficiency
 
 ### Pending Todos
 
@@ -126,9 +129,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 27-01-PLAN.md
+Stopped at: Completed 27-02-PLAN.md
 Resume file: None
-Next: Proceed to 27-02-PLAN.md
+Next: Proceed to Phase 28
 
 ---
 *Last updated: 2026-02-12*
