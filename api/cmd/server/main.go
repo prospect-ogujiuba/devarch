@@ -158,7 +158,7 @@ func main() {
 	}
 	slog.Info("security mode", "mode", secMode)
 
-	syncManager := sync.NewManager(db, podmanClient, registryManager)
+	syncManager := sync.NewManager(db, podmanClient, registryManager, logger)
 	router := api.NewRouter(db, containerClient, podmanClient, syncManager, projectScanner, nginxGenerator, projectController, registryManager, cipher, secMode, logger)
 
 	port := os.Getenv("PORT")

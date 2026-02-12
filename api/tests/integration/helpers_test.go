@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -207,6 +208,7 @@ func truncateAll(t *testing.T, db *sql.DB) {
 		"container_metrics",
 		"container_states",
 		"sync_state",
+		"sync_jobs",
 	}
 
 	for _, table := range tables {
@@ -218,7 +220,7 @@ func truncateAll(t *testing.T, db *sql.DB) {
 func setupRouter(t *testing.T) http.Handler {
 	t.Helper()
 	stubClient := &container.Client{}
-	return api.NewRouter(testDB, stubClient, nil, nil, nil, nil, nil, nil, nil, security.ModeDevOpen)
+	return api.NewRouter(testDB, stubClient, nil, nil, nil, nil, nil, nil, nil, security.ModeDevOpen, slog.Default())
 }
 
 func createStackViaDB(t *testing.T, db *sql.DB, name string) int {

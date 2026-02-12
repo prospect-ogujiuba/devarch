@@ -6,17 +6,18 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os/exec"
 	"time"
 )
 
 type TrivyScanner struct {
-	db *sql.DB
+	db     *sql.DB
+	logger *slog.Logger
 }
 
-func NewTrivyScanner(db *sql.DB) *TrivyScanner {
-	return &TrivyScanner{db: db}
+func NewTrivyScanner(db *sql.DB, logger *slog.Logger) *TrivyScanner {
+	return &TrivyScanner{db: db, logger: logger}
 }
 
 type trivyReport struct {
@@ -68,7 +69,7 @@ func (ts *TrivyScanner) ScanAll(ctx context.Context) error {
 
 	for _, img := range images {
 		if err := ts.ScanImage(ctx, img.name, img.tag); err != nil {
-			log.Printf("failed to scan %s:%s: %v", img.name, img.tag, err)
+			ts.logger.Error("failed to scan image", "image", img.name, "tag", img.tag, "error", err)
 		}
 	}
 
@@ -136,7 +137,7 @@ func (ts *TrivyScanner) ScanImage(ctx context.Context, imageName, tag string) er
 				RETURNING id
 			`, vuln.VulnerabilityID, vuln.Severity, vuln.Title, vuln.Description, cvss, publishedAt).Scan(&vulnID)
 			if err != nil {
-				log.Printf("failed to upsert vulnerability %s: %v", vuln.VulnerabilityID, err)
+				ts.logger.Error("failed to upsert vulnerability", "cve", vuln.VulnerabilityID, "error", err)
 				continue
 			}
 
