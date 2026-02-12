@@ -191,10 +191,10 @@ Plans:
   2. WebSocket status updates invalidate instance detail queries
   3. Dashboard WS client includes signed token when API auth enabled
   4. Live container status updates trigger UI refresh via query invalidation
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD
+- [ ] 25-01-PLAN.md — Add stacks/instances predicate invalidation to WS status handler
 
 #### Phase 26: API Integration Tests
 **Goal**: Integration tests cover stack/instance CRUD, soft-delete, plan staleness, advisory locks
