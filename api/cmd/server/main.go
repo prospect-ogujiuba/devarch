@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"database/sql"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -38,7 +39,34 @@ import (
 // @in header
 // @name X-API-Key
 // @description API key authentication header
+
+func initLogger() *slog.Logger {
+	var level slog.Level
+	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
+	case "debug":
+		level = slog.LevelDebug
+	case "warn", "warning":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo
+	}
+
+	programLevel := new(slog.LevelVar)
+	programLevel.Set(level)
+
+	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: programLevel,
+	})
+
+	logger := slog.New(handler)
+	slog.SetDefault(logger)
+	return logger
+}
+
 func main() {
+	logger := initLogger()
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		dbURL = "postgres://devarch:devarch@localhost:5432/devarch?sslmode=disable"
@@ -46,35 +74,39 @@ func main() {
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		slog.Error("failed to connect to database", "error", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
 	if err := db.Ping(); err != nil {
-		log.Fatalf("failed to ping database: %v", err)
+		slog.Error("failed to ping database", "error", err)
+		os.Exit(1)
 	}
 
 	key, err := crypto.LoadOrGenerateKey()
 	if err != nil {
-		log.Fatalf("failed to load encryption key: %v", err)
+		slog.Error("failed to load encryption key", "error", err)
+		os.Exit(1)
 	}
-	log.Println("encryption key loaded successfully")
+	slog.Info("encryption key loaded successfully")
 
 	cipher := crypto.NewCipher(key)
 
 	podmanClient, err := podman.NewClient()
 	if err != nil {
-		log.Fatalf("failed to create podman client: %v", err)
+		slog.Error("failed to create podman client", "error", err)
+		os.Exit(1)
 	}
-	log.Printf("connected to podman socket: %s", podmanClient.SocketPath())
+	slog.Info("connected to podman socket", "socket", podmanClient.SocketPath())
 
 	if err := podmanClient.Ping(context.Background()); err != nil {
-		log.Printf("warning: podman ping failed: %v", err)
+		slog.Warn("podman ping failed", "error", err)
 	}
 
 	containerClient, err := container.NewClient()
 	if err != nil {
-		log.Printf("warning: container client unavailable (compose operations disabled): %v", err)
+		slog.Warn("container client unavailable (compose operations disabled)", "error", err)
 	}
 
 	projectController := project.NewController(db, containerClient)
@@ -86,17 +118,17 @@ func main() {
 	projectScanner := scanner.NewScanner(db, appsDir)
 
 	if projects, err := projectScanner.ScanAndPersist(); err != nil {
-		log.Printf("initial project scan failed: %v", err)
+		slog.Error("initial project scan failed", "error", err)
 	} else {
-		log.Println("initial project scan complete")
+		slog.Info("initial project scan complete")
 		for _, p := range projects {
 			if p.ComposePath != "" {
 				if err := projectController.EnsureStack(p.Name); err != nil {
-					log.Printf("failed to import compose for project %s: %v", p.Name, err)
+					slog.Error("failed to import compose for project", "project", p.Name, "error", err)
 				}
 			}
 		}
-		log.Println("project compose import complete")
+		slog.Info("project compose import complete")
 	}
 
 	nginxOutputDir := os.Getenv("NGINX_GENERATED_DIR")
@@ -106,9 +138,9 @@ func main() {
 	nginxGenerator := nginx.NewGenerator(db, nginxOutputDir)
 
 	if err := nginxGenerator.GenerateAll(); err != nil {
-		log.Printf("initial nginx generation failed: %v", err)
+		slog.Error("initial nginx generation failed", "error", err)
 	} else {
-		log.Println("initial nginx config generation complete")
+		slog.Info("initial nginx config generation complete")
 	}
 
 	registryManager := registry.NewManager()
@@ -117,15 +149,17 @@ func main() {
 
 	secMode, err := security.ParseMode(os.Getenv("SECURITY_MODE"))
 	if err != nil {
-		log.Fatalf("security configuration error: %v", err)
+		slog.Error("security configuration error", "error", err)
+		os.Exit(1)
 	}
 	if err := security.ValidateConfig(secMode); err != nil {
-		log.Fatalf("security configuration error: %v", err)
+		slog.Error("security configuration error", "error", err)
+		os.Exit(1)
 	}
-	log.Printf("security mode: %s", secMode)
+	slog.Info("security mode", "mode", secMode)
 
 	syncManager := sync.NewManager(db, podmanClient, registryManager)
-	router := api.NewRouter(db, containerClient, podmanClient, syncManager, projectScanner, nginxGenerator, projectController, registryManager, cipher, secMode)
+	router := api.NewRouter(db, containerClient, podmanClient, syncManager, projectScanner, nginxGenerator, projectController, registryManager, cipher, secMode, logger)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -146,9 +180,10 @@ func main() {
 	syncManager.Start(ctx)
 
 	go func() {
-		log.Printf("starting server on :%s", port)
+		slog.Info("starting server", "port", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
+			slog.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -156,15 +191,16 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("shutting down server...")
+	slog.Info("shutting down server")
 	cancel()
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("server shutdown error: %v", err)
+		slog.Error("server shutdown error", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("server stopped")
+	slog.Info("server stopped")
 }
