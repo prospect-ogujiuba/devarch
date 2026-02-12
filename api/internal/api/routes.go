@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -26,7 +27,7 @@ import (
 	"github.com/priz/devarch-api/pkg/registry"
 )
 
-func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podman.Client, syncManager *sync.Manager, projectScanner *scanner.Scanner, nginxGenerator *nginx.Generator, projectController *project.Controller, registryManager *registry.Manager, cipher *crypto.Cipher, secMode security.Mode) http.Handler {
+func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podman.Client, syncManager *sync.Manager, projectScanner *scanner.Scanner, nginxGenerator *nginx.Generator, projectController *project.Controller, registryManager *registry.Manager, cipher *crypto.Cipher, secMode security.Mode, logger *slog.Logger) http.Handler {
 	r := chi.NewRouter()
 
 	// Read stack import size limit from env var (default 256MB)
@@ -47,9 +48,9 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	}
 	allowCredentials := len(allowedOrigins) > 0 && allowedOrigins[0] != "*"
 
-	r.Use(middleware.Logger)
-	r.Use(mw.RecoverEnvelope)
 	r.Use(middleware.RequestID)
+	r.Use(mw.SlogMiddleware(logger))
+	r.Use(mw.RecoverEnvelope)
 	r.Use(middleware.RealIP)
 	// MaxBodySize removed from global scope - applied per-route instead
 	r.Use(cors.Handler(cors.Options{
