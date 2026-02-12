@@ -223,10 +223,11 @@ Plans:
   3. Service detail controller tests cover query orchestration
   4. Tests verify state derivation logic (loading, error, success states)
   5. Tests verify action handler delegation
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 27-01-PLAN.md — Test infrastructure + instance & stack controller tests
+- [ ] 27-02-PLAN.md — Service controller tests + CI workflow
 
 #### Phase 28: Observability Hardening
 **Goal**: Structured logging with request correlation; sync job history persists across restarts
