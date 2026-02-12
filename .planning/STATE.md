@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Phase 27 complete — Frontend controller tests
+**Current focus:** Phase 28 complete — Observability hardening (v1.1.1 milestone complete)
 
 ## Current Position
 
 Phase: 28 of 28
-Plan: 01 of 02 complete
-Status: Phase 28 in progress
-Last activity: 2026-02-12 — Structured JSON logging with request correlation (slog middleware)
+Plan: 02 of 02 complete
+Status: Phase 28 complete — v1.1.1 milestone complete
+Last activity: 2026-02-12 — Observability hardening (structured logging + sync job persistence)
 
-Progress: Phases 16-27 complete, Phase 28 in progress (1/2 plans)
+Progress: Phases 16-28 complete (v1.1.1 milestone shipped)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) + 2 (v1.1.3) + 4 (v1.1.4) + 2 (v1.1.5) + 2 (v1.1.6) + 1 (v1.1.7) + 1 (v1.1.8) + 2 (v1.1.9) + 1 (v1.1.10) + 2 (v1.1.11) + 2 (v1.1.12) + 1 (v1.1.13) = 66
-- Average duration: ~5.1 minutes per plan
+- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) + 2 (v1.1.3) + 4 (v1.1.4) + 2 (v1.1.5) + 2 (v1.1.6) + 1 (v1.1.7) + 1 (v1.1.8) + 2 (v1.1.9) + 1 (v1.1.10) + 2 (v1.1.11) + 2 (v1.1.12) + 2 (v1.1.13) = 67
+- Average duration: ~5.0 minutes per plan
 - Total execution time: ~5.6 hours
 
 **By Phase:**
@@ -41,12 +41,12 @@ Progress: Phases 16-27 complete, Phase 28 in progress (1/2 plans)
 | v1.1.10 (25) | 1 | 32s | 32s |
 | v1.1.11 (26) | 2 | 292s | 146s |
 | v1.1.12 (27) | 2 | 308s | 154s |
-| v1.1.13 (28) | 1 | 157s | 157s |
+| v1.1.13 (28) | 2 | 607s | 304s |
 
 **Recent Trend:**
 - v1.0 shipped successfully on 2026-02-09
 - v1.1 shipped successfully on 2026-02-10
-- v1.1.1-v1.1.12 in progress
+- v1.1.1 shipped successfully on 2026-02-12
 
 *Updated after each plan completion*
 | Phase 16 P01 | 42 | 1 tasks | 2 files |
@@ -137,9 +137,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 28-01-PLAN.md
+Stopped at: Completed Phase 28 — v1.1.1 milestone complete
 Resume file: None
-Next: Execute 28-02-PLAN.md
+Next: /gsd:complete-milestone
 
 ---
 *Last updated: 2026-02-12*
