@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Phase 25 in progress — websocket expansion and frontend auth
+**Current focus:** Phase 26 complete — API integration tests
 
 ## Current Position
 
@@ -14,7 +14,7 @@ Plan: 02 of 02 complete
 Status: Phase 26 complete
 Last activity: 2026-02-12 — Integration tests complete (instance CRUD, staleness, advisory locks)
 
-Progress: Phases 16-25 complete, Phase 26 in progress
+Progress: Phases 16-26 complete
 
 ## Performance Metrics
 
@@ -67,7 +67,6 @@ Progress: Phases 16-25 complete, Phase 26 in progress
 | Phase 24 P03 | 557 | 2 tasks | 10 files |
 | Phase 25 P01 | 32 | 1 tasks | 1 files |
 | Phase 26 P01 | 172 | 2 tasks | 4 files |
-| Phase 26 P02 | 120 | 2 tasks | 4 files |
 | Phase 26 P02 | 120 | 2 tasks | 4 files |
 
 ## Accumulated Context

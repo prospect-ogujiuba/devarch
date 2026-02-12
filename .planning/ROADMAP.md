@@ -210,8 +210,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 26-01-PLAN.md — Test infrastructure (testcontainers, helpers, TestMain) + stack CRUD/soft-delete tests
-- [ ] 26-02-PLAN.md — Instance CRUD + staleness token + advisory lock tests + CI workflow
+- [x] 26-01-PLAN.md — Test infrastructure (testcontainers, helpers, TestMain) + stack CRUD/soft-delete tests
+- [x] 26-02-PLAN.md — Instance CRUD + staleness token + advisory lock tests + CI workflow
 
 #### Phase 27: Frontend Controller Tests
 **Goal**: Controller hooks have test coverage for orchestration flows
@@ -260,10 +260,10 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 | 23. Performance Optimization | 1/1 | ✓ Complete | 2026-02-11 |
 | 24. Frontend Controller Extraction | 3/3 | ✓ Complete | 2026-02-11 |
 | 25. WebSocket Expansion & Frontend Auth | 1/1 | ✓ Complete | 2026-02-12 |
-| 26. API Integration Tests | 0/TBD | Not started | - |
+| 26. API Integration Tests | 2/2 | ✓ Complete | 2026-02-12 |
 | 27. Frontend Controller Tests | 0/TBD | Not started | - |
 | 28. Observability Hardening | 0/TBD | Not started | - |
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-12 — Phase 25 complete*
+*Last updated: 2026-02-12 — Phase 26 complete*
