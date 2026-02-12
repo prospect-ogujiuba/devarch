@@ -344,10 +344,10 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 		if build, ok := overrides["build"]; ok {
 			if buildMap, ok := build.(map[string]interface{}); ok {
 				if ctx, ok := buildMap["context"].(string); ok {
-					buildMap["context"] = g.resolveRelativePath(ctx, categoryNames[id])
+					buildMap["context"] = g.resolveBuildContextPath(ctx, categoryNames[id])
 				}
 			} else if ctx, ok := build.(string); ok {
-				overrides["build"] = g.resolveRelativePath(ctx, categoryNames[id])
+				overrides["build"] = g.resolveBuildContextPath(ctx, categoryNames[id])
 			}
 		}
 
