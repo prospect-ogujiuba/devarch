@@ -56,6 +56,7 @@ type Job struct {
 	StartedAt time.Time  `json:"started_at"`
 	EndedAt   *time.Time `json:"ended_at,omitempty"`
 	Error     string     `json:"error,omitempty"`
+	CreatedAt time.Time  `json:"created_at,omitempty"`
 }
 
 type StatusCache struct {
@@ -434,6 +435,7 @@ func (m *Manager) runDailyCleanupIfDue(ctx context.Context) error {
 		{"registry images", m.cleanupRegistryImages},
 		{"orphan vulns", m.cleanupOrphanVulnerabilities},
 		{"soft-deleted", m.cleanupSoftDeleted},
+		{"sync jobs", m.cleanupSyncJobs},
 	} {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -559,6 +561,23 @@ func (m *Manager) cleanupSoftDeleted(ctx context.Context) error {
 		return err1
 	}
 	return err2
+}
+
+func (m *Manager) cleanupSyncJobs(ctx context.Context) error {
+	cutoff := time.Now().Add(-7 * 24 * time.Hour)
+	_, err := m.deleteInBatches(
+		ctx,
+		`WITH doomed AS (
+			SELECT id FROM sync_jobs
+			WHERE created_at < $1
+			LIMIT $2
+		)
+		DELETE FROM sync_jobs USING doomed WHERE sync_jobs.id = doomed.id`,
+		cutoff,
+		m.cleanupBatch,
+		"cleanup old sync jobs",
+	)
+	return err
 }
 
 func (m *Manager) deleteInBatches(ctx context.Context, query string, arg1 any, batchSize int, label string) (int64, error) {
@@ -700,6 +719,18 @@ func (m *Manager) TriggerSync(syncType string) string {
 		} else {
 			job.Status = "completed"
 		}
+
+		// Persist to DB (write-through)
+		_, dbErr := m.db.ExecContext(context.Background(),
+			`INSERT INTO sync_jobs (id, type, status, started_at, ended_at, error, created_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+			job.ID, job.Type, job.Status, job.StartedAt, job.EndedAt, job.Error)
+		if dbErr != nil {
+			log.Printf("sync: failed to persist job %s: %v", jobID, dbErr)
+		} else {
+			// Remove from memory after successful DB persistence
+			delete(m.jobs, jobID)
+		}
 		m.jobsMu.Unlock()
 	}()
 
@@ -707,13 +738,36 @@ func (m *Manager) TriggerSync(syncType string) string {
 }
 
 func (m *Manager) GetJobs() []*Job {
-	m.jobsMu.RLock()
-	defer m.jobsMu.RUnlock()
-
-	jobs := make([]*Job, 0, len(m.jobs))
-	for _, job := range m.jobs {
-		jobs = append(jobs, job)
+	// Query DB for recent completed jobs
+	rows, err := m.db.Query(`
+		SELECT id, type, status, started_at, ended_at, error, created_at
+		FROM sync_jobs
+		ORDER BY created_at DESC
+		LIMIT 100
+	`)
+	jobs := make([]*Job, 0)
+	if err != nil {
+		log.Printf("sync: failed to query sync_jobs: %v", err)
+		// Fall back to in-memory only
+	} else {
+		defer rows.Close()
+		for rows.Next() {
+			job := &Job{}
+			if err := rows.Scan(&job.ID, &job.Type, &job.Status, &job.StartedAt, &job.EndedAt, &job.Error, &job.CreatedAt); err != nil {
+				log.Printf("sync: failed to scan job row: %v", err)
+				continue
+			}
+			jobs = append(jobs, job)
+		}
 	}
+
+	// Append in-memory jobs (running) to front
+	m.jobsMu.RLock()
+	for _, job := range m.jobs {
+		jobs = append([]*Job{job}, jobs...)
+	}
+	m.jobsMu.RUnlock()
+
 	return jobs
 }
 
