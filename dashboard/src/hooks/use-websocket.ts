@@ -57,6 +57,10 @@ export function useWebSocket() {
                 const key = q.queryKey
                 return Array.isArray(key) && key.length >= 3 && key[0] === 'services' && key[2] === 'metrics'
               }})
+              queryClient.invalidateQueries({ predicate: (q) => {
+                const key = q.queryKey
+                return Array.isArray(key) && key[0] === 'stacks'
+              }})
             }
           } catch {
             // ignore malformed messages
