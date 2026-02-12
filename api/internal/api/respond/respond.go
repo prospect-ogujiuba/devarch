@@ -3,7 +3,7 @@ package respond
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 )
 
@@ -14,7 +14,7 @@ func JSON(w http.ResponseWriter, r *http.Request, statusCode int, data interface
 
 	envelope := SuccessEnvelope{Data: data}
 	if err := json.NewEncoder(w).Encode(envelope); err != nil {
-		log.Printf("error encoding response: %v", err)
+		slog.Error("error encoding response", "error", err)
 	}
 }
 
@@ -31,7 +31,7 @@ func Error(w http.ResponseWriter, r *http.Request, statusCode int, code, message
 		},
 	}
 	if err := json.NewEncoder(w).Encode(envelope); err != nil {
-		log.Printf("error encoding error response: %v", err)
+		slog.Error("error encoding error response", "error", err)
 	}
 }
 
@@ -48,7 +48,7 @@ func NotFound(w http.ResponseWriter, r *http.Request, resource, identifier strin
 
 // InternalError returns a 500 internal server error and logs the full error
 func InternalError(w http.ResponseWriter, r *http.Request, err error) {
-	log.Printf("internal error: %v", err)
+	slog.Error("internal error", "error", err)
 	Error(w, r, http.StatusInternalServerError, "internal_error", "An internal error occurred", nil)
 }
 

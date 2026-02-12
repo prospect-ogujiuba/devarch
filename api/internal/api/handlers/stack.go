@@ -4,13 +4,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/lib/pq"
+	mw "github.com/priz/devarch-api/internal/api/middleware"
 	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
@@ -388,6 +388,7 @@ func (h *StackHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Router       /stacks/{name} [delete]
 // @Security     ApiKeyAuth
 func (h *StackHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	logger := mw.LoggerFromContext(r.Context())
 	name := chi.URLParam(r, "name")
 
 	var stackID int
@@ -412,10 +413,10 @@ func (h *StackHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	yamlBytes, err := h.stackCompose(name)
 	if err != nil {
-		log.Printf("warning: could not generate compose for stack %q (may not have been deployed): %v", name, err)
+		logger.Warn("could not generate compose for stack (may not have been deployed)", "stack", name, "error", err)
 	} else {
 		if err := h.containerClient.StopStack("devarch-"+name, yamlBytes); err != nil {
-			log.Printf("warning: failed to stop containers for stack %q: %v", name, err)
+			logger.Warn("failed to stop containers for stack", "stack", name, "error", err)
 		}
 	}
 
@@ -649,6 +650,7 @@ type disableResponse struct {
 // @Router       /stacks/{name}/disable [post]
 // @Security     ApiKeyAuth
 func (h *StackHandler) Disable(w http.ResponseWriter, r *http.Request) {
+	logger := mw.LoggerFromContext(r.Context())
 	name := chi.URLParam(r, "name")
 
 	var stackID int
@@ -669,12 +671,12 @@ func (h *StackHandler) Disable(w http.ResponseWriter, r *http.Request) {
 		identity.LabelStackID: name,
 	})
 	if err != nil {
-		log.Printf("warning: failed to list running containers for stack %q: %v", name, err)
+		logger.Warn("failed to list running containers for stack", "stack", name, "error", err)
 		running = []string{}
 	}
 
 	if err := h.containerClient.StopContainers(running); err != nil {
-		log.Printf("warning: failed to stop containers for stack %q: %v", name, err)
+		logger.Warn("failed to stop containers for stack", "stack", name, "error", err)
 	}
 
 	stoppedContainers := running

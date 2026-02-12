@@ -3,7 +3,7 @@ package middleware
 import (
 	"crypto/subtle"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"sync"
@@ -135,7 +135,7 @@ func RecoverEnvelope(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
-				log.Printf("panic recovered: %v", rec)
+				slog.Error("panic recovered", "error", rec)
 				respond.InternalError(w, r, fmt.Errorf("panic: %v", rec))
 			}
 		}()
