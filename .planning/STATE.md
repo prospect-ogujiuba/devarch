@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Two stacks using the same service template must never collide — isolation is the primitive everything else depends on.
-**Current focus:** Phase 24 complete — frontend controller extraction
+**Current focus:** Phase 25 in progress — websocket expansion and frontend auth
 
 ## Current Position
 
-Phase: 24 of 28
-Plan: 03 of 03 complete
-Status: Phase 24 complete
-Last activity: 2026-02-11 — Frontend controller extraction complete
+Phase: 25 of 28
+Plan: 01 of 01 complete
+Status: Phase 25 complete
+Last activity: 2026-02-12 — WebSocket stack/instance invalidation complete
 
-Progress: Phases 16-24 complete
+Progress: Phases 16-25 complete
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) + 2 (v1.1.3) + 4 (v1.1.4) + 2 (v1.1.5) + 2 (v1.1.6) + 1 (v1.1.7) + 1 (v1.1.8) + 2 (v1.1.9) = 60
-- Average duration: ~4.8 minutes per plan
+- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) + 2 (v1.1.3) + 4 (v1.1.4) + 2 (v1.1.5) + 2 (v1.1.6) + 1 (v1.1.7) + 1 (v1.1.8) + 2 (v1.1.9) + 1 (v1.1.10) = 61
+- Average duration: ~4.7 minutes per plan
 - Total execution time: ~4.8 hours
 
 **By Phase:**
@@ -38,6 +38,7 @@ Progress: Phases 16-24 complete
 | v1.1.7 (22) | 1 | 43s | 43s |
 | v1.1.8 (23) | 1 | 116s | 116s |
 | v1.1.9 (24) | 2 | 680s | 340s |
+| v1.1.10 (25) | 1 | 32s | 32s |
 
 **Recent Trend:**
 - v1.0 shipped successfully on 2026-02-09
@@ -63,6 +64,7 @@ Progress: Phases 16-24 complete
 | Phase 24 P01 | 393 | 2 tasks | 4 files |
 | Phase 24 P02 | 287 | 2 tasks | 3 files |
 | Phase 24 P03 | 557 | 2 tasks | 10 files |
+| Phase 25 P01 | 32 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -103,6 +105,7 @@ Recent decisions affecting current work:
 - [Phase 24-03]: All 9 feature query files migrated to useMutationHelper pattern (FE-04 complete)
 - [Phase 24-02]: Instance mutations use useMutationHelper - 21 mutations refactored with consistent error handling
 - [Phase 24-02]: Override mutations preserve effective-config invalidation for real-time UI sync
+- [Phase 25]: Single predicate covers all stack and instance queries via ['stacks', ...] prefix
 
 ### Pending Todos
 
@@ -114,10 +117,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-11
-Stopped at: Completed 24-03-PLAN.md (Phase 24 complete)
+Last session: 2026-02-12
+Stopped at: Completed 25-01-PLAN.md (Phase 25 complete)
 Resume file: None
-Next: Phase 25 or next milestone work
+Next: Phase 26 or next milestone work
 
 ---
-*Last updated: 2026-02-11*
+*Last updated: 2026-02-12*
