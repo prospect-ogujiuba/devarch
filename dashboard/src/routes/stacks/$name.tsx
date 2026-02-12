@@ -560,7 +560,7 @@ function StackDetailPage() {
                 <Button
                   size="sm"
                   className="w-full sm:w-auto"
-                  onClick={() => ctrl.generatePlan.mutate(undefined, { onSuccess: (data) => setCurrentPlan(data.data) })}
+                  onClick={() => ctrl.generatePlan.mutate(undefined, { onSuccess: (data) => setCurrentPlan(data) })}
                   disabled={ctrl.generatePlan.isPending || ctrl.applyPlan.isPending}
                 >
                   {ctrl.generatePlan.isPending ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
@@ -643,7 +643,7 @@ function StackDetailPage() {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => ctrl.generatePlan.mutate(undefined, { onSuccess: (data) => setCurrentPlan(data.data) })}
+                      onClick={() => ctrl.generatePlan.mutate(undefined, { onSuccess: (data) => setCurrentPlan(data) })}
                       disabled={ctrl.generatePlan.isPending || ctrl.applyPlan.isPending}
                     >
                       Regenerate Plan

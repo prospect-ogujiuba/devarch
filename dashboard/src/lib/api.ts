@@ -85,7 +85,18 @@ export async function fetchWSToken(): Promise<string> {
 }
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Unwrap SuccessEnvelope: API wraps all JSON responses in { data: ... }
+    if (
+      response.data &&
+      typeof response.data === 'object' &&
+      !Array.isArray(response.data) &&
+      'data' in response.data
+    ) {
+      response.data = (response.data as Record<string, unknown>).data
+    }
+    return response
+  },
   (error) => {
     if (isAxiosError(error) && error.response?.status === 401) {
       clearApiKey()
