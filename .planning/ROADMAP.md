@@ -226,8 +226,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 27-01-PLAN.md — Test infrastructure + instance & stack controller tests
-- [ ] 27-02-PLAN.md — Service controller tests + CI workflow
+- [x] 27-01-PLAN.md — Test infrastructure + instance & stack controller tests
+- [x] 27-02-PLAN.md — Service controller tests + CI workflow
 
 #### Phase 28: Observability Hardening
 **Goal**: Structured logging with request correlation; sync job history persists across restarts
@@ -263,7 +263,7 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 | 24. Frontend Controller Extraction | 3/3 | ✓ Complete | 2026-02-11 |
 | 25. WebSocket Expansion & Frontend Auth | 1/1 | ✓ Complete | 2026-02-12 |
 | 26. API Integration Tests | 2/2 | ✓ Complete | 2026-02-12 |
-| 27. Frontend Controller Tests | 0/2 | Not started | - |
+| 27. Frontend Controller Tests | 2/2 | ✓ Complete | 2026-02-12 |
 | 28. Observability Hardening | 0/2 | Not started | - |
 
 ---
