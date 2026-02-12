@@ -239,10 +239,11 @@ Plans:
   3. Sync job summaries persist to DB (table: sync_jobs)
   4. Sync job history survives API process restarts
   5. Logs parseable by structured log tools (JSON format)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 28-01-PLAN.md — Structured slog logging with request-scoped middleware and handler migration
+- [ ] 28-02-PLAN.md — Sync job DB persistence with write-through and 7-day cleanup
 
 ## Progress
 
@@ -262,9 +263,9 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 | 24. Frontend Controller Extraction | 3/3 | ✓ Complete | 2026-02-11 |
 | 25. WebSocket Expansion & Frontend Auth | 1/1 | ✓ Complete | 2026-02-12 |
 | 26. API Integration Tests | 2/2 | ✓ Complete | 2026-02-12 |
-| 27. Frontend Controller Tests | 0/TBD | Not started | - |
-| 28. Observability Hardening | 0/TBD | Not started | - |
+| 27. Frontend Controller Tests | 0/2 | Not started | - |
+| 28. Observability Hardening | 0/2 | Not started | - |
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-12 — Phase 26 complete*
+*Last updated: 2026-02-12 — Phase 28 planned*
