@@ -194,7 +194,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 25-01-PLAN.md — Add stacks/instances predicate invalidation to WS status handler
+- [x] 25-01-PLAN.md — Add stacks/instances predicate invalidation to WS status handler
 
 #### Phase 26: API Integration Tests
 **Goal**: Integration tests cover stack/instance CRUD, soft-delete, plan staleness, advisory locks
@@ -258,11 +258,11 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 | 22. Identity Service & Naming Consolidation | 2/2 | ✓ Complete | 2026-02-11 |
 | 23. Performance Optimization | 1/1 | ✓ Complete | 2026-02-11 |
 | 24. Frontend Controller Extraction | 3/3 | ✓ Complete | 2026-02-11 |
-| 25. WebSocket Expansion & Frontend Auth | 0/TBD | Not started | - |
+| 25. WebSocket Expansion & Frontend Auth | 1/1 | ✓ Complete | 2026-02-12 |
 | 26. API Integration Tests | 0/TBD | Not started | - |
 | 27. Frontend Controller Tests | 0/TBD | Not started | - |
 | 28. Observability Hardening | 0/TBD | Not started | - |
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-11 — Phase 24 complete*
+*Last updated: 2026-02-12 — Phase 25 complete*
