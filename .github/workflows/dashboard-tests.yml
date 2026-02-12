@@ -1,0 +1,28 @@
+name: Dashboard Tests
+
+on:
+  pull_request:
+    paths:
+      - 'dashboard/**'
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dependencies
+        working-directory: dashboard
+        run: npm ci
+
+      - name: Run unit tests
+        working-directory: dashboard
+        run: npm run test:unit
