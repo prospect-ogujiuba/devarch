@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
+	"log/slog"
 	"math"
 	"math/rand"
 	"os"
@@ -31,6 +31,7 @@ const (
 type Manager struct {
 	db           *sql.DB
 	podman       *podman.Client
+	logger       *slog.Logger
 	jobs         map[string]*Job
 	jobsMu       sync.RWMutex
 	statusCache  *StatusCache
@@ -72,7 +73,7 @@ type StatusUpdate struct {
 	Data      map[string]interface{} `json:"data"`
 }
 
-func NewManager(db *sql.DB, pc *podman.Client, regMgr *registry.Manager) *Manager {
+func NewManager(db *sql.DB, pc *podman.Client, regMgr *registry.Manager, logger *slog.Logger) *Manager {
 	metricsInterval := mustParseDurationEnv("DEVARCH_METRICS_INTERVAL", "30s")
 	if metricsInterval < 5*time.Second {
 		metricsInterval = 5 * time.Second
@@ -103,15 +104,20 @@ func NewManager(db *sql.DB, pc *podman.Client, regMgr *registry.Manager) *Manage
 	vulnOrphanRetention := mustParseDurationEnv("DEVARCH_VULN_ORPHAN_RETENTION", "30d")
 	softDeleteRetention := mustParseDurationEnv("DEVARCH_SOFT_DELETE_RETENTION", "30d")
 
-	log.Printf("sync: config — metrics every %s retain %s, cleanup every %s batch %d, config versions max %d",
-		metricsInterval, metricsRetention, cleanupInterval, cleanupBatch, configVersionsMax)
+	logger.Info("sync: config",
+		"metrics_interval", metricsInterval,
+		"metrics_retention", metricsRetention,
+		"cleanup_interval", cleanupInterval,
+		"cleanup_batch", cleanupBatch,
+		"config_versions_max", configVersionsMax)
 
 	return &Manager{
 		db:           db,
 		podman:       pc,
+		logger:       logger,
 		jobs:         make(map[string]*Job),
-		registrySync: NewRegistrySync(db, regMgr),
-		trivyScanner: NewTrivyScanner(db),
+		registrySync: NewRegistrySync(db, regMgr, logger),
+		trivyScanner: NewTrivyScanner(db, logger),
 		statusCache: &StatusCache{
 			data:       make(map[string]interface{}),
 			containers: make(map[string]string),
@@ -156,7 +162,7 @@ func (m *Manager) containerStatusLoop(ctx context.Context) {
 func (m *Manager) syncContainerStatus(ctx context.Context) {
 	containers, err := m.podman.ListContainers(ctx, true)
 	if err != nil {
-		log.Printf("sync: failed to list containers: %v", err)
+		m.logger.Error("sync: failed to list containers", "error", err)
 		return
 	}
 
@@ -169,7 +175,7 @@ func (m *Manager) syncContainerStatus(ctx context.Context) {
 
 	rows, err := m.db.Query("SELECT id, name FROM services")
 	if err != nil {
-		log.Printf("sync: failed to query services: %v", err)
+		m.logger.Error("sync: failed to query services", "error", err)
 		return
 	}
 	defer rows.Close()
@@ -192,7 +198,7 @@ func (m *Manager) syncContainerStatus(ctx context.Context) {
 			ON CONFLICT (service_id) DO UPDATE SET status = $2, updated_at = NOW()
 		`, id, status)
 		if err != nil {
-			log.Printf("sync: failed to update status for %s: %v", name, err)
+			m.logger.Error("sync: failed to update status", "service", name, "error", err)
 		}
 	}
 
@@ -245,7 +251,7 @@ func (m *Manager) collectMetrics(ctx context.Context) {
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
 		`, id, metrics.CPUPercentage, metrics.MemoryUsedMB, metrics.MemoryLimitMB, metrics.MemoryPercentage, metrics.NetworkRxBytes, metrics.NetworkTxBytes)
 		if err != nil {
-			log.Printf("sync: failed to insert metrics for %s: %v", name, err)
+			m.logger.Error("sync: failed to insert metrics", "service", name, "error", err)
 		}
 	}
 }
@@ -265,7 +271,7 @@ func (m *Manager) eventLoop(ctx context.Context) {
 			Type: []string{"container"},
 		}, func(event *podman.Event, err error) bool {
 			if err != nil {
-				log.Printf("sync: event error: %v", err)
+				m.logger.Error("sync: event error", "error", err)
 				return true
 			}
 
@@ -274,7 +280,7 @@ func (m *Manager) eventLoop(ctx context.Context) {
 		})
 
 		if err != nil && ctx.Err() == nil {
-			log.Printf("sync: event stream disconnected: %v, reconnecting...", err)
+			m.logger.Error("sync: event stream disconnected, reconnecting", "error", err)
 			time.Sleep(2 * time.Second)
 		}
 	}
@@ -305,7 +311,7 @@ func (m *Manager) updateContainerStatus(ctx context.Context, name string, status
 		WHERE s.id = cs.service_id AND s.name = $2
 	`, status, name)
 	if err != nil {
-		log.Printf("sync: failed to update status for %s: %v", name, err)
+		m.logger.Error("sync: failed to update status", "service", name, "error", err)
 	}
 
 	m.statusCache.mu.Lock()
@@ -333,7 +339,7 @@ func (m *Manager) updateContainerHealth(ctx context.Context, name string, event 
 		WHERE s.id = cs.service_id AND s.name = $2
 	`, healthStatus, name)
 	if err != nil {
-		log.Printf("sync: failed to update health for %s: %v", name, err)
+		m.logger.Error("sync: failed to update health", "service", name, "error", err)
 	}
 }
 
@@ -419,7 +425,7 @@ func (m *Manager) runDailyCleanupIfDue(ctx context.Context) error {
 		)
 		lastRun = time.Unix(0, 0).UTC()
 	} else if err != nil {
-		log.Printf("sync: daily cleanup state read failed: %v", err)
+		m.logger.Error("sync: daily cleanup state read failed", "error", err)
 		return err
 	}
 	if time.Since(lastRun) < 24*time.Hour {
@@ -446,7 +452,7 @@ func (m *Manager) runDailyCleanupIfDue(ctx context.Context) error {
 		if opErr != nil {
 			// Keep going, but don't persist the timestamp.
 			anyErr = opErr
-			log.Printf("sync: daily cleanup op %q failed: %v", op.name, opErr)
+			m.logger.Error("sync: daily cleanup op failed", "op", op.name, "error", opErr)
 		}
 	}
 
@@ -458,7 +464,7 @@ func (m *Manager) runDailyCleanupIfDue(ctx context.Context) error {
 	if _, err := m.db.ExecContext(ctx,
 		`UPDATE sync_state SET value = NOW(), updated_at = NOW() WHERE key = 'last_daily_cleanup'`,
 	); err != nil {
-		log.Printf("sync: daily cleanup state update failed: %v", err)
+		m.logger.Error("sync: daily cleanup state update failed", "error", err)
 		return err
 	}
 	return nil
@@ -585,16 +591,16 @@ func (m *Manager) deleteInBatches(ctx context.Context, query string, arg1 any, b
 	for i := 0; i < maxBatchesPerOp; i++ {
 		if ctx.Err() != nil {
 			if total > 0 {
-				log.Printf("sync: %s: deleted %d rows (interrupted)", label, total)
+				m.logger.Info("sync: batch delete interrupted", "label", label, "rows", total)
 			}
 			return total, ctx.Err()
 		}
 		res, err := m.db.ExecContext(ctx, query, arg1, batchSize)
 		if err != nil {
 			if total > 0 {
-				log.Printf("sync: %s: deleted %d rows before error: %v", label, total, err)
+				m.logger.Error("sync: batch delete partial", "label", label, "rows", total, "error", err)
 			} else {
-				log.Printf("sync: %s failed: %v", label, err)
+				m.logger.Error("sync: batch delete failed", "label", label, "error", err)
 			}
 			return total, err
 		}
@@ -605,7 +611,7 @@ func (m *Manager) deleteInBatches(ctx context.Context, query string, arg1 any, b
 		}
 	}
 	if total >= int64(batchSize) {
-		log.Printf("sync: %s: deleted %d rows", label, total)
+		m.logger.Info("sync: batch delete complete", "label", label, "rows", total)
 	}
 	return total, nil
 }
@@ -617,7 +623,7 @@ func mustParseIntEnv(key string, def int) int {
 	}
 	i, err := strconv.Atoi(v)
 	if err != nil {
-		log.Printf("sync: invalid %s=%q, using %d", key, v, def)
+		slog.Warn("sync: invalid env config", "key", key, "value", v, "default", def)
 		return def
 	}
 	return i
@@ -632,10 +638,10 @@ func mustParseDurationEnv(key string, def string) time.Duration {
 	if err != nil {
 		dd, derr := parseDurationWithDays(def)
 		if derr != nil {
-			log.Printf("sync: invalid %s=%q and default %q, using 0", key, v, def)
+			slog.Warn("sync: invalid env config and default", "key", key, "value", v, "default", def)
 			return 0
 		}
-		log.Printf("sync: invalid %s=%q, using default %q", key, v, def)
+		slog.Warn("sync: invalid env config", "key", key, "value", v, "default", def)
 		return dd
 	}
 	return d
@@ -705,7 +711,7 @@ func (m *Manager) TriggerSync(syncType string) string {
 			m.syncContainerStatus(ctx)
 			m.collectMetrics(ctx)
 			if syncErr := m.registrySync.SyncAll(ctx); syncErr != nil {
-				log.Printf("sync: registry sync failed: %v", syncErr)
+				m.logger.Error("sync: registry sync failed", "error", syncErr)
 			}
 			err = m.trivyScanner.ScanAll(ctx)
 		}
@@ -726,7 +732,7 @@ func (m *Manager) TriggerSync(syncType string) string {
 			 VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
 			job.ID, job.Type, job.Status, job.StartedAt, job.EndedAt, job.Error)
 		if dbErr != nil {
-			log.Printf("sync: failed to persist job %s: %v", jobID, dbErr)
+			m.logger.Error("sync: failed to persist job", "job_id", jobID, "error", dbErr)
 		} else {
 			// Remove from memory after successful DB persistence
 			delete(m.jobs, jobID)
@@ -747,14 +753,14 @@ func (m *Manager) GetJobs() []*Job {
 	`)
 	jobs := make([]*Job, 0)
 	if err != nil {
-		log.Printf("sync: failed to query sync_jobs: %v", err)
+		m.logger.Error("sync: failed to query sync_jobs", "error", err)
 		// Fall back to in-memory only
 	} else {
 		defer rows.Close()
 		for rows.Next() {
 			job := &Job{}
 			if err := rows.Scan(&job.ID, &job.Type, &job.Status, &job.StartedAt, &job.EndedAt, &job.Error, &job.CreatedAt); err != nil {
-				log.Printf("sync: failed to scan job row: %v", err)
+				m.logger.Error("sync: failed to scan job row", "error", err)
 				continue
 			}
 			jobs = append(jobs, job)

@@ -3,7 +3,7 @@ package sync
 import (
 	"context"
 	"database/sql"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/priz/devarch-api/pkg/registry"
@@ -12,12 +12,14 @@ import (
 type RegistrySync struct {
 	db      *sql.DB
 	manager *registry.Manager
+	logger  *slog.Logger
 }
 
-func NewRegistrySync(db *sql.DB, mgr *registry.Manager) *RegistrySync {
+func NewRegistrySync(db *sql.DB, mgr *registry.Manager, logger *slog.Logger) *RegistrySync {
 	return &RegistrySync{
 		db:      db,
 		manager: mgr,
+		logger:  logger,
 	}
 }
 
@@ -39,7 +41,7 @@ func (rs *RegistrySync) SyncAll(ctx context.Context) error {
 
 	for _, imageName := range images {
 		if err := rs.SyncImage(ctx, imageName); err != nil {
-			log.Printf("failed to sync image %s: %v", imageName, err)
+			rs.logger.Error("failed to sync image", "image", imageName, "error", err)
 		}
 	}
 
@@ -62,7 +64,7 @@ func (rs *RegistrySync) SyncImage(ctx context.Context, imageName string) error {
 
 	info, err := reg.GetImageInfo(ctx, repository)
 	if err != nil {
-		log.Printf("failed to get image info for %s: %v", imageName, err)
+		rs.logger.Error("failed to get image info", "image", imageName, "error", err)
 		info = &registry.ImageInfo{Repository: imageName}
 	}
 
@@ -84,7 +86,7 @@ func (rs *RegistrySync) SyncImage(ctx context.Context, imageName string) error {
 
 	tags, err := reg.ListTags(ctx, repository, registry.ListTagsOptions{PageSize: 20})
 	if err != nil {
-		log.Printf("failed to list tags for %s: %v", imageName, err)
+		rs.logger.Error("failed to list tags", "image", imageName, "error", err)
 		return nil
 	}
 
@@ -106,7 +108,7 @@ func (rs *RegistrySync) SyncImage(ctx context.Context, imageName string) error {
 			RETURNING id
 		`, imageID, tag.Name, tag.Digest, tag.SizeBytes, pushedAt).Scan(&tagID)
 		if err != nil {
-			log.Printf("failed to upsert tag %s: %v", tag.Name, err)
+			rs.logger.Error("failed to upsert tag", "tag", tag.Name, "error", err)
 			continue
 		}
 

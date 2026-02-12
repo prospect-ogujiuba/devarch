@@ -19,7 +19,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.24'
 
       - name: Install tools
         run: |
@@ -51,7 +51,7 @@ jobs:
         run: |
           oasdiff breaking /tmp/base-swagger.yaml /tmp/pr-swagger.yaml \
             --fail-on ERR \
-            --format githubactions || true
+            --format githubactions
 
       - name: Generate changelog
         if: always()

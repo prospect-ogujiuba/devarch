@@ -305,7 +305,7 @@ func (c *Client) WaitContainer(ctx context.Context, nameOrID string, condition s
 	}
 
 	if result.Error != "" {
-		return result.StatusCode, fmt.Errorf(result.Error)
+		return result.StatusCode, fmt.Errorf("%s", result.Error)
 	}
 
 	return result.StatusCode, nil

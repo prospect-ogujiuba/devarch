@@ -286,9 +286,9 @@ function StackDetailPage() {
           {ctrl.stack.enabled && (
             <LifecycleButtons
               isRunning={ctrl.stack.running_count > 0}
-              onStart={() => ctrl.startStack.mutate(ctrl.stack.name)}
-              onStop={() => ctrl.stopStack.mutate(ctrl.stack.name)}
-              onRestart={() => ctrl.restartStack.mutate(ctrl.stack.name)}
+              onStart={() => ctrl.startStack.mutate(ctrl.stack!.name)}
+              onStop={() => ctrl.stopStack.mutate(ctrl.stack!.name)}
+              onRestart={() => ctrl.restartStack.mutate(ctrl.stack!.name)}
               isStartPending={ctrl.startStack.isPending}
               isStopPending={ctrl.stopStack.isPending}
               isRestartPending={ctrl.restartStack.isPending}
@@ -456,11 +456,11 @@ function StackDetailPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Status:</span>
-                    <Badge variant={networkStatus.status === 'active' ? 'success' : 'outline'}>
-                      {networkStatus.status === 'active' ? 'Active' : 'Not Created'}
+                    <Badge variant={ctrl.networkStatus.status === 'active' ? 'success' : 'outline'}>
+                      {ctrl.networkStatus.status === 'active' ? 'Active' : 'Not Created'}
                     </Badge>
                   </div>
-                  {networkStatus.status === 'active' && (
+                  {ctrl.networkStatus.status === 'active' && (
                     <>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">Driver:</span>
