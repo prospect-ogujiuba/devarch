@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 ## Current Position
 
-Phase: 26 of 28
-Plan: 02 of 02 complete
-Status: Phase 26 complete
-Last activity: 2026-02-12 — Integration tests complete (instance CRUD, staleness, advisory locks)
+Phase: 27 of 28
+Plan: 01 of 02 complete
+Status: Phase 27 in progress
+Last activity: 2026-02-12 — Frontend controller tests (instance + stack hooks)
 
-Progress: Phases 16-26 complete
+Progress: Phases 16-26 complete, 27 in progress
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) + 2 (v1.1.3) + 4 (v1.1.4) + 2 (v1.1.5) + 2 (v1.1.6) + 1 (v1.1.7) + 1 (v1.1.8) + 2 (v1.1.9) + 1 (v1.1.10) + 2 (v1.1.11) = 63
+- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) + 2 (v1.1.3) + 4 (v1.1.4) + 2 (v1.1.5) + 2 (v1.1.6) + 1 (v1.1.7) + 1 (v1.1.8) + 2 (v1.1.9) + 1 (v1.1.10) + 2 (v1.1.11) + 1 (v1.1.12) = 64
 - Average duration: ~4.6 minutes per plan
-- Total execution time: ~4.8 hours
+- Total execution time: ~4.9 hours
 
 **By Phase:**
 
@@ -40,11 +40,12 @@ Progress: Phases 16-26 complete
 | v1.1.9 (24) | 2 | 680s | 340s |
 | v1.1.10 (25) | 1 | 32s | 32s |
 | v1.1.11 (26) | 2 | 292s | 146s |
+| v1.1.12 (27) | 1 | 183s | 183s |
 
 **Recent Trend:**
 - v1.0 shipped successfully on 2026-02-09
 - v1.1 shipped successfully on 2026-02-10
-- v1.1.1-v1.1.11 in progress
+- v1.1.1-v1.1.12 in progress
 
 *Updated after each plan completion*
 | Phase 16 P01 | 42 | 1 tasks | 2 files |
@@ -68,6 +69,7 @@ Progress: Phases 16-26 complete
 | Phase 25 P01 | 32 | 1 tasks | 1 files |
 | Phase 26 P01 | 172 | 2 tasks | 4 files |
 | Phase 26 P02 | 120 | 2 tasks | 4 files |
+| Phase 27 P01 | 183 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -109,6 +111,9 @@ Recent decisions affecting current work:
 - [Phase 24-02]: Instance mutations use useMutationHelper - 21 mutations refactored with consistent error handling
 - [Phase 24-02]: Override mutations preserve effective-config invalidation for real-time UI sync
 - [Phase 25]: Single predicate covers all stack and instance queries via ['stacks', ...] prefix
+- [Phase 27-01]: test-utils.tsx extension required for JSX support in wrapper component
+- [Phase 27-01]: localStorage mock in setup.ts enables testing components importing API module
+- [Phase 27-01]: Mock factory helpers (mockQueryResult, mockMutation) reduce test boilerplate
 
 ### Pending Todos
 
@@ -121,9 +126,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 26-02-PLAN.md
+Stopped at: Completed 27-01-PLAN.md
 Resume file: None
-Next: Phase 26 complete, proceed to Phase 27
+Next: Proceed to 27-02-PLAN.md
 
 ---
 *Last updated: 2026-02-12*
