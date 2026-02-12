@@ -1,13 +1,14 @@
 package handlers
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	mw "github.com/priz/devarch-api/internal/api/middleware"
 	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/security"
 	devsync "github.com/priz/devarch-api/internal/sync"
@@ -41,7 +42,7 @@ func NewWebSocketHandler(sm *devsync.Manager, allowedOrigins []string, secMode s
 						return true
 					}
 				}
-				log.Printf("websocket: rejected connection from origin %q", origin)
+				slog.Warn("websocket: rejected connection from origin", "origin", origin)
 				return false
 			},
 			ReadBufferSize:  1024,
@@ -77,7 +78,8 @@ func (h *WebSocketHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("websocket upgrade error: %v", err)
+		logger := mw.LoggerFromContext(r.Context())
+		logger.Error("websocket upgrade error", "error", err)
 		return
 	}
 	defer conn.Close()
@@ -102,7 +104,7 @@ func (h *WebSocketHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		_, _, err := conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("websocket error: %v", err)
+				slog.Error("websocket error", "error", err)
 			}
 			break
 		}
@@ -137,7 +139,7 @@ func (h *WebSocketHandler) broadcastStatus() {
 	for conn := range h.clients {
 		conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 		if err := conn.WriteJSON(status); err != nil {
-			log.Printf("websocket write error: %v", err)
+			slog.Error("websocket write error", "error", err)
 			conn.Close()
 			failed = append(failed, conn)
 		}

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"regexp"
@@ -347,41 +347,41 @@ func (h *ServiceHandler) loadServiceByName(name string) (*models.Service, error)
 
 func (h *ServiceHandler) loadServiceRelations(s *models.Service) {
 	if rows, err := h.db.Query(`SELECT host_ip, host_port, container_port, protocol FROM service_ports WHERE service_id = $1`, s.ID); err != nil {
-		log.Printf("loadServiceRelations: ports query error for service %d: %v", s.ID, err)
+		slog.Error("loadServiceRelations: ports query error", "service_id", s.ID, "error", err)
 	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var p models.ServicePort
 			if err := rows.Scan(&p.HostIP, &p.HostPort, &p.ContainerPort, &p.Protocol); err != nil {
-				log.Printf("loadServiceRelations: ports scan error: %v", err)
+				slog.Error("loadServiceRelations: ports scan error", "error", err)
 				continue
 			}
 			s.Ports = append(s.Ports, p)
 		}
 		if err := rows.Err(); err != nil {
-			log.Printf("loadServiceRelations: ports iteration error: %v", err)
+			slog.Error("loadServiceRelations: ports iteration error", "error", err)
 		}
 	}
 
 	if rows, err := h.db.Query(`SELECT volume_type, source, target, read_only, is_external FROM service_volumes WHERE service_id = $1`, s.ID); err != nil {
-		log.Printf("loadServiceRelations: volumes query error for service %d: %v", s.ID, err)
+		slog.Error("loadServiceRelations: volumes query error", "service_id", s.ID, "error", err)
 	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var v models.ServiceVolume
 			if err := rows.Scan(&v.VolumeType, &v.Source, &v.Target, &v.ReadOnly, &v.IsExternal); err != nil {
-				log.Printf("loadServiceRelations: volumes scan error: %v", err)
+				slog.Error("loadServiceRelations: volumes scan error", "error", err)
 				continue
 			}
 			s.Volumes = append(s.Volumes, v)
 		}
 		if err := rows.Err(); err != nil {
-			log.Printf("loadServiceRelations: volumes iteration error: %v", err)
+			slog.Error("loadServiceRelations: volumes iteration error", "error", err)
 		}
 	}
 
 	if rows, err := h.db.Query(`SELECT key, value, is_secret, encrypted_value, encryption_version FROM service_env_vars WHERE service_id = $1`, s.ID); err != nil {
-		log.Printf("loadServiceRelations: env_vars query error for service %d: %v", s.ID, err)
+		slog.Error("loadServiceRelations: env_vars query error", "service_id", s.ID, "error", err)
 	} else {
 		defer rows.Close()
 		for rows.Next() {
@@ -389,7 +389,7 @@ func (h *ServiceHandler) loadServiceRelations(s *models.Service) {
 			var encryptedValue sql.NullString
 			var encryptionVersion int
 			if err := rows.Scan(&e.Key, &e.Value, &e.IsSecret, &encryptedValue, &encryptionVersion); err != nil {
-				log.Printf("loadServiceRelations: env_vars scan error: %v", err)
+				slog.Error("loadServiceRelations: env_vars scan error", "error", err)
 				continue
 			}
 
@@ -411,58 +411,58 @@ func (h *ServiceHandler) loadServiceRelations(s *models.Service) {
 			s.EnvVars = append(s.EnvVars, e)
 		}
 		if err := rows.Err(); err != nil {
-			log.Printf("loadServiceRelations: env_vars iteration error: %v", err)
+			slog.Error("loadServiceRelations: env_vars iteration error", "error", err)
 		}
 	}
 
 	if rows, err := h.db.Query(`SELECT key, value FROM service_labels WHERE service_id = $1`, s.ID); err != nil {
-		log.Printf("loadServiceRelations: labels query error for service %d: %v", s.ID, err)
+		slog.Error("loadServiceRelations: labels query error", "service_id", s.ID, "error", err)
 	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var l models.ServiceLabel
 			if err := rows.Scan(&l.Key, &l.Value); err != nil {
-				log.Printf("loadServiceRelations: labels scan error: %v", err)
+				slog.Error("loadServiceRelations: labels scan error", "error", err)
 				continue
 			}
 			s.Labels = append(s.Labels, l)
 		}
 		if err := rows.Err(); err != nil {
-			log.Printf("loadServiceRelations: labels iteration error: %v", err)
+			slog.Error("loadServiceRelations: labels iteration error", "error", err)
 		}
 	}
 
 	if rows, err := h.db.Query(`SELECT domain, proxy_port FROM service_domains WHERE service_id = $1`, s.ID); err != nil {
-		log.Printf("loadServiceRelations: domains query error for service %d: %v", s.ID, err)
+		slog.Error("loadServiceRelations: domains query error", "service_id", s.ID, "error", err)
 	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var d models.ServiceDomain
 			if err := rows.Scan(&d.Domain, &d.ProxyPort); err != nil {
-				log.Printf("loadServiceRelations: domains scan error: %v", err)
+				slog.Error("loadServiceRelations: domains scan error", "error", err)
 				continue
 			}
 			s.Domains = append(s.Domains, d)
 		}
 		if err := rows.Err(); err != nil {
-			log.Printf("loadServiceRelations: domains iteration error: %v", err)
+			slog.Error("loadServiceRelations: domains iteration error", "error", err)
 		}
 	}
 
 	if rows, err := h.db.Query(`SELECT srv.name FROM service_dependencies d JOIN services srv ON d.depends_on_service_id = srv.id WHERE d.service_id = $1`, s.ID); err != nil {
-		log.Printf("loadServiceRelations: dependencies query error for service %d: %v", s.ID, err)
+		slog.Error("loadServiceRelations: dependencies query error", "service_id", s.ID, "error", err)
 	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var name string
 			if err := rows.Scan(&name); err != nil {
-				log.Printf("loadServiceRelations: dependencies scan error: %v", err)
+				slog.Error("loadServiceRelations: dependencies scan error", "error", err)
 				continue
 			}
 			s.Dependencies = append(s.Dependencies, name)
 		}
 		if err := rows.Err(); err != nil {
-			log.Printf("loadServiceRelations: dependencies iteration error: %v", err)
+			slog.Error("loadServiceRelations: dependencies iteration error", "error", err)
 		}
 	}
 
@@ -474,48 +474,48 @@ func (h *ServiceHandler) loadServiceRelations(s *models.Service) {
 	}
 
 	if rows, err := h.db.Query(`SELECT path FROM service_env_files WHERE service_id = $1 ORDER BY sort_order`, s.ID); err != nil {
-		log.Printf("loadServiceRelations: env_files query error for service %d: %v", s.ID, err)
+		slog.Error("loadServiceRelations: env_files query error", "service_id", s.ID, "error", err)
 	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var path string
 			if err := rows.Scan(&path); err != nil {
-				log.Printf("loadServiceRelations: env_files scan error: %v", err)
+				slog.Error("loadServiceRelations: env_files scan error", "error", err)
 				continue
 			}
 			s.EnvFiles = append(s.EnvFiles, path)
 		}
 		if err := rows.Err(); err != nil {
-			log.Printf("loadServiceRelations: env_files iteration error: %v", err)
+			slog.Error("loadServiceRelations: env_files iteration error", "error", err)
 		}
 	}
 
 	if rows, err := h.db.Query(`SELECT network_name FROM service_networks WHERE service_id = $1 ORDER BY network_name`, s.ID); err != nil {
-		log.Printf("loadServiceRelations: networks query error for service %d: %v", s.ID, err)
+		slog.Error("loadServiceRelations: networks query error", "service_id", s.ID, "error", err)
 	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var name string
 			if err := rows.Scan(&name); err != nil {
-				log.Printf("loadServiceRelations: networks scan error: %v", err)
+				slog.Error("loadServiceRelations: networks scan error", "error", err)
 				continue
 			}
 			s.Networks = append(s.Networks, name)
 		}
 		if err := rows.Err(); err != nil {
-			log.Printf("loadServiceRelations: networks iteration error: %v", err)
+			slog.Error("loadServiceRelations: networks iteration error", "error", err)
 		}
 	}
 
 	if rows, err := h.db.Query(`SELECT id, service_id, config_file_id, source_path, target_path, readonly FROM service_config_mounts WHERE service_id = $1`, s.ID); err != nil {
-		log.Printf("loadServiceRelations: config_mounts query error for service %d: %v", s.ID, err)
+		slog.Error("loadServiceRelations: config_mounts query error", "service_id", s.ID, "error", err)
 	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var m models.ServiceConfigMount
 			var cfgFileID sql.NullInt32
 			if err := rows.Scan(&m.ID, &m.ServiceID, &cfgFileID, &m.SourcePath, &m.TargetPath, &m.ReadOnly); err != nil {
-				log.Printf("loadServiceRelations: config_mounts scan error: %v", err)
+				slog.Error("loadServiceRelations: config_mounts scan error", "error", err)
 				continue
 			}
 			if cfgFileID.Valid {
@@ -525,7 +525,7 @@ func (h *ServiceHandler) loadServiceRelations(s *models.Service) {
 			s.ConfigMounts = append(s.ConfigMounts, m)
 		}
 		if err := rows.Err(); err != nil {
-			log.Printf("loadServiceRelations: config_mounts iteration error: %v", err)
+			slog.Error("loadServiceRelations: config_mounts iteration error", "error", err)
 		}
 	}
 }
@@ -800,14 +800,14 @@ func (h *ServiceHandler) snapshotConfig(s *models.Service, summary string) {
 
 	var nextVersion int
 	if err := h.db.QueryRow(`SELECT COALESCE(MAX(version), 0) + 1 FROM service_config_versions WHERE service_id = $1`, s.ID).Scan(&nextVersion); err != nil {
-		log.Printf("snapshotConfig: failed to get next version for service %d: %v", s.ID, err)
+		slog.Error("snapshotConfig: failed to get next version", "service_id", s.ID, "error", err)
 		return
 	}
 	if _, err := h.db.Exec(`
 		INSERT INTO service_config_versions (service_id, version, config_snapshot, change_summary)
 		VALUES ($1, $2, $3, $4)
 	`, s.ID, nextVersion, snapshotJSON, summary); err != nil {
-		log.Printf("snapshotConfig: failed to insert version %d for service %d: %v", nextVersion, s.ID, err)
+		slog.Error("snapshotConfig: failed to insert version", "version", nextVersion, "service_id", s.ID, "error", err)
 	}
 }
 
