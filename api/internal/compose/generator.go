@@ -213,14 +213,14 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 				}
 			}
 
-			// Resolve relative build context paths
+			// Resolve build context paths (container-internal for podman-compose)
 			if build, ok := overrides["build"]; ok {
 				if buildMap, ok := build.(map[string]interface{}); ok {
 					if ctx, ok := buildMap["context"].(string); ok {
-						buildMap["context"] = g.resolveRelativePath(ctx, categoryName)
+						buildMap["context"] = g.resolveBuildContextPath(ctx, categoryName)
 					}
 				} else if ctx, ok := build.(string); ok {
-					overrides["build"] = g.resolveRelativePath(ctx, categoryName)
+					overrides["build"] = g.resolveBuildContextPath(ctx, categoryName)
 				}
 			}
 
@@ -503,6 +503,32 @@ func (g *Generator) rewriteContainerPath(source string) string {
 		return g.hostProjectRoot
 	}
 	return source
+}
+
+// resolveBuildContextPath resolves build context paths to container-internal paths.
+// podman-compose runs inside the container and needs local access to the build context
+// to tar it and send it to the host podman daemon via the socket.
+func (g *Generator) resolveBuildContextPath(source, categoryName string) string {
+	if source == "" {
+		return source
+	}
+	// Absolute /workspace paths stay as-is (already container-accessible)
+	if filepath.IsAbs(source) {
+		return source
+	}
+	if !strings.HasPrefix(source, ".") && !strings.Contains(source, "/") {
+		return source
+	}
+	// Resolve relative paths against workspace root (container-internal)
+	root := g.workspaceRoot
+	if root == "" {
+		root = g.hostProjectRoot
+	}
+	if root == "" || categoryName == "" {
+		return source
+	}
+	base := filepath.Join(root, "apps", categoryName)
+	return filepath.Clean(filepath.Join(base, source))
 }
 
 func (g *Generator) resolveRelativePath(source, categoryName string) string {
