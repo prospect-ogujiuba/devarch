@@ -292,7 +292,7 @@ export function useGeneratePlan(name: string) {
   return useMutation({
     mutationFn: async () => {
       const response = await api.get<StackPlan>(`/stacks/${name}/plan`)
-      return response
+      return response.data
     },
     onError: (error) => {
       toast.error(getErrorMessage(error, 'Failed to generate plan'))

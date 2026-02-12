@@ -459,8 +459,8 @@ function PlanTab({ stackName }: { stackName: string }) {
 
   const handleGenerate = () => {
     generatePlan.mutate(undefined, {
-      onSuccess: (response) => {
-        setPlan(response.data)
+      onSuccess: (data) => {
+        setPlan(data)
       },
     })
   }
