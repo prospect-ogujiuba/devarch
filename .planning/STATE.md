@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 ## Current Position
 
-Phase: 27 of 28
-Plan: 02 of 02 complete
-Status: Phase 27 complete
-Last activity: 2026-02-12 — Frontend controller tests complete (all 3 hooks + CI workflow)
+Phase: 28 of 28
+Plan: 02 of ?? complete
+Status: Phase 28 in progress
+Last activity: 2026-02-12 — Sync job persistence complete (DB write-through + 7-day retention)
 
-Progress: Phases 16-27 complete
+Progress: Phases 16-27 complete, Phase 28 in progress
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) + 2 (v1.1.3) + 4 (v1.1.4) + 2 (v1.1.5) + 2 (v1.1.6) + 1 (v1.1.7) + 1 (v1.1.8) + 2 (v1.1.9) + 1 (v1.1.10) + 2 (v1.1.11) + 2 (v1.1.12) = 65
+- Total plans completed: 30 (v1.0) + 14 (v1.1) + 1 (v1.1.1) + 1 (v1.1.2) + 2 (v1.1.3) + 4 (v1.1.4) + 2 (v1.1.5) + 2 (v1.1.6) + 1 (v1.1.7) + 1 (v1.1.8) + 2 (v1.1.9) + 1 (v1.1.10) + 2 (v1.1.11) + 2 (v1.1.12) + 1 (v1.1.13) = 66
 - Average duration: ~4.5 minutes per plan
-- Total execution time: ~4.9 hours
+- Total execution time: ~5.0 hours
 
 **By Phase:**
 
@@ -41,6 +41,7 @@ Progress: Phases 16-27 complete
 | v1.1.10 (25) | 1 | 32s | 32s |
 | v1.1.11 (26) | 2 | 292s | 146s |
 | v1.1.12 (27) | 2 | 308s | 154s |
+| v1.1.13 (28) | 1 | 157s | 157s |
 
 **Recent Trend:**
 - v1.0 shipped successfully on 2026-02-09
@@ -71,6 +72,7 @@ Progress: Phases 16-27 complete
 | Phase 26 P02 | 120 | 2 tasks | 4 files |
 | Phase 27 P01 | 183 | 2 tasks | 4 files |
 | Phase 27 P02 | 125 | 2 tasks | 2 files |
+| Phase 28 P02 | 157 | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -117,6 +119,9 @@ Recent decisions affecting current work:
 - [Phase 27-01]: Mock factory helpers (mockQueryResult, mockMutation) reduce test boilerplate
 - [Phase 27-02]: All 3 controller hooks tested following consistent patterns (TEST-03 complete)
 - [Phase 27-02]: CI workflow triggers only on dashboard/** changes for efficiency
+- [Phase 28]: Write-through persistence removes completed jobs from memory after successful DB insert
+- [Phase 28]: GetJobs merges in-memory (running) + DB (completed) for unified view
+- [Phase 28]: 7-day retention integrated into existing daily cleanup cycle
 
 ### Pending Todos
 
@@ -129,9 +134,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 27-02-PLAN.md
+Stopped at: Completed 28-02-PLAN.md
 Resume file: None
-Next: Proceed to Phase 28
+Next: Continue Phase 28
 
 ---
 *Last updated: 2026-02-12*
