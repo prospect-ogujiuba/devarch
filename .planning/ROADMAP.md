@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 Stacks & Instances** — Phases 1-9 (shipped 2026-02-09)
 - ✅ **v1.1 Schema Reconciliation** — Phases 10-15 (shipped 2026-02-10)
-- 🚧 **v1.1.1 Architecture Hardening** — Phases 16-28 (in progress)
+- ✅ **v1.1.1 Architecture Hardening** — Phases 16-28 (shipped 2026-02-12)
 
 ## Phases
 
@@ -39,7 +39,7 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 
 </details>
 
-### 🚧 v1.1.1 Architecture Hardening (In Progress)
+### ✅ v1.1.1 Architecture Hardening (Shipped 2026-02-12)
 
 **Milestone Goal:** Harden security model, normalize API contracts, decompose monolithic handlers, optimize query paths, extract frontend controllers, and establish test/observability baselines.
 
@@ -242,8 +242,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 28-01-PLAN.md — Structured slog logging with request-scoped middleware and handler migration
-- [ ] 28-02-PLAN.md — Sync job DB persistence with write-through and 7-day cleanup
+- [x] 28-01-PLAN.md — Structured slog logging with request-scoped middleware and handler migration
+- [x] 28-02-PLAN.md — Sync job DB persistence with write-through and 7-day cleanup
 
 ## Progress
 
@@ -264,8 +264,8 @@ Phases execute in numeric order: 16 → 17 → 18 → 19 → 20 → 21 → 22 �
 | 25. WebSocket Expansion & Frontend Auth | 1/1 | ✓ Complete | 2026-02-12 |
 | 26. API Integration Tests | 2/2 | ✓ Complete | 2026-02-12 |
 | 27. Frontend Controller Tests | 2/2 | ✓ Complete | 2026-02-12 |
-| 28. Observability Hardening | 0/2 | Not started | - |
+| 28. Observability Hardening | 2/2 | ✓ Complete | 2026-02-12 |
 
 ---
 *Created: 2026-02-03*
-*Last updated: 2026-02-12 — Phase 28 planned*
+*Last updated: 2026-02-12 — Phase 28 complete*
