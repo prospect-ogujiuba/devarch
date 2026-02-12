@@ -207,10 +207,11 @@ Plans:
   4. Tests verify plan token staleness detection
   5. Tests verify advisory lock conflicts prevent concurrent applies
   6. CI pipeline runs integration tests and fails build on failure
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 26-01-PLAN.md — Test infrastructure (testcontainers, helpers, TestMain) + stack CRUD/soft-delete tests
+- [ ] 26-02-PLAN.md — Instance CRUD + staleness token + advisory lock tests + CI workflow
 
 #### Phase 27: Frontend Controller Tests
 **Goal**: Controller hooks have test coverage for orchestration flows
