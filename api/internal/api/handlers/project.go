@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/lib/pq"
 	"github.com/priz/devarch-api/internal/api/respond"
+	mw "github.com/priz/devarch-api/internal/api/middleware"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/identity"
 	"github.com/priz/devarch-api/internal/project"
@@ -348,7 +349,8 @@ func (h *ProjectHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	var stackID int
-	err := h.db.QueryRow(`SELECT stack_id FROM projects WHERE name = $1`, name).Scan(&stackID)
+	var stackName string
+	err := h.db.QueryRow(`SELECT p.stack_id, s.name FROM projects p JOIN stacks s ON s.id = p.stack_id WHERE p.name = $1`, name).Scan(&stackID, &stackName)
 	if err == sql.ErrNoRows {
 		respond.NotFound(w, r, "project", name)
 		return
@@ -358,14 +360,31 @@ func (h *ProjectHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.db.Exec(`UPDATE stacks SET deleted_at = NOW(), updated_at = NOW(), project_id = NULL WHERE id = $1`, stackID)
+	if _, err := h.controller.Stop(r.Context(), name); err != nil {
+		logger := mw.LoggerFromContext(r.Context())
+		logger.Warn("failed to stop project containers during delete", "error", err)
+	}
+
+	tx, err := h.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		respond.InternalError(w, r, err)
+		return
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(`UPDATE stacks SET deleted_at = NOW(), updated_at = NOW(), project_id = NULL WHERE id = $1`, stackID)
 	if err != nil {
 		respond.InternalError(w, r, err)
 		return
 	}
 
-	_, err = h.db.Exec(`DELETE FROM projects WHERE name = $1`, name)
+	_, err = tx.Exec(`DELETE FROM projects WHERE name = $1`, name)
 	if err != nil {
+		respond.InternalError(w, r, err)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
 		respond.InternalError(w, r, err)
 		return
 	}
