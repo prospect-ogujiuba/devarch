@@ -751,3 +751,12 @@ export interface ImagePruneResult {
   Err?: string
   Size: number
 }
+
+export interface ImageInfo {
+  repository: string
+  description: string
+  star_count: number
+  pull_count: number
+  is_official: boolean
+  last_updated?: string
+}
