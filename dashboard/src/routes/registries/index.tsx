@@ -95,15 +95,11 @@ function RegistriesPage() {
         </div>
       </div>
 
-      {!debouncedQuery && (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Search className="mb-4 size-12 text-muted-foreground/50" />
-          <p className="text-lg text-muted-foreground">Search for Docker images</p>
-          <p className="text-sm text-muted-foreground/70">Try "postgres", "nginx", or "redis"</p>
-        </div>
+      {!debouncedQuery && results && results.length > 0 && (
+        <h2 className="text-lg font-semibold">Popular Images</h2>
       )}
 
-      {debouncedQuery && isLoading && (
+      {isLoading && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i} className="animate-pulse">
@@ -117,7 +113,7 @@ function RegistriesPage() {
         </div>
       )}
 
-      {debouncedQuery && !isLoading && results && results.length === 0 && (
+      {!isLoading && results && results.length === 0 && debouncedQuery && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <Package className="mb-4 size-12 text-muted-foreground/50" />
           <p className="text-lg text-muted-foreground">No images found</p>
