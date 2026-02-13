@@ -197,6 +197,18 @@ export function useDeleteService() {
   })
 }
 
+export function useImportLibrary() {
+  return useMutationHelper({
+    mutationFn: async () => {
+      const response = await api.post('/services/import-library')
+      return response.data
+    },
+    successMessage: 'Service library imported',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to import service library'),
+    invalidate: [['services']],
+  })
+}
+
 function makeSubResourceMutation<T>(resource: string, label: string) {
   return function useSubResource() {
     const queryClient = useQueryClient()
