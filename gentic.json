@@ -1,0 +1,91 @@
+{
+  "$schema": "./config/gentic-schema.json",
+  "version": "0.1.2",
+  "hooks": {
+    "session-start": {
+      "enabled": true,
+      "failMode": "open"
+    },
+    "guard-bash": {
+      "enabled": true,
+      "failMode": "closed"
+    },
+    "edit-gate": {
+      "enabled": true,
+      "failMode": "open"
+    },
+    "stop-gate": {
+      "enabled": true,
+      "failMode": "open"
+    },
+    "diff-digest": {
+      "enabled": true,
+      "failMode": "open"
+    },
+    "snapshot-inject": {
+      "enabled": true,
+      "failMode": "open"
+    },
+    "compact-summarize": {
+      "enabled": true,
+      "failMode": "open"
+    },
+    "post-failure-log": {
+      "enabled": true,
+      "failMode": "open"
+    },
+    "statusline": {
+      "enabled": true,
+      "failMode": "open"
+    },
+    "navigator": {
+      "enabled": true,
+      "failMode": "open"
+    }
+  },
+  "snapshot": {
+    "maxDepth": 3,
+    "maxSizeBytes": 6144,
+    "includeHotspots": true,
+    "includeRiskZones": true
+  },
+  "session": {
+    "retentionCount": 30,
+    "ledgerMaxSizeBytes": 1048576,
+    "redactSecrets": true
+  },
+  "risk": {
+    "criticalPaths": [
+      ".github/workflows/",
+      "Dockerfile",
+      "docker-compose",
+      "infra/",
+      "deploy/"
+    ],
+    "highPaths": [
+      "package.json",
+      "tsconfig.json",
+      ".eslintrc",
+      "gentic.json"
+    ]
+  },
+  "guardBash": {
+    "extraPatterns": [],
+    "disabledPatterns": [],
+    "borderlineAction": "ask"
+  },
+  "stopGate": {
+    "verificationPattern": "^Verification:\\s+",
+    "riskPattern": "^Risk:\\s+"
+  },
+  "navigator": {
+    "aggressiveness": 3
+  },
+  "oracle": {
+    "mineOnStart": true,
+    "maxSessionsToMine": 10,
+    "insightBudgetBytes": 1024
+  },
+  "pathfinder": {},
+  "failClosed": []
+}
