@@ -17,5 +17,7 @@ api/.runtime/
 node_modules/
 dist/
 
-# Gentic runtime (local)
+# Claude Code / Gentic tooling
+.claude/
 .gentic/
+gentic.json
