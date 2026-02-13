@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { RegistryInfo, TagResult, SearchResult } from '@/types/api'
+import type { RegistryInfo, TagResult, SearchResult, ImageInfo } from '@/types/api'
 
 export function useRegistries() {
   return useQuery({
@@ -41,7 +41,7 @@ export function useImageInfo(registryName: string, repository: string, opts?: { 
   return useQuery({
     queryKey: ['registry-image-info', registryName, repository],
     queryFn: async () => {
-      const res = await api.get(`/registries/${registryName}/images/${repository}`)
+      const res = await api.get<ImageInfo>(`/registries/${registryName}/images/${repository}`)
       return res.data
     },
     enabled: opts?.enabled !== false && !!registryName && !!repository,
