@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-import { EnableToggle, MoreActionsMenu } from '@/components/ui/entity-actions'
+import { EnableToggle, LifecycleButtons, MoreActionsMenu } from '@/components/ui/entity-actions'
 import { useInstanceDetailController } from '@/features/instances/useInstanceDetailController'
 import { OverridePorts } from '@/components/instances/override-ports'
 import { OverrideVolumes } from '@/components/instances/override-volumes'
@@ -63,6 +63,7 @@ function InstanceDetailPage() {
   const routeNavigate = Route.useNavigate()
   const navigate = useNavigate()
   const ctrl = useInstanceDetailController(stackName, instanceId)
+  const isRunning = ctrl.instance?.running ?? false
 
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -155,7 +156,7 @@ function InstanceDetailPage() {
           </div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">{ctrl.instance.instance_id}</h1>
-            <div className={cn('size-2 rounded-full', ctrl.instance.enabled ? 'bg-green-500' : 'bg-muted-foreground')} />
+            <div className={cn('size-2 rounded-full', isRunning ? 'bg-green-500' : ctrl.instance.enabled ? 'bg-yellow-500' : 'bg-muted-foreground')} />
           </div>
           <p className="text-muted-foreground">{ctrl.instance.template_name}</p>
           {ctrl.instance.container_name && (
@@ -163,6 +164,20 @@ function InstanceDetailPage() {
           )}
         </div>
         <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
+          {ctrl.instance.enabled && (
+            <LifecycleButtons
+              isRunning={isRunning}
+              onStart={() => ctrl.startInstance.mutate()}
+              onStop={() => ctrl.stopInstance.mutate()}
+              onRestart={() => ctrl.restartInstance.mutate()}
+              isStartPending={ctrl.startInstance.isPending}
+              isStopPending={ctrl.stopInstance.isPending}
+              isRestartPending={ctrl.restartInstance.isPending}
+              showRestart
+              className="col-span-2"
+              buttonClassName="w-full sm:w-auto"
+            />
+          )}
           <EnableToggle
             enabled={ctrl.instance.enabled}
             onToggle={handleToggleEnabled}
