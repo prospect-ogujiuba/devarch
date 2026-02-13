@@ -428,6 +428,7 @@ export interface Instance {
   container_name: string | null
   description: string
   enabled: boolean
+  running: boolean
   override_count: number
   created_at: string
   updated_at: string
