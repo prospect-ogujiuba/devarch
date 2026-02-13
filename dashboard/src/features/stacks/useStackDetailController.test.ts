@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useStackDetailController } from './useStackDetailController'
 import { createWrapper } from '@/test/test-utils'
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 vi.mock('./queries')
 vi.mock('@/features/instances/queries')
 vi.mock('@/features/proxy/queries')

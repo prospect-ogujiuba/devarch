@@ -4,6 +4,8 @@ import { useServiceDetailController } from './useServiceDetailController'
 import { createWrapper } from '@/test/test-utils'
 import type { Service } from '@/types/api'
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 vi.mock('./queries')
 vi.mock('@/features/proxy/queries')
 vi.mock('@/lib/format', () => ({ computeUptime: vi.fn() }))
