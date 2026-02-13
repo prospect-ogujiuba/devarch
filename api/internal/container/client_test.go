@@ -73,7 +73,7 @@ func TestNewClient_RespectsDevarchRuntime(t *testing.T) {
 	}
 }
 
-func TestStubMethods_ReturnErrNotImplemented(t *testing.T) {
+func TestNetworkMethods(t *testing.T) {
 	// Clear env to allow auto-detect
 	origEnv := os.Getenv("DEVARCH_RUNTIME")
 	os.Unsetenv("DEVARCH_RUNTIME")
@@ -86,22 +86,22 @@ func TestStubMethods_ReturnErrNotImplemented(t *testing.T) {
 
 	t.Run("CreateNetwork", func(t *testing.T) {
 		err := client.CreateNetwork("test", nil)
-		if err != ErrNotImplemented {
-			t.Errorf("CreateNetwork() error = %v, want %v", err, ErrNotImplemented)
+		if err != nil {
+			t.Errorf("CreateNetwork() error = %v, want nil", err)
 		}
 	})
 
 	t.Run("RemoveNetwork", func(t *testing.T) {
 		err := client.RemoveNetwork("test")
-		if err != ErrNotImplemented {
-			t.Errorf("RemoveNetwork() error = %v, want %v", err, ErrNotImplemented)
+		if err != nil {
+			t.Errorf("RemoveNetwork() error = %v, want nil", err)
 		}
 	})
 
 	t.Run("ListNetworks", func(t *testing.T) {
 		_, err := client.ListNetworks()
-		if err != ErrNotImplemented {
-			t.Errorf("ListNetworks() error = %v, want %v", err, ErrNotImplemented)
+		if err != nil {
+			t.Errorf("ListNetworks() error = %v, want nil", err)
 		}
 	})
 }
