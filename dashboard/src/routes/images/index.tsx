@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
 import { HardDrive, Download, Trash2, Eraser, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -61,14 +62,13 @@ function ImagesPage() {
       await pullImageWithProgress(pullReference, (report) => {
         setPullProgress((prev) => [...prev.slice(-20), report])
       })
-      setPullOpen(false)
-      setPullReference('')
-      setPullProgress([])
+      toast.success(`Pulled ${pullReference}`)
     } catch (error) {
       setPullProgress((prev) => [
         ...prev,
         { error: error instanceof Error ? error.message : 'Pull failed' },
       ])
+      toast.error(`Failed to pull: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setPulling(false)
     }
@@ -156,7 +156,13 @@ function ImagesPage() {
         </Table>
       )}
 
-      <Dialog open={pullOpen} onOpenChange={setPullOpen}>
+      <Dialog open={pullOpen} onOpenChange={(open) => {
+        setPullOpen(open)
+        if (!open) {
+          setPullReference('')
+          setPullProgress([])
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Pull Container Image</DialogTitle>
