@@ -33,7 +33,7 @@ type effectiveConfigResponse struct {
 	Labels           []models.ServiceLabel      `json:"labels"`
 	Domains          []models.ServiceDomain     `json:"domains"`
 	Healthcheck      *models.ServiceHealthcheck `json:"healthcheck,omitempty"`
-	Dependencies     []string                   `json:"dependencies"`
+	Dependencies     []dependencyEntry          `json:"dependencies"`
 	ConfigFiles      []models.ServiceConfigFile `json:"config_files"`
 	OverridesApplied overrideMetadata           `json:"overrides_applied"`
 }
