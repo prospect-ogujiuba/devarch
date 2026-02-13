@@ -33,7 +33,7 @@ type effectiveConfigResponse struct {
 	Labels           []models.ServiceLabel      `json:"labels"`
 	Domains          []models.ServiceDomain     `json:"domains"`
 	Healthcheck      *models.ServiceHealthcheck `json:"healthcheck,omitempty"`
-	Dependencies     []dependencyEntry          `json:"dependencies"`
+	Dependencies     []string                   `json:"dependencies"`
 	ConfigFiles      []models.ServiceConfigFile `json:"config_files"`
 	OverridesApplied overrideMetadata           `json:"overrides_applied"`
 }
@@ -245,10 +245,16 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 	}
 
 	if len(instanceDeps) > 0 {
-		resp.Dependencies = instanceDeps
+		resp.Dependencies = make([]string, len(instanceDeps))
+		for i, d := range instanceDeps {
+			resp.Dependencies[i] = d.DependsOn
+		}
 		resp.OverridesApplied.Dependencies = true
 	} else {
-		resp.Dependencies = templateDeps
+		resp.Dependencies = make([]string, len(templateDeps))
+		for i, d := range templateDeps {
+			resp.Dependencies[i] = d.DependsOn
+		}
 	}
 
 	templateConfigFiles, err := h.loadServiceConfigFiles(templateServiceID)

@@ -32,12 +32,12 @@ type SearchResult struct {
 }
 
 type ImageInfo struct {
-	Repository   string
-	Description  string
-	StarCount    int
-	PullCount    int64
-	IsOfficial   bool
-	LastUpdated  time.Time
+	Repository   string    `json:"repository"`
+	Description  string    `json:"description"`
+	StarCount    int       `json:"star_count"`
+	PullCount    int64     `json:"pull_count"`
+	IsOfficial   bool      `json:"is_official"`
+	LastUpdated  time.Time `json:"last_updated,omitempty"`
 }
 
 type TagInfo struct {
