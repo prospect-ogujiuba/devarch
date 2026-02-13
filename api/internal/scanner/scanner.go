@@ -869,13 +869,23 @@ func (s *Scanner) upsert(p ProjectInfo) error {
 	networkName := "devarch-" + p.Name + "-net"
 	var stackID int
 	err := s.db.QueryRow(`
-		INSERT INTO stacks (name, network_name, source)
-		VALUES ($1, $2, 'project-scan')
-		ON CONFLICT (name) WHERE deleted_at IS NULL DO UPDATE SET updated_at = NOW()
-		RETURNING id
-	`, p.Name, networkName).Scan(&stackID)
-	if err != nil {
+		UPDATE stacks SET deleted_at = NULL, updated_at = NOW(), source = 'project-scan'
+		WHERE name = $1 AND deleted_at IS NOT NULL RETURNING id
+	`, p.Name).Scan(&stackID)
+	if err == sql.ErrNoRows {
+		err = s.db.QueryRow(`
+			INSERT INTO stacks (name, network_name, source)
+			VALUES ($1, $2, 'project-scan')
+			ON CONFLICT (name) WHERE deleted_at IS NULL DO UPDATE SET updated_at = NOW()
+			RETURNING id
+		`, p.Name, networkName).Scan(&stackID)
+		if err != nil {
+			return fmt.Errorf("ensure stack for project %s: %w", p.Name, err)
+		}
+	} else if err != nil {
 		return fmt.Errorf("ensure stack for project %s: %w", p.Name, err)
+	} else {
+		log.Printf("restored soft-deleted stack for project %s", p.Name)
 	}
 
 	var projectID int
