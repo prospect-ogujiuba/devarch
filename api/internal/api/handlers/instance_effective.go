@@ -586,9 +586,9 @@ func (h *InstanceHandler) loadInstanceHealthcheck(instanceID int) (*models.Servi
 	return &hc, nil
 }
 
-func (h *InstanceHandler) loadServiceDependencies(serviceID int) ([]string, error) {
+func (h *InstanceHandler) loadServiceDependencies(serviceID int) ([]dependencyEntry, error) {
 	rows, err := h.db.Query(`
-		SELECT s.name
+		SELECT s.name, sd.condition
 		FROM service_dependencies sd
 		JOIN services s ON s.id = sd.depends_on_service_id
 		WHERE sd.service_id = $1
@@ -599,13 +599,13 @@ func (h *InstanceHandler) loadServiceDependencies(serviceID int) ([]string, erro
 	}
 	defer rows.Close()
 
-	var deps []string
+	var deps []dependencyEntry
 	for rows.Next() {
-		var dep string
-		if err := rows.Scan(&dep); err != nil {
+		var d dependencyEntry
+		if err := rows.Scan(&d.DependsOn, &d.Condition); err != nil {
 			return nil, err
 		}
-		deps = append(deps, dep)
+		deps = append(deps, d)
 	}
 	return deps, rows.Err()
 }
