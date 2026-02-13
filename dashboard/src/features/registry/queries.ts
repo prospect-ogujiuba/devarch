@@ -31,7 +31,7 @@ export function useSearchImages(registryName: string, query: string) {
     queryFn: async () => {
       const url = query
         ? `/registries/${registryName}/search?q=${encodeURIComponent(query)}&page_size=25`
-        : `/registries/${registryName}/search?page_size=25`
+        : `/registries/${registryName}/search?page_size=24`
       const res = await api.get<SearchResult[]>(url)
       return res.data
     },
