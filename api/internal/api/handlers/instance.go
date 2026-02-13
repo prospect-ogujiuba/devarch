@@ -435,7 +435,7 @@ func (h *InstanceHandler) Get(w http.ResponseWriter, r *http.Request) {
 		ConfigMounts: []models.ServiceConfigMount{},
 		Labels:       []models.ServiceLabel{},
 		Domains:      []models.ServiceDomain{},
-		Dependencies: []string{},
+		Dependencies: []dependencyEntry{},
 		ConfigFiles:  []models.ServiceConfigFile{},
 	}
 
