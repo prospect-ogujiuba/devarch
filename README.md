@@ -83,11 +83,19 @@ npm run preview
 
 ### Authentication
 
+DevArch supports three **security modes** controlled by the `SECURITY_MODE` env var:
+
+| Mode | API Key Required | WS Auth Required | Use Case |
+|------|-----------------|------------------|----------|
+| `dev-open` (default) | No | No | Local development, no auth |
+| `dev-keyed` | Yes | No | Shared dev, API key on HTTP |
+| `strict` | Yes | Yes | Production-like, full auth |
+
 - Set `DEVARCH_API_KEY` env var on the API to enable auth
-- If `DEVARCH_API_KEY` is unset, authentication is disabled entirely (warning logged once)
 - Uses constant-time comparison on the `X-API-Key` header
+- In `strict` mode, WebSocket connections require a short-lived HMAC-SHA256 token obtained via `POST /api/v1/auth/ws-token` (60-second TTL)
 - The dashboard login page prompts for the key and stores it in localStorage
-- The compose.yml ships with a pre-configured API key
+- CORS origins controlled via `ALLOWED_ORIGINS` env var (comma-separated, defaults to wildcard)
 
 ---
 
@@ -172,7 +180,7 @@ Full override editor with tabs for every configurable aspect:
 - **Resources**: CPU/memory limits and reservations
 - **Effective Config**: read-only merged view (template + your overrides + wired env vars)
 
-Actions: Edit description, Duplicate, Rename, Delete (with delete preview).
+Actions: Edit description, Duplicate, Rename, Delete (with delete preview), Open Terminal (interactive shell via WebSocket).
 
 ### Services (`/services`)
 Browse and manage the service template catalog. Search by name/image, filter by status/category, sort by name/status. Grid or table view.
@@ -181,6 +189,7 @@ Browse and manage the service template catalog. Search by name/image, filter by 
 - **Info**: status, image, restart policy, metrics, inline editors for ports/volumes/env/deps/labels/domains/healthcheck/config mounts
 - **Environment**: env var editor with secret flag
 - **Logs**: live streaming container logs with search
+- **Terminal**: interactive container shell via xterm.js WebSocket
 - **Compose**: generated YAML preview
 - **Files**: config file editor with syntax highlighting
 - **Proxy**: reverse proxy config generation
@@ -209,6 +218,9 @@ Manage Docker/Podman networks. View managed vs. external vs. orphaned networks. 
 
 ### Registries (`/registries`)
 Search Docker images across registries (DockerHub and GitHub Container Registry). Browse results with star/pull counts. Used by the tag picker when creating/editing services.
+
+### Images (`/images`)
+Manage local container images. List all images with search/filter, view details (layers, history), pull new images with streaming progress, remove individual images, and bulk-prune unused images. Accessible from the sidebar.
 
 ### Settings (`/settings`)
 - **Container Runtime**: see Docker/Podman status, versions. Switch between runtimes.
@@ -262,12 +274,15 @@ devarch init devarch.yml
 All endpoints under `/api/v1/` require `X-API-Key` header (when auth is enabled). Rate limited: 10 req/sec, burst 50 per IP. Default body size limit: 10MB (stack import: 256MB, configurable via `STACK_IMPORT_MAX_BYTES`).
 
 > Paths below are relative to `/api/v1` unless otherwise noted.
+>
+> **Swagger UI** available at `/swagger/` (auto-generated from annotations).
 
 ### Health & Auth
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/health` | Liveness check (root-level, no auth) |
 | POST | `/api/v1/auth/validate` | Validate API key (no rate limit) |
+| POST | `/api/v1/auth/ws-token` | Get short-lived WebSocket auth token (strict mode) |
 
 ### Status & Sync
 | Method | Path | Purpose |
@@ -410,6 +425,21 @@ All endpoints under `/api/v1/` require `X-API-Key` header (when auth is enabled)
 | GET | `/registries` | List registries (DockerHub, GHCR) |
 | GET | `/registries/{registry}/search` | Search images |
 | GET | `/registries/{registry}/images/*` | Image details |
+
+### Container Exec
+| Method | Path | Purpose |
+|--------|------|---------|
+| WS | `/containers/{name}/exec` | Interactive terminal session (WebSocket) |
+
+### Images
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/images` | List local images |
+| GET | `/images/inspect?name={ref}` | Inspect image details |
+| GET | `/images/history?name={ref}` | Image layer history |
+| POST | `/images/pull` | Pull image with streaming progress |
+| DELETE | `/images/remove?name={ref}` | Remove image |
+| POST | `/images/prune` | Remove unused images |
 
 ### Nginx
 | Method | Path | Purpose |
@@ -581,6 +611,9 @@ Import flags:
 | `APPS_DIR` | `/workspace/apps` | Directory with project apps |
 | `NGINX_GENERATED_DIR` | `/workspace/config/nginx/generated` | Output for nginx configs |
 | `STACK_IMPORT_MAX_BYTES` | `268435456` (256MB) | Max stack import file size |
+| `SECURITY_MODE` | `dev-open` | Security profile: `dev-open`, `dev-keyed`, or `strict` |
+| `ALLOWED_ORIGINS` | `*` | CORS allowed origins (comma-separated) |
+| `LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
 
 ### CLI Scripts (config.sh)
 | Variable | Default | Purpose |
@@ -777,13 +810,13 @@ A background **sync manager** runs continuously:
 
 The dashboard subscribes to the WebSocket for live container status updates without polling.
 
-Manual sync can be triggered via `POST /api/v1/sync`. Job status visible at `GET /api/v1/sync/jobs`.
+Manual sync can be triggered via `POST /api/v1/sync`. Job status visible at `GET /api/v1/sync/jobs`. Sync job history is persisted to the `sync_jobs` table (migration 013).
 
 ---
 
 ## 14. Database Schema
 
-12 migration files (001-012) creating ~40 tables:
+13 migration files (001-013) creating ~40 tables:
 
 | Migration | Tables Created |
 |-----------|---------------|
@@ -799,6 +832,7 @@ Manual sync can be triggered via `POST /api/v1/sync`. Job status visible at `GET
 | 010 | Additional instance override tables |
 | 011 | Drops `project_services`, adds `stacks.project_id`, makes `projects.stack_id NOT NULL` |
 | 012 | Fixes flowstate build context paths in `compose_overrides` |
+| 013 | `sync_jobs` (persisted sync job history) |
 
 ---
 
@@ -828,18 +862,23 @@ Manual sync can be triggered via `POST /api/v1/sync`. Job status visible at `GET
 
 12. **External network** — the `microservices-net` bridge network must exist before starting compose. Create it with `podman network create microservices-net`.
 
+13. **Structured logging** — the API uses `slog` with JSON output. Request logging includes method, path, status, duration, and request ID.
+
+14. **Interactive terminal** — `GET /api/v1/containers/{name}/exec` opens a WebSocket-based terminal session via Podman exec. Available from service and instance detail pages in the dashboard.
+
 ---
 
 ## 16. Technology Stack
 
 | Component | Technology |
 |-----------|------------|
-| **API** | Go 1.22, chi router, lib/pq, gorilla/websocket, yaml.v3 |
-| **Dashboard** | React 19, Vite 7, TanStack Router + Query, Tailwind CSS 4, Radix UI, CodeMirror 6, Zod, Axios, Sonner, cmdk, lucide-react |
+| **API** | Go 1.22, chi router, lib/pq, gorilla/websocket, yaml.v3, swaggo/http-swagger |
+| **Dashboard** | React 19, Vite 7, TanStack Router + Query, Tailwind CSS 4, Radix UI, CodeMirror 6, xterm.js, Zod, Axios, Sonner, cmdk, lucide-react |
 | **Dashboard Testing** | Vitest + Testing Library |
 | **Database** | PostgreSQL 16 |
 | **Container Runtime** | Docker or Podman (auto-detect, switchable) |
 | **CLI** | Bash/Zsh scripts |
 | **API Container** | Go 1.23 alpine + air hot-reload (dev), multi-stage build (production) |
 | **Dashboard Container** | Node 22 build → nginx alpine |
+| **CI** | GitHub Actions (dashboard tests, integration tests, OpenAPI spec check) |
 | **Registries** | DockerHub, GitHub Container Registry (GHCR) |
