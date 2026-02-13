@@ -45,6 +45,13 @@ type instanceResponse struct {
 	UpdatedAt         time.Time `json:"updated_at"`
 }
 
+type dependencyEntry struct {
+	ID         int    `json:"id"`
+	InstanceID int    `json:"instance_id"`
+	DependsOn  string `json:"depends_on"`
+	Condition  string `json:"condition"`
+}
+
 type instanceDetailResponse struct {
 	instanceResponse
 	Ports        []models.ServicePort       `json:"ports"`
@@ -56,7 +63,7 @@ type instanceDetailResponse struct {
 	Labels       []models.ServiceLabel      `json:"labels"`
 	Domains      []models.ServiceDomain     `json:"domains"`
 	Healthcheck  *models.ServiceHealthcheck `json:"healthcheck"`
-	Dependencies []string                   `json:"dependencies"`
+	Dependencies []dependencyEntry          `json:"dependencies"`
 	ConfigFiles  []models.ServiceConfigFile `json:"config_files"`
 }
 
