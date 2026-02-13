@@ -17,6 +17,7 @@ import { Route as ServicesIndexRouteImport } from './routes/services/index'
 import { Route as RegistriesIndexRouteImport } from './routes/registries/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as NetworksIndexRouteImport } from './routes/networks/index'
+import { Route as ImagesIndexRouteImport } from './routes/images/index'
 import { Route as CategoriesIndexRouteImport } from './routes/categories/index'
 import { Route as StacksNameRouteImport } from './routes/stacks/$name'
 import { Route as ServicesNewRouteImport } from './routes/services/new'
@@ -65,6 +66,11 @@ const NetworksIndexRoute = NetworksIndexRouteImport.update({
   path: '/networks/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ImagesIndexRoute = ImagesIndexRouteImport.update({
+  id: '/images/',
+  path: '/images/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CategoriesIndexRoute = CategoriesIndexRouteImport.update({
   id: '/categories/',
   path: '/categories/',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/services/new': typeof ServicesNewRoute
   '/stacks/$name': typeof StacksNameRouteWithChildren
   '/categories/': typeof CategoriesIndexRoute
+  '/images/': typeof ImagesIndexRoute
   '/networks/': typeof NetworksIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/registries/': typeof RegistriesIndexRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/services/new': typeof ServicesNewRoute
   '/stacks/$name': typeof StacksNameRouteWithChildren
   '/categories': typeof CategoriesIndexRoute
+  '/images': typeof ImagesIndexRoute
   '/networks': typeof NetworksIndexRoute
   '/projects': typeof ProjectsIndexRoute
   '/registries': typeof RegistriesIndexRoute
@@ -145,6 +153,7 @@ export interface FileRoutesById {
   '/services/new': typeof ServicesNewRoute
   '/stacks/$name': typeof StacksNameRouteWithChildren
   '/categories/': typeof CategoriesIndexRoute
+  '/images/': typeof ImagesIndexRoute
   '/networks/': typeof NetworksIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/registries/': typeof RegistriesIndexRoute
@@ -164,6 +173,7 @@ export interface FileRouteTypes {
     | '/services/new'
     | '/stacks/$name'
     | '/categories/'
+    | '/images/'
     | '/networks/'
     | '/projects/'
     | '/registries/'
@@ -181,6 +191,7 @@ export interface FileRouteTypes {
     | '/services/new'
     | '/stacks/$name'
     | '/categories'
+    | '/images'
     | '/networks'
     | '/projects'
     | '/registries'
@@ -198,6 +209,7 @@ export interface FileRouteTypes {
     | '/services/new'
     | '/stacks/$name'
     | '/categories/'
+    | '/images/'
     | '/networks/'
     | '/projects/'
     | '/registries/'
@@ -216,6 +228,7 @@ export interface RootRouteChildren {
   ServicesNewRoute: typeof ServicesNewRoute
   StacksNameRoute: typeof StacksNameRouteWithChildren
   CategoriesIndexRoute: typeof CategoriesIndexRoute
+  ImagesIndexRoute: typeof ImagesIndexRoute
   NetworksIndexRoute: typeof NetworksIndexRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
   RegistriesIndexRoute: typeof RegistriesIndexRoute
@@ -281,6 +294,13 @@ declare module '@tanstack/react-router' {
       path: '/networks'
       fullPath: '/networks/'
       preLoaderRoute: typeof NetworksIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/images/': {
+      id: '/images/'
+      path: '/images'
+      fullPath: '/images/'
+      preLoaderRoute: typeof ImagesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/categories/': {
@@ -355,6 +375,7 @@ const rootRouteChildren: RootRouteChildren = {
   ServicesNewRoute: ServicesNewRoute,
   StacksNameRoute: StacksNameRouteWithChildren,
   CategoriesIndexRoute: CategoriesIndexRoute,
+  ImagesIndexRoute: ImagesIndexRoute,
   NetworksIndexRoute: NetworksIndexRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
   RegistriesIndexRoute: RegistriesIndexRoute,

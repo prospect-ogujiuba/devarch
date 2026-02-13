@@ -688,3 +688,66 @@ export interface ProxyTypeInfo {
   id: string
   name: string
 }
+
+export interface ContainerImage {
+  Id: string
+  ParentId: string
+  RepoTags: string[]
+  RepoDigests: string[]
+  Created: number
+  Size: number
+  SharedSize: number
+  VirtualSize: number
+  Labels: Record<string, string>
+  Containers: number
+  Dangling: boolean
+}
+
+export interface ImageConfigDetail {
+  Env: string[]
+  Cmd: string[]
+  Entrypoint: string[]
+  Labels: Record<string, string>
+  WorkingDir: string
+  User: string
+}
+
+export interface ContainerImageInspect {
+  Id: string
+  RepoTags: string[]
+  RepoDigests: string[]
+  Parent: string
+  Comment: string
+  Created: string
+  Author: string
+  Architecture: string
+  Os: string
+  Size: number
+  VirtualSize: number
+  GraphDriver: { Name: string; Data: Record<string, string> }
+  RootFS: { Type: string; Layers: string[] }
+  Labels: Record<string, string>
+  Config: ImageConfigDetail
+}
+
+export interface ImageHistoryEntry {
+  Id: string
+  Created: number
+  CreatedBy: string
+  Tags: string[]
+  Size: number
+  Comment: string
+}
+
+export interface ImagePullProgress {
+  id?: string
+  stream?: string
+  error?: string
+  images?: string[]
+}
+
+export interface ImagePruneResult {
+  Id: string
+  Err?: string
+  Size: number
+}
