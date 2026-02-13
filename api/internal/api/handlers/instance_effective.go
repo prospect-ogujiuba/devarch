@@ -610,22 +610,22 @@ func (h *InstanceHandler) loadServiceDependencies(serviceID int) ([]string, erro
 	return deps, rows.Err()
 }
 
-func (h *InstanceHandler) loadInstanceDependencies(instanceID int) ([]string, error) {
+func (h *InstanceHandler) loadInstanceDependencies(instanceID int) ([]dependencyEntry, error) {
 	rows, err := h.db.Query(`
-		SELECT depends_on FROM instance_dependencies WHERE instance_id = $1 ORDER BY depends_on
+		SELECT id, instance_id, depends_on, condition FROM instance_dependencies WHERE instance_id = $1 ORDER BY depends_on
 	`, instanceID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var deps []string
+	var deps []dependencyEntry
 	for rows.Next() {
-		var dep string
-		if err := rows.Scan(&dep); err != nil {
+		var d dependencyEntry
+		if err := rows.Scan(&d.ID, &d.InstanceID, &d.DependsOn, &d.Condition); err != nil {
 			return nil, err
 		}
-		deps = append(deps, dep)
+		deps = append(deps, d)
 	}
 	return deps, rows.Err()
 }
