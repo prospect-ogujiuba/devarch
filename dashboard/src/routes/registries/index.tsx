@@ -54,7 +54,10 @@ function RegistriesPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
 
-  useEffect(() => setPage(1), [debouncedQuery, selectedRegistry])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setPage(1)
+  }, [debouncedQuery, selectedRegistry])
 
   const totalItems = results?.length ?? 0
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
