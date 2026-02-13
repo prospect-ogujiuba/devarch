@@ -188,6 +188,15 @@ type searchResponse struct {
 	} `json:"results"`
 }
 
+type libraryResponse struct {
+	Results []struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		StarCount   int    `json:"star_count"`
+		PullCount   int64  `json:"pull_count"`
+	} `json:"results"`
+}
+
 func (c *Client) SearchImages(ctx context.Context, query string, opts registry.SearchOptions) ([]registry.SearchResult, error) {
 	pageSize := opts.PageSize
 	if pageSize == 0 {
@@ -200,7 +209,7 @@ func (c *Client) SearchImages(ctx context.Context, query string, opts registry.S
 
 	var url string
 	if query == "" {
-		url = fmt.Sprintf("%s/search/repositories?page_size=%d&page=%d", hubAPIURL, pageSize, page)
+		url = fmt.Sprintf("%s/repositories/library/?page_size=%d&page=%d", hubAPIURL, pageSize, page)
 	} else {
 		url = fmt.Sprintf("%s/search/repositories?query=%s&page_size=%d&page=%d", hubAPIURL, query, pageSize, page)
 	}
@@ -218,6 +227,26 @@ func (c *Client) SearchImages(ctx context.Context, query string, opts registry.S
 
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
+	}
+
+	if query == "" {
+		var lr libraryResponse
+		if err := json.NewDecoder(resp.Body).Decode(&lr); err != nil {
+			return nil, err
+		}
+
+		results := make([]registry.SearchResult, len(lr.Results))
+		for i, r := range lr.Results {
+			results[i] = registry.SearchResult{
+				Name:        "library/" + r.Name,
+				Description: r.Description,
+				StarCount:   r.StarCount,
+				PullCount:   r.PullCount,
+				IsOfficial:  true,
+			}
+		}
+
+		return results, nil
 	}
 
 	var sr searchResponse
