@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useQueryClient } from '@tanstack/react-query'
 import { useImages, useRemoveImage, usePruneImages, pullImageWithProgress } from '@/features/images/queries'
 import { formatBytes } from '@/lib/format'
 import type { ImagePullProgress } from '@/types/api'
@@ -40,6 +41,7 @@ function formatAge(created: number): string {
 }
 
 function ImagesPage() {
+  const queryClient = useQueryClient()
   const { data, isLoading } = useImages(false)
   const removeMutation = useRemoveImage()
   const pruneMutation = usePruneImages()
@@ -63,6 +65,7 @@ function ImagesPage() {
         setPullProgress((prev) => [...prev.slice(-20), report])
       })
       toast.success(`Pulled ${pullReference}`)
+      queryClient.invalidateQueries({ queryKey: ['images'] })
     } catch (error) {
       setPullProgress((prev) => [
         ...prev,
