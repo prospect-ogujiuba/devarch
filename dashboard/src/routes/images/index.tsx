@@ -172,16 +172,10 @@ function ImagesPage() {
               disabled={pulling}
             />
             {pullProgress.length > 0 && (
-              <div className="rounded-md border bg-muted/50 p-3 font-mono text-xs space-y-1 max-h-48 overflow-y-auto">
+              <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border bg-muted/50 p-3 font-mono text-xs">
                 {pullProgress.map((p, i) => (
-                  <div key={i}>
-                    {p.error ? (
-                      <span className="text-destructive">{p.error}</span>
-                    ) : p.stream ? (
-                      <span>{p.stream}</span>
-                    ) : p.id ? (
-                      <span>{p.id}</span>
-                    ) : null}
+                  <div key={i} className={p.error ? "text-destructive" : undefined}>
+                    {p.error ?? p.stream ?? p.id}
                   </div>
                 ))}
               </div>
