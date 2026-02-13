@@ -2539,3 +2539,45 @@ func (h *ServiceHandler) UpdateImports(w http.ResponseWriter, r *http.Request) {
 
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
+
+// ImportLibrary godoc
+// @Summary      Import service library
+// @Description  Import all service templates from the mounted services-library directory
+// @Tags         services
+// @Produce      json
+// @Success      200 {object} respond.SuccessEnvelope{data=map[string]interface{}}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /services/import-library [post]
+// @Security     ApiKeyAuth
+func (h *ServiceHandler) ImportLibrary(w http.ResponseWriter, r *http.Request) {
+	composeDir := ""
+	if ws := os.Getenv("WORKSPACE_ROOT"); ws != "" {
+		composeDir = ws + "/services-library"
+	} else if cd := os.Getenv("COMPOSE_DIR"); cd != "" {
+		composeDir = cd
+	}
+
+	if composeDir == "" {
+		respond.BadRequest(w, r, "COMPOSE_DIR or WORKSPACE_ROOT environment variable not set")
+		return
+	}
+
+	importer := compose.NewImporter(h.db, composeDir)
+	if err := importer.ImportAll(); err != nil {
+		respond.InternalError(w, r, err)
+		return
+	}
+
+	var count int
+	err := h.db.QueryRow("SELECT COUNT(*) FROM services").Scan(&count)
+	if err != nil {
+		respond.InternalError(w, r, err)
+		return
+	}
+
+	respond.JSON(w, r, http.StatusOK, map[string]interface{}{
+		"imported":      true,
+		"service_count": count,
+	})
+}

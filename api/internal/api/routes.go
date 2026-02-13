@@ -98,6 +98,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 			r.Get("/", serviceHandler.List)
 			r.Post("/", serviceHandler.Create)
 			r.Post("/bulk", serviceHandler.Bulk)
+			r.Post("/import-library", serviceHandler.ImportLibrary)
 
 			r.Route("/{name}", func(r chi.Router) {
 				r.Get("/", serviceHandler.Get)

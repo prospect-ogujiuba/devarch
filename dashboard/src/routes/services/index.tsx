@@ -1,9 +1,9 @@
 import { useMemo, useCallback } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { z } from 'zod'
-import { Server, Play, Square, Cpu, MemoryStick, Plus } from 'lucide-react'
+import { Server, Play, Square, Cpu, MemoryStick, Plus, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useServices } from '@/features/services/queries'
+import { useServices, useImportLibrary } from '@/features/services/queries'
 import { ServiceTable } from '@/components/services/service-table'
 import { ServiceGrid } from '@/components/services/service-grid'
 import { BulkActionsToolbar } from '@/components/services/bulk-actions-toolbar'
@@ -64,6 +64,7 @@ const sortOptions = [
 
 function ServicesPage() {
   const { data, isLoading } = useServices()
+  const importMutation = useImportLibrary()
   const routeSearch = Route.useSearch()
   const navigate = Route.useNavigate()
   const services = useMemo(() => data?.services ?? [], [data])
@@ -181,9 +182,25 @@ function ServicesPage() {
       sortOptions={sortOptions}
       searchPlaceholder="Search services..."
       actionButton={
-        <Button asChild size="sm" className="w-full sm:w-auto">
-          <Link to="/services/new"><Plus className="size-4" /> New Service</Link>
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button asChild size="sm" className="w-full sm:w-auto">
+            <Link to="/services/new"><Plus className="size-4" /> New Service</Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto"
+            onClick={() => importMutation.mutate()}
+            disabled={importMutation.isPending}
+          >
+            {importMutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="size-4" />
+            )}
+            Import Library
+          </Button>
+        </div>
       }
       selectionSlot={
         <BulkActionsToolbar
