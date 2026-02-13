@@ -39,6 +39,7 @@ type instanceResponse struct {
 	ContainerName     string    `json:"container_name"`
 	Description       string    `json:"description"`
 	Enabled           bool      `json:"enabled"`
+	Running           bool      `json:"running"`
 	OverrideCount     int       `json:"override_count"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
@@ -312,6 +313,19 @@ func (h *InstanceHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	runningNames, _ := h.containerClient.ListRunningContainersWithLabels(map[string]string{
+		identity.LabelStackID: stackName,
+	})
+	runningSet := make(map[string]bool, len(runningNames))
+	for _, n := range runningNames {
+		runningSet[n] = true
+	}
+	for i := range instances {
+		if instances[i].ContainerName != "" {
+			instances[i].Running = runningSet[instances[i].ContainerName]
+		}
+	}
+
 	respond.JSON(w, r, http.StatusOK, instances)
 }
 
@@ -391,6 +405,16 @@ func (h *InstanceHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respond.InternalError(w, r, fmt.Errorf("failed to get instance: %w", err))
 		return
+	}
+
+	runningNames, _ := h.containerClient.ListRunningContainersWithLabels(map[string]string{
+		identity.LabelStackID: stackName,
+	})
+	for _, n := range runningNames {
+		if n == instance.ContainerName {
+			instance.Running = true
+			break
+		}
 	}
 
 	// Load instance override data
