@@ -16,3 +16,6 @@ api/.runtime/
 .idea/
 node_modules/
 dist/
+
+# Gentic runtime (local)
+.gentic/
