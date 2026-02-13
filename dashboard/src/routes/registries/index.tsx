@@ -55,8 +55,7 @@ function RegistriesPage() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    setPage(1)
+    setPage(1) // eslint-disable-line react-hooks/set-state-in-effect
   }, [debouncedQuery, selectedRegistry])
 
   const totalItems = results?.length ?? 0

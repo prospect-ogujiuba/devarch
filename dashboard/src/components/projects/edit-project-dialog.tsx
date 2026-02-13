@@ -23,15 +23,10 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
 
   useEffect(() => {
     if (open) {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      setProjectType(project.project_type)
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+      setProjectType(project.project_type) // eslint-disable-line react-hooks/set-state-in-effect
       setLanguage(project.language ?? '')
-      // eslint-disable-next-line react-hooks/exhaustive-deps
       setFramework(project.framework ?? '')
-      // eslint-disable-next-line react-hooks/exhaustive-deps
       setDescription(project.description ?? '')
-      // eslint-disable-next-line react-hooks/exhaustive-deps
       setDomain(project.domain ?? '')
     }
   }, [open, project])
