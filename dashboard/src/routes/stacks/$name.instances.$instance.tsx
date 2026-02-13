@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import { ArrowLeft, Loader2, Edit } from 'lucide-react'
+import { ArrowLeft, Loader2, Edit, Terminal } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,6 +32,7 @@ import {
   DuplicateInstanceDialog,
   RenameInstanceDialog,
 } from '@/components/instances/instance-actions'
+import { TerminalDialog } from '@/components/terminal/terminal-dialog'
 import { cn } from '@/lib/utils'
 
 function timeAgo(dateStr: string): string {
@@ -69,6 +70,7 @@ function InstanceDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [duplicateOpen, setDuplicateOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
+  const [terminalOpen, setTerminalOpen] = useState(false)
   const [editDescription, setEditDescription] = useState('')
 
   const openEdit = () => {
@@ -189,6 +191,12 @@ function InstanceDetailPage() {
               <Edit className="size-4" />
               Edit Description
             </DropdownMenuItem>
+            {isRunning && ctrl.instance.container_name && (
+              <DropdownMenuItem onClick={() => setTerminalOpen(true)}>
+                <Terminal className="size-4" />
+                Terminal
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
               Duplicate
             </DropdownMenuItem>
@@ -423,6 +431,10 @@ function InstanceDetailPage() {
         onOpenChange={setDeleteOpen}
         onSuccess={handleDeleteSuccess}
       />
+
+      {ctrl.instance.container_name && (
+        <TerminalDialog containerName={ctrl.instance.container_name} open={terminalOpen} onOpenChange={setTerminalOpen} />
+      )}
     </div>
   )
 }

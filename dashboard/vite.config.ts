@@ -23,6 +23,11 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
       },
+      '/api/v1/containers': {
+        target: 'http://localhost:8550',
+        changeOrigin: true,
+        ws: true,
+      },
     },
   },
   test: {
