@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { HardDrive, Download, Trash2, Eraser, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -50,6 +50,7 @@ function ImagesPage() {
   const [pullReference, setPullReference] = useState('')
   const [pulling, setPulling] = useState(false)
   const [pullProgress, setPullProgress] = useState<ImagePullProgress[]>([])
+  const progressRef = useRef<HTMLDivElement>(null)
 
   const [removeTarget, setRemoveTarget] = useState<string | null>(null)
   const [pruneOpen, setPruneOpen] = useState(false)
@@ -62,8 +63,12 @@ function ImagesPage() {
     setPullProgress([])
     try {
       await pullImageWithProgress(pullReference, (report) => {
-        setPullProgress((prev) => [...prev.slice(-20), report])
+        setPullProgress((prev) => [...prev.slice(-50), report])
+        requestAnimationFrame(() => {
+          progressRef.current?.scrollTo({ top: progressRef.current.scrollHeight })
+        })
       })
+      setPullProgress((prev) => [...prev, { stream: `✓ Successfully pulled ${pullReference}` }])
       toast.success(`Pulled ${pullReference}`)
       queryClient.invalidateQueries({ queryKey: ['images'] })
     } catch (error) {
@@ -178,10 +183,10 @@ function ImagesPage() {
               placeholder="image:tag"
               value={pullReference}
               onChange={(e) => setPullReference(e.target.value)}
-              disabled={pulling}
+              disabled={pulling || pullProgress.length > 0}
             />
             {pullProgress.length > 0 && (
-              <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border bg-muted/50 p-3 font-mono text-xs">
+              <div ref={progressRef} className="max-h-64 space-y-1 overflow-y-auto rounded-md border bg-muted/50 p-3 font-mono text-xs">
                 {pullProgress.map((p, i) => (
                   <div key={i} className={p.error ? "text-destructive" : undefined}>
                     {p.error ?? p.stream ?? p.id}
@@ -191,13 +196,21 @@ function ImagesPage() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPullOpen(false)} disabled={pulling}>
-              Cancel
-            </Button>
-            <Button onClick={handlePullStart} disabled={!pullReference.trim() || pulling}>
-              {pulling && <Loader2 className="size-4 animate-spin" />}
-              Pull
-            </Button>
+            {!pulling && pullProgress.length > 0 ? (
+              <Button onClick={() => setPullOpen(false)}>
+                Done
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setPullOpen(false)} disabled={pulling}>
+                  Cancel
+                </Button>
+                <Button onClick={handlePullStart} disabled={!pullReference.trim() || pulling}>
+                  {pulling && <Loader2 className="size-4 animate-spin" />}
+                  Pull
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
