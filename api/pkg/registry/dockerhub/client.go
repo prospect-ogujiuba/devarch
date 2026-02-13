@@ -198,7 +198,12 @@ func (c *Client) SearchImages(ctx context.Context, query string, opts registry.S
 		page = 1
 	}
 
-	url := fmt.Sprintf("%s/search/repositories?query=%s&page_size=%d&page=%d", hubAPIURL, query, pageSize, page)
+	var url string
+	if query == "" {
+		url = fmt.Sprintf("%s/search/repositories?page_size=%d&page=%d", hubAPIURL, pageSize, page)
+	} else {
+		url = fmt.Sprintf("%s/search/repositories?query=%s&page_size=%d&page=%d", hubAPIURL, query, pageSize, page)
+	}
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
