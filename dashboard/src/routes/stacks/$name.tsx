@@ -47,17 +47,16 @@ function timeAgo(dateStr: string): string {
 interface InstanceCardProps {
   instance: Instance
   stackName: string
-  runningContainerNames: Set<string>
   onDelete: (id: string) => void
   onDuplicate: (id: string) => void
 }
 
-function InstanceCard({ instance, stackName, runningContainerNames, onDelete, onDuplicate }: InstanceCardProps) {
+function InstanceCard({ instance, stackName, onDelete, onDuplicate }: InstanceCardProps) {
   const updateInstance = useUpdateInstance(stackName, instance.instance_id)
   const stopInstance = useStopInstance(stackName, instance.instance_id)
   const startInstance = useStartInstance(stackName, instance.instance_id)
   const restartInstance = useRestartInstance(stackName, instance.instance_id)
-  const isRunning = Boolean(instance.container_name && runningContainerNames.has(instance.container_name))
+  const isRunning = instance.running
   const canStart = instance.enabled && !isRunning && !startInstance.isPending
   const canStop = isRunning && !stopInstance.isPending
   const canRestart = isRunning && !restartInstance.isPending
@@ -404,7 +403,6 @@ function StackDetailPage() {
                       key={instance.id}
                       instance={instance}
                       stackName={name}
-                      runningContainerNames={ctrl.runningContainerNames}
                       onDelete={openInstanceDelete}
                       onDuplicate={openInstanceDuplicate}
                     />

@@ -81,7 +81,7 @@ describe('useStackDetailController', () => {
   })
 
   describe('derived state: connectedContainers', () => {
-    it('returns connectedContainers array and runningContainerNames Set from network data', () => {
+    it('returns connectedContainers array from network data', () => {
       const mockNetwork = { containers: ['web-1', 'db-1'] }
 
       vi.mocked(useStack).mockReturnValue(mockQueryResult(undefined) as any)
@@ -107,13 +107,9 @@ describe('useStackDetailController', () => {
       })
 
       expect(result.current.connectedContainers).toEqual(['web-1', 'db-1'])
-      expect(result.current.runningContainerNames).toBeInstanceOf(Set)
-      expect(result.current.runningContainerNames.has('web-1')).toBe(true)
-      expect(result.current.runningContainerNames.has('db-1')).toBe(true)
-      expect(result.current.runningContainerNames.size).toBe(2)
     })
 
-    it('returns empty array and empty Set when network containers is empty', () => {
+    it('returns empty array when network containers is empty', () => {
       const mockNetwork = { containers: [] }
 
       vi.mocked(useStack).mockReturnValue(mockQueryResult(undefined) as any)
@@ -139,13 +135,11 @@ describe('useStackDetailController', () => {
       })
 
       expect(result.current.connectedContainers).toEqual([])
-      expect(result.current.runningContainerNames).toBeInstanceOf(Set)
-      expect(result.current.runningContainerNames.size).toBe(0)
     })
   })
 
   describe('derived state: null network data', () => {
-    it('returns empty array and empty Set when network data is undefined', () => {
+    it('returns empty array when network data is undefined', () => {
       vi.mocked(useStack).mockReturnValue(mockQueryResult(undefined) as any)
       vi.mocked(useInstances).mockReturnValue(mockQueryResult(undefined) as any)
       vi.mocked(useStackNetwork).mockReturnValue(mockQueryResult(undefined) as any)
@@ -169,8 +163,6 @@ describe('useStackDetailController', () => {
       })
 
       expect(result.current.connectedContainers).toEqual([])
-      expect(result.current.runningContainerNames).toBeInstanceOf(Set)
-      expect(result.current.runningContainerNames.size).toBe(0)
     })
   })
 

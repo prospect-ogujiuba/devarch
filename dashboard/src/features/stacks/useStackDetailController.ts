@@ -37,7 +37,6 @@ export function useStackDetailController(stackName: string) {
   const generateProxyConfig = useGenerateStackProxyConfig(stackName)
 
   const connectedContainers = networkQuery.data?.containers ?? []
-  const runningContainerNames = new Set(connectedContainers)
 
   return {
     stack: stackQuery.data,
@@ -47,7 +46,6 @@ export function useStackDetailController(stackName: string) {
     composeLoading: composeQuery.isLoading,
     isLoading: stackQuery.isLoading,
     connectedContainers,
-    runningContainerNames,
     enableStack,
     disableStack,
     stopStack,
