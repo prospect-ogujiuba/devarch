@@ -305,15 +305,16 @@ func (h *RegistryHandler) ListRegistries(w http.ResponseWriter, r *http.Request)
 func (h *RegistryHandler) SearchImages(w http.ResponseWriter, r *http.Request) {
 	registryName := chi.URLParam(r, "registry")
 	query := r.URL.Query().Get("q")
-	if query == "" {
-		respond.BadRequest(w, r, "query parameter 'q' is required")
-		return
-	}
 
 	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 
-	cacheKey := fmt.Sprintf("search:%s:%s:%d:%d", registryName, query, pageSize, page)
+	var cacheKey string
+	if query == "" {
+		cacheKey = fmt.Sprintf("search:%s:popular:%d:%d", registryName, pageSize, page)
+	} else {
+		cacheKey = fmt.Sprintf("search:%s:%s:%d:%d", registryName, query, pageSize, page)
+	}
 	if cached, ok := h.cache.Get(cacheKey); ok {
 		respond.JSON(w, r, http.StatusOK,cached)
 		return
