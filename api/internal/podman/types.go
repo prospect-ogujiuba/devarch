@@ -305,3 +305,110 @@ type EventActor struct {
 	ID         string            `json:"ID"`
 	Attributes map[string]string `json:"Attributes"`
 }
+
+type ExecConfig struct {
+	AttachStdin  bool     `json:"AttachStdin"`
+	AttachStdout bool     `json:"AttachStdout"`
+	AttachStderr bool     `json:"AttachStderr"`
+	Tty          bool     `json:"Tty"`
+	Cmd          []string `json:"Cmd"`
+	Env          []string `json:"Env,omitempty"`
+	WorkingDir   string   `json:"WorkingDir,omitempty"`
+	User         string   `json:"User,omitempty"`
+	Privileged   bool     `json:"Privileged,omitempty"`
+}
+
+type ExecCreateResponse struct {
+	Id string `json:"Id"`
+}
+
+type ExecStartConfig struct {
+	Detach bool `json:"Detach"`
+	Tty    bool `json:"Tty"`
+}
+
+type ExecInspectResponse struct {
+	CanRemove   bool   `json:"CanRemove"`
+	ExitCode    int    `json:"ExitCode"`
+	Running     bool   `json:"Running"`
+	Pid         int    `json:"Pid"`
+	ContainerID string `json:"ContainerID"`
+}
+
+type ExecResizeOptions struct {
+	Height int `json:"height"`
+	Width  int `json:"width"`
+}
+
+type Image struct {
+	Id          string            `json:"Id"`
+	ParentId    string            `json:"ParentId"`
+	RepoTags    []string          `json:"RepoTags"`
+	RepoDigests []string          `json:"RepoDigests"`
+	Created     int64             `json:"Created"`
+	Size        int64             `json:"Size"`
+	SharedSize  int64             `json:"SharedSize"`
+	VirtualSize int64             `json:"VirtualSize"`
+	Labels      map[string]string `json:"Labels"`
+	Containers  int64             `json:"Containers"`
+	Dangling    bool              `json:"Dangling"`
+}
+
+type ImageInspect struct {
+	Id           string            `json:"Id"`
+	RepoTags     []string          `json:"RepoTags"`
+	RepoDigests  []string          `json:"RepoDigests"`
+	Parent       string            `json:"Parent"`
+	Comment      string            `json:"Comment"`
+	Created      string            `json:"Created"`
+	Author       string            `json:"Author"`
+	Architecture string            `json:"Architecture"`
+	Os           string            `json:"Os"`
+	Size         int64             `json:"Size"`
+	VirtualSize  int64             `json:"VirtualSize"`
+	GraphDriver  GraphDriver       `json:"GraphDriver"`
+	RootFS       RootFS            `json:"RootFS"`
+	Labels       map[string]string `json:"Labels"`
+	Config       ImageConfig       `json:"Config"`
+}
+
+type GraphDriver struct {
+	Name string            `json:"Name"`
+	Data map[string]string `json:"Data"`
+}
+
+type RootFS struct {
+	Type   string   `json:"Type"`
+	Layers []string `json:"Layers"`
+}
+
+type ImageConfig struct {
+	Env        []string          `json:"Env"`
+	Cmd        []string          `json:"Cmd"`
+	Entrypoint []string          `json:"Entrypoint"`
+	Labels     map[string]string `json:"Labels"`
+	WorkingDir string            `json:"WorkingDir"`
+	User       string            `json:"User"`
+}
+
+type ImageHistoryEntry struct {
+	Id        string   `json:"Id"`
+	Created   int64    `json:"Created"`
+	CreatedBy string   `json:"CreatedBy"`
+	Tags      []string `json:"Tags"`
+	Size      int64    `json:"Size"`
+	Comment   string   `json:"Comment"`
+}
+
+type ImagePullReport struct {
+	Id     string   `json:"id,omitempty"`
+	Stream string   `json:"stream,omitempty"`
+	Error  string   `json:"error,omitempty"`
+	Images []string `json:"images,omitempty"`
+}
+
+type ImagePruneReport struct {
+	Id   string `json:"Id"`
+	Err  string `json:"Err,omitempty"`
+	Size int64  `json:"Size"`
+}

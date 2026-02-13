@@ -77,6 +77,8 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	proxyGenerator := proxy.NewGenerator(db)
 	proxyHandler := handlers.NewProxyHandler(proxyGenerator)
 	authHandler := handlers.NewAuthHandler()
+	execHandler := handlers.NewExecHandler(podmanClient, allowedOrigins, secMode)
+	imageHandler := handlers.NewImageHandler(podmanClient)
 
 	r.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"),
@@ -208,6 +210,19 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 				r.Get("/search", registryHandler.SearchImages)
 				r.Get("/images/*", registryHandler.ImageRoute)
 			})
+		})
+
+		r.Route("/containers/{name}", func(r chi.Router) {
+			r.Get("/exec", execHandler.Handle)
+		})
+
+		r.Route("/images", func(r chi.Router) {
+			r.Get("/", imageHandler.List)
+			r.Get("/inspect", imageHandler.Inspect)
+			r.Delete("/remove", imageHandler.Remove)
+			r.Get("/history", imageHandler.History)
+			r.Post("/pull", imageHandler.Pull)
+			r.Post("/prune", imageHandler.Prune)
 		})
 
 		r.Route("/stacks", func(r chi.Router) {

@@ -147,6 +147,19 @@ func (c *Client) postAction(ctx context.Context, path string) error {
 	return nil
 }
 
+func (c *Client) rawDial() (net.Conn, error) {
+	return net.Dial("unix", c.socketPath)
+}
+
+func (c *Client) delete(ctx context.Context, path string) (*http.Response, error) {
+	url := c.baseURL + path
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	return c.httpClient.Do(req)
+}
+
 func (c *Client) Ping(ctx context.Context) error {
 	resp, err := c.get(ctx, "/libpod/_ping")
 	if err != nil {
