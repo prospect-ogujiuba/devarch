@@ -27,12 +27,15 @@ export function useImageTags(registryName: string, repository: string, opts?: { 
 
 export function useSearchImages(registryName: string, query: string) {
   return useQuery({
-    queryKey: ['registry-search', registryName, query],
+    queryKey: ['registry-search', registryName, query || ''],
     queryFn: async () => {
-      const res = await api.get<SearchResult[]>(`/registries/${registryName}/search?q=${encodeURIComponent(query)}&page_size=25`)
+      const url = query
+        ? `/registries/${registryName}/search?q=${encodeURIComponent(query)}&page_size=25`
+        : `/registries/${registryName}/search?page_size=25`
+      const res = await api.get<SearchResult[]>(url)
       return res.data
     },
-    enabled: !!registryName && !!query && query.length >= 2,
+    enabled: !!registryName,
     staleTime: 5 * 60 * 1000,
   })
 }
