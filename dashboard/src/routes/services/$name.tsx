@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import { ArrowLeft, Loader2, Clock, RefreshCw, Cpu, MemoryStick, Network, Pencil, Trash2, Download, Maximize2, Minimize2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Clock, RefreshCw, Cpu, MemoryStick, Network, Pencil, Trash2, Download, Maximize2, Minimize2, Terminal } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -31,6 +31,7 @@ import { EditableDomains } from '@/components/services/editable-domains'
 import { TagPicker } from '@/components/services/tag-picker'
 import { ConfigFilesPanel } from '@/components/services/config-files-panel'
 import { CodeEditor } from '@/components/services/code-editor'
+import { TerminalDialog } from '@/components/terminal/terminal-dialog'
 import { formatUptime, formatBytes } from '@/lib/format'
 
 export const Route = createFileRoute('/services/$name')({
@@ -53,6 +54,7 @@ function ServiceDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [composeExpanded, setComposeExpanded] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [terminalOpen, setTerminalOpen] = useState(false)
   const [editForm, setEditForm] = useState({
     image_name: '',
     image_tag: '',
@@ -147,6 +149,12 @@ function ServiceDetailPage() {
               className="col-span-2"
               buttonClassName="w-full sm:w-auto"
             />
+            {ctrl.status === 'running' && (
+              <Button variant="outline" size="sm" onClick={() => setTerminalOpen(true)} className="w-full sm:w-auto">
+                <Terminal className="size-4" />
+                Terminal
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={openEdit} className="w-full sm:w-auto">
               <Pencil className="size-4" />
               Edit
@@ -342,6 +350,8 @@ function ServiceDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <TerminalDialog containerName={ctrl.service.name} open={terminalOpen} onOpenChange={setTerminalOpen} />
     </div>
   )
 }
