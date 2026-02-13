@@ -44,14 +44,17 @@ The API entrypoint automatically runs migrations and starts the server with hot-
 
 ### Import the service catalog
 
+**From the dashboard:** Services page > "Import Library" button — triggers a full re-import of all service templates from the services-library directory.
+
+**From CLI (inside API container):**
+
 ```bash
-# Run inside the API container
 podman exec devarch-api devarch-import \
   -compose-dir /workspace/services-library \
   -config-dir /workspace/services-library/config
 ```
 
-Or run the import command directly if developing locally (outside compose):
+**From CLI (local development):**
 
 ```bash
 cd api
@@ -183,7 +186,7 @@ Full override editor with tabs for every configurable aspect:
 Actions: Edit description, Duplicate, Rename, Delete (with delete preview), Open Terminal (interactive shell via WebSocket).
 
 ### Services (`/services`)
-Browse and manage the service template catalog. Search by name/image, filter by status/category, sort by name/status. Grid or table view.
+Browse and manage the service template catalog. Search by name/image, filter by status/category, sort by name/status. Grid or table view. "Import Library" button re-imports all service templates from the services-library directory.
 
 **Service detail** (`/services/{name}`) tabs:
 - **Info**: status, image, restart policy, metrics, inline editors for ports/volumes/env/deps/labels/domains/healthcheck/config mounts
@@ -368,6 +371,7 @@ All endpoints under `/api/v1/` require `X-API-Key` header (when auth is enabled)
 |--------|------|---------|
 | GET/POST | `/services` | List / Create |
 | POST | `/services/bulk` | Bulk operations |
+| POST | `/services/import-library` | Re-import service templates from services-library |
 | GET/PUT/DELETE | `/services/{name}` | Get / Update / Delete |
 | POST | `/services/{name}/start\|stop\|restart` | Container lifecycle |
 | POST | `/services/{name}/rebuild` | Rebuild container |
