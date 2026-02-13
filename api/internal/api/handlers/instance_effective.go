@@ -23,6 +23,7 @@ type effectiveConfigResponse struct {
 	RestartPolicy    string                     `json:"restart_policy"`
 	Command          string                     `json:"command,omitempty"`
 	UserSpec         string                     `json:"user_spec,omitempty"`
+	ContainerName    string                     `json:"container_name"`
 	Ports            []models.ServicePort       `json:"ports"`
 	Volumes          []models.ServiceVolume     `json:"volumes"`
 	EnvVars          []models.ServiceEnvVar     `json:"env_vars"`
@@ -68,13 +69,13 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 	instanceName := chi.URLParam(r, "instance")
 
 	var instanceID, stackID, templateServiceID int
-	var command, userSpec sql.NullString
+	var command, userSpec, containerName sql.NullString
 	err := h.db.QueryRow(`
-		SELECT si.id, si.stack_id, si.template_service_id
+		SELECT si.id, si.stack_id, si.template_service_id, si.container_name
 		FROM service_instances si
 		JOIN stacks st ON st.id = si.stack_id
 		WHERE st.name = $1 AND si.instance_id = $2 AND si.deleted_at IS NULL AND st.deleted_at IS NULL
-	`, stackName, instanceName).Scan(&instanceID, &stackID, &templateServiceID)
+	`, stackName, instanceName).Scan(&instanceID, &stackID, &templateServiceID, &containerName)
 
 	if err == sql.ErrNoRows {
 		respond.NotFound(w, r, "instance", instanceName)
@@ -104,6 +105,9 @@ func (h *InstanceHandler) EffectiveConfig(w http.ResponseWriter, r *http.Request
 	}
 	if userSpec.Valid {
 		resp.UserSpec = userSpec.String
+	}
+	if containerName.Valid {
+		resp.ContainerName = containerName.String
 	}
 
 	templatePorts, err := h.loadServicePorts(templateServiceID)
