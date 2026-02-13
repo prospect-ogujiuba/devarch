@@ -130,7 +130,7 @@ function RegistriesPage() {
                 params={{ registry: selectedRegistry, _splat: img.name }}
                 className="block"
               >
-                <Card className="transition-colors hover:border-primary/50">
+                <Card className="h-full transition-colors hover:border-primary/50">
                   <CardContent className="space-y-2 pt-4">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="truncate font-semibold">{img.name}</h3>
