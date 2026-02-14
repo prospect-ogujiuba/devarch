@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -94,6 +95,18 @@ func (c *Controller) ensureStack(projectName string) (*stackInfo, error) {
 				return nil, fmt.Errorf("insert dependency: %w", err)
 			}
 		}
+	}
+
+	if err := importBuildContextFiles(tx, composePath.String, templateIDs); err != nil {
+		return nil, fmt.Errorf("import build context files: %w", err)
+	}
+
+	if err := importEnvFiles(tx, composePath.String, templateIDs); err != nil {
+		return nil, fmt.Errorf("import env files: %w", err)
+	}
+
+	if err := importProjectConfigFiles(tx, composePath.String, templateIDs); err != nil {
+		return nil, fmt.Errorf("import config files: %w", err)
 	}
 
 	stackID := 0
@@ -326,4 +339,202 @@ func isBinaryContent(data []byte) bool {
 		return false
 	}
 	return true
+}
+
+func importBuildContextFiles(tx *sql.Tx, composePath string, templateIDs map[string]int) error {
+	services, err := compose.ParseFileAll(composePath)
+	if err != nil {
+		return fmt.Errorf("parse compose: %w", err)
+	}
+
+	composeDir := filepath.Dir(composePath)
+
+	for _, svc := range services {
+		serviceID, ok := templateIDs[svc.Name]
+		if !ok {
+			continue
+		}
+
+		if svc.Overrides == nil {
+			continue
+		}
+
+		build, ok := svc.Overrides["build"]
+		if !ok {
+			continue
+		}
+
+		var buildContext string
+		switch b := build.(type) {
+		case string:
+			buildContext = b
+		case map[string]interface{}:
+			if ctx, ok := b["context"].(string); ok {
+				buildContext = ctx
+			}
+		}
+
+		if buildContext == "" {
+			continue
+		}
+
+		if !filepath.IsAbs(buildContext) {
+			buildContext = filepath.Clean(filepath.Join(composeDir, buildContext))
+		}
+
+		dockerfilePath := filepath.Join(buildContext, "Dockerfile")
+		if _, err := os.Stat(dockerfilePath); err == nil {
+			content, err := os.ReadFile(dockerfilePath)
+			if err == nil && !isBinaryContent(content) {
+				_, err = tx.Exec(`
+					INSERT INTO service_config_files (service_id, file_path, content, file_mode)
+					VALUES ($1, $2, $3, $4)
+					ON CONFLICT (service_id, file_path) DO UPDATE SET
+						content = $3, file_mode = $4, updated_at = NOW()
+				`, serviceID, "Dockerfile", string(content), "0644")
+				if err != nil {
+					return fmt.Errorf("insert Dockerfile for %s: %w", svc.Name, err)
+				}
+			}
+		}
+
+		dockerignorePath := filepath.Join(buildContext, ".dockerignore")
+		if _, err := os.Stat(dockerignorePath); err == nil {
+			content, err := os.ReadFile(dockerignorePath)
+			if err == nil && !isBinaryContent(content) {
+				_, err = tx.Exec(`
+					INSERT INTO service_config_files (service_id, file_path, content, file_mode)
+					VALUES ($1, $2, $3, $4)
+					ON CONFLICT (service_id, file_path) DO UPDATE SET
+						content = $3, file_mode = $4, updated_at = NOW()
+				`, serviceID, ".dockerignore", string(content), "0644")
+				if err != nil {
+					return fmt.Errorf("insert .dockerignore for %s: %w", svc.Name, err)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func importEnvFiles(tx *sql.Tx, composePath string, templateIDs map[string]int) error {
+	services, err := compose.ParseFileAll(composePath)
+	if err != nil {
+		return fmt.Errorf("parse compose: %w", err)
+	}
+
+	composeDir := filepath.Dir(composePath)
+
+	for _, svc := range services {
+		serviceID, ok := templateIDs[svc.Name]
+		if !ok {
+			continue
+		}
+
+		for _, envFile := range svc.EnvFiles {
+			envPath := envFile
+			if !filepath.IsAbs(envPath) {
+				envPath = filepath.Clean(filepath.Join(composeDir, envPath))
+			}
+
+			if _, err := os.Stat(envPath); err != nil {
+				continue
+			}
+
+			content, err := os.ReadFile(envPath)
+			if err != nil {
+				continue
+			}
+
+			if isBinaryContent(content) {
+				continue
+			}
+
+			relPath := filepath.Base(envFile)
+
+			_, err = tx.Exec(`
+				INSERT INTO service_config_files (service_id, file_path, content, file_mode)
+				VALUES ($1, $2, $3, $4)
+				ON CONFLICT (service_id, file_path) DO UPDATE SET
+					content = $3, file_mode = $4, updated_at = NOW()
+			`, serviceID, relPath, string(content), "0644")
+			if err != nil {
+				return fmt.Errorf("insert env file %s for %s: %w", relPath, svc.Name, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func importProjectConfigFiles(tx *sql.Tx, composePath string, templateIDs map[string]int) error {
+	services, err := compose.ParseFileAll(composePath)
+	if err != nil {
+		return fmt.Errorf("parse compose: %w", err)
+	}
+
+	composeDir := filepath.Dir(composePath)
+	configDir := filepath.Join(composeDir, "config")
+
+	if _, err := os.Stat(configDir); err != nil {
+		return nil
+	}
+
+	for _, svc := range services {
+		serviceID, ok := templateIDs[svc.Name]
+		if !ok {
+			continue
+		}
+
+		serviceConfigDir := filepath.Join(configDir, svc.Name)
+		if _, err := os.Stat(serviceConfigDir); err != nil {
+			continue
+		}
+
+		err := filepath.Walk(serviceConfigDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() {
+				return nil
+			}
+
+			relPath, err := filepath.Rel(serviceConfigDir, path)
+			if err != nil {
+				return err
+			}
+
+			content, err := os.ReadFile(path)
+			if err != nil {
+				return nil
+			}
+
+			if isBinaryContent(content) {
+				return nil
+			}
+
+			fileMode := "0644"
+			if info.Mode()&0111 != 0 {
+				fileMode = "0755"
+			}
+
+			_, err = tx.Exec(`
+				INSERT INTO service_config_files (service_id, file_path, content, file_mode)
+				VALUES ($1, $2, $3, $4)
+				ON CONFLICT (service_id, file_path) DO UPDATE SET
+					content = $3, file_mode = $4, updated_at = NOW()
+			`, serviceID, relPath, string(content), fileMode)
+			if err != nil {
+				return fmt.Errorf("insert config file %s for %s: %w", relPath, svc.Name, err)
+			}
+
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("walk config dir for %s: %w", svc.Name, err)
+		}
+	}
+
+	return nil
 }
