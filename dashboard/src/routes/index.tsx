@@ -14,7 +14,7 @@ import { useServices } from '@/features/services/queries'
 import { useUrlSyncedListControls } from '@/hooks/use-url-synced-list-controls'
 import { useUrlPagination } from '@/hooks/use-url-pagination'
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '@/lib/pagination'
-import type { CategoryOverview, CategoryItem } from '@/types/api'
+import type { CategoryOverview, Category } from '@/types/api'
 
 export const Route = createFileRoute('/')({
   validateSearch: z.object({
@@ -55,11 +55,13 @@ const sortOptions = [
   { value: 'running', label: 'Running' },
 ]
 
-function toCategoryItem(c: CategoryOverview): CategoryItem {
+function toCategory(c: CategoryOverview): Category {
   return {
+    id: 0,
     name: c.name,
+    startup_order: 0,
+    service_count: c.total_services ?? 0,
     runningCount: c.running_services ?? 0,
-    serviceCount: c.total_services ?? 0,
   }
 }
 
@@ -195,11 +197,11 @@ function OverviewPage() {
         {controls.filtered.length === 0 ? (
           <EmptyState icon={FolderOpen} message="No categories match your filters" />
         ) : controls.viewMode === 'table' ? (
-          <CategoryTable categories={pagination.pagedItems.map(toCategoryItem)} compact />
+          <CategoryTable categories={pagination.pagedItems.map(toCategory)} compact />
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {pagination.pagedItems.map((category) => (
-              <CategoryCard key={category.name} category={toCategoryItem(category)} compact />
+              <CategoryCard key={category.name} category={toCategory(category)} compact />
             ))}
           </div>
         )}

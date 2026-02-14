@@ -1,13 +1,16 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Play, Square, Loader2 } from 'lucide-react'
+import { Play, Square, Loader2, Pencil, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ResourceBar } from '@/components/ui/resource-bar'
 import { useStartCategory, useStopCategory } from '@/features/categories/queries'
-import type { CategoryItem } from '@/types/api'
+import { EditCategoryDialog } from './edit-category-dialog'
+import { DeleteCategoryDialog } from './delete-category-dialog'
+import type { Category } from '@/types/api'
 
 interface CategoryCardProps {
-  category: CategoryItem
+  category: Category
   compact?: boolean
 }
 
@@ -15,7 +18,11 @@ export function CategoryCard({ category, compact }: CategoryCardProps) {
   const startMutation = useStartCategory()
   const stopMutation = useStopCategory()
   const isLoading = startMutation.isPending || stopMutation.isPending
-  const { name, runningCount, serviceCount } = category
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const { name } = category
+  const runningCount = category.runningCount ?? 0
+  const serviceCount = category.service_count ?? 0
   const allRunning = runningCount === serviceCount && serviceCount > 0
   const allStopped = runningCount === 0
   const pct = serviceCount > 0 ? (runningCount / serviceCount) * 100 : 0
@@ -55,11 +62,22 @@ export function CategoryCard({ category, compact }: CategoryCardProps) {
   }
 
   return (
+    <>
     <Card className="py-4 hover:border-primary/50 transition-colors">
       <CardHeader className="pb-2">
-        <Link to="/services" search={{ category: name }} className="hover:underline">
-          <CardTitle className="text-base capitalize">{name}</CardTitle>
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link to="/services" search={{ category: name }} className="hover:underline">
+            <CardTitle className="text-base capitalize">{name}</CardTitle>
+          </Link>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon-sm" onClick={() => setEditOpen(true)}>
+              <Pencil className="size-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon-sm" onClick={() => setDeleteOpen(true)}>
+              <Trash2 className="size-3.5" />
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-4">
@@ -115,5 +133,8 @@ export function CategoryCard({ category, compact }: CategoryCardProps) {
         </div>
       </CardContent>
     </Card>
+    <EditCategoryDialog category={category} open={editOpen} onOpenChange={setEditOpen} />
+    <DeleteCategoryDialog category={category} open={deleteOpen} onOpenChange={setDeleteOpen} />
+    </>
   )
 }
