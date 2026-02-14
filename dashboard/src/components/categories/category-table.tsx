@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
   Table,
@@ -9,13 +10,15 @@ import {
 } from '@/components/ui/table'
 import { ResourceBar } from '@/components/ui/resource-bar'
 import { Button } from '@/components/ui/button'
-import { Play, Square, Loader2 } from 'lucide-react'
+import { Play, Square, Loader2, Pencil, Trash2 } from 'lucide-react'
 import { useStartCategory, useStopCategory } from '@/features/categories/queries'
+import { EditCategoryDialog } from './edit-category-dialog'
+import { DeleteCategoryDialog } from './delete-category-dialog'
 import { titleCase } from '@/lib/utils'
-import type { CategoryItem } from '@/types/api'
+import type { Category } from '@/types/api'
 
 interface CategoryTableProps {
-  categories: CategoryItem[]
+  categories: Category[]
   compact?: boolean
 }
 
@@ -51,14 +54,20 @@ export function CategoryTable({ categories, compact }: CategoryTableProps) {
   )
 }
 
-function CategoryTableRow({ category, compact }: { category: CategoryItem; compact?: boolean }) {
+function CategoryTableRow({ category, compact }: { category: Category; compact?: boolean }) {
   const startMutation = useStartCategory()
   const stopMutation = useStopCategory()
   const isLoading = startMutation.isPending || stopMutation.isPending
-  const { name, runningCount, serviceCount, startupOrder } = category
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const { name } = category
+  const runningCount = category.runningCount ?? 0
+  const serviceCount = category.service_count ?? 0
+  const startupOrder = category.startup_order
   const pct = serviceCount > 0 ? (runningCount / serviceCount) * 100 : 0
 
   return (
+    <>
     <TableRow>
       <TableCell>
         <Link to="/services" search={{ category: name }} className="font-medium hover:underline">
@@ -73,6 +82,12 @@ function CategoryTableRow({ category, compact }: { category: CategoryItem; compa
       {!compact && <TableCell className="text-muted-foreground">{startupOrder}</TableCell>}
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-1">
+          <Button variant="ghost" size="icon-sm" onClick={() => setEditOpen(true)}>
+            <Pencil className="size-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon-sm" onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="size-3.5" />
+          </Button>
           {runningCount < serviceCount && (
             <Button variant="ghost" size="icon-sm" onClick={() => startMutation.mutate(name)} disabled={isLoading}>
               {startMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
@@ -86,5 +101,8 @@ function CategoryTableRow({ category, compact }: { category: CategoryItem; compa
         </div>
       </TableCell>
     </TableRow>
+    <EditCategoryDialog category={category} open={editOpen} onOpenChange={setEditOpen} />
+    <DeleteCategoryDialog category={category} open={deleteOpen} onOpenChange={setDeleteOpen} />
+    </>
   )
 }

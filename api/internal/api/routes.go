@@ -152,10 +152,15 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 
 		r.Route("/categories", func(r chi.Router) {
 			r.Get("/", categoryHandler.List)
-			r.Get("/{name}", categoryHandler.Get)
-			r.Get("/{name}/services", categoryHandler.Services)
-			r.Post("/{name}/start", categoryHandler.Start)
-			r.Post("/{name}/stop", categoryHandler.Stop)
+			r.Post("/", categoryHandler.Create)
+			r.Route("/{name}", func(r chi.Router) {
+				r.Get("/", categoryHandler.Get)
+				r.Put("/", categoryHandler.Update)
+				r.Delete("/", categoryHandler.Delete)
+				r.Get("/services", categoryHandler.Services)
+				r.Post("/start", categoryHandler.Start)
+				r.Post("/stop", categoryHandler.Stop)
+			})
 		})
 
 		r.Route("/projects", func(r chi.Router) {

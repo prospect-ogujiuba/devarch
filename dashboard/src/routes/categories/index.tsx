@@ -1,17 +1,19 @@
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
-import { Server, Play, Square } from 'lucide-react'
+import { Server, Play, Square, Plus } from 'lucide-react'
 import { useCategories } from '@/features/categories/queries'
 import { CategoryCard } from '@/components/categories/category-card'
 import { CategoryTable } from '@/components/categories/category-table'
+import { CreateCategoryDialog } from '@/components/categories/create-category-dialog'
 import { FilterBar, type FilterOption } from '@/components/ui/filter-bar'
 import { ListPageScaffold } from '@/components/ui/list-page-scaffold'
 import { PaginationControls } from '@/components/ui/pagination-controls'
+import { Button } from '@/components/ui/button'
 import { useUrlSyncedListControls } from '@/hooks/use-url-synced-list-controls'
 import { useUrlPagination } from '@/hooks/use-url-pagination'
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '@/lib/pagination'
-import type { Category, CategoryItem } from '@/types/api'
+import type { Category } from '@/types/api'
 
 export const Route = createFileRoute('/categories/')({
   validateSearch: z.object({
@@ -59,6 +61,7 @@ function CategoriesPage() {
   const routeSearch = Route.useSearch()
   const navigate = Route.useNavigate()
   const items = useMemo(() => categories ?? [], [categories])
+  const [createOpen, setCreateOpen] = useState(false)
 
   const controls = useUrlSyncedListControls(
     { storageKey: 'categories', items, searchFn, filterFns, sortFns, defaultSort: 'order', defaultView: 'grid' },
@@ -121,18 +124,18 @@ function CategoriesPage() {
     { value: 'stopped', label: 'Stopped', count: statusCounts.stopped },
   ]
 
-  const toCategoryItem = (cat: Category): CategoryItem => ({
-    name: cat.name,
-    runningCount: cat.runningCount ?? 0,
-    serviceCount: cat.service_count ?? 0,
-    startupOrder: cat.startup_order,
-  })
-
   return (
+    <>
     <ListPageScaffold
       title="Categories"
       subtitle={`${totalRunning} of ${totalServices} services running across ${items.length} categories`}
       isLoading={isLoading}
+      actionButton={
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus className="size-4" />
+          Create
+        </Button>
+      }
       statCards={[
         { icon: Server, label: 'Categories', value: items.length },
         { icon: Play, label: 'Services Running', value: totalRunning, color: 'text-green-500' },
@@ -157,11 +160,11 @@ function CategoriesPage() {
           onChange={handleStatusFilterChange}
         />
       }
-      tableView={() => <CategoryTable categories={pagination.pagedItems.map(toCategoryItem)} />}
+      tableView={() => <CategoryTable categories={pagination.pagedItems} />}
       gridView={() => (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {pagination.pagedItems.map((category) => (
-            <CategoryCard key={category.name} category={toCategoryItem(category)} />
+            <CategoryCard key={category.name} category={category} />
           ))}
         </div>
       )}
@@ -179,5 +182,7 @@ function CategoriesPage() {
         />
       )}
     </ListPageScaffold>
+    <CreateCategoryDialog open={createOpen} onOpenChange={setCreateOpen} />
+    </>
   )
 }

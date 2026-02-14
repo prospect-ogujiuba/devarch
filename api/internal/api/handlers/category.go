@@ -2,8 +2,11 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/lib/pq"
@@ -98,7 +101,7 @@ func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 		categories = append(categories, c)
 	}
 
-	respond.JSON(w, r, http.StatusOK,categories)
+	respond.JSON(w, r, http.StatusOK, categories)
 }
 
 // Get godoc
@@ -137,7 +140,7 @@ func (h *CategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 		c.Color = color.String
 	}
 
-	respond.JSON(w, r, http.StatusOK,c)
+	respond.JSON(w, r, http.StatusOK, c)
 }
 
 // Services godoc
@@ -256,17 +259,6 @@ func (h *CategoryHandler) Start(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-// Stop godoc
-// @Summary      Stop all services in category
-// @Description  Stops all services that belong to the specified category
-// @Tags         categories
-// @Produce      json
-// @Param        name path string true "Category name"
-// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
-// @Failure      404 {object} respond.ErrorEnvelope
-// @Failure      500 {object} respond.ErrorEnvelope
-// @Router       /categories/{name}/stop [post]
-// @Security     ApiKeyAuth
 func (h *CategoryHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	if h.containerClient == nil {
 		respond.InternalError(w, r, fmt.Errorf("container client not initialized"))
@@ -319,4 +311,164 @@ func (h *CategoryHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	respond.Action(w, r, http.StatusOK, "completed",
 		respond.WithMetadata("services", results),
 	)
+}
+
+var validCategoryName = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$`)
+
+type createCategoryRequest struct {
+	Name         string `json:"name"`
+	DisplayName  string `json:"display_name"`
+	Color        string `json:"color"`
+	StartupOrder *int   `json:"startup_order"`
+}
+
+func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
+	var req createCategoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.BadRequest(w, r, "invalid JSON body")
+		return
+	}
+
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" {
+		respond.BadRequest(w, r, "name is required")
+		return
+	}
+	if len(req.Name) > 64 || !validCategoryName.MatchString(req.Name) {
+		respond.BadRequest(w, r, "name must be lowercase alphanumeric with hyphens, max 64 characters")
+		return
+	}
+
+	startupOrder := 0
+	if req.StartupOrder != nil {
+		startupOrder = *req.StartupOrder
+	}
+
+	var c models.Category
+	var displayName, color sql.NullString
+	err := h.db.QueryRow(`
+		INSERT INTO categories (name, display_name, color, startup_order)
+		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4)
+		RETURNING id, name, display_name, color, startup_order, created_at, updated_at
+	`, req.Name, req.DisplayName, req.Color, startupOrder).Scan(
+		&c.ID, &c.Name, &displayName, &color, &c.StartupOrder, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			respond.Conflict(w, r, fmt.Sprintf("category '%s' already exists", req.Name))
+			return
+		}
+		respond.InternalError(w, r, err)
+		return
+	}
+
+	if displayName.Valid {
+		c.DisplayName = displayName.String
+	}
+	if color.Valid {
+		c.Color = color.String
+	}
+
+	respond.JSON(w, r, http.StatusCreated, c)
+}
+
+type updateCategoryRequest struct {
+	DisplayName  *string `json:"display_name"`
+	Color        *string `json:"color"`
+	StartupOrder *int    `json:"startup_order"`
+}
+
+func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	var req updateCategoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.BadRequest(w, r, "invalid JSON body")
+		return
+	}
+
+	var c models.Category
+	var displayName, color sql.NullString
+	err := h.db.QueryRow(`
+		UPDATE categories SET
+			display_name = CASE WHEN $2 THEN NULLIF($3, '') ELSE display_name END,
+			color = CASE WHEN $4 THEN NULLIF($5, '') ELSE color END,
+			startup_order = CASE WHEN $6 THEN $7 ELSE startup_order END,
+			updated_at = NOW()
+		WHERE name = $1
+		RETURNING id, name, display_name, color, startup_order, created_at, updated_at
+	`,
+		name,
+		req.DisplayName != nil, sqlNullString(req.DisplayName),
+		req.Color != nil, sqlNullString(req.Color),
+		req.StartupOrder != nil, sqlNullInt(req.StartupOrder),
+	).Scan(&c.ID, &c.Name, &displayName, &color, &c.StartupOrder, &c.CreatedAt, &c.UpdatedAt)
+	if err == sql.ErrNoRows {
+		respond.NotFound(w, r, "category", name)
+		return
+	}
+	if err != nil {
+		respond.InternalError(w, r, err)
+		return
+	}
+
+	if displayName.Valid {
+		c.DisplayName = displayName.String
+	}
+	if color.Valid {
+		c.Color = color.String
+	}
+
+	respond.JSON(w, r, http.StatusOK, c)
+}
+
+func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	var serviceCount int
+	err := h.db.QueryRow(`
+		SELECT COUNT(*) FROM services s
+		JOIN categories c ON s.category_id = c.id
+		WHERE c.name = $1
+	`, name).Scan(&serviceCount)
+	if err != nil {
+		respond.InternalError(w, r, err)
+		return
+	}
+	if serviceCount > 0 {
+		respond.Conflict(w, r, fmt.Sprintf("cannot delete category '%s': has %d service(s)", name, serviceCount))
+		return
+	}
+
+	result, err := h.db.Exec("DELETE FROM categories WHERE name = $1", name)
+	if err != nil {
+		respond.InternalError(w, r, err)
+		return
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		respond.InternalError(w, r, err)
+		return
+	}
+	if affected == 0 {
+		respond.NotFound(w, r, "category", name)
+		return
+	}
+
+	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+func sqlNullString(s *string) sql.NullString {
+	if s == nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: *s, Valid: true}
+}
+
+func sqlNullInt(i *int) sql.NullInt32 {
+	if i == nil {
+		return sql.NullInt32{}
+	}
+	return sql.NullInt32{Int32: int32(*i), Valid: true}
 }
