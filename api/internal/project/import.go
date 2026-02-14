@@ -109,6 +109,10 @@ func (c *Controller) ensureStack(projectName string) (*stackInfo, error) {
 		return nil, fmt.Errorf("import config files: %w", err)
 	}
 
+	if _, err := resolveConfigMountLinks(tx); err != nil {
+		return nil, fmt.Errorf("resolve config mount links: %w", err)
+	}
+
 	stackID := 0
 	networkName := "devarch-" + projectName + "-net"
 
@@ -537,4 +541,81 @@ func importProjectConfigFiles(tx *sql.Tx, composePath string, templateIDs map[st
 	}
 
 	return nil
+}
+
+func resolveConfigMountLinks(tx *sql.Tx) (int, error) {
+	rows, err := tx.Query(`
+		SELECT scm.id, scm.source_path
+		FROM service_config_mounts scm
+		WHERE scm.config_file_id IS NULL
+	`)
+	if err != nil {
+		return 0, fmt.Errorf("query config mounts: %w", err)
+	}
+	defer rows.Close()
+
+	type mountRecord struct {
+		id         int
+		sourcePath string
+	}
+	var mounts []mountRecord
+	for rows.Next() {
+		var m mountRecord
+		if err := rows.Scan(&m.id, &m.sourcePath); err != nil {
+			return 0, err
+		}
+		mounts = append(mounts, m)
+	}
+
+	resolved := 0
+	for _, mount := range mounts {
+		cleaned := mount.sourcePath
+		for strings.HasPrefix(cleaned, "../") {
+			cleaned = strings.TrimPrefix(cleaned, "../")
+		}
+
+		if !strings.HasPrefix(cleaned, "config/") {
+			continue
+		}
+
+		rest := strings.TrimPrefix(cleaned, "config/")
+		var configOwner, configRelPath string
+		if idx := strings.Index(rest, "/"); idx >= 0 {
+			configOwner = rest[:idx]
+			configRelPath = rest[idx+1:]
+		} else {
+			configOwner = rest
+			configRelPath = ""
+		}
+
+		if configRelPath == "" {
+			continue
+		}
+
+		var configFileID int
+		err := tx.QueryRow(`
+			SELECT scf.id
+			FROM service_config_files scf
+			JOIN services s ON s.id = scf.service_id
+			WHERE s.name = $1 AND scf.file_path = $2
+		`, configOwner, configRelPath).Scan(&configFileID)
+
+		if err == sql.ErrNoRows {
+			continue
+		} else if err != nil {
+			return 0, fmt.Errorf("resolve config_file_id for mount %d: %w", mount.id, err)
+		}
+
+		_, err = tx.Exec(`
+			UPDATE service_config_mounts
+			SET config_file_id = $1
+			WHERE id = $2
+		`, configFileID, mount.id)
+		if err != nil {
+			return 0, fmt.Errorf("update config mount %d: %w", mount.id, err)
+		}
+		resolved++
+	}
+
+	return resolved, nil
 }
