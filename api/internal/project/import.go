@@ -3,6 +3,7 @@ package project
 import (
 	"database/sql"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"strings"
 
@@ -301,4 +302,28 @@ func resolveServicePaths(svc *compose.ParsedService, composeDir string) {
 			}
 		}
 	}
+}
+
+func isBinaryContent(data []byte) bool {
+	if len(data) == 0 {
+		return false
+	}
+	contentType := http.DetectContentType(data)
+	if strings.HasPrefix(contentType, "text/") || strings.HasPrefix(contentType, "application/json") ||
+		strings.HasPrefix(contentType, "application/xml") || strings.HasPrefix(contentType, "application/javascript") {
+		return false
+	}
+	if contentType == "application/octet-stream" {
+		check := data
+		if len(check) > 512 {
+			check = check[:512]
+		}
+		for _, b := range check {
+			if b == 0 {
+				return true
+			}
+		}
+		return false
+	}
+	return true
 }
