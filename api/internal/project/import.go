@@ -278,6 +278,19 @@ func importTemplate(tx *sql.Tx, name string, categoryID int, parsed *compose.Par
 		}
 	}
 
+	if _, err := tx.Exec("DELETE FROM service_config_mounts WHERE service_id = $1", serviceID); err != nil {
+		return 0, err
+	}
+	for _, mount := range parsed.ConfigMounts {
+		_, err := tx.Exec(`
+			INSERT INTO service_config_mounts (service_id, config_file_id, source_path, target_path, readonly)
+			VALUES ($1, NULL, $2, $3, $4)
+		`, serviceID, mount.SourcePath, mount.TargetPath, mount.ReadOnly)
+		if err != nil {
+			return 0, fmt.Errorf("insert config mount: %w", err)
+		}
+	}
+
 	return serviceID, nil
 }
 
