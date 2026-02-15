@@ -523,11 +523,12 @@ func classifyConfigMounts(parsed *ParsedService) {
 			continue
 		}
 
-		// Strip leading ../ prefixes to normalize the path
+		// Strip leading ../ and ./ prefixes to normalize the path
 		cleaned := v.Source
 		for strings.HasPrefix(cleaned, "../") {
 			cleaned = strings.TrimPrefix(cleaned, "../")
 		}
+		cleaned = strings.TrimPrefix(cleaned, "./")
 
 		// Check if this is a config volume with config/ prefix
 		if strings.HasPrefix(cleaned, "config/") {
