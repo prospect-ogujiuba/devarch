@@ -10,6 +10,7 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
 import { useDeleteCategory } from '@/features/categories/queries'
+import { categoryLabel } from '@/lib/utils'
 import type { Category } from '@/types/api'
 
 interface DeleteCategoryDialogProps {
@@ -31,7 +32,7 @@ export function DeleteCategoryDialog({ category, open, onOpenChange }: DeleteCat
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete {category.name}?</AlertDialogTitle>
+          <AlertDialogTitle>Delete {categoryLabel(category)}?</AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-2">
               <p>This will permanently delete the category.</p>
