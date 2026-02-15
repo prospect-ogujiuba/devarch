@@ -295,10 +295,11 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	var s models.Service
 	var catName string
+	var catDisplayName sql.NullString
 	err := h.db.QueryRow(`
 		SELECT s.id, s.name, s.category_id, s.image_name, s.image_tag,
 			s.restart_policy, s.command, s.user_spec, s.enabled,
-			s.created_at, s.updated_at, c.name as category_name,
+			s.created_at, s.updated_at, c.name as category_name, c.display_name as category_display_name,
 			s.config_status, s.last_validated_at, s.validation_errors,
 			s.compose_overrides
 		FROM services s
@@ -307,7 +308,7 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 	`, name).Scan(
 		&s.ID, &s.Name, &s.CategoryID, &s.ImageName, &s.ImageTag,
 		&s.RestartPolicy, &s.Command, &s.UserSpec, &s.Enabled,
-		&s.CreatedAt, &s.UpdatedAt, &catName,
+		&s.CreatedAt, &s.UpdatedAt, &catName, &catDisplayName,
 		&s.ConfigStatus, &s.LastValidatedAt, &s.ValidationErrors,
 		&s.ComposeOverrides,
 	)
@@ -321,6 +322,9 @@ func (h *ServiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.Category = &models.Category{Name: catName}
+	if catDisplayName.Valid {
+		s.Category.DisplayName = catDisplayName.String
+	}
 	if s.Command.Valid {
 		s.CommandStr = s.Command.String
 	}
