@@ -64,7 +64,7 @@ func (c *Controller) ensureStack(projectName string) (*stackInfo, error) {
 	}
 	defer tx.Rollback()
 
-	categoryID, err := ensureCategory(tx, "projects")
+	categoryID, err := ensureCategory(tx, projectName)
 	if err != nil {
 		return nil, fmt.Errorf("ensure category: %w", err)
 	}
