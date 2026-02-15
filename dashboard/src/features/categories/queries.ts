@@ -69,6 +69,7 @@ export function useCreateCategory() {
 }
 
 interface UpdateCategoryPayload {
+  name?: string
   display_name?: string
   color?: string
   startup_order?: number
