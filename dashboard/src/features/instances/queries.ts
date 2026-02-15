@@ -455,3 +455,31 @@ export function useUpdateInstanceConfigMounts(stackName: string, instanceId: str
     ],
   })
 }
+
+export function useInstanceLogs(stackName: string, instanceId: string, tail: number = 100) {
+  return useQuery({
+    queryKey: ['stacks', stackName, 'instances', instanceId, 'logs', tail],
+    queryFn: async () => {
+      const response = await api.get(`/stacks/${stackName}/instances/${instanceId}/logs?tail=${tail}`, {
+        responseType: 'text',
+      })
+      return response.data as string
+    },
+    enabled: !!stackName && !!instanceId,
+    refetchInterval: 30000,
+  })
+}
+
+export function useInstanceCompose(stackName: string, instanceId: string) {
+  return useQuery({
+    queryKey: ['stacks', stackName, 'instances', instanceId, 'compose'],
+    queryFn: async () => {
+      const response = await api.get(`/stacks/${stackName}/instances/${instanceId}/compose`, {
+        headers: { Accept: 'text/yaml' },
+        responseType: 'text',
+      })
+      return response.data as string
+    },
+    enabled: !!stackName && !!instanceId,
+  })
+}
