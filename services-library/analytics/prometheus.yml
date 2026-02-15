@@ -18,5 +18,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    x-devarch-config:
+      prometheus.yml: /etc/prometheus/prometheus.yml
+      blackbox.yml: /etc/prometheus/blackbox.yml
+      rules/alerts.yml: /etc/prometheus/rules/alerts.yml
     networks:
       - microservices-net

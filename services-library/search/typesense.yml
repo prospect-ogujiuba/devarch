@@ -17,6 +17,8 @@ services:
       start_period: 30s
     networks:
     - microservices-net
+    x-devarch-config:
+      typesense-server.ini: /etc/typesense/typesense-server.ini
     container_name: typesense
 volumes:
   typesense_data: null

@@ -16,6 +16,8 @@ services:
       start_period: 30s
     networks:
     - microservices-net
+    x-devarch-config:
+      config.cfg: /etc/sonic.cfg
     container_name: sonic
 volumes:
   sonic_data: null

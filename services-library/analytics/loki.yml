@@ -19,5 +19,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    x-devarch-config:
+      loki-config.yml: /etc/loki/local-config.yaml
     networks:
       - microservices-net

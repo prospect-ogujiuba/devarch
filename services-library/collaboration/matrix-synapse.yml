@@ -19,6 +19,8 @@ services:
       start_period: 60s
     networks:
     - microservices-net
+    x-devarch-config:
+      homeserver.yaml: /data/homeserver.yaml
     container_name: matrix-synapse
 volumes:
   synapse_data: null
