@@ -218,7 +218,7 @@ func (h *InstanceHandler) Logs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logs, err := h.containerClient.ContainerLogsString(r.Context(), containerName, tail)
+	logs, err := h.containerClient.GetLogs(containerName, strconv.Itoa(tail))
 	if err != nil {
 		respond.InternalError(w, r, err)
 		return
