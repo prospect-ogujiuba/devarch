@@ -131,10 +131,15 @@ function ServicesPage() {
     }
   }, [services])
 
-  const categories = useMemo(
-    () => [...new Set(services.map((s) => s.category?.name).filter(Boolean))] as string[],
-    [services],
-  )
+  const categories = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const s of services) {
+      if (s.category?.name && !seen.has(s.category.name)) {
+        seen.set(s.category.name, s.category.display_name || '')
+      }
+    }
+    return [...seen.entries()]
+  }, [services])
 
   const statusCounts = useMemo(() => {
     const counts = { all: services.length, running: 0, stopped: 0, error: 0 }
@@ -156,7 +161,7 @@ function ServicesPage() {
 
   const categoryOptions: FilterOption[] = [
     { value: 'all', label: 'All Categories' },
-    ...categories.map((cat) => ({ value: cat, label: titleCase(cat) })),
+    ...categories.map(([name, displayName]) => ({ value: name, label: displayName || titleCase(name) })),
   ]
 
   return (
