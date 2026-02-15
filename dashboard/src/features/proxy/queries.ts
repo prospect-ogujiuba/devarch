@@ -52,3 +52,16 @@ export function useGenerateProjectProxyConfig(projectName: string) {
     errorMessage: (error) => getErrorMessage(error, 'Failed to generate proxy config'),
   })
 }
+
+export function useGenerateInstanceProxyConfig(stackName: string, instanceId: string) {
+  return useMutationHelper({
+    mutationFn: async (proxyType: string) => {
+      const response = await api.post<ProxyConfigResult>(
+        `/stacks/${stackName}/instances/${instanceId}/proxy-config`,
+        { proxy_type: proxyType },
+      )
+      return response.data
+    },
+    errorMessage: (error) => getErrorMessage(error, 'Failed to generate proxy config'),
+  })
+}
