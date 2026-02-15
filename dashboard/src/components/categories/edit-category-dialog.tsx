@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useUpdateCategory } from '@/features/categories/queries'
+import { categoryLabel } from '@/lib/utils'
 import type { Category } from '@/types/api'
 
 interface EditCategoryDialogProps {
@@ -51,7 +52,7 @@ export function EditCategoryDialog({ category, open, onOpenChange }: EditCategor
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit {category.name}</DialogTitle>
+          <DialogTitle>Edit {categoryLabel(category)}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
