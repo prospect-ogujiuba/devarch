@@ -18,6 +18,8 @@ services:
       start_period: 30s
     networks:
     - microservices-net
+    x-devarch-config:
+      tyk.conf: /opt/tyk-gateway/tyk.conf
     container_name: tyk
 volumes:
   tyk_data: null

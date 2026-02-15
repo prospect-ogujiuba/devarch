@@ -17,5 +17,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    x-devarch-config:
+      otel-collector.yml: /etc/otelcol-contrib/config.yaml
     networks:
       - microservices-net

@@ -22,6 +22,9 @@ services:
       start_period: 30s
     networks:
     - microservices-net
+    x-devarch-config:
+      rabbitmq.conf: /etc/rabbitmq/rabbitmq.conf
+      enabled_plugins: /etc/rabbitmq/enabled_plugins
     container_name: rabbitmq
 volumes:
   rabbitmq_data: null

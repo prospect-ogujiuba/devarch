@@ -14,6 +14,8 @@ services:
       start_period: 30s
     networks:
     - microservices-net
+    x-devarch-config:
+      krakend.json: /etc/krakend/krakend.json
     container_name: krakend
 networks:
   microservices-net:

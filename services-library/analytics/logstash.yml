@@ -22,5 +22,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    x-devarch-config:
+      logstash.yml: /usr/share/logstash/config/logstash.yml
+      pipeline.conf: /usr/share/logstash/pipeline/pipeline.conf
     networks:
       - microservices-net

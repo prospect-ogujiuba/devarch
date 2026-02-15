@@ -21,5 +21,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    x-devarch-config:
+      tempo-config.yml: /etc/tempo/tempo.yaml
     networks:
       - microservices-net
