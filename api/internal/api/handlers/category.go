@@ -373,6 +373,7 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateCategoryRequest struct {
+	Name         *string `json:"name"`
 	DisplayName  *string `json:"display_name"`
 	Color        *string `json:"color"`
 	StartupOrder *int    `json:"startup_order"`
@@ -387,18 +388,28 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.Name != nil {
+		*req.Name = strings.TrimSpace(*req.Name)
+		if len(*req.Name) > 64 || !validCategoryName.MatchString(*req.Name) {
+			respond.BadRequest(w, r, "name must be lowercase alphanumeric with hyphens, max 64 characters")
+			return
+		}
+	}
+
 	var c models.Category
 	var displayName, color sql.NullString
 	err := h.db.QueryRow(`
 		UPDATE categories SET
-			display_name = CASE WHEN $2 THEN NULLIF($3, '') ELSE display_name END,
-			color = CASE WHEN $4 THEN NULLIF($5, '') ELSE color END,
-			startup_order = CASE WHEN $6 THEN $7 ELSE startup_order END,
+			name = CASE WHEN $2 THEN $3 ELSE name END,
+			display_name = CASE WHEN $4 THEN NULLIF($5, '') ELSE display_name END,
+			color = CASE WHEN $6 THEN NULLIF($7, '') ELSE color END,
+			startup_order = CASE WHEN $8 THEN $9 ELSE startup_order END,
 			updated_at = NOW()
 		WHERE name = $1
 		RETURNING id, name, display_name, color, startup_order, created_at, updated_at
 	`,
 		name,
+		req.Name != nil, sqlNullString(req.Name),
 		req.DisplayName != nil, sqlNullString(req.DisplayName),
 		req.Color != nil, sqlNullString(req.Color),
 		req.StartupOrder != nil, sqlNullInt(req.StartupOrder),
@@ -408,6 +419,10 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			respond.Conflict(w, r, fmt.Sprintf("category '%s' already exists", *req.Name))
+			return
+		}
 		respond.InternalError(w, r, err)
 		return
 	}
