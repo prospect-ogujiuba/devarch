@@ -176,9 +176,6 @@ func truncateAll(t *testing.T, db *sql.DB) {
 		// Stacks
 		"stacks",
 
-		// Project services
-		"project_services",
-
 		// Projects
 		"projects",
 

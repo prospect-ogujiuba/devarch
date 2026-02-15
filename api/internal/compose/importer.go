@@ -21,7 +21,6 @@ type Importer struct {
 	db          *sql.DB
 	composeDir  string
 	projectRoot string
-	configDir   string
 }
 
 func NewImporter(db *sql.DB, composeDir string) *Importer {
@@ -37,10 +36,6 @@ func NewImporterWithRoot(db *sql.DB, composeDir, projectRoot string) *Importer {
 		composeDir:  composeDir,
 		projectRoot: projectRoot,
 	}
-}
-
-func (i *Importer) SetConfigDir(dir string) {
-	i.configDir = dir
 }
 
 func (i *Importer) ImportAll() error {
@@ -125,32 +120,55 @@ func (i *Importer) importCategoryServices(category string) error {
 	}
 
 	for _, entry := range entries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".yml" {
+		if !entry.IsDir() {
 			continue
 		}
 
-		path := filepath.Join(categoryDir, entry.Name())
-		if err := i.importServices(path, categoryID, category); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: failed to import %s: %v\n", path, err)
+		svcDir := filepath.Join(categoryDir, entry.Name())
+		ymlPath := filepath.Join(svcDir, entry.Name()+".yml")
+		if _, err := os.Stat(ymlPath); err != nil {
+			continue
+		}
+
+		serviceIDs, err := i.importServices(ymlPath, categoryID, category)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to import %s: %v\n", ymlPath, err)
+			continue
+		}
+
+		configDir := filepath.Join(svcDir, "config")
+		if info, statErr := os.Stat(configDir); statErr == nil && info.IsDir() {
+			for _, serviceID := range serviceIDs {
+				if _, err := i.importServiceConfigFiles(serviceID, configDir); err != nil {
+					fmt.Fprintf(os.Stderr, "warning: config import for %s: %v\n", entry.Name(), err)
+				}
+				if err := i.resolveServiceConfigMountFKs(serviceID); err != nil {
+					fmt.Fprintf(os.Stderr, "warning: config mount FK resolution for %s: %v\n", entry.Name(), err)
+				}
+			}
 		}
 	}
 
 	return nil
 }
 
-func (i *Importer) importServices(path string, categoryID int, categoryName string) error {
+func (i *Importer) importServices(path string, categoryID int, categoryName string) ([]int, error) {
 	services, err := ParseFileAll(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	var ids []int
 	for _, parsed := range services {
 		i.resolvePaths(parsed, path)
-		if err := i.importService(parsed, categoryID); err != nil {
+		id, err := i.importService(parsed, categoryID)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "warning: failed to import service %s: %v\n", parsed.Name, err)
+			continue
 		}
+		ids = append(ids, id)
 	}
-	return nil
+	return ids, nil
 }
 
 func (i *Importer) resolvePaths(parsed *ParsedService, composePath string) {
@@ -202,11 +220,10 @@ func (i *Importer) stripProjectRoot(absPath string) string {
 	return absPath
 }
 
-func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
-
+func (i *Importer) importService(parsed *ParsedService, categoryID int) (int, error) {
 	tx, err := i.db.Begin()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer tx.Rollback()
 
@@ -230,11 +247,11 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 	`, parsed.Name, categoryID, parsed.ImageName, parsed.ImageTag,
 		parsed.RestartPolicy, parsed.Command, parsed.UserSpec, overridesJSON, parsed.ContainerName).Scan(&serviceID)
 	if err != nil {
-		return fmt.Errorf("insert service: %w", err)
+		return 0, fmt.Errorf("insert service: %w", err)
 	}
 
 	if _, err := tx.Exec("DELETE FROM service_ports WHERE service_id = $1", serviceID); err != nil {
-		return err
+		return 0, err
 	}
 	for _, port := range parsed.Ports {
 		_, err := tx.Exec(`
@@ -243,12 +260,12 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 			ON CONFLICT (service_id, host_ip, host_port) DO NOTHING
 		`, serviceID, port.HostIP, port.HostPort, port.ContainerPort, port.Protocol)
 		if err != nil {
-			return fmt.Errorf("insert port: %w", err)
+			return 0, fmt.Errorf("insert port: %w", err)
 		}
 	}
 
 	if _, err := tx.Exec("DELETE FROM service_volumes WHERE service_id = $1", serviceID); err != nil {
-		return err
+		return 0, err
 	}
 	for _, vol := range parsed.Volumes {
 		_, err := tx.Exec(`
@@ -256,12 +273,12 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 			VALUES ($1, $2, $3, $4, $5, $6)
 		`, serviceID, vol.VolumeType, vol.Source, vol.Target, vol.ReadOnly, vol.IsExternal)
 		if err != nil {
-			return fmt.Errorf("insert volume: %w", err)
+			return 0, fmt.Errorf("insert volume: %w", err)
 		}
 	}
 
 	if _, err := tx.Exec("DELETE FROM service_env_vars WHERE service_id = $1", serviceID); err != nil {
-		return err
+		return 0, err
 	}
 	for _, env := range parsed.EnvVars {
 		_, err := tx.Exec(`
@@ -270,12 +287,12 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 			ON CONFLICT (service_id, key) DO UPDATE SET value = $3, is_secret = $4
 		`, serviceID, env.Key, env.Value, env.IsSecret)
 		if err != nil {
-			return fmt.Errorf("insert env var: %w", err)
+			return 0, fmt.Errorf("insert env var: %w", err)
 		}
 	}
 
 	if _, err := tx.Exec("DELETE FROM service_labels WHERE service_id = $1", serviceID); err != nil {
-		return err
+		return 0, err
 	}
 	for _, label := range parsed.Labels {
 		_, err := tx.Exec(`
@@ -284,12 +301,12 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 			ON CONFLICT (service_id, key) DO UPDATE SET value = $3
 		`, serviceID, label.Key, label.Value)
 		if err != nil {
-			return fmt.Errorf("insert label: %w", err)
+			return 0, fmt.Errorf("insert label: %w", err)
 		}
 	}
 
 	if _, err := tx.Exec("DELETE FROM service_env_files WHERE service_id = $1", serviceID); err != nil {
-		return err
+		return 0, err
 	}
 	for idx, path := range parsed.EnvFiles {
 		_, err := tx.Exec(`
@@ -297,12 +314,12 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 			VALUES ($1, $2, $3)
 		`, serviceID, path, idx)
 		if err != nil {
-			return fmt.Errorf("insert env_file: %w", err)
+			return 0, fmt.Errorf("insert env_file: %w", err)
 		}
 	}
 
 	if _, err := tx.Exec("DELETE FROM service_networks WHERE service_id = $1", serviceID); err != nil {
-		return err
+		return 0, err
 	}
 	for _, network := range parsed.Networks {
 		_, err := tx.Exec(`
@@ -310,13 +327,12 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 			VALUES ($1, $2)
 		`, serviceID, network)
 		if err != nil {
-			return fmt.Errorf("insert network: %w", err)
+			return 0, fmt.Errorf("insert network: %w", err)
 		}
 	}
 
-	// Import config mounts (with NULL config_file_id, resolved later)
 	if _, err := tx.Exec("DELETE FROM service_config_mounts WHERE service_id = $1", serviceID); err != nil {
-		return err
+		return 0, err
 	}
 	for _, mount := range parsed.ConfigMounts {
 		_, err := tx.Exec(`
@@ -324,12 +340,12 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 			VALUES ($1, NULL, $2, $3, $4)
 		`, serviceID, mount.SourcePath, mount.TargetPath, mount.ReadOnly)
 		if err != nil {
-			return fmt.Errorf("insert config mount: %w", err)
+			return 0, fmt.Errorf("insert config mount: %w", err)
 		}
 	}
 
 	if _, err := tx.Exec("DELETE FROM service_healthchecks WHERE service_id = $1", serviceID); err != nil {
-		return err
+		return 0, err
 	}
 	if parsed.Healthcheck != nil {
 		_, err := tx.Exec(`
@@ -338,46 +354,11 @@ func (i *Importer) importService(parsed *ParsedService, categoryID int) error {
 		`, serviceID, parsed.Healthcheck.Test, parsed.Healthcheck.IntervalSeconds,
 			parsed.Healthcheck.TimeoutSeconds, parsed.Healthcheck.Retries, parsed.Healthcheck.StartPeriodSeconds)
 		if err != nil {
-			return fmt.Errorf("insert healthcheck: %w", err)
+			return 0, fmt.Errorf("insert healthcheck: %w", err)
 		}
 	}
 
-	return tx.Commit()
-}
-
-// ImportAllConfigFiles scans the config directory and imports config files for all services found in DB.
-func (i *Importer) ImportAllConfigFiles() (int, error) {
-	if i.configDir == "" {
-		return 0, fmt.Errorf("config dir not set")
-	}
-
-	entries, err := os.ReadDir(i.configDir)
-	if err != nil {
-		return 0, fmt.Errorf("read config dir: %w", err)
-	}
-
-	total := 0
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		serviceName := entry.Name()
-
-		var serviceID int
-		err := i.db.QueryRow("SELECT id FROM services WHERE name = $1", serviceName).Scan(&serviceID)
-		if err != nil {
-			continue // no matching service in DB
-		}
-
-		count, err := i.importServiceConfigFiles(serviceID, filepath.Join(i.configDir, serviceName))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "warning: config import for %s: %v\n", serviceName, err)
-			continue
-		}
-		total += count
-	}
-
-	return total, nil
+	return serviceID, tx.Commit()
 }
 
 func (i *Importer) importServiceConfigFiles(serviceID int, configPath string) (int, error) {
@@ -453,24 +434,21 @@ func isBinaryContent(data []byte) bool {
 	return true
 }
 
-// ResolveConfigMountLinks updates service_config_mounts rows to link them to their owning service's config_file.
-// Must be called after both ImportAll() and ImportAllConfigFiles() complete.
-func (i *Importer) ResolveConfigMountLinks() error {
-	// Get all config mounts with NULL config_file_id
+func (i *Importer) resolveServiceConfigMountFKs(serviceID int) error {
+	type mountRecord struct {
+		id         int
+		sourcePath string
+	}
+
 	rows, err := i.db.Query(`
-		SELECT scm.id, scm.source_path
-		FROM service_config_mounts scm
-		WHERE scm.config_file_id IS NULL
-	`)
+		SELECT id, source_path FROM service_config_mounts
+		WHERE service_id = $1 AND config_file_id IS NULL
+	`, serviceID)
 	if err != nil {
 		return fmt.Errorf("query config mounts: %w", err)
 	}
 	defer rows.Close()
 
-	type mountRecord struct {
-		id         int
-		sourcePath string
-	}
 	var mounts []mountRecord
 	for rows.Next() {
 		var m mountRecord
@@ -480,16 +458,14 @@ func (i *Importer) ResolveConfigMountLinks() error {
 		mounts = append(mounts, m)
 	}
 
-	resolved := 0
 	for _, mount := range mounts {
-		// Parse source_path to extract config owner and relpath
 		cleaned := mount.sourcePath
 		for strings.HasPrefix(cleaned, "../") {
 			cleaned = strings.TrimPrefix(cleaned, "../")
 		}
 
 		if !strings.HasPrefix(cleaned, "config/") {
-			continue // shouldn't happen, but skip non-config paths
+			continue
 		}
 
 		rest := strings.TrimPrefix(cleaned, "config/")
@@ -498,44 +474,33 @@ func (i *Importer) ResolveConfigMountLinks() error {
 			configOwner = rest[:idx]
 			configRelPath = rest[idx+1:]
 		} else {
-			configOwner = rest
-			configRelPath = ""
+			continue
 		}
 
 		if configRelPath == "" {
-			continue // directory mount, no file to link
+			continue
 		}
 
-		// Resolve config_file_id
 		var configFileID int
 		err := i.db.QueryRow(`
-			SELECT scf.id
-			FROM service_config_files scf
+			SELECT scf.id FROM service_config_files scf
 			JOIN services s ON s.id = scf.service_id
 			WHERE s.name = $1 AND scf.file_path = $2
 		`, configOwner, configRelPath).Scan(&configFileID)
 
 		if err == sql.ErrNoRows {
-			fmt.Fprintf(os.Stderr, "warning: config mount source_path=%s not found in service_config_files (owner=%s, path=%s)\n",
-				mount.sourcePath, configOwner, configRelPath)
 			continue
 		} else if err != nil {
 			return fmt.Errorf("resolve config_file_id for mount %d: %w", mount.id, err)
 		}
 
-		// Update the mount with resolved FK
 		_, err = i.db.Exec(`
-			UPDATE service_config_mounts
-			SET config_file_id = $1
-			WHERE id = $2
+			UPDATE service_config_mounts SET config_file_id = $1 WHERE id = $2
 		`, configFileID, mount.id)
 		if err != nil {
 			return fmt.Errorf("update config mount %d: %w", mount.id, err)
 		}
-		resolved++
 	}
-
-	fmt.Fprintf(os.Stderr, "resolved %d config mount FKs\n", resolved)
 	return nil
 }
 
@@ -571,12 +536,12 @@ func (i *Importer) resolveDependencies() error {
 		}
 
 		for _, entry := range entries {
-			if entry.IsDir() || filepath.Ext(entry.Name()) != ".yml" {
+			if !entry.IsDir() {
 				continue
 			}
 
-			path := filepath.Join(categoryDir, entry.Name())
-			services, err := ParseFileAll(path)
+			ymlPath := filepath.Join(categoryDir, entry.Name(), entry.Name()+".yml")
+			services, err := ParseFileAll(ymlPath)
 			if err != nil {
 				continue
 			}

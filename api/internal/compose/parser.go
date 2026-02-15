@@ -210,8 +210,7 @@ func OverridesToJSON(overrides map[string]interface{}) []byte {
 }
 
 func extractCategory(path string) string {
-	dir := filepath.Dir(path)
-	return filepath.Base(dir)
+	return filepath.Base(filepath.Dir(filepath.Dir(path)))
 }
 
 func parseImage(image string, svc *ParsedService) {

@@ -2560,7 +2560,7 @@ func (h *ServiceHandler) ImportLibrary(w http.ResponseWriter, r *http.Request) {
 
 	composeDir := os.Getenv("COMPOSE_DIR")
 	if composeDir == "" && libraryDir != "" {
-		composeDir = libraryDir + "/compose"
+		composeDir = libraryDir
 	}
 	if composeDir == "" {
 		respond.BadRequest(w, r, "LIBRARY_DIR or WORKSPACE_ROOT environment variable not set")
@@ -2571,25 +2571,6 @@ func (h *ServiceHandler) ImportLibrary(w http.ResponseWriter, r *http.Request) {
 	if err := importer.ImportAll(); err != nil {
 		respond.InternalError(w, r, err)
 		return
-	}
-
-	configDir := ""
-	if libraryDir != "" {
-		candidate := libraryDir + "/config"
-		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
-			configDir = candidate
-		}
-	}
-	if configDir != "" {
-		importer.SetConfigDir(configDir)
-		if _, err := importer.ImportAllConfigFiles(); err != nil {
-			respond.InternalError(w, r, err)
-			return
-		}
-		if err := importer.ResolveConfigMountLinks(); err != nil {
-			respond.InternalError(w, r, err)
-			return
-		}
 	}
 
 	var count int
