@@ -83,6 +83,28 @@ func (g *Generator) GenerateForProject(proxyType ProxyType, projectName string) 
 	}, nil
 }
 
+// GenerateForInstance builds proxy config for a single instance.
+func (g *Generator) GenerateForInstance(proxyType ProxyType, stackName string, instanceID string) (*ProxyConfigResult, error) {
+	targets, err := g.instanceTargets(stackName, instanceID)
+	if err != nil {
+		return nil, err
+	}
+	if len(targets) == 0 {
+		return nil, fmt.Errorf("instance %q in stack %q has no domains configured", instanceID, stackName)
+	}
+	config, err := render(proxyType, targets)
+	if err != nil {
+		return nil, err
+	}
+	return &ProxyConfigResult{
+		ProxyType: proxyType,
+		Scope:     "instance",
+		Name:      instanceID,
+		Config:    config,
+		Targets:   targets,
+	}, nil
+}
+
 // --- DB queries ---
 
 func (g *Generator) serviceTargets(name string) ([]ProxyTarget, error) {
@@ -173,6 +195,72 @@ func (g *Generator) stackTargets(stackName string) ([]ProxyTarget, error) {
 		}
 		targets = append(targets, ProxyTarget{
 			Name:       instanceID,
+			Domain:     domain,
+			TargetHost: containerName,
+			TargetPort: port,
+			HTTPS:      true,
+		})
+	}
+	return targets, templateRows.Err()
+}
+
+func (g *Generator) instanceTargets(stackName string, instanceID string) ([]ProxyTarget, error) {
+	rows, err := g.db.Query(`
+		SELECT id.domain, id.proxy_port, si.container_name, si.instance_id
+		FROM instance_domains id
+		JOIN service_instances si ON si.id = id.instance_id
+		JOIN stacks st ON st.id = si.stack_id
+		WHERE st.name = $1 AND si.instance_id = $2 AND st.deleted_at IS NULL AND si.deleted_at IS NULL AND si.enabled = true
+	`, stackName, instanceID)
+	if err != nil {
+		return nil, fmt.Errorf("query instance domains: %w", err)
+	}
+	defer rows.Close()
+
+	var targets []ProxyTarget
+	for rows.Next() {
+		var domain, containerName, instID string
+		var port int
+		if err := rows.Scan(&domain, &port, &containerName, &instID); err != nil {
+			return nil, fmt.Errorf("scan instance domain: %w", err)
+		}
+		targets = append(targets, ProxyTarget{
+			Name:       instID,
+			Domain:     domain,
+			TargetHost: containerName,
+			TargetPort: port,
+			HTTPS:      true,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(targets) > 0 {
+		return targets, nil
+	}
+
+	templateRows, err := g.db.Query(`
+		SELECT sd.domain, sd.proxy_port, si.container_name, si.instance_id
+		FROM service_domains sd
+		JOIN services s ON s.id = sd.service_id
+		JOIN service_instances si ON si.template_service_id = s.id
+		JOIN stacks st ON st.id = si.stack_id
+		WHERE st.name = $1 AND si.instance_id = $2 AND st.deleted_at IS NULL AND si.deleted_at IS NULL AND si.enabled = true
+	`, stackName, instanceID)
+	if err != nil {
+		return nil, fmt.Errorf("query template domains for instance: %w", err)
+	}
+	defer templateRows.Close()
+
+	for templateRows.Next() {
+		var domain, containerName, instID string
+		var port int
+		if err := templateRows.Scan(&domain, &port, &containerName, &instID); err != nil {
+			return nil, fmt.Errorf("scan template domain: %w", err)
+		}
+		targets = append(targets, ProxyTarget{
+			Name:       instID,
 			Domain:     domain,
 			TargetHost: containerName,
 			TargetPort: port,

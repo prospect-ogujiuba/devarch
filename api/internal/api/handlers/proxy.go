@@ -132,6 +132,38 @@ func (h *ProxyHandler) GenerateForProject(w http.ResponseWriter, r *http.Request
 	respond.JSON(w, r, http.StatusOK,result)
 }
 
+// GenerateForInstance godoc
+// @Summary      Generate proxy config for instance
+// @Description  Generates reverse proxy configuration for a single instance
+// @Tags         proxy
+// @Accept       json
+// @Produce      json
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        request body generateProxyRequest true "Proxy generation request"
+// @Success      200 {object} respond.SuccessEnvelope{data=respond.ActionResponse}
+// @Failure      400 {object} respond.ErrorEnvelope
+// @Failure      422 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/proxy-config [post]
+// @Security     ApiKeyAuth
+func (h *ProxyHandler) GenerateForInstance(w http.ResponseWriter, r *http.Request) {
+	stackName := chi.URLParam(r, "name")
+	instanceID := chi.URLParam(r, "instance")
+	proxyType, err := parseProxyType(r)
+	if err != nil {
+		respond.BadRequest(w, r, err.Error())
+		return
+	}
+
+	result, err := h.generator.GenerateForInstance(proxyType, stackName, instanceID)
+	if err != nil {
+		respond.Error(w, r, http.StatusUnprocessableEntity, "unprocessable_entity", err.Error(), nil)
+		return
+	}
+
+	respond.JSON(w, r, http.StatusOK,result)
+}
+
 func parseProxyType(r *http.Request) (proxy.ProxyType, error) {
 	var req generateProxyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
