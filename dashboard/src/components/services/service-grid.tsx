@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { getServiceStatus } from '@/lib/service-utils'
 import type { Service } from '@/types/api'
 import { formatUptime, computeUptime } from '@/lib/format'
-import { titleCase, cn } from '@/lib/utils'
+import { titleCase, cn, categoryLabel } from '@/lib/utils'
 
 interface ServiceGridProps {
   services: Service[]
@@ -60,7 +60,7 @@ export function ServiceGrid({ services, selected, onToggleSelect }: ServiceGridP
             <CardContent className="space-y-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Badge variant="outline" className="text-xs">
-                  {titleCase(service.category?.name ?? '')}
+                  {service.category ? categoryLabel(service.category) : ''}
                 </Badge>
                 {service.ports && service.ports.length > 0 && (
                   <span className="text-xs">:{service.ports[0].host_port}</span>
