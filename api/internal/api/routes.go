@@ -289,6 +289,8 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 						r.Get("/logs", instanceHandler.Logs)
 						r.Get("/compose", instanceHandler.Compose)
 
+						r.Post("/proxy-config", proxyHandler.GenerateForInstance)
+
 						r.Put("/ports", instanceHandler.UpdatePorts)
 						r.Put("/volumes", instanceHandler.UpdateVolumes)
 						r.Put("/env-vars", instanceHandler.UpdateEnvVars)
