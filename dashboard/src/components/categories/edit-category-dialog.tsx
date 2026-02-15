@@ -14,12 +14,14 @@ interface EditCategoryDialogProps {
 
 export function EditCategoryDialog({ category, open, onOpenChange }: EditCategoryDialogProps) {
   const updateCategory = useUpdateCategory()
+  const [name, setName] = useState(category.name)
   const [displayName, setDisplayName] = useState(category.display_name ?? '')
   const [color, setColor] = useState(category.color ?? '#3b82f6')
   const [startupOrder, setStartupOrder] = useState(String(category.startup_order))
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
+      setName(category.name)
       setDisplayName(category.display_name ?? '')
       setColor(category.color ?? '#3b82f6')
       setStartupOrder(String(category.startup_order))
@@ -33,6 +35,7 @@ export function EditCategoryDialog({ category, open, onOpenChange }: EditCategor
       {
         name: category.name,
         data: {
+          ...(name !== category.name && { name }),
           display_name: displayName,
           color,
           startup_order: parseInt(startupOrder) || 0,
@@ -54,9 +57,11 @@ export function EditCategoryDialog({ category, open, onOpenChange }: EditCategor
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <label className="text-sm font-medium">Name</label>
-              <div className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md">
-                {category.name}
-              </div>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="category-name"
+              />
             </div>
             <div className="grid gap-2">
               <label className="text-sm font-medium">Display Name</label>
