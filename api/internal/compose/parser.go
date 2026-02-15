@@ -17,6 +17,7 @@ var knownComposeKeys = map[string]bool{
 	"command": true, "user": true, "ports": true, "volumes": true,
 	"environment": true, "env_file": true, "depends_on": true,
 	"labels": true, "healthcheck": true, "networks": true,
+	"x-devarch-config": true,
 }
 
 type ComposeFile struct {
@@ -173,6 +174,7 @@ func ParseFileAll(path string) ([]*ParsedService, error) {
 
 		// Classify config mounts from volumes
 		classifyConfigMounts(parsed)
+		parsed.ConfigMounts = append(parsed.ConfigMounts, parseDevarchConfig(rawCompose.Services[name], name)...)
 
 		services = append(services, parsed)
 	}
@@ -580,4 +582,30 @@ func classifyConfigMounts(parsed *ParsedService) {
 	}
 
 	parsed.Volumes = remainingVolumes
+}
+
+func parseDevarchConfig(raw map[string]interface{}, serviceName string) []ParsedConfigMount {
+	xConfig, ok := raw["x-devarch-config"]
+	if !ok {
+		return nil
+	}
+	configMap, ok := xConfig.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	var mounts []ParsedConfigMount
+	for filePath, target := range configMap {
+		targetPath, ok := target.(string)
+		if !ok {
+			continue
+		}
+		mounts = append(mounts, ParsedConfigMount{
+			SourcePath:    fmt.Sprintf("config/%s/%s", serviceName, filePath),
+			TargetPath:    targetPath,
+			ReadOnly:      true,
+			ConfigOwner:   serviceName,
+			ConfigRelPath: filePath,
+		})
+	}
+	return mounts
 }
