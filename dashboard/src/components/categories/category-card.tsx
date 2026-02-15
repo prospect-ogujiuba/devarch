@@ -7,6 +7,7 @@ import { ResourceBar } from '@/components/ui/resource-bar'
 import { useStartCategory, useStopCategory } from '@/features/categories/queries'
 import { EditCategoryDialog } from './edit-category-dialog'
 import { DeleteCategoryDialog } from './delete-category-dialog'
+import { categoryLabel } from '@/lib/utils'
 import type { Category } from '@/types/api'
 
 interface CategoryCardProps {
@@ -33,7 +34,7 @@ export function CategoryCard({ category, compact }: CategoryCardProps) {
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <Link to="/services" search={{ category: name }} className="hover:underline">
-              <CardTitle className="text-base capitalize">{name}</CardTitle>
+              <CardTitle className="text-base">{categoryLabel(category)}</CardTitle>
             </Link>
             <span className="text-sm text-muted-foreground">
               {runningCount}/{serviceCount}
@@ -67,7 +68,7 @@ export function CategoryCard({ category, compact }: CategoryCardProps) {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <Link to="/services" search={{ category: name }} className="hover:underline">
-            <CardTitle className="text-base capitalize">{name}</CardTitle>
+            <CardTitle className="text-base">{categoryLabel(category)}</CardTitle>
           </Link>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon-sm" onClick={() => setEditOpen(true)}>
