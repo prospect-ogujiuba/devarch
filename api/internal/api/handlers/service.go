@@ -100,7 +100,7 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 	query := `
 		SELECT s.id, s.name, s.category_id, s.image_name, s.image_tag,
 			s.restart_policy, s.command, s.user_spec, s.enabled,
-			s.created_at, s.updated_at, c.name as category_name,
+			s.created_at, s.updated_at, c.name as category_name, c.display_name as category_display_name,
 			COALESCE(s.compose_overrides, '{}')
 		FROM services s
 		JOIN categories c ON s.category_id = c.id
@@ -156,16 +156,20 @@ func (h *ServiceHandler) List(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var s models.Service
 		var catName string
+		var catDisplayName sql.NullString
 		if err := rows.Scan(
 			&s.ID, &s.Name, &s.CategoryID, &s.ImageName, &s.ImageTag,
 			&s.RestartPolicy, &s.Command, &s.UserSpec, &s.Enabled,
-			&s.CreatedAt, &s.UpdatedAt, &catName,
+			&s.CreatedAt, &s.UpdatedAt, &catName, &catDisplayName,
 			&s.ComposeOverrides,
 		); err != nil {
 			respond.InternalError(w, r, err)
 			return
 		}
 		s.Category = &models.Category{Name: catName}
+		if catDisplayName.Valid {
+			s.Category.DisplayName = catDisplayName.String
+		}
 		if s.Command.Valid {
 			s.CommandStr = s.Command.String
 		}
