@@ -14,7 +14,7 @@ import { Play, Square, Loader2, Pencil, Trash2 } from 'lucide-react'
 import { useStartCategory, useStopCategory } from '@/features/categories/queries'
 import { EditCategoryDialog } from './edit-category-dialog'
 import { DeleteCategoryDialog } from './delete-category-dialog'
-import { titleCase } from '@/lib/utils'
+import { categoryLabel } from '@/lib/utils'
 import type { Category } from '@/types/api'
 
 interface CategoryTableProps {
@@ -71,7 +71,7 @@ function CategoryTableRow({ category, compact }: { category: Category; compact?:
     <TableRow>
       <TableCell>
         <Link to="/services" search={{ category: name }} className="font-medium hover:underline">
-          {titleCase(name)}
+          {categoryLabel(category)}
         </Link>
       </TableCell>
       {!compact && <TableCell>{serviceCount}</TableCell>}
