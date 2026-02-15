@@ -13,7 +13,7 @@ import { StatusBadge } from './status-badge'
 import { ActionButton } from './action-button'
 import { getServiceStatus } from '@/lib/service-utils'
 import type { Service } from '@/types/api'
-import { titleCase } from '@/lib/utils'
+import { titleCase, categoryLabel } from '@/lib/utils'
 
 interface ServiceTableProps {
   services: Service[]
@@ -85,7 +85,7 @@ export function ServiceTable({ services, selected, onToggleSelect }: ServiceTabl
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{titleCase(service.category?.name ?? '')}</Badge>
+                      <Badge variant="outline">{service.category ? categoryLabel(service.category) : ''}</Badge>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate text-muted-foreground">
                       {service.image_name}:{service.image_tag}
