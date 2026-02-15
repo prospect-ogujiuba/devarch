@@ -28,6 +28,7 @@ import { EditableConfigMounts } from '@/components/services/editable-config-moun
 import { EditableHealthcheck } from '@/components/services/editable-healthcheck'
 import { EditableLabels } from '@/components/services/editable-labels'
 import { EditableDomains } from '@/components/services/editable-domains'
+import { categoryLabel } from '@/lib/utils'
 import { TagPicker } from '@/components/services/tag-picker'
 import { ConfigFilesPanel } from '@/components/services/config-files-panel'
 import { CodeEditor } from '@/components/services/code-editor'
@@ -196,7 +197,7 @@ function ServiceDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-2 text-sm">
-                <div className="flex"><span className="text-muted-foreground w-40">Category:</span> {ctrl.service.category?.name ?? '-'}</div>
+                <div className="flex"><span className="text-muted-foreground w-40">Category:</span> {ctrl.service.category ? categoryLabel(ctrl.service.category) : '-'}</div>
                 <div className="flex"><span className="text-muted-foreground w-40">Image:</span> {ctrl.image}</div>
                 <div className="flex"><span className="text-muted-foreground w-40">Restart Policy:</span> {ctrl.service.restart_policy}</div>
                 {ctrl.service.command && <div className="flex"><span className="text-muted-foreground w-40">Command:</span> <code>{ctrl.service.command}</code></div>}
