@@ -1,0 +1,9 @@
+services:
+  svc-xconfig:
+    image: prom/prometheus:v2.50
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    x-devarch-config:
+      main.conf: /etc/app/main.conf
+      sub/nested.yml: /etc/app/nested.yml

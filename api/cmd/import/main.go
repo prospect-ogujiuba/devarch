@@ -14,10 +14,9 @@ import (
 func main() {
 	var (
 		dbURL       = flag.String("db", "", "Database URL (or set DATABASE_URL env)")
-		libraryDir  = flag.String("library-dir", "", "Path to services-library root (contains compose/ and config/)")
-		composeDir  = flag.String("compose-dir", "", "Path to compose directory (overrides library-dir)")
+		libraryDir  = flag.String("library-dir", "", "Path to services-library root (self-contained per-service folders)")
+		composeDir  = flag.String("compose-dir", "", "Path to library directory (overrides library-dir)")
 		projectRoot = flag.String("project-root", "", "Project root for resolving relative paths")
-		configDir   = flag.String("config-dir", "", "Path to config directory (overrides library-dir)")
 		countOnly   = flag.Bool("count-only", false, "Print service count and exit")
 	)
 	flag.Parse()
@@ -65,17 +64,10 @@ func main() {
 		*composeDir = os.Getenv("COMPOSE_DIR")
 	}
 	if *composeDir == "" && *libraryDir != "" {
-		*composeDir = *libraryDir + "/compose"
+		*composeDir = *libraryDir
 	}
 	if *composeDir == "" {
 		log.Fatal("compose-dir or library-dir is required")
-	}
-
-	if *configDir == "" && *libraryDir != "" {
-		candidate := *libraryDir + "/config"
-		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
-			*configDir = candidate
-		}
 	}
 
 	var importer *compose.Importer
@@ -85,7 +77,7 @@ func main() {
 		importer = compose.NewImporter(db, *composeDir)
 	}
 
-	log.Println("importing compose files...")
+	log.Println("importing services...")
 	if err := importer.ImportAll(); err != nil {
 		log.Fatalf("import failed: %v", err)
 	}
@@ -93,19 +85,4 @@ func main() {
 	var count int
 	db.QueryRow("SELECT COUNT(*) FROM services").Scan(&count)
 	log.Printf("import complete: %d services", count)
-
-	if *configDir != "" {
-		importer.SetConfigDir(*configDir)
-		fileCount, err := importer.ImportAllConfigFiles()
-		if err != nil {
-			log.Printf("warning: config file import: %v", err)
-		} else {
-			log.Printf("config files imported: %d files", fileCount)
-		}
-
-		log.Println("resolving config mount links...")
-		if err := importer.ResolveConfigMountLinks(); err != nil {
-			log.Printf("warning: config mount link resolution: %v", err)
-		}
-	}
 }

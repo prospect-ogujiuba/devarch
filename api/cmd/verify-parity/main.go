@@ -21,7 +21,6 @@ func main() {
 		dbURL        = flag.String("db", "", "Database URL (or set DATABASE_URL env)")
 		composeDir   = flag.String("compose-dir", "", "Path to compose directory")
 		projectRoot  = flag.String("project-root", "", "Project root for resolving relative paths")
-		configDir    = flag.String("config-dir", "", "Path to config directory for service config files")
 		service      = flag.String("service", "", "Verify single service by name (optional)")
 		verbose      = flag.Bool("verbose", false, "Print details for passing services too")
 		jsonOut      = flag.Bool("json", false, "Print machine-readable JSON output")
@@ -83,28 +82,6 @@ func main() {
 
 	if err := importer.ImportAll(); err != nil {
 		log.Fatalf("import failed: %v", err)
-	}
-
-	// Import config files if config-dir specified
-	if *configDir == "" && *projectRoot != "" {
-		candidate := filepath.Join(*projectRoot, "config")
-		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
-			*configDir = candidate
-		}
-	}
-	if *configDir != "" {
-		importer.SetConfigDir(*configDir)
-		fileCount, err := importer.ImportAllConfigFiles()
-		if err != nil {
-			log.Printf("warning: config file import: %v", err)
-		} else {
-			log.Printf("config files imported: %d files", fileCount)
-		}
-
-		log.Println("resolving config mount links...")
-		if err := importer.ResolveConfigMountLinks(); err != nil {
-			log.Printf("warning: config mount link resolution: %v", err)
-		}
 	}
 
 	log.Println("import complete")
@@ -485,8 +462,7 @@ func verifyService(db *sql.DB, gen *compose.Generator, svc serviceRecord, compos
 }
 
 func findOriginalService(composeDir string, svc serviceRecord) (*compose.ParsedService, error) {
-	// Try exact name match first
-	exactPath := filepath.Join(composeDir, svc.Category, svc.Name+".yml")
+	exactPath := filepath.Join(composeDir, svc.Category, svc.Name, svc.Name+".yml")
 	if services, err := compose.ParseFileAll(exactPath); err == nil {
 		for _, s := range services {
 			if s.Name == svc.Name {
@@ -495,18 +471,17 @@ func findOriginalService(composeDir string, svc serviceRecord) (*compose.ParsedS
 		}
 	}
 
-	// Scan all yml files in category directory for the service
 	catDir := filepath.Join(composeDir, svc.Category)
 	entries, err := os.ReadDir(catDir)
 	if err != nil {
 		return nil, fmt.Errorf("read category dir %s: %w", svc.Category, err)
 	}
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yml") {
+		if !entry.IsDir() {
 			continue
 		}
-		path := filepath.Join(catDir, entry.Name())
-		services, err := compose.ParseFileAll(path)
+		ymlPath := filepath.Join(catDir, entry.Name(), entry.Name()+".yml")
+		services, err := compose.ParseFileAll(ymlPath)
 		if err != nil {
 			continue
 		}
