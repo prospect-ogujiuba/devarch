@@ -19,6 +19,12 @@ services:
       start_period: 30s
     networks:
     - microservices-net
+    x-devarch-config:
+      custom/events.conf: /data/nginx/custom/events.conf
+      custom/http.conf: /data/nginx/custom/http.conf
+      custom/http_top.conf: /data/nginx/custom/http_top.conf
+      custom/root_top.conf: /data/nginx/custom/root_top.conf
+      custom/server_proxy.conf: /data/nginx/custom/server_proxy.conf
     container_name: nginx-proxy-manager
 volumes:
   npm_data: null
