@@ -529,34 +529,53 @@ func classifyConfigMounts(parsed *ParsedService) {
 			cleaned = strings.TrimPrefix(cleaned, "../")
 		}
 
-		// Check if this is a config volume
-		if !strings.HasPrefix(cleaned, "config/") {
-			remainingVolumes = append(remainingVolumes, v)
+		// Check if this is a config volume with config/ prefix
+		if strings.HasPrefix(cleaned, "config/") {
+			// Extract config owner and relative path
+			// Format: config/{owner}/{relpath...}
+			rest := strings.TrimPrefix(cleaned, "config/")
+
+			var configOwner, configRelPath string
+			if idx := strings.Index(rest, "/"); idx >= 0 {
+				configOwner = rest[:idx]
+				configRelPath = rest[idx+1:] // strip leading /
+			} else {
+				// Exact match: config/{owner} with no trailing path
+				configOwner = rest
+				configRelPath = ""
+			}
+
+			// Create config mount
+			parsed.ConfigMounts = append(parsed.ConfigMounts, ParsedConfigMount{
+				SourcePath:    v.Source,
+				TargetPath:    v.Target,
+				ReadOnly:      v.ReadOnly,
+				ConfigOwner:   configOwner,
+				ConfigRelPath: configRelPath,
+			})
 			continue
 		}
 
-		// Extract config owner and relative path
-		// Format: config/{owner}/{relpath...}
-		rest := strings.TrimPrefix(cleaned, "config/")
-
-		var configOwner, configRelPath string
-		if idx := strings.Index(rest, "/"); idx >= 0 {
-			configOwner = rest[:idx]
-			configRelPath = rest[idx+1:] // strip leading /
-		} else {
-			// Exact match: config/{owner} with no trailing path
-			configOwner = rest
-			configRelPath = ""
+		// Also classify single-file bind mounts with config extensions
+		ext := strings.ToLower(filepath.Ext(cleaned))
+		configExts := map[string]bool{
+			".sh": true, ".conf": true, ".cfg": true, ".ini": true,
+			".yml": true, ".yaml": true, ".toml": true, ".json": true,
+			".xml": true, ".env": true, ".cnf": true, ".sql": true,
+			".properties": true,
+		}
+		if configExts[ext] {
+			parsed.ConfigMounts = append(parsed.ConfigMounts, ParsedConfigMount{
+				SourcePath:    v.Source,
+				TargetPath:    v.Target,
+				ReadOnly:      v.ReadOnly,
+				ConfigOwner:   "",
+				ConfigRelPath: filepath.Base(cleaned),
+			})
+			continue
 		}
 
-		// Create config mount
-		parsed.ConfigMounts = append(parsed.ConfigMounts, ParsedConfigMount{
-			SourcePath:    v.Source,
-			TargetPath:    v.Target,
-			ReadOnly:      v.ReadOnly,
-			ConfigOwner:   configOwner,
-			ConfigRelPath: configRelPath,
-		})
+		remainingVolumes = append(remainingVolumes, v)
 	}
 
 	parsed.Volumes = remainingVolumes
