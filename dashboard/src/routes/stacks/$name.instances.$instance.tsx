@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import { ArrowLeft, Loader2, Edit, Terminal } from 'lucide-react'
+import { ArrowLeft, Loader2, Edit, Terminal, Minimize2, Maximize2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,6 +33,9 @@ import {
   RenameInstanceDialog,
 } from '@/components/instances/instance-actions'
 import { TerminalDialog } from '@/components/terminal/terminal-dialog'
+import { InstanceLogViewer } from '@/components/instances/instance-log-viewer'
+import { ProxyConfigPanel } from '@/components/proxy/proxy-config-panel'
+import { CodeEditor } from '@/components/services/code-editor'
 import { cn } from '@/lib/utils'
 
 function timeAgo(dateStr: string): string {
@@ -50,12 +53,12 @@ function timeAgo(dateStr: string): string {
 
 export const Route = createFileRoute('/stacks/$name/instances/$instance')({
   validateSearch: z.object({
-    instanceTab: z.enum(['info', 'ports', 'volumes', 'env-files', 'environment', 'networks', 'labels', 'domains', 'healthcheck', 'dependencies', 'config-mounts', 'files', 'resources', 'effective']).optional(),
+    instanceTab: z.enum(['info', 'ports', 'volumes', 'env-files', 'environment', 'networks', 'labels', 'domains', 'healthcheck', 'dependencies', 'config-mounts', 'files', 'resources', 'effective', 'logs', 'compose', 'proxy']).optional(),
   }),
   component: InstanceDetailPage,
 })
 
-const instanceTabs = ['info', 'ports', 'volumes', 'env-files', 'environment', 'networks', 'labels', 'domains', 'healthcheck', 'dependencies', 'config-mounts', 'files', 'resources', 'effective'] as const
+const instanceTabs = ['info', 'ports', 'volumes', 'env-files', 'environment', 'networks', 'labels', 'domains', 'healthcheck', 'dependencies', 'config-mounts', 'files', 'resources', 'effective', 'logs', 'compose', 'proxy'] as const
 type InstanceTab = (typeof instanceTabs)[number]
 
 function InstanceDetailPage() {
@@ -72,6 +75,7 @@ function InstanceDetailPage() {
   const [renameOpen, setRenameOpen] = useState(false)
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [editDescription, setEditDescription] = useState('')
+  const [composeExpanded, setComposeExpanded] = useState(false)
 
   const openEdit = () => {
     if (!ctrl.instance) return
@@ -144,6 +148,9 @@ function InstanceDetailPage() {
     { value: 'files', label: 'Config Files' },
     { value: 'resources', label: 'Resources' },
     { value: 'effective', label: 'Effective Config' },
+    { value: 'logs', label: 'Logs' },
+    { value: 'compose', label: 'Compose' },
+    { value: 'proxy', label: 'Proxy' },
   ]
 
   return (
@@ -385,6 +392,53 @@ function InstanceDetailPage() {
 
         <TabsContent value="effective">
           <EffectiveConfigTab stackName={stackName} instanceId={instanceId} />
+        </TabsContent>
+
+        <TabsContent value="logs">
+          <InstanceLogViewer stackName={stackName} instanceId={instanceId} />
+        </TabsContent>
+
+        <TabsContent value="compose">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Generated Compose YAML</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setComposeExpanded(!composeExpanded)} disabled={!ctrl.composeYaml}>
+                    {composeExpanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+                    {composeExpanded ? 'Collapse' : 'Expand'}
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={!ctrl.composeYaml} onClick={() => {
+                    if (!ctrl.composeYaml) return
+                    const blob = new Blob([ctrl.composeYaml], { type: 'text/yaml' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `${instanceId}-compose.yaml`
+                    a.click()
+                    URL.revokeObjectURL(url)
+                  }}>
+                    Download
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {!ctrl.composeYaml ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : ctrl.composeYaml ? (
+                <CodeEditor value={ctrl.composeYaml} onChange={() => {}} language="yaml" readOnly autoHeight={composeExpanded} />
+              ) : (
+                <p className="text-muted-foreground">Compose YAML not available</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="proxy">
+          <ProxyConfigPanel scope="instance" name={instanceId} generateMutation={ctrl.generateProxyConfig} />
         </TabsContent>
       </Tabs>
 
