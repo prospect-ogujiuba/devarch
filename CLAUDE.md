@@ -14,7 +14,7 @@ Current milestone: **Stacks & Instances** — isolated, composable service group
 ```bash
 go run ./cmd/server                              # start API server
 go run ./cmd/migrate -migrations ./migrations     # run migrations
-go run ./cmd/import -compose-dir ../services-library  # import service templates
+go run ./cmd/import                                   # import service templates (auto-detects ../services-library)
 ```
 
 ### Dashboard (from `dashboard/`)

@@ -14,9 +14,10 @@ import (
 func main() {
 	var (
 		dbURL       = flag.String("db", "", "Database URL (or set DATABASE_URL env)")
-		composeDir  = flag.String("compose-dir", "", "Path to compose directory")
+		libraryDir  = flag.String("library-dir", "", "Path to services-library root (contains compose/ and config/)")
+		composeDir  = flag.String("compose-dir", "", "Path to compose directory (overrides library-dir)")
 		projectRoot = flag.String("project-root", "", "Project root for resolving relative paths")
-		configDir   = flag.String("config-dir", "", "Path to config directory for service config files")
+		configDir   = flag.String("config-dir", "", "Path to config directory (overrides library-dir)")
 		countOnly   = flag.Bool("count-only", false, "Print service count and exit")
 	)
 	flag.Parse()
@@ -45,11 +46,36 @@ func main() {
 		return
 	}
 
+	if *libraryDir == "" {
+		*libraryDir = os.Getenv("LIBRARY_DIR")
+	}
+	if *libraryDir == "" {
+		for _, candidate := range []string{
+			"/workspace/services-library",
+			"../services-library",
+		} {
+			if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+				*libraryDir = candidate
+				break
+			}
+		}
+	}
+
 	if *composeDir == "" {
 		*composeDir = os.Getenv("COMPOSE_DIR")
 	}
+	if *composeDir == "" && *libraryDir != "" {
+		*composeDir = *libraryDir + "/compose"
+	}
 	if *composeDir == "" {
-		log.Fatal("compose-dir is required")
+		log.Fatal("compose-dir or library-dir is required")
+	}
+
+	if *configDir == "" && *libraryDir != "" {
+		candidate := *libraryDir + "/config"
+		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+			*configDir = candidate
+		}
 	}
 
 	var importer *compose.Importer
@@ -68,14 +94,6 @@ func main() {
 	db.QueryRow("SELECT COUNT(*) FROM services").Scan(&count)
 	log.Printf("import complete: %d services", count)
 
-	// Import config files if config-dir specified
-	if *configDir == "" && *projectRoot != "" {
-		// Default to ../config relative to project root
-		candidate := *projectRoot + "/config"
-		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
-			*configDir = candidate
-		}
-	}
 	if *configDir != "" {
 		importer.SetConfigDir(*configDir)
 		fileCount, err := importer.ImportAllConfigFiles()
@@ -85,7 +103,6 @@ func main() {
 			log.Printf("config files imported: %d files", fileCount)
 		}
 
-		// Resolve config mount FKs after config files are imported
 		log.Println("resolving config mount links...")
 		if err := importer.ResolveConfigMountLinks(); err != nil {
 			log.Printf("warning: config mount link resolution: %v", err)
