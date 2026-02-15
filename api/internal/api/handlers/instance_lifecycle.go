@@ -227,3 +227,38 @@ func (h *InstanceHandler) Logs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte(logs))
 }
+
+// Compose godoc
+// @Summary      Get instance compose YAML
+// @Tags         instances
+// @Produce      plain
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Success      200 {string} string
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/compose [get]
+// @Security     ApiKeyAuth
+func (h *InstanceHandler) Compose(w http.ResponseWriter, r *http.Request) {
+	stackName := chi.URLParam(r, "name")
+	instanceName := chi.URLParam(r, "instance")
+
+	_, _, err := h.getInstanceRuntimeInfo(stackName, instanceName)
+	if err == sql.ErrNoRows {
+		respond.NotFound(w, r, "instance", instanceName)
+		return
+	}
+	if err != nil {
+		respond.InternalError(w, r, fmt.Errorf("failed to query instance: %w", err))
+		return
+	}
+
+	_, yamlBytes, err := h.instanceCompose(stackName)
+	if err != nil {
+		respond.InternalError(w, r, fmt.Errorf("failed to generate compose: %w", err))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/yaml")
+	w.Write(yamlBytes)
+}
