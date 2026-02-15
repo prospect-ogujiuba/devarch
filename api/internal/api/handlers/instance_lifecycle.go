@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/priz/devarch-api/internal/compose"
@@ -181,4 +182,48 @@ func (h *InstanceHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond.Action(w, r, http.StatusOK, "restarted")
+}
+
+// Logs godoc
+// @Summary      Get instance logs
+// @Tags         instances
+// @Produce      plain
+// @Param        name path string true "Stack name"
+// @Param        instance path string true "Instance ID"
+// @Param        tail query int false "Number of log lines to return" default(100)
+// @Success      200 {string} string
+// @Failure      404 {object} respond.ErrorEnvelope
+// @Failure      500 {object} respond.ErrorEnvelope
+// @Router       /stacks/{name}/instances/{instance}/logs [get]
+// @Security     ApiKeyAuth
+func (h *InstanceHandler) Logs(w http.ResponseWriter, r *http.Request) {
+	stackName := chi.URLParam(r, "name")
+	instanceName := chi.URLParam(r, "instance")
+
+	tailStr := r.URL.Query().Get("tail")
+	tail := 100
+	if tailStr != "" {
+		if parsed, err := strconv.Atoi(tailStr); err == nil && parsed > 0 {
+			tail = parsed
+		}
+	}
+
+	_, containerName, err := h.getInstanceRuntimeInfo(stackName, instanceName)
+	if err == sql.ErrNoRows {
+		respond.NotFound(w, r, "instance", instanceName)
+		return
+	}
+	if err != nil {
+		respond.InternalError(w, r, fmt.Errorf("failed to query instance: %w", err))
+		return
+	}
+
+	logs, err := h.containerClient.ContainerLogsString(r.Context(), containerName, tail)
+	if err != nil {
+		respond.InternalError(w, r, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(logs))
 }
