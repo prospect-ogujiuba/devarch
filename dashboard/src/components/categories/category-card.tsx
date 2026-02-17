@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Play, Square, Loader2, Pencil, Trash2 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EntityCard } from '@/components/ui/entity-card'
 import { Button } from '@/components/ui/button'
 import { ResourceBar } from '@/components/ui/resource-bar'
@@ -65,7 +65,7 @@ export function CategoryCard({ category, compact }: CategoryCardProps) {
 
   return (
     <>
-    <Card className="py-4 hover:border-primary/50 transition-colors">
+    <EntityCard className="py-4">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <Link to="/services" search={{ category: name }} className="hover:underline">
@@ -134,7 +134,7 @@ export function CategoryCard({ category, compact }: CategoryCardProps) {
           )}
         </div>
       </CardContent>
-    </Card>
+    </EntityCard>
     <EditCategoryDialog category={category} open={editOpen} onOpenChange={setEditOpen} />
     <DeleteCategoryDialog category={category} open={deleteOpen} onOpenChange={setDeleteOpen} />
     </>
