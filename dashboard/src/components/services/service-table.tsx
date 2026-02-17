@@ -88,7 +88,9 @@ export function ServiceTable({ services, selected, onToggleSelect }: ServiceTabl
                       <Badge variant="outline">{service.category ? categoryLabel(service.category) : ''}</Badge>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                      {service.image_name}:{service.image_tag}
+                      {service.image_name || service.image_tag
+                        ? `${service.image_name}${service.image_tag ? `:${service.image_tag}` : ''}`
+                        : '—'}
                     </TableCell>
                     <TableCell>
                       {service.ports && service.ports.length > 0 ? (
@@ -127,9 +129,6 @@ export function ServiceTable({ services, selected, onToggleSelect }: ServiceTabl
         </Table>
       </div>
 
-      <div className="text-sm text-muted-foreground">
-        Showing {services.length} service{services.length !== 1 ? 's' : ''}
-      </div>
     </div>
   )
 }
