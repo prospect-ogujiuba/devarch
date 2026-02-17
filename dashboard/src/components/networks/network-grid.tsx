@@ -3,15 +3,18 @@ import { Network, Trash2, AlertTriangle, Shield } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { EmptyState } from '@/components/ui/empty-state'
 import type { NetworkInfo } from '@/types/api'
 
 interface NetworkGridProps {
   networks: NetworkInfo[]
+  selected: Set<string>
+  onToggleSelect: (name: string) => void
   onRemove: (name: string) => void
 }
 
-export function NetworkGrid({ networks, onRemove }: NetworkGridProps) {
+export function NetworkGrid({ networks, selected, onToggleSelect, onRemove }: NetworkGridProps) {
   if (networks.length === 0) {
     return <EmptyState icon={Network} message="No networks match your filters" />
   }
@@ -22,7 +25,12 @@ export function NetworkGrid({ networks, onRemove }: NetworkGridProps) {
         <Card key={net.name} className="py-4 hover:border-primary/50 transition-colors">
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between gap-2">
-              <CardTitle className="text-base font-mono truncate">{net.name}</CardTitle>
+              <Checkbox
+                checked={selected.has(net.name)}
+                onCheckedChange={() => onToggleSelect(net.name)}
+                onClick={(e) => e.stopPropagation()}
+              />
+              <CardTitle className="text-base font-mono truncate flex-1">{net.name}</CardTitle>
               <div className="flex gap-1 shrink-0">
                 {!net.managed && (
                   <Badge variant="outline" className="text-muted-foreground text-xs">
