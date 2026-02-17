@@ -89,7 +89,7 @@ function RuntimeSection() {
         </div>
 
         <div className="text-sm text-muted-foreground">
-          Network: {runtime?.microservices.network} ({runtime?.microservices.network_exists ? 'exists' : 'missing'}) &middot; {runtime?.microservices.running ?? 0} services running
+          Network: {runtime?.microservices.network} ({runtime?.microservices.network_exists ? 'exists' : <span className="text-yellow-500">missing</span>}) &middot; {runtime?.microservices.running ?? 0} services running
         </div>
       </CardContent>
     </Card>
