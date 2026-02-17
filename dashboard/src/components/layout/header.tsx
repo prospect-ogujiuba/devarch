@@ -21,7 +21,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         <nav className="hidden md:flex items-center gap-1 ml-6">
           {primaryNavItems.map(item => (
             <Button key={item.to} variant="ghost" size="sm" asChild>
-              <Link to={item.to} activeProps={{ className: 'bg-accent' }} activeOptions={item.to === '/' ? { exact: true } : undefined}>
+              <Link to={item.to} activeProps={{ className: 'bg-accent text-accent-foreground' }} activeOptions={item.to === '/' ? { exact: true } : undefined}>
                 <item.icon className="size-4" />
                 {item.label}
               </Link>
@@ -32,7 +32,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         <div className="ml-auto flex items-center gap-2">
           {settingsItem && (
             <Button variant="ghost" size="sm" className="hidden md:inline-flex" asChild>
-              <Link to={settingsItem.to} activeProps={{ className: 'bg-accent' }}>
+              <Link to={settingsItem.to} activeProps={{ className: 'bg-accent text-accent-foreground' }}>
                 <settingsItem.icon className="size-4" />
                 {settingsItem.label}
               </Link>
