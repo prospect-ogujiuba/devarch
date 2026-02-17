@@ -4,7 +4,7 @@
 **Last Updated:** 2026-02-17
 
 ## Overview
-Displays a single category with running service count, resource bar, and action buttons (start/stop all, edit, delete). Supports compact and full modes; used in overview page and categories list.
+Displays a single category with running service count, resource bar, and action buttons (start/stop all, edit, delete). Supports compact and full modes; used in overview page and categories list page.
 
 ## Props
 ```typescript
@@ -15,40 +15,56 @@ interface CategoryCardProps {
 ```
 
 - `category` — Category object with name, service_count, runningCount, startup_order
-- `compact` — If true, minimal horizontal layout; false = full card layout
+- `compact` — If true, minimal horizontal layout; if false, full card layout (default)
 
 ## Features
 
 ### Compact Mode (Overview Page)
-- Horizontal resource bar with running count
-- Single row play/stop buttons
-- Minimal height
+- Single horizontal row layout
+- Small resource bar with running count badge (right side)
+- Play/stop buttons in small icon-only style
+- Minimal height for dense layout
 
 ### Full Mode (Categories Page)
-- Large running count display (e.g., "3/5")
-- Resource bar showing percentage
-- Edit/delete buttons in header
-- Full Start All / Stop All buttons
+- Large running count display (e.g., "3/5 services running")
+- Full-width resource bar showing percentage
+- Edit/delete buttons in header (small icons)
+- Full-width Start All / Stop All buttons
+- Edit and Delete dialogs
 
 ### Shared Logic
-- Calculates `allRunning` (all services running) and `allStopped` (none running)
-- Only shows Start button if not all running; Stop button if not all stopped
+- Calculates `allRunning` — all services running (show stop button)
+- Calculates `allStopped` — no services running (show start button)
+- Only shows Start button if not all running
+- Only shows Stop button if not all stopped
 - Disabled state during mutation
 
 ## State
 - `editOpen`, `deleteOpen` — Dialog visibility
-- Uses `useStartCategory()`, `useStopCategory()` mutations
+- Uses mutations: `useStartCategory()`, `useStopCategory()`
+- Mutation loading state disables all buttons
 
-## Styling Changes
-- Migrated from Card to EntityCard for hover effects
-- Resource bar uses `bg-green-500` (was `bg-success`)
+## Styling
+- Uses `EntityCard` for consistent hover effects
+- Resource bar: `bg-green-500` (full width, transitions smoothly)
+- Link styling: `hover:underline` for category name
+
+## Mutations
+- `useStartCategory()` — Start all services in category
+- `useStopCategory()` — Stop all services in category
+
+## Dialogs
+- `EditCategoryDialog` — Edit category name/order
+- `DeleteCategoryDialog` — Confirm deletion
 
 ## Dependencies
-- `EntityCard` — Wrapper component
+- `EntityCard` — Card wrapper with hover styling
 - `EditCategoryDialog`, `DeleteCategoryDialog` — Edit/delete flows
+- `ResourceBar` — Visual percentage display
 - `useStartCategory()`, `useStopCategory()` — Mutations
-- `categoryLabel()` — Format category name
+- `categoryLabel()` — Format category name display
+- Icons: Play, Square, Loader2, Pencil, Trash2
 
-## Related Pages
-- `/routes/index.tsx` (overview) — Compact cards
-- `/routes/categories/index.tsx` — Full cards
+## Related Components
+- `/routes/index.tsx` (overview) — Uses compact=true
+- `/routes/categories/index.tsx` — Uses compact=false (or omitted)

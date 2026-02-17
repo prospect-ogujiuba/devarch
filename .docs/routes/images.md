@@ -6,31 +6,76 @@
 ## Overview
 Container image management page with table/grid view toggle, search, sort, and image pull/prune dialogs. Displays image stats (total size, dangling count) and streaming pull progress.
 
-## Key Functions
-- `ImagesPage()` — Main route component (file route `/images/`)
-- `imageTableView()` — Table renderer showing image details (tag, ID, size, age)
-- `handlePullStart()` — Pull image by reference with streaming progress
-- `handleRemove()` — Remove single image by tag
-- `handlePrune()` — Remove all dangling images
-- `formatAge()` — Helper to format Unix timestamps as human-readable age
+## Route
+- File route: `/images/`
+- No search param validation
 
-## Props/State
-- `search`, `sortBy`, `sortDir`, `viewMode` — List controls synced to URL
-- `pullOpen`, `pruneOpen`, `removeTarget` — Dialog states
-- `pullProgress` — Array of streaming pull events for progress display
+## Key Functions
+- `ImagesPage()` — Main route component
+- `imageTableView()` — Table renderer (image, tag, ID, size, created)
+- `handlePullStart()` — Pull image by reference with streaming progress
+- `handleRemove()` — Remove single image with confirmation
+- `handlePrune()` — Remove all dangling images
+- `formatAge()` — Convert Unix timestamp to human-readable age (e.g., "5d ago")
+
+## State Management
+- `search`, `sortBy`, `sortDir`, `viewMode` — List controls
+- `pullOpen`, `pruneOpen`, `removeTarget` — Dialog visibility states
+- `pulling` — Pull operation in progress
+- `pullProgress` — Array of streaming pull events
 - `filteredImages` — Memoized search/sort result
 
+## Stat Cards
+- Total Images — Count of all images
+- Total Size — Formatted bytes
+- Dangling Count — Yellow badge if > 0
+
+## View Modes
+
+### Table View
+Columns: Image | Tag | ID | Size | Created | Actions
+- Shows full metadata in rows
+- Delete button per image
+
+### Grid View
+Cards with: repo name, tag, short SHA256, size, age
+- Delete button per card
+- Responsive: 2-4 columns
+
+## Dialogs
+
+### Pull Image
+- Input: image reference (e.g., nginx:latest)
+- Progress: auto-scrolling output log (max 50 lines)
+- States: input → pulling → done
+- Success: toast + query invalidation
+
+### Remove Image
+- Confirmation: "Remove {tag}?"
+- Mutation-driven removal
+
+### Prune Dialog
+- Removes all dangling/untagged images
+- Confirmation prompt
+
+## Search & Sort
+- Search: case-insensitive tag matching
+- Sort by: Name, Size, Age
+- Sort dir: Asc/Desc
+
 ## Dependencies
-- `useImages()`, `useRemoveImage()`, `usePruneImages()`, `pullImageWithProgress()` — Image queries
-- `ListPageScaffold` — Standard page layout with controls, stats, filters
-- `Dialog`, `Table` — Radix UI components
-- `formatBytes()` — Utility for byte display
+- `useImages()`, `useRemoveImage()`, `usePruneImages()` — Image queries
+- `pullImageWithProgress()` — Streaming pull
+- `ListPageScaffold` — Page layout component
+- `Dialog`, `Table` — Radix UI
+- `formatBytes()` — Format file sizes
+- Icons: HardDrive, Database, AlertTriangle, Download, Trash2, Eraser, Loader2
 
 ## Recent Changes
-- Added `viewMode` state (table/grid toggle) wired to controls
-- Refactored to use `ListPageScaffold` for consistent page structure
-- Grid view renders manual card layout (not yet EntityCard-based)
-- Pull progress auto-scrolls and streams incrementally
+- Added grid/table view toggle wired to controls
+- Grid view renders manual card layout with stats
+- Pull progress auto-scrolls to bottom
+- Dangling count has conditional yellow styling
 
-## Related Components
-- `/routes/services`, `/routes/categories` — Similar page pattern with ListPageScaffold
+## Related Pages
+- `/routes/categories/`, `/routes/services/` — Similar ListPageScaffold pattern
