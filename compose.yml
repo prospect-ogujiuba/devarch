@@ -1,6 +1,5 @@
 networks:
   microservices-net:
-    external: true
 
 volumes:
   devarch_pgdata:
