@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { z } from 'zod'
 import { Server, Play, Square, Activity, Loader2, Cpu, MemoryStick, FolderOpen } from 'lucide-react'
 import { StatCard } from '@/components/ui/stat-card'
@@ -9,6 +9,9 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { PaginationControls } from '@/components/ui/pagination-controls'
 import { CategoryCard } from '@/components/categories/category-card'
 import { CategoryTable } from '@/components/categories/category-table'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
+import { StatusBadge } from '@/components/services/status-badge'
+import { getServiceStatus } from '@/lib/service-utils'
 import { useStatusOverview } from '@/features/status/queries'
 import { useServices } from '@/features/services/queries'
 import { useUrlSyncedListControls } from '@/hooks/use-url-synced-list-controls'
@@ -127,6 +130,13 @@ function OverviewPage() {
     }
   }, [services])
 
+  const topServices = useMemo(() => {
+    return [...services]
+      .filter((s) => (s.metrics?.cpu_percentage ?? 0) > 0)
+      .sort((a, b) => (b.metrics?.cpu_percentage ?? 0) - (a.metrics?.cpu_percentage ?? 0))
+      .slice(0, 5)
+  }, [services])
+
   const statusCounts = useMemo(() => {
     let running = 0
     let partial = 0
@@ -170,6 +180,53 @@ function OverviewPage() {
         <StatCard icon={Activity} label="Categories" value={categories.length} />
         <StatCard icon={Cpu} label="Avg CPU" value={`${serviceStats.avgCpu.toFixed(1)}%`} />
         <StatCard icon={MemoryStick} label="Total Memory" value={`${serviceStats.totalMem.toFixed(0)} MB`} />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 rounded-md border px-4 py-2 text-sm text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <Server className="size-4" />
+          <span className="font-medium text-foreground">{status?.container_runtime ?? '—'}</span>
+        </span>
+        {status?.socket_path && (
+          <span className="font-mono text-xs">{status.socket_path}</span>
+        )}
+        <span>{status?.enabled_services ?? 0} enabled services</span>
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold">Top Services by CPU</h2>
+        {topServices.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No metrics available</p>
+        ) : (
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>CPU%</TableHead>
+                  <TableHead>Memory MB</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {topServices.map((s) => (
+                  <TableRow key={s.name}>
+                    <TableCell>
+                      <Link to="/services/$name" params={{ name: s.name }} className="font-medium hover:underline">
+                        {s.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{s.category?.name ?? '—'}</TableCell>
+                    <TableCell>{(s.metrics?.cpu_percentage ?? 0).toFixed(1)}%</TableCell>
+                    <TableCell>{(s.metrics?.memory_used_mb ?? 0).toFixed(0)}</TableCell>
+                    <TableCell><StatusBadge status={getServiceStatus(s)} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
