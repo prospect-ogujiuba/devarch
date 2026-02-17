@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { Layers, Trash2, Power, PowerOff, Globe, Network, Unplug } from 'lucide-react'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { EntityCard } from '@/components/ui/entity-card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -36,9 +37,9 @@ export function StackGrid({ stacks, onEnable, onDisable, onDelete, onCreateNetwo
             : 'text-muted-foreground'
 
         return (
-          <Card
+          <EntityCard
             key={stack.name}
-            className="py-4 hover:border-primary/50 transition-colors"
+            className="py-4"
           >
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between">
@@ -55,9 +56,7 @@ export function StackGrid({ stacks, onEnable, onDisable, onDelete, onCreateNetwo
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {stack.description || 'No description'}
-              </p>
+              {stack.description && (<p className="text-sm text-muted-foreground line-clamp-2">{stack.description}</p>)}
               <div className="flex items-center gap-3 text-sm">
                 <span className="text-muted-foreground">
                   {stack.instance_count} {stack.instance_count === 1 ? 'instance' : 'instances'}
@@ -101,6 +100,7 @@ export function StackGrid({ stacks, onEnable, onDisable, onDelete, onCreateNetwo
                   Enable
                 </Button>
               )}
+              <div className="w-px h-5 bg-border self-center" />
               <Button
                 variant="outline"
                 size="icon-sm"
@@ -132,11 +132,12 @@ export function StackGrid({ stacks, onEnable, onDisable, onDelete, onCreateNetwo
                   e.preventDefault()
                   onDelete(stack.name)
                 }}
+                title="Delete stack"
               >
                 <Trash2 className="size-3" />
               </Button>
             </CardFooter>
-          </Card>
+          </EntityCard>
         )
       })}
     </div>
