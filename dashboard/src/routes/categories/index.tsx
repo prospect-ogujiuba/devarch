@@ -64,7 +64,7 @@ function CategoriesPage() {
   const [createOpen, setCreateOpen] = useState(false)
 
   const controls = useUrlSyncedListControls(
-    { storageKey: 'categories', items, searchFn, filterFns, sortFns, defaultSort: 'order', defaultView: 'grid' },
+    { storageKey: 'categories', items, searchFn, filterFns, sortFns, defaultSort: 'name', defaultView: 'grid' },
     { routeSearch, navigate, sortOptions, filterKeys: ['status'] },
   )
   const pagination = useUrlPagination({
