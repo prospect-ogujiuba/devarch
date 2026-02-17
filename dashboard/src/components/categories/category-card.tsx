@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Play, Square, Loader2, Pencil, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { EntityCard } from '@/components/ui/entity-card'
 import { Button } from '@/components/ui/button'
 import { ResourceBar } from '@/components/ui/resource-bar'
 import { useStartCategory, useStopCategory } from '@/features/categories/queries'
@@ -30,7 +31,7 @@ export function CategoryCard({ category, compact }: CategoryCardProps) {
 
   if (compact) {
     return (
-      <Card className="py-4">
+      <EntityCard className="py-4">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <Link to="/services" search={{ category: name }} className="hover:underline">
@@ -58,7 +59,7 @@ export function CategoryCard({ category, compact }: CategoryCardProps) {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </EntityCard>
     )
   }
 
@@ -93,7 +94,7 @@ export function CategoryCard({ category, compact }: CategoryCardProps) {
           </div>
           <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
             <div
-              className="h-full bg-success transition-all"
+              className="h-full bg-green-500 transition-all"
               style={{ width: `${pct}%` }}
             />
           </div>

@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { EntityCard } from '@/components/ui/entity-card'
 import { Badge } from '@/components/ui/badge'
 import { Globe, GitBranch, Package, ExternalLink, Puzzle, Palette } from 'lucide-react'
 import { ProjectLogo } from '@/components/projects/project-logo'
@@ -35,7 +36,7 @@ export function ProjectCard({ project }: { project: Project }) {
 
   return (
     <Link to="/projects/$name" params={{ name: project.name }}>
-      <Card className="py-4 hover:border-foreground/20 transition-colors cursor-pointer h-full">
+      <EntityCard className="py-4 h-full" cursor="pointer">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -57,16 +58,14 @@ export function ProjectCard({ project }: { project: Project }) {
                   v{project.version}
                 </Badge>
               )}
-              <Badge variant="outline" className={colorClass}>
-                {project.project_type}
-              </Badge>
+              {colorClass && (<Badge variant="outline" className={colorClass}>{project.project_type}</Badge>)}
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          {project.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
-          )}
+          <p className="text-sm text-muted-foreground/50 line-clamp-2">
+            {project.description || <span className="italic">No description</span>}
+          </p>
 
           <div className="flex flex-wrap gap-2">
             {project.framework && (
@@ -125,7 +124,7 @@ export function ProjectCard({ project }: { project: Project }) {
             )}
           </div>
         </CardContent>
-      </Card>
+      </EntityCard>
     </Link>
   )
 }
