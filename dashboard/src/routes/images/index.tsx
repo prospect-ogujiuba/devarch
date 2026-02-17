@@ -61,6 +61,7 @@ function ImagesPage() {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
 
   const filteredImages = useMemo(() => {
     const q = search.toLowerCase()
@@ -177,8 +178,8 @@ function ImagesPage() {
         setSortBy,
         sortDir,
         setSortDir,
-        viewMode: 'table',
-        setViewMode: () => {},
+        viewMode,
+        setViewMode,
         filters: {},
         setFilter: () => {},
         filtered: filteredImages,
@@ -206,7 +207,40 @@ function ImagesPage() {
       emptyMessage="No images found"
       items={filteredImages}
       tableView={imageTableView}
-      gridView={imageTableView}
+      gridView={(items) => (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {items.map((image) => {
+            const firstTag = image.RepoTags?.[0] || '<none>'
+            const [repo, tag] = firstTag.includes(':') ? firstTag.split(':') : [firstTag, '<none>']
+            const shortId = image.Id.replace(/^sha256:/, '').slice(0, 12)
+            return (
+              <div key={image.Id} className="rounded-lg border bg-card text-card-foreground shadow-sm py-4 hover:border-primary/50 transition-colors">
+                <div className="px-4 pb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{repo}</p>
+                      <p className="text-sm text-muted-foreground">{tag}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setRemoveTarget(firstTag)}
+                      disabled={removeMutation.isPending}
+                    >
+                      <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="px-4 pt-2 flex items-center gap-3 text-sm text-muted-foreground">
+                  <span className="font-mono text-xs">{shortId}</span>
+                  <span>{formatBytes(image.Size)}</span>
+                  <span>{formatAge(image.Created)}</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     >
 
     <Dialog open={pullOpen} onOpenChange={(open) => {
