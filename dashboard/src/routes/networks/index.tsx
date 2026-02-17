@@ -258,6 +258,8 @@ function NetworksPage() {
         gridView={() => (
           <NetworkGrid
             networks={pagination.pagedItems}
+            selected={selected}
+            onToggleSelect={handleToggleSelect}
             onRemove={handleRemove}
           />
         )}
