@@ -18,32 +18,53 @@ interface StackGridProps {
 }
 ```
 
-## Card Layout
-- **Header:** Stack name (link), enabled/disabled badge
-- **Content:**
-  - Optional description (conditional render)
-  - Instance count with status color (green if all running, yellow if partial, muted if none)
-  - Network name display if network_name exists (blue text)
-- **Footer:** Action buttons
-  - Enable/Disable toggle
-  - Divider separator
-  - Create/Remove network buttons (toggle based on network_active)
-  - Delete button
+All callbacks receive stack name as string parameter.
 
-## UX Improvements
-- Conditional description render (no "No description" text)
-- Network buttons show hover titles
-- Delete button title on hover
-- Divider separates primary action (enable/disable) from secondary (network, delete)
+## Card Layout
+
+### Header
+- Stack name (blue link to stack detail page)
+- Enabled/Disabled badge (right side)
+
+### Content
+- Optional description (conditional render, line clamped to 2 lines)
+- Instance count and running status (e.g., "5 instances" + "3/5 running")
+- Running status color:
+  - Green if all running
+  - Yellow if partial (some running)
+  - Muted gray if none running
+- Network name display (if exists) with blue text and globe icon
+
+### Footer Actions
+- **Enable/Disable:** Toggles based on stack.enabled state
+- **Divider:** Separates primary from secondary actions
+- **Create/Remove Network:** Toggle buttons based on network_active state
+- **Delete:** Remove stack
+
+## Button States
+- Create network: disabled if network_active=true
+- Remove network: disabled if network_active=false
+- Delete: always enabled
+- Buttons show hover titles for clarity
+
+## Empty State
+- Shows empty state icon/message when stacks.length === 0
 
 ## Styling
-- Migrated from Card to EntityCard for consistent hover effect
-- Removed inline `hover:border-primary/50` (now in EntityCard)
+- Uses `EntityCard` for consistent hover effect
+- Responsive grid: 1-4 columns (sm, lg, xl breakpoints)
+- Divider separator uses border styling
 
 ## Dependencies
 - `EntityCard` — Card wrapper
 - `Badge`, `Button` — UI primitives
+- `Link` — React Router navigation to /stacks/$name
 - `cn()` — Classname utility
+- Icons: Layers, Trash2, Power, PowerOff, Globe, Network, Unplug
+
+## Recent Changes
+- Migrated from Card to EntityCard for consistent hover effect
+- Removed inline hover styling (now in EntityCard)
 
 ## Related Components
 - `/routes/stacks/index.tsx` — Parent page using StackGrid

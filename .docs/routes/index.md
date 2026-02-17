@@ -6,47 +6,86 @@
 ## Overview
 Landing page showing system stats, runtime info, top services by CPU, and categories list with status filters. Serves as quick health check and navigation hub.
 
+## Route
+- File route: `/` (exact match)
+- Search params: q (search), status (filter), sort, dir, view, page, size
+
 ## Main Sections
 
-### Stat Cards (Grid)
-- Total Services, Running, Stopped, Categories, Avg CPU, Total Memory
-- Uses icon badges with values
+### 1. Stat Cards (Top Grid)
+6-column responsive grid showing:
+- **Total Services** — Server icon
+- **Running** — Play icon, green text
+- **Stopped** — Square icon, muted text
+- **Categories** — Activity icon
+- **Avg CPU** — CPU icon, formatted as percent
+- **Total Memory** — Memory icon, formatted as MB
 
-### Runtime Info Bar
-- Container runtime (podman/docker)
-- Socket path (if available)
-- Count of enabled services
-- Yellow highlight for missing network indicator
+Uses `StatCard` component with icon, label, and value.
 
-### Top Services by CPU
-- Table of top 5 services sorted by CPU usage
-- Shows name, category, CPU%, memory, status
-- Empty state if no metrics available
+### 2. Runtime Info Bar
+Single-line info bar showing:
+- Container runtime (podman/docker) with Server icon
+- Socket path (monospace, if available)
+- Enabled services count
+- Network status: name + exists indicator (yellow if missing)
 
-### Categories Section
-- Search, sort, view toggle (table/grid)
-- Status filter: All, All Running, Partial, Stopped
-- Paginated grid of category cards (compact mode)
-- Shows running count per category
+### 3. Top Services by CPU
+Table showing top 5 services by CPU usage:
+- Columns: Name (linked), Category, CPU%, Memory MB, Status
+- Memoized: `topServices` array sorted by CPU percentage
+- Empty state: "No metrics available" if no running services with metrics
 
-## State & Logic
-- `useStatusOverview()` — Overview data (categories, status counts)
-- `useServices()` — All services (for top CPU calculation)
-- `topServices` — Memoized top 5 by CPU percentage
-- `serviceStats` — Average CPU and total memory across running services
-- `statusCounts` — Running/partial/stopped category counts
+### 4. Categories Section
+Search, sort, view toggle + status filter + paginated grid:
+- **Search:** By category name
+- **Sort:** Name (default), Services count, Running count
+- **View:** Table or grid
+- **Filter:** Status (all/running/partial/stopped) with counts
+
+Uses `CategoryCard` in compact mode, or `CategoryTable` for table view.
+
+## State & Data Management
+
+### Queries
+- `useStatusOverview()` — Overview data: categories, service counts, container runtime
+- `useServices()` — All services (for metrics calculation)
+
+### Computed Values
+- `topServices` — Memoized top 5 services sorted by CPU % (descending)
+- `serviceStats` — Average CPU and total memory across all services with metrics
+- `statusCounts` — Category counts by status (running/partial/stopped)
+
+### URL Syncing
+- Uses `useUrlSyncedListControls()` — Search/sort/filter → URL
+- Uses `useUrlPagination()` — Page number/size → URL
+- Pagination resets on search/sort/filter change
+
+## Statistics Calculation
+```
+avgCpu = totalCpu / runningWithMetrics
+totalMem = sum of all service memory_used_mb
+```
+
+Categories status breakdown:
+- Running: all services in category running
+- Partial: some services running
+- Stopped: no services running
 
 ## Recent Changes
-- Added `topServices` memoization with CPU-based sorting
-- Runtime info bar now displays container runtime, socket path, enabled count
-- Category compact cards used (not full layout)
+- Added `topServices` memoization with CPU-based filtering and sorting
+- Runtime info bar displays container runtime, socket path, enabled count, network status
+- Categories use compact `CategoryCard` (not full layout)
+- Status filter shows counts for each option
 
 ## Dependencies
 - `useStatusOverview()`, `useServices()` — Query hooks
-- `ListPageScaffold` — Not used; custom layout
 - `CategoryCard` — Compact card renderer
-- `CategoryTable` — Table view
-- `StatCard`, `FilterBar`, `ListToolbar` — UI components
+- `CategoryTable` — Table view alternative
+- `StatCard`, `FilterBar`, `ListToolbar`, `EmptyState`, `PaginationControls` — UI components
+- `getServiceStatus()` — Service status helper
+- Icons: Server, Play, Square, Activity, Loader2, Cpu, MemoryStick, FolderOpen
 
-## Navigation Entry Point
-- Route: `/` (home, exact match)
+## Related Pages
+- `/categories/` — Full categories page
+- `/services/` — Services list
