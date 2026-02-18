@@ -495,7 +495,7 @@ func (s *Service) loadAllProviders(stackID int) ([]wiring.Provider, error) {
 	rows, err := s.db.Query(`
 		SELECT si.id, si.instance_id, se.id, se.name, se.type, se.port, se.protocol
 		FROM service_instances si
-		JOIN service_exports se ON se.service_id = si.service_id
+		JOIN service_exports se ON se.service_id = si.template_service_id
 		WHERE si.stack_id = $1 AND si.deleted_at IS NULL
 		ORDER BY si.instance_id, se.name
 	`, stackID)
@@ -552,7 +552,7 @@ func (s *Service) loadAllConsumers(stackID int) ([]wiring.Consumer, error) {
 	rows, err := s.db.Query(`
 		SELECT si.id, si.instance_id, ic.id, ic.name, ic.type, ic.required, COALESCE(ic.env_vars, '{}')
 		FROM service_instances si
-		JOIN service_import_contracts ic ON ic.service_id = si.service_id
+		JOIN service_import_contracts ic ON ic.service_id = si.template_service_id
 		WHERE si.stack_id = $1 AND si.deleted_at IS NULL
 		ORDER BY si.instance_id, ic.name
 	`, stackID)
