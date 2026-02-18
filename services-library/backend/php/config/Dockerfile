@@ -81,9 +81,6 @@ RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master
 
 RUN chown -R www-data:www-data /var/www/html
 
-COPY start.sh /usr/local/bin/start.sh
-RUN chmod +x /usr/local/bin/start.sh
-
 WORKDIR /var/www/html
 
 EXPOSE 8000 9000
