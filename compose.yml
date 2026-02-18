@@ -53,6 +53,7 @@ services:
       - ./apps:/workspace/apps:ro
       - ./services-library:/workspace/services-library:ro
       - ./api:/app
+      - ${HOME}/.devarch:/root/.devarch
     networks:
       - microservices-net
     healthcheck:
