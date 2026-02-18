@@ -202,6 +202,46 @@ func (m *Manager) syncContainerStatus(ctx context.Context) {
 		}
 	}
 
+	// Track instance containers: compute devarch-{stack}-{instance} names
+	instanceRows, err := m.db.Query(`
+		SELECT si.template_service_id, si.instance_id, si.container_name, st.name AS stack_name
+		FROM service_instances si
+		JOIN stacks st ON st.id = si.stack_id
+		WHERE si.deleted_at IS NULL AND si.template_service_id IS NOT NULL
+	`)
+	if err != nil {
+		m.logger.Error("sync: failed to query instances", "error", err)
+	} else {
+		defer instanceRows.Close()
+		for instanceRows.Next() {
+			var templateServiceID int
+			var instanceID string
+			var containerName sql.NullString
+			var stackName string
+			if err := instanceRows.Scan(&templateServiceID, &instanceID, &containerName, &stackName); err != nil {
+				continue
+			}
+			var cname string
+			if containerName.Valid && containerName.String != "" {
+				cname = containerName.String
+			} else {
+				cname = fmt.Sprintf("devarch-%s-%s", stackName, instanceID)
+			}
+			status := "stopped"
+			if state, ok := runningSet[cname]; ok {
+				status = state
+			}
+			_, err := m.db.Exec(`
+				INSERT INTO container_states (service_id, status, updated_at)
+				VALUES ($1, $2, NOW())
+				ON CONFLICT (service_id) DO UPDATE SET status = $2, updated_at = NOW()
+			`, templateServiceID, status)
+			if err != nil {
+				m.logger.Error("sync: failed to update instance status", "container", cname, "error", err)
+			}
+		}
+	}
+
 	m.statusCache.mu.Lock()
 	m.statusCache.containers = runningSet
 	m.statusCache.data["containers"] = runningSet
