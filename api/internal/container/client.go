@@ -164,7 +164,7 @@ func (c *Client) StartComposeService(projectName string, composeYAML []byte, ser
 }
 
 func (c *Client) RestartComposeService(projectName string, composeYAML []byte, service string) error {
-	return c.execComposeCommand(composeYAML, projectName, "restart", service)
+	return c.execComposeCommand(composeYAML, projectName, "up", "-d", service)
 }
 
 func (c *Client) StartService(name string, composeYAML []byte) error {
