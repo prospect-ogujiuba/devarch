@@ -47,18 +47,26 @@ get_current_runtime() {
 
 stop_all_services() {
     print_status "info" "Stopping all microservices before runtime switch..."
-    
-    # Use service-manager for robust service shutdown
+
     local service_manager="$SCRIPT_DIR/service-manager.sh"
     if [[ -f "$service_manager" ]]; then
-        print_status "step" "Using service-manager for clean shutdown..."
-        
-        # Use service-manager with cleanup options for thorough shutdown
-        if "$service_manager" stop-all --timeout 10 --preserve-data --cleanup-orphans 2>/dev/null; then
-            print_status "success" "Services stopped cleanly via service-manager"
+        print_status "step" "Using service-manager to stop individual services..."
+
+        local services
+        services=$("$service_manager" list 2>/dev/null | tail -n +2 | awk '{print $1}')
+        if [[ -n "$services" ]]; then
+            local stopped=0 failed=0
+            while IFS= read -r svc; do
+                [[ -z "$svc" ]] && continue
+                if "$service_manager" down "$svc" 2>/dev/null; then
+                    stopped=$((stopped + 1))
+                else
+                    failed=$((failed + 1))
+                fi
+            done <<< "$services"
+            print_status "success" "Stopped $stopped service(s) ($failed failed)"
         else
-            print_status "warning" "Service-manager shutdown had issues, falling back to manual cleanup"
-            cleanup_runtime_containers
+            print_status "info" "No services found or API unreachable"
         fi
     else
         print_status "warning" "service-manager.sh not found, using manual cleanup"
@@ -276,7 +284,7 @@ show_service_status() {
     
     local service_manager="$SCRIPT_DIR/service-manager.sh"
     if [[ -f "$service_manager" ]]; then
-        local running_services=$("$service_manager" ps 2>/dev/null | grep -c "Up" || echo "0")
+        local running_services=$("$service_manager" status 2>/dev/null | grep -c "running" || echo "0")
         [[ "$running_services" -gt 0 ]] && print_status "info" "$running_services services running" || print_status "success" "No services running"
     else
         local network_containers="0"
@@ -317,13 +325,13 @@ FEATURES:
 NOTES:
   - All running services will be stopped during the switch
   - The config.sh file will be updated automatically
-  - Use 'service-manager.sh start-all' to restart services after switching
+  - Start services by category after switching (e.g. database, backend)
   - Data volumes are preserved during runtime switches
 
 POST-SWITCH COMMANDS:
-  ./scripts/service-manager.sh start-all    # Restart all services
-  ./scripts/service-manager.sh status       # Check service status
-  ./scripts/service-manager.sh ps           # List running containers
+  ./scripts/service-manager.sh start database backend  # Start service categories
+  ./scripts/service-manager.sh status                  # Check service status
+  ./scripts/service-manager.sh list                    # List all services
 
 EOF
 }
@@ -339,7 +347,7 @@ main() {
             if switch_to_docker; then
                 echo ""
                 print_status "info" "To start services with Docker:"
-                echo "  ./scripts/service-manager.sh start-all"
+                echo "  ./scripts/service-manager.sh start database backend"
             fi
             ;;
         "podman")
@@ -347,7 +355,7 @@ main() {
             if switch_to_podman; then
                 echo ""
                 print_status "info" "To start services with Podman:"
-                echo "  ./scripts/service-manager.sh start-all"
+                echo "  ./scripts/service-manager.sh start database backend"
             fi
             ;;
         "status"|"s")
