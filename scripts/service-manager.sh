@@ -25,33 +25,57 @@ warn() { printf "\033[33mWARN\033[0m %s\n" "$1"; }
 # =============================================================================
 
 api_get() {
-    local response
-    response=$(curl -sf -H "X-API-Key: $DEVARCH_API_KEY" "$API_BASE$1" 2>/dev/null)
+    local raw body http_code
+    raw=$(curl -s -w "\n%{http_code}" -H "X-API-Key: $DEVARCH_API_KEY" "$API_BASE$1" 2>/dev/null)
     if [[ $? -ne 0 ]]; then
         err "API unreachable at $API_BASE — is devarch-api running?"
         exit 1
     fi
-    echo "$response"
+    http_code=$(echo "$raw" | tail -1)
+    body=$(echo "$raw" | sed '$d')
+    if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]] 2>/dev/null; then
+        local api_err
+        api_err=$(echo "$body" | python3 -c "import sys,json; print(json.load(sys.stdin).get('error',{}).get('message',''))" 2>/dev/null)
+        err "GET $1 failed (HTTP $http_code)${api_err:+: $api_err}"
+        exit 1
+    fi
+    echo "$body"
 }
 
 api_post() {
-    local response
-    response=$(curl -sf -X POST -H "X-API-Key: $DEVARCH_API_KEY" "$API_BASE$1" 2>/dev/null)
+    local raw body http_code
+    raw=$(curl -s -w "\n%{http_code}" -X POST -H "X-API-Key: $DEVARCH_API_KEY" "$API_BASE$1" 2>/dev/null)
     if [[ $? -ne 0 ]]; then
-        err "API request failed: POST $1"
+        err "API unreachable at $API_BASE — is devarch-api running?"
         return 1
     fi
-    echo "$response"
+    http_code=$(echo "$raw" | tail -1)
+    body=$(echo "$raw" | sed '$d')
+    if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]] 2>/dev/null; then
+        local api_err
+        api_err=$(echo "$body" | python3 -c "import sys,json; print(json.load(sys.stdin).get('error',{}).get('message',''))" 2>/dev/null)
+        err "POST $1 failed (HTTP $http_code)${api_err:+: $api_err}"
+        return 1
+    fi
+    echo "$body"
 }
 
 api_post_json() {
-    local response
-    response=$(curl -sf -X POST -H "X-API-Key: $DEVARCH_API_KEY" -H "Content-Type: application/json" -d "$2" "$API_BASE$1" 2>/dev/null)
+    local raw body http_code
+    raw=$(curl -s -w "\n%{http_code}" -X POST -H "X-API-Key: $DEVARCH_API_KEY" -H "Content-Type: application/json" -d "$2" "$API_BASE$1" 2>/dev/null)
     if [[ $? -ne 0 ]]; then
-        err "API request failed: POST $1"
+        err "API unreachable at $API_BASE — is devarch-api running?"
         return 1
     fi
-    echo "$response"
+    http_code=$(echo "$raw" | tail -1)
+    body=$(echo "$raw" | sed '$d')
+    if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]] 2>/dev/null; then
+        local api_err
+        api_err=$(echo "$body" | python3 -c "import sys,json; print(json.load(sys.stdin).get('error',{}).get('message',''))" 2>/dev/null)
+        err "POST $1 failed (HTTP $http_code)${api_err:+: $api_err}"
+        return 1
+    fi
+    echo "$body"
 }
 
 # =============================================================================
