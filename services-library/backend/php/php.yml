@@ -13,8 +13,6 @@ services:
     environment:
       COMPOSER_ALLOW_SUPERUSER: "1"
       COMPOSER_MEMORY_LIMIT: "-1"
-    depends_on:
-      - mailpit
     healthcheck:
       test: ["CMD", "php-fpm", "-t"]
       interval: 30s
