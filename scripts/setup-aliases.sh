@@ -90,6 +90,10 @@ generate_aliases_bash() {
     for alias_name in "${ALIASES[@]}"; do
         output+="alias ${alias_name}='${DEVARCH_CLI}'\n"
     done
+    output+="\n# Podman utility aliases\n"
+    output+="alias ps='podman ps --format=\"table {{.Names}} {{.Status}} {{.Ports}} {{.Networks}}\"'\n"
+    output+="alias psa='podman ps -a --format=\"table {{.Names}} {{.Status}} {{.Ports}} {{.Networks}}\"'\n"
+    output+="alias pcleanall='podman stop -a; podman rm -a -f; podman rmi -a -f; podman volume prune -f; podman network prune -f; podman pod rm -a -f; podman system prune -a -f'\n"
     echo -e "$output"
 }
 
@@ -99,6 +103,10 @@ generate_aliases_fish() {
     for alias_name in "${ALIASES[@]}"; do
         output+="alias ${alias_name}='${DEVARCH_CLI}'\n"
     done
+    output+="\n# Podman utility aliases\n"
+    output+="alias ps='podman ps --format=\"table {{.Names}} {{.Status}} {{.Ports}} {{.Networks}}\"'\n"
+    output+="alias psa='podman ps -a --format=\"table {{.Names}} {{.Status}} {{.Ports}} {{.Networks}}\"'\n"
+    output+="alias pcleanall='podman stop -a; podman rm -a -f; podman rmi -a -f; podman volume prune -f; podman network prune -f; podman pod rm -a -f; podman system prune -a -f'\n"
     echo -e "$output"
 }
 
@@ -123,10 +131,10 @@ add_aliases() {
         # Remove existing devarch aliases
         if [[ "$shell_type" == "fish" ]]; then
             sed -i '/# DevArch aliases/,/^$/d' "$config_file" 2>/dev/null
-            sed -i '/alias devarch=/d;/alias dvrc=/d;/alias dv=/d;/alias da=/d' "$config_file" 2>/dev/null
+            sed -i '/alias devarch=/d;/alias dvrc=/d;/alias dv=/d;/alias da=/d;/alias ps=/d;/alias psa=/d;/alias pcleanall=/d' "$config_file" 2>/dev/null
         else
             sed -i '/# DevArch aliases/,/^$/d' "$config_file" 2>/dev/null
-            sed -i '/alias devarch=/d;/alias dvrc=/d;/alias dv=/d;/alias da=/d' "$config_file" 2>/dev/null
+            sed -i '/alias devarch=/d;/alias dvrc=/d;/alias dv=/d;/alias da=/d;/alias ps=/d;/alias psa=/d;/alias pcleanall=/d' "$config_file" 2>/dev/null
         fi
     fi
 
