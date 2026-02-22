@@ -19,7 +19,7 @@ if [[ -z "$STACK_NAME" ]]; then
 fi
 
 echo "Initializing stack: $STACK_NAME"
-echo "Step 1/3: Importing stack configuration..."
+echo "Step 1/4: Importing stack configuration..."
 
 IMPORT_RESULT=$(curl -s -w "\n%{http_code}" -X POST \
   -H "X-API-Key: $API_KEY" \
@@ -39,7 +39,7 @@ CREATED_COUNT=$(echo "$RESPONSE_BODY" | jq -r '.created | length')
 UPDATED_COUNT=$(echo "$RESPONSE_BODY" | jq -r '.updated | length')
 echo "Import complete. Created: $CREATED_COUNT, Updated: $UPDATED_COUNT"
 
-echo "Step 2/3: Pulling container images..."
+echo "Step 2/4: Pulling container images..."
 
 IMAGES=$(grep -E "^[[:space:]]+image:" "$YML_FILE" | sed 's/.*image: *"\?\([^"]*\)"\?.*/\1/' | sort -u)
 
@@ -59,23 +59,49 @@ if [[ -n "$RUNTIME" ]]; then
   done
 fi
 
-echo "Step 3/3: Applying stack..."
+echo "Step 3/4: Planning stack..."
+
+PLAN_RESULT=$(curl -s -w "\n%{http_code}" \
+  -H "X-API-Key: $API_KEY" \
+  "$API_BASE/api/v1/stacks/$STACK_NAME/plan")
+
+HTTP_CODE=$(echo "$PLAN_RESULT" | tail -1)
+RESPONSE_BODY=$(echo "$PLAN_RESULT" | sed '$d')
+
+if [[ "$HTTP_CODE" -ne 200 ]]; then
+  echo "Error: Plan failed with HTTP $HTTP_CODE"
+  echo "$RESPONSE_BODY"
+  exit 1
+fi
+
+PLAN_TOKEN=$(echo "$RESPONSE_BODY" | jq -r '.data.token')
+
+if [[ -z "$PLAN_TOKEN" || "$PLAN_TOKEN" == "null" ]]; then
+  echo "Error: Could not extract plan token from response"
+  echo "$RESPONSE_BODY"
+  exit 1
+fi
+
+echo "Plan token: ${PLAN_TOKEN:0:8}..."
+
+echo "Step 4/4: Applying stack..."
 
 APPLY_RESULT=$(curl -s -w "\n%{http_code}" -X POST \
   -H "X-API-Key: $API_KEY" \
   -H "Content-Type: application/json" \
-  -d "{\"token\": \"\"}" \
+  -d "{\"token\": \"$PLAN_TOKEN\"}" \
   "$API_BASE/api/v1/stacks/$STACK_NAME/apply")
 
 HTTP_CODE=$(echo "$APPLY_RESULT" | tail -1)
 RESPONSE_BODY=$(echo "$APPLY_RESULT" | sed '$d')
 
 if [[ "$HTTP_CODE" -ne 200 ]]; then
-  echo "Warning: Apply returned HTTP $HTTP_CODE"
+  echo "Error: Apply failed with HTTP $HTTP_CODE"
   echo "$RESPONSE_BODY"
-else
-  echo "Apply complete."
+  exit 1
 fi
+
+echo "Apply complete."
 
 echo ""
 echo "Stack '$STACK_NAME' initialized successfully!"
