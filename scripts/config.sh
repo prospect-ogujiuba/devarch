@@ -23,7 +23,7 @@
 SCRIPT_SOURCE="${(%):-%x}"
 export PROJECT_ROOT=$(cd "$(dirname "$SCRIPT_SOURCE")/../" && pwd)
 export SCRIPT_DIR="${PROJECT_ROOT}/scripts"
-export COMPOSE_DIR="${PROJECT_ROOT}/compose"
+export SERVICES_LIBRARY_DIR="${PROJECT_ROOT}/services-library"
 export APPS_DIR="${PROJECT_ROOT}/apps"
 export LOGS_DIR="${PROJECT_ROOT}/logs"
 
@@ -137,6 +137,46 @@ ensure_network_exists() {
         eval "$CONTAINER_CMD network ls --format '{{.Name}}'" 2>/dev/null | grep -q "^$NETWORK_NAME$" && return 0
     fi
     eval "$CONTAINER_CMD network create --driver bridge \"$NETWORK_NAME\" $ERROR_REDIRECT" || { print_status "error" "network create failed"; return 1; }
+}
+
+# =============================================================================
+# SERVICE HELPER FUNCTIONS (API-backed)
+# =============================================================================
+# Called by install-wordpress.sh, setup-laravel.sh, and other scripts that
+# need to check or start individual services via the DevArch API.
+
+# Usage: validate_service_exists <service-name>
+# Returns 0 (true) if the service is registered in the API, 1 otherwise.
+validate_service_exists() {
+    local name="$1"
+    local _api_base="${DEVARCH_API_URL:-http://localhost:8550}/api/v1"
+    local _api_key="${DEVARCH_API_KEY:-test}"
+    curl -sf -H "X-API-Key: $_api_key" "$_api_base/services/$name" >/dev/null 2>&1
+}
+
+# Usage: get_service_status <service-name>
+# Prints the container status string ("running", "stopped", "exited", etc.)
+# Prints "unknown" and returns 1 if the API is unreachable or service not found.
+get_service_status() {
+    local name="$1"
+    local _api_base="${DEVARCH_API_URL:-http://localhost:8550}/api/v1"
+    local _api_key="${DEVARCH_API_KEY:-test}"
+    local _response
+    _response=$(curl -sf -H "X-API-Key: $_api_key" "$_api_base/services/$name/status" 2>/dev/null)
+    if [[ $? -ne 0 || -z "$_response" ]]; then
+        echo "unknown"
+        return 1
+    fi
+    echo "$_response" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','unknown'))" 2>/dev/null || echo "unknown"
+}
+
+# Usage: start_single_service <service-name>
+# Calls the API to start the named service. Returns 0 on success, 1 on failure.
+start_single_service() {
+    local name="$1"
+    local _api_base="${DEVARCH_API_URL:-http://localhost:8550}/api/v1"
+    local _api_key="${DEVARCH_API_KEY:-test}"
+    curl -sf -X POST -H "X-API-Key: $_api_key" "$_api_base/services/$name/start" >/dev/null 2>&1
 }
 
 detect_os() {
