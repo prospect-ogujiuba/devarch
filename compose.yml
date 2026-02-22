@@ -44,7 +44,7 @@ services:
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
       - SECURITY_MODE=${SECURITY_MODE:-}
       - PROJECT_ROOT=/app
-      - HOST_PROJECT_ROOT=/home/fhcadmin/projects/devarch
+      - HOST_PROJECT_ROOT=/home/priz/projects/devarch
       - WORKSPACE_ROOT=/workspace
     ports:
       - "127.0.0.1:8550:8080"
