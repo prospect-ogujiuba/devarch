@@ -4,10 +4,8 @@
 
 # Configuration - add/remove folders as needed
 FOLDERS_TO_PROCESS=(
-    "compose"
-    "config" 
+    "services-library"
     "scripts"
-
 )
 
 # Output directory
@@ -111,7 +109,7 @@ normalize_line_endings() {
 # Generate hosts file entries dynamically from compose files
 generate_hosts_file() {
     local hosts_file="$CONTEXT_DIR/hosts.txt"
-    local compose_dir="compose"
+    local compose_dir="services-library"
 
     echo "Generating dynamic hosts file entries from compose files and apps..."
 
@@ -128,7 +126,7 @@ EOF
     local app_domains=()
 
     # Parse Compose domains (infrastructure services - keep .test)
-    for compose_file in $(find "$compose_dir" -name "*.yml" -o -name "*.yaml" 2>/dev/null | sort); do
+    for compose_file in $(find "$compose_dir" -name "*.yml" 2>/dev/null | grep -v '/config/' | sort); do
         echo "  Parsing $compose_file..."
         local domains=$(grep -o 'Host(`[^`]*`)' "$compose_file" | sed 's/Host(`//g' | sed 's/`)//g')
         for domain in $domains; do
@@ -433,7 +431,7 @@ main() {
 
     # Detailed folder structures (full depth) for compose, config, and scripts
     # Using the same logic as individual context files, with markdown bullets
-    for section_folder in compose config scripts; do
+    for section_folder in services-library scripts; do
         if [[ -d "$section_folder" ]]; then
             echo "### ${section_folder} - Folder Structure" >> "$index_file"
             if command -v tree >/dev/null 2>&1; then
