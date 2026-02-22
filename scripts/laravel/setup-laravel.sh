@@ -368,7 +368,6 @@ show_completion_message() {
     if [[ -n "$running_db" ]]; then
         echo "Database Information:"
         echo "  Running database: $running_db"
-        echo "  Setup databases: ./scripts/setup-databases.sh -a"
         echo "  Default credentials: admin / 123456"
         echo ""
     fi
