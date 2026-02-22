@@ -91,8 +91,11 @@ generate_aliases_bash() {
         output+="alias ${alias_name}='${DEVARCH_CLI}'\n"
     done
     output+="\n# Podman utility aliases\n"
-    output+="alias ps='podman ps --format=\"table {{.Names}} {{.Status}} {{.Ports}} {{.Networks}}\"'\n"
-    output+="alias psa='podman ps -a --format=\"table {{.Names}} {{.Status}} {{.Ports}} {{.Networks}}\"'\n"
+    output+="alias ps='podman ps --format=\"table {{.Names}} {{.Status}} {{.Ports}}\"'\n"
+    output+="alias psn='podman ps --format=\"table {{.Names}} {{.Status}} {{.Ports}} {{.Networks}}\"'\n"
+    output+="alias psa='podman ps  -a --format=\"table {{.Names}} {{.Status}} {{.Ports}}\"'\n"
+    output+="alias psan='podman ps -a --format=\"table {{.Names}} {{.Status}} {{.Ports}} {{.Networks}}\"'\n"
+
     output+="alias pcleanall='podman stop -a; podman rm -a -f; podman rmi -a -f; podman volume prune -f; podman network prune -f; podman pod rm -a -f; podman system prune -a -f'\n"
     echo -e "$output"
 }
