@@ -601,7 +601,7 @@ func parseDevarchConfig(raw map[string]interface{}, serviceName string) []Parsed
 		mounts = append(mounts, ParsedConfigMount{
 			SourcePath:    fmt.Sprintf("config/%s/%s", serviceName, filePath),
 			TargetPath:    targetPath,
-			ReadOnly:      true,
+			ReadOnly:      false,
 			ConfigOwner:   serviceName,
 			ConfigRelPath: filePath,
 		})
