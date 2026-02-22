@@ -425,7 +425,7 @@ cmd_nuke() {
     cmd_test
     
     print_status "success" "Nuclear reset completed!"
-    print_status "info" "You can now start services: ./scripts/service-manager.sh start-all"
+    print_status "info" "You can now start services: ./scripts/service-manager.sh up <name>"
 }
 
 cmd_env() {
@@ -472,7 +472,7 @@ cmd_env() {
     
     echo ""
     print_status "info" "Integration Commands:"
-    echo "  ./scripts/service-manager.sh start-all    # Start all services"
+    echo "  ./scripts/service-manager.sh start database backend  # Start service categories"
     echo "  ./scripts/service-manager.sh status       # Check service status"
     echo "  ./scripts/runtime-switcher.sh status      # Check runtime status"
 }
