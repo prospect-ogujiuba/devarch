@@ -174,7 +174,8 @@ cmd_status() {
         [[ $? -ne 0 ]] && return 1
         echo "$services" | python3 -c "
 import sys, json
-services = json.load(sys.stdin)
+raw = json.loads(sys.stdin.read(), strict=False)
+services = raw.get('data', raw) if isinstance(raw, dict) else raw
 for s in services:
     name = s.get('name', '')
     cat = s.get('category', {})
@@ -194,7 +195,8 @@ cmd_list() {
     printf "\033[1m%-20s %s\033[0m\n" "SERVICE" "CATEGORY"
     echo "$services" | python3 -c "
 import sys, json
-services = json.load(sys.stdin)
+raw = json.loads(sys.stdin.read(), strict=False)
+services = raw.get('data', raw) if isinstance(raw, dict) else raw
 for s in sorted(services, key=lambda x: (x.get('category',{}).get('name',''), x.get('name',''))):
     cat = s.get('category', {})
     cat_name = cat.get('name', '') if isinstance(cat, dict) else ''
@@ -275,7 +277,7 @@ main() {
 
     # Extract service name or targets
     case "$cmd" in
-        up|down|restart|rebuild|logs|compose)
+        up|down|restart|rebuild|logs|status|compose)
             [[ -n "$1" && "$1" != -* ]] && { service_name="$1"; shift; }
             ;;
         start|stop)
