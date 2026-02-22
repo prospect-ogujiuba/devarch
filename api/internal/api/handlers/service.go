@@ -882,6 +882,15 @@ func (h *ServiceHandler) Start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ensure network exists before compose up
+	netLabels := map[string]string{
+		"devarch.managed_by": "devarch",
+	}
+	if err := h.containerClient.CreateNetwork("microservices-net", netLabels); err != nil {
+		respond.InternalError(w, r, err)
+		return
+	}
+
 	// Materialize config files before starting
 	if h.projectRoot != "" {
 		if err := h.generator.MaterializeConfigFiles(s, h.projectRoot); err != nil {
