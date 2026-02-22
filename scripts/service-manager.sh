@@ -7,6 +7,7 @@
 
 SCRIPT_NAME="${0##*/}"
 API_BASE="http://localhost:8550/api/v1"
+DEVARCH_API_KEY="${DEVARCH_API_KEY:-test}"
 
 # Source config for runtime detection (container commands, network)
 . "$(dirname "$0")/config.sh"
@@ -25,7 +26,7 @@ warn() { printf "\033[33mWARN\033[0m %s\n" "$1"; }
 
 api_get() {
     local response
-    response=$(curl -sf "$API_BASE$1" 2>/dev/null)
+    response=$(curl -sf -H "X-API-Key: $DEVARCH_API_KEY" "$API_BASE$1" 2>/dev/null)
     if [[ $? -ne 0 ]]; then
         err "API unreachable at $API_BASE — is devarch-api running?"
         exit 1
@@ -35,7 +36,7 @@ api_get() {
 
 api_post() {
     local response
-    response=$(curl -sf -X POST "$API_BASE$1" 2>/dev/null)
+    response=$(curl -sf -X POST -H "X-API-Key: $DEVARCH_API_KEY" "$API_BASE$1" 2>/dev/null)
     if [[ $? -ne 0 ]]; then
         err "API request failed: POST $1"
         return 1
@@ -45,7 +46,7 @@ api_post() {
 
 api_post_json() {
     local response
-    response=$(curl -sf -X POST -H "Content-Type: application/json" -d "$2" "$API_BASE$1" 2>/dev/null)
+    response=$(curl -sf -X POST -H "X-API-Key: $DEVARCH_API_KEY" -H "Content-Type: application/json" -d "$2" "$API_BASE$1" 2>/dev/null)
     if [[ $? -ne 0 ]]; then
         err "API request failed: POST $1"
         return 1
@@ -153,7 +154,7 @@ cmd_logs() {
             eval "$CONTAINER_CMD logs -f --tail $tail $name" 2>/dev/null || \
             err "cannot follow logs for $name"
     else
-        curl -sf "$API_BASE/services/$name/logs?tail=$tail" 2>/dev/null || err "failed to get logs for $name"
+        curl -sf -H "X-API-Key: $DEVARCH_API_KEY" "$API_BASE/services/$name/logs?tail=$tail" 2>/dev/null || err "failed to get logs for $name"
     fi
 }
 
@@ -232,7 +233,7 @@ cmd_stop_category() {
 cmd_compose() {
     local name="$1"
     [[ -z "$name" ]] && { err "compose requires service name"; exit 1; }
-    curl -sf "$API_BASE/services/$name/compose" 2>/dev/null || err "failed to get compose for $name"
+    curl -sf -H "X-API-Key: $DEVARCH_API_KEY" "$API_BASE/services/$name/compose" 2>/dev/null || err "failed to get compose for $name"
 }
 
 cmd_check() {
@@ -244,7 +245,7 @@ cmd_check() {
     [[ "$has_runtime" == "false" ]] && { err "No container runtime"; exit_code=1; }
 
     # Check API
-    curl -sf "$API_BASE/services?limit=1" >/dev/null 2>&1 && \
+    curl -sf -H "X-API-Key: $DEVARCH_API_KEY" "$API_BASE/services?limit=1" >/dev/null 2>&1 && \
         printf "\033[32m+\033[0m api at %s\n" "$API_BASE" || \
         { printf "\033[31m!\033[0m api unreachable at %s\n" "$API_BASE"; exit_code=1; }
 
