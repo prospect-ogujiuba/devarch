@@ -25,6 +25,8 @@ services:
       custom/http_top.conf: /data/nginx/custom/http_top.conf
       custom/root_top.conf: /data/nginx/custom/root_top.conf
       custom/server_proxy.conf: /data/nginx/custom/server_proxy.conf
+      certs/local.crt: /etc/ssl/certs/local.crt
+      certs/local.key: /etc/ssl/private/local.key
     container_name: nginx-proxy-manager
 volumes:
   npm_data: null
