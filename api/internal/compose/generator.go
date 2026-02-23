@@ -124,7 +124,12 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 	g.db.QueryRow(`SELECT c.name FROM categories c JOIN services s ON s.category_id = c.id WHERE s.id = $1`, service.ID).Scan(&categoryName)
 
 	for _, vol := range service.Volumes {
-		source := g.resolveRelativePath(vol.Source, categoryName)
+		var source string
+		if vol.VolumeType == "bind" {
+			source = g.resolveBindMountPath(vol.Source, categoryName, service.Name)
+		} else {
+			source = vol.Source
+		}
 		volStr := fmt.Sprintf("%s:%s", source, vol.Target)
 		if vol.ReadOnly {
 			volStr += ":ro"
@@ -528,6 +533,29 @@ func (g *Generator) resolveBuildContextPath(source, categoryName string) string 
 		return source
 	}
 	base := filepath.Join(root, "apps", categoryName)
+	return filepath.Clean(filepath.Join(base, source))
+}
+
+// resolveBindMountPath resolves bind mount source paths to absolute host paths.
+// Sources may be stored as-is from compose templates (e.g. "../../../apps" relative to
+// services-library/{category}/{service}/), so we resolve against that origin.
+func (g *Generator) resolveBindMountPath(source, categoryName, serviceName string) string {
+	if source == "" {
+		return source
+	}
+	if filepath.IsAbs(source) {
+		return g.rewriteContainerPath(source)
+	}
+	if g.hostProjectRoot == "" {
+		return source
+	}
+	// Materialized config paths
+	if strings.HasPrefix(source, ".runtime/compose/") {
+		return filepath.Join(g.hostProjectRoot, "api", source)
+	}
+	// Resolve relative to the original compose file location:
+	// services-library/{category}/{service}/
+	base := filepath.Join(g.hostProjectRoot, "services-library", categoryName, serviceName)
 	return filepath.Clean(filepath.Join(base, source))
 }
 

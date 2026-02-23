@@ -218,10 +218,6 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 			})
 		})
 
-		r.Route("/containers/{name}", func(r chi.Router) {
-			r.Get("/exec", execHandler.Handle)
-		})
-
 		r.Route("/images", func(r chi.Router) {
 			r.Get("/", imageHandler.List)
 			r.Get("/inspect", imageHandler.Inspect)
@@ -322,6 +318,8 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 			})
 		})
 	})
+
+	r.Get("/api/v1/containers/{name}/exec", execHandler.Handle)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
