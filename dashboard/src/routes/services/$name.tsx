@@ -352,7 +352,7 @@ function ServiceDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <TerminalDialog containerName={ctrl.service.name} open={terminalOpen} onOpenChange={setTerminalOpen} />
+      <TerminalDialog containerName={ctrl.service.container_name_template || ctrl.service.name} open={terminalOpen} onOpenChange={setTerminalOpen} />
     </div>
   )
 }
