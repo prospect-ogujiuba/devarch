@@ -47,8 +47,8 @@ typeset -A DB_CONFIG
 DB_CONFIG=(
     [host]="mariadb"
     [name]=""  # Will be set to site name
-    [user]="root"
-    [password]="admin1234567"
+    [user]="${MYSQL_USER:-root}"
+    [password]="${MYSQL_ROOT_PASSWORD:-admin1234567}"
 )
 
 # WordPress admin configuration
