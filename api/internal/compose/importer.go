@@ -125,7 +125,7 @@ func (i *Importer) importCategoryServices(category string) error {
 		}
 
 		svcDir := filepath.Join(categoryDir, entry.Name())
-		ymlPath := filepath.Join(svcDir, entry.Name()+".yml")
+		ymlPath := filepath.Join(svcDir, "compose.yml")
 		if _, err := os.Stat(ymlPath); err != nil {
 			continue
 		}
@@ -540,7 +540,7 @@ func (i *Importer) resolveDependencies() error {
 				continue
 			}
 
-			ymlPath := filepath.Join(categoryDir, entry.Name(), entry.Name()+".yml")
+			ymlPath := filepath.Join(categoryDir, entry.Name(), "compose.yml")
 			services, err := ParseFileAll(ymlPath)
 			if err != nil {
 				continue
