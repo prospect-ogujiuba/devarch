@@ -134,7 +134,7 @@ EOF
         done
 
         if [[ -z "$domains" ]]; then
-            local filename=$(basename "$compose_file" .yml)
+            local filename=$(basename "$(dirname "$compose_file")")
             case "$filename" in mariadb|mysql|postgres|mongodb|redis|elasticsearch|logstash) ;; 
             *) compose_domains+=("${filename}.test") ;; 
             esac

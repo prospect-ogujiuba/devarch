@@ -32,7 +32,7 @@ echo "Initializing databases in MariaDB..."
 # Check if MariaDB is running
 if ! $CONTAINER_CMD ps | grep -q mariadb; then
     echo "Error: MariaDB container is not running. Start it first:"
-    echo "  $COMPOSE_CMD -f services-library/database/mariadb/mariadb.yml up -d"
+    echo "  $COMPOSE_CMD -f services-library/database/mariadb/compose.yml up -d"
     exit 1
 fi
 
