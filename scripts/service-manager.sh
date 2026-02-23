@@ -189,7 +189,7 @@ cmd_status() {
         data=$(api_get "/services/$name/status")
         [[ $? -ne 0 ]] && return 1
         local status
-        status=$(echo "$data" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','unknown'))" 2>/dev/null || echo "$data")
+        status=$(echo "$data" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('status','unknown'))" 2>/dev/null || echo "$data")
         printf "%-20s %s\n" "$name" "$status"
     else
         printf "\033[1m%-20s %-12s %s\033[0m\n" "SERVICE" "STATUS" "CATEGORY"

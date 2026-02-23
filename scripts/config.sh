@@ -167,7 +167,7 @@ get_service_status() {
         echo "unknown"
         return 1
     fi
-    echo "$_response" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','unknown'))" 2>/dev/null || echo "unknown"
+    echo "$_response" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('status','unknown'))" 2>/dev/null || echo "unknown"
 }
 
 # Usage: start_single_service <service-name>
