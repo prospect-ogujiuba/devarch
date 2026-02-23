@@ -9,6 +9,7 @@ services:
     volumes:
     - npm_data:/data
     - npm_letsencrypt:/etc/letsencrypt
+    - ../../../apps:/var/www/html:ro
     healthcheck:
       test:
       - CMD-SHELL
