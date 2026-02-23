@@ -167,11 +167,9 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:         ":" + port,
-		Handler:      router,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Addr:        ":" + port,
+		Handler:     router,
+		IdleTimeout: 60 * time.Second,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
