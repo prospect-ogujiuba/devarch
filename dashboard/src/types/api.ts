@@ -86,6 +86,7 @@ export interface Service {
   restart_policy: string
   command?: string
   user_spec?: string
+  container_name_template?: string
   enabled: boolean
   created_at: string
   updated_at: string
