@@ -7,13 +7,20 @@ import { createWrapper } from '@/test/test-utils'
 
 vi.mock('./queries')
 vi.mock('@/features/services/queries')
+vi.mock('@/features/proxy/queries')
 
-import { useInstance, useUpdateInstance } from './queries'
+import { useInstance, useUpdateInstance, useStopInstance, useStartInstance, useRestartInstance, useInstanceCompose } from './queries'
 import { useService } from '@/features/services/queries'
+import { useGenerateInstanceProxyConfig } from '@/features/proxy/queries'
 
 describe('useInstanceDetailController', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(useInstanceCompose).mockReturnValue({ data: undefined, isLoading: false } as any)
+    vi.mocked(useStopInstance).mockReturnValue({ mutate: vi.fn(), isPending: false } as any)
+    vi.mocked(useStartInstance).mockReturnValue({ mutate: vi.fn(), isPending: false } as any)
+    vi.mocked(useRestartInstance).mockReturnValue({ mutate: vi.fn(), isPending: false } as any)
+    vi.mocked(useGenerateInstanceProxyConfig).mockReturnValue({ mutate: vi.fn(), isPending: false } as any)
   })
 
   describe('data passthrough', () => {
