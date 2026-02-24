@@ -1,5 +1,8 @@
 networks:
   microservices-net:
+  proxy-net:
+    name: microservices-net
+    external: true
 
 volumes:
   devarch_pgdata:
@@ -56,6 +59,7 @@ services:
       - ${HOME}/.devarch:/root/.devarch
     networks:
       - microservices-net
+      - proxy-net
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
       interval: 30s
@@ -76,3 +80,4 @@ services:
       - "127.0.0.1:5174:80"
     networks:
       - microservices-net
+      - proxy-net
