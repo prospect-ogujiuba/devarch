@@ -44,7 +44,16 @@ export function OverrideDependencies({ instance, templateData, stackName, instan
   const cancel = () => setEditing(false)
 
   const save = () => {
-    updateDeps.mutate(drafts, { onSuccess: () => setEditing(false) })
+    const draftDeps = new Set(drafts.map((d) => d.depends_on))
+    const preserved = templateDeps
+      .filter((dep) => !draftDeps.has(dep))
+      .map((dep) => ({
+        depends_on: dep,
+        condition: 'service_started',
+      }))
+    updateDeps.mutate([...preserved, ...drafts], {
+      onSuccess: () => setEditing(false),
+    })
   }
 
   const resetAll = () => {

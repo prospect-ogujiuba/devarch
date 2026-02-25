@@ -23,7 +23,11 @@ export function OverrideNetworks({ instance, templateData, stackName, instanceId
   const updateNetworks = useUpdateInstanceNetworks(stackName, instanceId)
 
   const save = () => {
-    updateNetworks.mutate(section.drafts, { onSuccess: () => section.setEditing(false) })
+    const draftSet = new Set(section.drafts)
+    const preserved = templateNetworks.filter((n) => !draftSet.has(n))
+    updateNetworks.mutate([...preserved, ...section.drafts], {
+      onSuccess: () => section.setEditing(false),
+    })
   }
 
   const resetAll = () => {

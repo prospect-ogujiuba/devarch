@@ -40,7 +40,17 @@ export function OverrideEnvVars({ instance, templateData, stackName, instanceId 
   const updateEnvVars = useUpdateInstanceEnvVars(stackName, instanceId)
 
   const save = () => {
-    updateEnvVars.mutate(section.drafts, { onSuccess: () => section.setEditing(false) })
+    const draftKeys = new Set(section.drafts.map((d) => d.key))
+    const preserved = templateEnvVars
+      .filter((e) => !draftKeys.has(e.key))
+      .map((e) => ({
+        key: e.key,
+        value: e.value ?? '',
+        is_secret: e.is_secret,
+      }))
+    updateEnvVars.mutate([...preserved, ...section.drafts], {
+      onSuccess: () => section.setEditing(false),
+    })
   }
 
   const resetAll = () => {

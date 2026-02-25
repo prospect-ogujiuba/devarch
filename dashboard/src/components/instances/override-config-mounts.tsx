@@ -41,7 +41,18 @@ export function OverrideConfigMounts({ instance, templateData, stackName, instan
   const updateConfigMounts = useUpdateInstanceConfigMounts(stackName, instanceId)
 
   const save = () => {
-    updateConfigMounts.mutate(section.drafts, { onSuccess: () => section.setEditing(false) })
+    const draftTargets = new Set(section.drafts.map((d) => d.target_path))
+    const preserved = templateConfigMounts
+      .filter((m) => !draftTargets.has(m.target_path))
+      .map((m) => ({
+        config_file_id: m.config_file_id,
+        source_path: m.source_path,
+        target_path: m.target_path,
+        readonly: m.readonly,
+      }))
+    updateConfigMounts.mutate([...preserved, ...section.drafts], {
+      onSuccess: () => section.setEditing(false),
+    })
   }
 
   const resetAll = () => {

@@ -41,13 +41,25 @@ export function OverridePorts({ instance, templateData, stackName, instanceId }:
   const updatePorts = useUpdateInstancePorts(stackName, instanceId)
 
   const save = () => {
+    const draftContainerPorts = new Set(section.drafts.map((d) => parseInt(d.container_port, 10)))
+    const preserved = templatePorts
+      .filter((p) => !draftContainerPorts.has(p.container_port))
+      .map((p) => ({
+        host_ip: p.host_ip,
+        host_port: p.host_port,
+        container_port: p.container_port,
+        protocol: p.protocol || 'tcp',
+      }))
     updatePorts.mutate(
-      section.drafts.map((d) => ({
-        host_ip: d.host_ip,
-        host_port: parseInt(d.host_port, 10) || 0,
-        container_port: parseInt(d.container_port, 10) || 0,
-        protocol: d.protocol || 'tcp',
-      })),
+      [
+        ...preserved,
+        ...section.drafts.map((d) => ({
+          host_ip: d.host_ip,
+          host_port: parseInt(d.host_port, 10) || 0,
+          container_port: parseInt(d.container_port, 10) || 0,
+          protocol: d.protocol || 'tcp',
+        })),
+      ],
       { onSuccess: () => section.setEditing(false) },
     )
   }

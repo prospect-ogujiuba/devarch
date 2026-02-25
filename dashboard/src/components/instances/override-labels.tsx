@@ -47,7 +47,16 @@ export function OverrideLabels({ instance, templateData, stackName, instanceId }
       setError('Cannot create labels with "devarch." prefix (system-managed)')
       return
     }
-    updateLabels.mutate(section.drafts, { onSuccess: () => section.setEditing(false) })
+    const draftKeys = new Set(section.drafts.map((d) => d.key))
+    const preserved = customTemplateLabels
+      .filter((l) => !draftKeys.has(l.key))
+      .map((l) => ({
+        key: l.key,
+        value: l.value,
+      }))
+    updateLabels.mutate([...preserved, ...section.drafts], {
+      onSuccess: () => section.setEditing(false),
+    })
   }
 
   const resetAll = () => {
