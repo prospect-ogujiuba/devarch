@@ -89,7 +89,7 @@ func (h *InstanceHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.containerClient.StopContainer(containerName); err != nil {
-		respond.InternalError(w, r, fmt.Errorf("failed to stop instance: %w", err))
+		respond.ContainerError(w, r, fmt.Errorf("failed to stop instance: %w", err))
 		return
 	}
 
@@ -133,7 +133,7 @@ func (h *InstanceHandler) Start(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.containerClient.StartComposeService(projectName, yamlBytes, instanceName); err != nil {
-		respond.InternalError(w, r, fmt.Errorf("failed to start instance: %w", err))
+		respond.ContainerError(w, r, fmt.Errorf("failed to start instance: %w", err))
 		return
 	}
 
@@ -177,7 +177,7 @@ func (h *InstanceHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.containerClient.RestartComposeService(projectName, yamlBytes, instanceName); err != nil {
-		respond.InternalError(w, r, fmt.Errorf("failed to restart instance: %w", err))
+		respond.ContainerError(w, r, fmt.Errorf("failed to restart instance: %w", err))
 		return
 	}
 
