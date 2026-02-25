@@ -159,12 +159,19 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 
 	svc.EnvFile = service.EnvFiles
 
-	// Load and merge config mounts into volumes
-	configMounts, err := g.loadConfigMounts(service.ID, categoryName)
+	// Load and merge config mounts into volumes (config mounts override template volumes with same target)
+	configMounts, err := g.loadConfigMounts(service.ID, categoryName, service.Name)
 	if err != nil {
 		return nil, fmt.Errorf("load config mounts: %w", err)
 	}
-	svc.Volumes = append(svc.Volumes, configMounts...)
+	if len(configMounts) > 0 {
+		mountTargets := make(map[string]bool, len(configMounts))
+		for _, m := range configMounts {
+			mountTargets[extractVolumeTarget(m)] = true
+		}
+		svc.Volumes = filterVolumesByTarget(svc.Volumes, mountTargets)
+		svc.Volumes = append(svc.Volumes, configMounts...)
+	}
 
 	svc.DependsOn = service.Dependencies
 
@@ -211,7 +218,7 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 							if volName != "" && namedVolumes[volName] == nil {
 								namedVolumes[volName] = nil
 							}
-							volList[i] = g.resolveRelativeVolStr(volStr, categoryName)
+							volList[i] = g.resolveRelativeVolStr(volStr, categoryName, service.Name)
 						}
 					}
 					overrides["volumes"] = volList
@@ -380,7 +387,7 @@ func (g *Generator) loadServiceRelations(service *models.Service) error {
 	return nil
 }
 
-func (g *Generator) loadConfigMounts(serviceID int, categoryName string) ([]string, error) {
+func (g *Generator) loadConfigMounts(serviceID int, categoryName, serviceName string) ([]string, error) {
 	rows, err := g.db.Query(`
 		SELECT scm.source_path, scm.target_path, scm.readonly, scf.file_path
 		FROM service_config_mounts scm
@@ -405,10 +412,10 @@ func (g *Generator) loadConfigMounts(serviceID int, categoryName string) ([]stri
 		var resolvedSource string
 		if configFilePath.Valid {
 			resolvedSource = filepath.Join(".runtime", "compose", "preview", categoryName, g.getServiceName(serviceID), configFilePath.String)
-			resolvedSource = g.resolveRelativePath(resolvedSource, categoryName)
+			resolvedSource = g.resolveRelativePath(resolvedSource, categoryName, serviceName)
 		} else {
 			// Use raw source_path for NULL config_file_id
-			resolvedSource = g.resolveRelativePath(sourcePath, categoryName)
+			resolvedSource = g.resolveRelativePath(sourcePath, categoryName, serviceName)
 		}
 
 		mountStr := fmt.Sprintf("%s:%s", resolvedSource, targetPath)
@@ -559,7 +566,7 @@ func (g *Generator) resolveBindMountPath(source, categoryName, serviceName strin
 	return filepath.Clean(filepath.Join(base, source))
 }
 
-func (g *Generator) resolveRelativePath(source, categoryName string) string {
+func (g *Generator) resolveRelativePath(source, categoryName, serviceName string) string {
 	if g.hostProjectRoot == "" {
 		return source
 	}
@@ -580,22 +587,40 @@ func (g *Generator) resolveRelativePath(source, categoryName string) string {
 	if categoryName == "" {
 		return source
 	}
-	base := filepath.Join(g.hostProjectRoot, "apps", categoryName)
+	base := filepath.Join(g.hostProjectRoot, "services-library", categoryName, serviceName)
 	return filepath.Clean(filepath.Join(base, source))
 }
 
 // resolveRelativeVolStr resolves relative bind mount paths within a volume string (source:target[:opts]).
-func (g *Generator) resolveRelativeVolStr(volStr, categoryName string) string {
+func (g *Generator) resolveRelativeVolStr(volStr, categoryName, serviceName string) string {
 	parts := strings.SplitN(volStr, ":", 3)
 	if len(parts) < 2 {
 		return volStr
 	}
-	resolved := g.resolveRelativePath(parts[0], categoryName)
+	resolved := g.resolveRelativePath(parts[0], categoryName, serviceName)
 	parts[0] = resolved
 	return strings.Join(parts, ":")
 }
 
 // extractNamedVolume checks if a volume string is a named volume and returns the name
+func extractVolumeTarget(volStr string) string {
+	parts := strings.Split(volStr, ":")
+	if len(parts) >= 2 {
+		return parts[1]
+	}
+	return ""
+}
+
+func filterVolumesByTarget(volumes []string, excludeTargets map[string]bool) []string {
+	var result []string
+	for _, v := range volumes {
+		if !excludeTargets[extractVolumeTarget(v)] {
+			result = append(result, v)
+		}
+	}
+	return result
+}
+
 func extractNamedVolume(volStr string) string {
 	parts := strings.Split(volStr, ":")
 	if len(parts) < 2 {

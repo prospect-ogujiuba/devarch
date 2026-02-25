@@ -214,7 +214,7 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 		}
 
 		for _, v := range cfg.volumes {
-			source := g.resolveStackVolumePath(v.source, stackName, inst.instanceID, inst.categoryName)
+			source := g.resolveStackVolumePath(v.source, stackName, inst.instanceID, inst.categoryName, inst.templateName)
 			volStr := fmt.Sprintf("%s:%s", source, v.target)
 			if v.readOnly {
 				volStr += ":ro"
@@ -249,23 +249,27 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 
 		svc.EnvFile = cfg.envFiles
 
-		// Merge config mounts into volumes
-		for _, mount := range cfg.configMounts {
-			var resolvedSource string
-			if mount.configFilePath.Valid {
-				// Resolve to materialized path: .runtime/compose/stacks/{stackName}/{instanceID}/{file_path}
-				resolvedSource = filepath.Join(".runtime", "compose", "stacks", stackName, inst.instanceID, mount.configFilePath.String)
-				resolvedSource = g.resolveStackVolumePath(resolvedSource, stackName, inst.instanceID, inst.categoryName)
-			} else {
-				// Use raw source_path for NULL config_file_id
-				resolvedSource = g.resolveStackVolumePath(mount.sourcePath, stackName, inst.instanceID, inst.categoryName)
+		// Merge config mounts into volumes (config mounts override template volumes with same target)
+		if len(cfg.configMounts) > 0 {
+			mountTargets := make(map[string]bool, len(cfg.configMounts))
+			var configMountStrs []string
+			for _, mount := range cfg.configMounts {
+				var resolvedSource string
+				if mount.configFilePath.Valid {
+					resolvedSource = filepath.Join(".runtime", "compose", "stacks", stackName, inst.instanceID, mount.configFilePath.String)
+					resolvedSource = g.resolveStackVolumePath(resolvedSource, stackName, inst.instanceID, inst.categoryName, inst.templateName)
+				} else {
+					resolvedSource = g.resolveStackVolumePath(mount.sourcePath, stackName, inst.instanceID, inst.categoryName, inst.templateName)
+				}
+				mountStr := fmt.Sprintf("%s:%s", resolvedSource, mount.targetPath)
+				if mount.readonly {
+					mountStr += ":ro"
+				}
+				mountTargets[mount.targetPath] = true
+				configMountStrs = append(configMountStrs, mountStr)
 			}
-
-			mountStr := fmt.Sprintf("%s:%s", resolvedSource, mount.targetPath)
-			if mount.readonly {
-				mountStr += ":ro"
-			}
-			svc.Volumes = append(svc.Volumes, mountStr)
+			svc.Volumes = filterVolumesByTarget(svc.Volumes, mountTargets)
+			svc.Volumes = append(svc.Volumes, configMountStrs...)
 		}
 
 		labelKeys := make([]string, 0, len(cfg.labels))
@@ -339,7 +343,7 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 						if volName != "" && namedVolumes[volName] == nil {
 							namedVolumes[volName] = nil
 						}
-						volList[i] = g.resolveStackVolumePath(volStr, stackName, id, categoryNames[id])
+						volList[i] = g.resolveStackVolumePath(volStr, stackName, id, categoryNames[id], templateNames[id])
 					}
 				}
 			}
@@ -1134,14 +1138,14 @@ func (g *Generator) loadEffectiveConfigMounts(instancePK, templateServiceID int)
 	return mounts, rows.Err()
 }
 
-func (g *Generator) resolveStackVolumePath(source, stackName, instanceID, categoryName string) string {
+func (g *Generator) resolveStackVolumePath(source, stackName, instanceID, categoryName, templateName string) string {
 	if strings.HasPrefix(source, ".runtime/compose/stacks/") {
 		if g.hostProjectRoot != "" {
 			return filepath.Join(g.hostProjectRoot, "api", source)
 		}
 		return source
 	}
-	return g.resolveRelativePath(source, categoryName)
+	return g.resolveRelativePath(source, categoryName, templateName)
 }
 
 func (g *Generator) loadResourceLimits(instancePK int) (*deployConfig, error) {
