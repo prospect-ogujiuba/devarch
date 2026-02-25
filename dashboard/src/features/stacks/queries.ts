@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { api, getErrorMessage } from '@/lib/api'
@@ -146,6 +147,7 @@ export function useEnableStack() {
       const response = await api.post(`/stacks/${name}/enable`)
       return response.data
     },
+    loadingMessage: (name) => `Enabling ${name}...`,
     successMessage: (name) => `Enabled ${name}`,
     errorMessage: (error, name) => getErrorMessage(error, `Failed to enable ${name}`),
     invalidate: [['stacks']],
@@ -158,6 +160,7 @@ export function useDisableStack() {
       const response = await api.post(`/stacks/${name}/disable`)
       return response.data
     },
+    loadingMessage: (name) => `Disabling ${name}...`,
     successMessage: (name) => `Disabled ${name}`,
     errorMessage: (error, name) => getErrorMessage(error, `Failed to disable ${name}`),
     invalidate: [['stacks']],
@@ -224,6 +227,7 @@ export function useStopStack() {
       const response = await api.post(`/stacks/${name}/stop`)
       return response.data
     },
+    loadingMessage: (name) => `Stopping ${name}...`,
     successMessage: (name) => `Stopped ${name}`,
     errorMessage: (error, name) => getErrorMessage(error, `Failed to stop ${name}`),
     invalidate: [['stacks']],
@@ -236,6 +240,7 @@ export function useStartStack() {
       const response = await api.post(`/stacks/${name}/start`)
       return response.data
     },
+    loadingMessage: (name) => `Starting ${name}...`,
     successMessage: (name) => `Started ${name}`,
     errorMessage: (error, name) => getErrorMessage(error, `Failed to start ${name}`),
     invalidate: [['stacks']],
@@ -248,6 +253,7 @@ export function useRestartStack() {
       const response = await api.post(`/stacks/${name}/restart`)
       return response.data
     },
+    loadingMessage: (name) => `Restarting ${name}...`,
     successMessage: (name) => `Restarted ${name}`,
     errorMessage: (error, name) => getErrorMessage(error, `Failed to restart ${name}`),
     invalidate: [['stacks']],
@@ -261,6 +267,7 @@ export function useCreateNetwork() {
       const response = await api.post(`/stacks/${name}/network`)
       return response.data
     },
+    loadingMessage: (name) => `Creating network for ${name}...`,
     successMessage: (name) => `Network created for ${name}`,
     errorMessage: (error, name) => getErrorMessage(error, `Failed to create network for ${name}`),
     invalidate: [['stacks']],
@@ -278,6 +285,7 @@ export function useRemoveNetwork() {
       const response = await api.delete(`/stacks/${name}/network`)
       return response.data
     },
+    loadingMessage: (name) => `Removing network for ${name}...`,
     successMessage: (name) => `Network removed for ${name}`,
     errorMessage: (error, name) => getErrorMessage(error, `Failed to remove network for ${name}`),
     invalidate: [['stacks']],
@@ -289,26 +297,40 @@ export function useRemoveNetwork() {
 }
 
 export function useGeneratePlan(name: string) {
+  const toastIdRef = useRef<string | number | undefined>(undefined)
   return useMutation({
     mutationFn: async () => {
       const response = await api.get<StackPlan>(`/stacks/${name}/plan`)
       return response.data
     },
+    onMutate: () => {
+      toastIdRef.current = toast.loading('Generating deploy plan...')
+    },
+    onSuccess: () => {
+      toast.success('Deploy plan ready', { id: toastIdRef.current })
+      toastIdRef.current = undefined
+    },
     onError: (error) => {
-      toast.error(getErrorMessage(error, 'Failed to generate plan'))
+      toast.error(getErrorMessage(error, 'Failed to generate plan'), { id: toastIdRef.current })
+      toastIdRef.current = undefined
     },
   })
 }
 
 export function useApplyPlan(name: string) {
   const queryClient = useQueryClient()
+  const toastIdRef = useRef<string | number | undefined>(undefined)
   return useMutation({
     mutationFn: async ({ token }: { token: string }) => {
       const response = await api.post<ApplyResult>(`/stacks/${name}/apply`, { token })
       return response.data
     },
+    onMutate: () => {
+      toastIdRef.current = toast.loading('Deploying stack...')
+    },
     onSuccess: () => {
-      toast.success('Stack deployed')
+      toast.success('Stack deployed', { id: toastIdRef.current })
+      toastIdRef.current = undefined
       queryClient.invalidateQueries({ queryKey: ['stacks', name] })
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', name, 'compose'] })
@@ -318,26 +340,33 @@ export function useApplyPlan(name: string) {
       if (error && typeof error === 'object' && 'response' in error) {
         const resp = (error as Record<string, unknown>).response as Record<string, unknown> | undefined
         if (!resp) {
-          toast.error(getErrorMessage(error, 'Apply failed'))
+          toast.error(getErrorMessage(error, 'Apply failed'), { id: toastIdRef.current })
+          toastIdRef.current = undefined
           return
         }
         if (resp.status === 409) {
-          toast.error('Plan is stale or another operation in progress. Regenerate plan.')
+          toast.error('Plan is stale or another operation in progress. Regenerate plan.', { id: toastIdRef.current })
+          toastIdRef.current = undefined
           return
         }
       }
-      toast.error(getErrorMessage(error, 'Apply failed'))
+      toast.error(getErrorMessage(error, 'Apply failed'), { id: toastIdRef.current })
+      toastIdRef.current = undefined
     },
   })
 }
 
 export function useExportStack(name: string) {
+  const toastIdRef = useRef<string | number | undefined>(undefined)
   return useMutation({
     mutationFn: async () => {
       const response = await api.get(`/stacks/${name}/export`, {
         responseType: 'blob',
       })
       return response.data
+    },
+    onMutate: () => {
+      toastIdRef.current = toast.loading('Exporting stack...')
     },
     onSuccess: (blob) => {
       const url = URL.createObjectURL(blob)
@@ -346,15 +375,19 @@ export function useExportStack(name: string) {
       a.download = `${name}-devarch.yml`
       a.click()
       URL.revokeObjectURL(url)
+      toast.success('Stack exported', { id: toastIdRef.current })
+      toastIdRef.current = undefined
     },
     onError: () => {
-      toast.error('Export failed')
+      toast.error('Export failed', { id: toastIdRef.current })
+      toastIdRef.current = undefined
     },
   })
 }
 
 export function useImportStack() {
   const queryClient = useQueryClient()
+  const toastIdRef = useRef<string | number | undefined>(undefined)
   return useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData()
@@ -366,10 +399,14 @@ export function useImportStack() {
       })
       return response.data
     },
+    onMutate: () => {
+      toastIdRef.current = toast.loading('Importing stack...')
+    },
     onSuccess: (result) => {
       const createdCount = result.created.length
       const updatedCount = result.updated.length
-      toast.success(`Imported stack. Created: ${createdCount}, Updated: ${updatedCount}`)
+      toast.success(`Imported stack. Created: ${createdCount}, Updated: ${updatedCount}`, { id: toastIdRef.current })
+      toastIdRef.current = undefined
       queryClient.invalidateQueries({ queryKey: ['stacks'] })
       queryClient.invalidateQueries({ queryKey: ['stacks', result.stack_name] })
     },
@@ -379,10 +416,12 @@ export function useImportStack() {
           ? (error.response.data as Record<string, unknown>).max_bytes
           : undefined
         const maxMB = typeof maxBytes === 'number' ? Math.round(maxBytes / (1024 * 1024)) : 256
-        toast.error(`Import file is too large. Max allowed is ${maxMB}MB.`)
+        toast.error(`Import file is too large. Max allowed is ${maxMB}MB.`, { id: toastIdRef.current })
+        toastIdRef.current = undefined
         return
       }
-      toast.error(getErrorMessage(error, 'Import failed'))
+      toast.error(getErrorMessage(error, 'Import failed'), { id: toastIdRef.current })
+      toastIdRef.current = undefined
     },
   })
 }

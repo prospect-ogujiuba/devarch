@@ -185,6 +185,7 @@ export function useStopInstance(stackName: string, instanceId: string) {
       const response = await api.post(`/stacks/${stackName}/instances/${instanceId}/stop`)
       return response.data
     },
+    loadingMessage: `Stopping ${instanceId}...`,
     successMessage: `Stopped ${instanceId}`,
     errorMessage: (error) => getErrorMessage(error, `Failed to stop ${instanceId}`),
     invalidate: [
@@ -200,6 +201,7 @@ export function useStartInstance(stackName: string, instanceId: string) {
       const response = await api.post(`/stacks/${stackName}/instances/${instanceId}/start`)
       return response.data
     },
+    loadingMessage: `Starting ${instanceId}...`,
     successMessage: `Started ${instanceId}`,
     errorMessage: (error) => getErrorMessage(error, `Failed to start ${instanceId}`),
     invalidate: [
@@ -215,6 +217,7 @@ export function useRestartInstance(stackName: string, instanceId: string) {
       const response = await api.post(`/stacks/${stackName}/instances/${instanceId}/restart`)
       return response.data
     },
+    loadingMessage: `Restarting ${instanceId}...`,
     successMessage: `Restarted ${instanceId}`,
     errorMessage: (error) => getErrorMessage(error, `Failed to restart ${instanceId}`),
     invalidate: [
