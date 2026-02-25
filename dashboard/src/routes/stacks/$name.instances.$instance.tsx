@@ -100,17 +100,27 @@ function InstanceErrors({ ctrl, stackName, instanceId }: { ctrl: ReturnType<type
     return Array.from(map.values())
   }, [extraCached])
 
-  const dismissCached = (action: string) => {
+  const dismissAll = (action: string) => {
+    const localResets: Record<string, (() => void) | undefined> = {
+      'Start': ctrl.startInstance.reset,
+      'Stop': ctrl.stopInstance.reset,
+      'Restart': ctrl.restartInstance.reset,
+      'Update': ctrl.updateInstance.reset,
+    }
+    localResets[action]?.()
+
     const cache = queryClient.getMutationCache()
     const actionKey = Object.entries(actionLabels).find(([, v]) => v === action)?.[0]
-    if (!actionKey) return
-    cache.findAll({ mutationKey: ['instance', stackName, instanceId, actionKey], status: 'error' }).forEach((m) => m.reset())
+    if (actionKey) {
+      cache.findAll({ mutationKey: ['instance', stackName, instanceId, actionKey] })
+        .forEach((m) => cache.remove(m))
+    }
   }
 
   const allErrors = [
     ...localErrors.map((e) => ({ ...e, source: 'local' as const })),
-    ...uniqueCached.map((e) => ({ ...e, reset: () => dismissCached(e.action), source: 'cached' as const })),
-  ]
+    ...uniqueCached.map((e) => ({ ...e, source: 'cached' as const })),
+  ].map((e) => ({ ...e, reset: () => dismissAll(e.action) }))
 
   if (allErrors.length === 0) return null
 
