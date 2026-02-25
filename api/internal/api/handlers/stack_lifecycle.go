@@ -30,7 +30,7 @@ func (h *StackHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.containerClient.StopStack("devarch-"+name, yamlBytes); err != nil {
-		respond.InternalError(w, r, err)
+		respond.ContainerError(w, r, err)
 		return
 	}
 
@@ -108,7 +108,7 @@ func (h *StackHandler) Start(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.containerClient.StartService("devarch-"+name, yamlBytes); err != nil {
-		respond.InternalError(w, r, err)
+		respond.ContainerError(w, r, err)
 		return
 	}
 
@@ -194,7 +194,7 @@ func (h *StackHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.containerClient.StartService("devarch-"+name, yamlBytes); err != nil {
-		respond.InternalError(w, r, err)
+		respond.ContainerError(w, r, err)
 		return
 	}
 
