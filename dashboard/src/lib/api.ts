@@ -8,6 +8,10 @@ function getObjectErrorMessage(data: unknown): string | null {
 
   const error = (data as Record<string, unknown>).error
   if (typeof error === 'string' && error.trim()) return error
+  if (error && typeof error === 'object') {
+    const nested = (error as Record<string, unknown>).message
+    if (typeof nested === 'string' && nested.trim()) return nested
+  }
 
   const detail = (data as Record<string, unknown>).detail
   if (typeof detail === 'string' && detail.trim()) return detail
