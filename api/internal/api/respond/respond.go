@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 )
 
 // JSON wraps data in a success envelope and encodes to response
@@ -50,6 +51,31 @@ func NotFound(w http.ResponseWriter, r *http.Request, resource, identifier strin
 func InternalError(w http.ResponseWriter, r *http.Request, err error) {
 	slog.Error("internal error", "error", err)
 	Error(w, r, http.StatusInternalServerError, "internal_error", "An internal error occurred", nil)
+}
+
+// ContainerError returns a 500 error with the sanitized container error message visible to the client.
+func ContainerError(w http.ResponseWriter, r *http.Request, err error) {
+	slog.Error("container error", "error", err)
+	Error(w, r, http.StatusInternalServerError, "container_error", sanitizeContainerError(err.Error()), nil)
+}
+
+// sanitizeContainerError strips lines that look like env var assignments to avoid leaking secrets.
+func sanitizeContainerError(raw string) string {
+	var safe []string
+	for _, line := range strings.Split(raw, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		if strings.Contains(trimmed, "=") && !strings.HasPrefix(trimmed, "exit") {
+			continue
+		}
+		safe = append(safe, trimmed)
+	}
+	if len(safe) == 0 {
+		return "Container operation failed"
+	}
+	return strings.Join(safe, "; ")
 }
 
 // Conflict returns a 409 conflict error
