@@ -44,7 +44,19 @@ export function OverrideVolumes({ instance, templateData, stackName, instanceId 
   const updateVolumes = useUpdateInstanceVolumes(stackName, instanceId)
 
   const save = () => {
-    updateVolumes.mutate(section.drafts, { onSuccess: () => section.setEditing(false) })
+    const draftTargets = new Set(section.drafts.map((d) => d.target))
+    const preserved = templateVolumes
+      .filter((v) => !draftTargets.has(v.target))
+      .map((v) => ({
+        volume_type: v.volume_type,
+        source: v.source,
+        target: v.target,
+        read_only: v.read_only,
+        is_external: v.is_external,
+      }))
+    updateVolumes.mutate([...preserved, ...section.drafts], {
+      onSuccess: () => section.setEditing(false),
+    })
   }
 
   const resetAll = () => {
