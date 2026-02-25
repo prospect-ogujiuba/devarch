@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
@@ -53,29 +54,29 @@ func InternalError(w http.ResponseWriter, r *http.Request, err error) {
 	Error(w, r, http.StatusInternalServerError, "internal_error", "An internal error occurred", nil)
 }
 
-// ContainerError returns a 500 error with the sanitized container error message visible to the client.
+// ContainerError returns a 500 error with a short message and full container error details.
 func ContainerError(w http.ResponseWriter, r *http.Request, err error) {
 	slog.Error("container error", "error", err)
-	Error(w, r, http.StatusInternalServerError, "container_error", sanitizeContainerError(err.Error()), nil)
+	msg, detail := splitContainerError(err.Error())
+	Error(w, r, http.StatusInternalServerError, "container_error", msg, detail)
 }
 
-// sanitizeContainerError strips lines that look like env var assignments to avoid leaking secrets.
-func sanitizeContainerError(raw string) string {
-	var safe []string
-	for _, line := range strings.Split(raw, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			continue
-		}
-		if strings.Contains(trimmed, "=") && !strings.HasPrefix(trimmed, "exit") {
-			continue
-		}
-		safe = append(safe, trimmed)
+var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+
+// splitContainerError extracts a short message and cleaned detail from a container error.
+func splitContainerError(raw string) (message, detail string) {
+	cleaned := ansiRegex.ReplaceAllString(raw, "")
+	cleaned = strings.Join(strings.Fields(cleaned), " ")
+	if idx := strings.Index(cleaned, ": "); idx > 0 {
+		message = cleaned[:idx]
+		detail = strings.TrimSpace(cleaned[idx+2:])
+	} else {
+		message = cleaned
 	}
-	if len(safe) == 0 {
-		return "Container operation failed"
+	if message == "" {
+		message = "Container operation failed"
 	}
-	return strings.Join(safe, "; ")
+	return
 }
 
 // Conflict returns a 409 conflict error
