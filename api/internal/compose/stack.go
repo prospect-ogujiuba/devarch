@@ -59,6 +59,7 @@ type stackInstance struct {
 	containerName     string
 	templateServiceID int
 	categoryName      string
+	templateName      string
 }
 
 type stackInstanceConfig struct {
@@ -141,6 +142,7 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 	configs := make(map[string]*stackInstanceConfig)
 	secretKeys := make(map[string]map[string]bool)
 	categoryNames := make(map[string]string)
+	templateNames := make(map[string]string)
 	for _, inst := range instances {
 		if !inst.enabled {
 			continue
@@ -152,6 +154,7 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 		configs[inst.instanceID] = cfg
 		secretKeys[inst.instanceID] = secrets
 		categoryNames[inst.instanceID] = inst.categoryName
+		templateNames[inst.instanceID] = inst.templateName
 	}
 
 	// Build networks map from all instances' networks
@@ -344,10 +347,10 @@ func (g *Generator) GenerateStackWithRedaction(stackName string, redactSecrets b
 		if build, ok := overrides["build"]; ok {
 			if buildMap, ok := build.(map[string]interface{}); ok {
 				if ctx, ok := buildMap["context"].(string); ok {
-					buildMap["context"] = g.resolveBuildContextPath(ctx, categoryNames[id])
+					buildMap["context"] = g.resolveBuildContextPath(ctx, categoryNames[id], templateNames[id])
 				}
 			} else if ctx, ok := build.(string); ok {
-				overrides["build"] = g.resolveBuildContextPath(ctx, categoryNames[id])
+				overrides["build"] = g.resolveBuildContextPath(ctx, categoryNames[id], templateNames[id])
 			}
 		}
 
@@ -425,7 +428,7 @@ func (g *Generator) buildDependsOn(instanceID string, deps []string, enabledMap,
 func (g *Generator) loadStackInstances(stackName string) ([]stackInstance, error) {
 	rows, err := g.db.Query(`
 		SELECT si.id, si.instance_id, si.enabled, si.container_name, si.template_service_id,
-		       COALESCE(c.name, '')
+		       COALESCE(c.name, ''), s.name
 		FROM service_instances si
 		JOIN stacks st ON st.id = si.stack_id
 		JOIN services s ON s.id = si.template_service_id
@@ -442,7 +445,7 @@ func (g *Generator) loadStackInstances(stackName string) ([]stackInstance, error
 	for rows.Next() {
 		var inst stackInstance
 		var containerName sql.NullString
-		if err := rows.Scan(&inst.id, &inst.instanceID, &inst.enabled, &containerName, &inst.templateServiceID, &inst.categoryName); err != nil {
+		if err := rows.Scan(&inst.id, &inst.instanceID, &inst.enabled, &containerName, &inst.templateServiceID, &inst.categoryName, &inst.templateName); err != nil {
 			return nil, err
 		}
 		if containerName.Valid && containerName.String != "" {

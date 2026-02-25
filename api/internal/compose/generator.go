@@ -222,10 +222,10 @@ func (g *Generator) Generate(service *models.Service) ([]byte, error) {
 			if build, ok := overrides["build"]; ok {
 				if buildMap, ok := build.(map[string]interface{}); ok {
 					if ctx, ok := buildMap["context"].(string); ok {
-						buildMap["context"] = g.resolveBuildContextPath(ctx, categoryName)
+						buildMap["context"] = g.resolveBuildContextPath(ctx, categoryName, service.Name)
 					}
 				} else if ctx, ok := build.(string); ok {
-					overrides["build"] = g.resolveBuildContextPath(ctx, categoryName)
+					overrides["build"] = g.resolveBuildContextPath(ctx, categoryName, service.Name)
 				}
 			}
 
@@ -513,7 +513,7 @@ func (g *Generator) rewriteContainerPath(source string) string {
 // resolveBuildContextPath resolves build context paths to container-internal paths.
 // podman-compose runs inside the container and needs local access to the build context
 // to tar it and send it to the host podman daemon via the socket.
-func (g *Generator) resolveBuildContextPath(source, categoryName string) string {
+func (g *Generator) resolveBuildContextPath(source, categoryName, serviceName string) string {
 	if source == "" {
 		return source
 	}
@@ -532,7 +532,7 @@ func (g *Generator) resolveBuildContextPath(source, categoryName string) string 
 	if root == "" || categoryName == "" {
 		return source
 	}
-	base := filepath.Join(root, "apps", categoryName)
+	base := filepath.Join(root, "services-library", categoryName, serviceName)
 	return filepath.Clean(filepath.Join(base, source))
 }
 
