@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { ArrowLeft, Loader2, Edit, Terminal, Minimize2, Maximize2, AlertTriangle, X } from 'lucide-react'
@@ -38,6 +38,7 @@ import { ProxyConfigPanel } from '@/components/proxy/proxy-config-panel'
 import { CodeEditor } from '@/components/services/code-editor'
 import { cn } from '@/lib/utils'
 import { getErrorMessage, getErrorDetails } from '@/lib/api'
+import { useMutationState, useQueryClient } from '@tanstack/react-query'
 
 function timeAgo(dateStr: string): string {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
@@ -61,6 +62,83 @@ export const Route = createFileRoute('/stacks/$name/instances/$instance')({
 
 const instanceTabs = ['info', 'ports', 'volumes', 'env-files', 'environment', 'networks', 'labels', 'domains', 'healthcheck', 'dependencies', 'config-mounts', 'files', 'resources', 'effective', 'logs', 'compose', 'proxy'] as const
 type InstanceTab = (typeof instanceTabs)[number]
+
+const actionLabels: Record<string, string> = { start: 'Start', stop: 'Stop', restart: 'Restart' }
+
+function InstanceErrors({ ctrl, stackName, instanceId }: { ctrl: ReturnType<typeof useInstanceDetailController>; stackName: string; instanceId: string }) {
+  const queryClient = useQueryClient()
+
+  // Errors from this page's own mutations
+  const localErrors = [
+    ctrl.startInstance.isError && { action: 'Start', error: ctrl.startInstance.error, reset: ctrl.startInstance.reset },
+    ctrl.stopInstance.isError && { action: 'Stop', error: ctrl.stopInstance.error, reset: ctrl.stopInstance.reset },
+    ctrl.restartInstance.isError && { action: 'Restart', error: ctrl.restartInstance.error, reset: ctrl.restartInstance.reset },
+    ctrl.updateInstance.isError && { action: 'Update', error: ctrl.updateInstance.error, reset: ctrl.updateInstance.reset },
+  ].filter((e): e is { action: string; error: unknown; reset: () => void } => !!e)
+
+  const localActions = new Set(localErrors.map((e) => e.action))
+
+  // Errors cached from other components (e.g. InstanceCard on stack page)
+  const cachedErrors = useMutationState({
+    filters: { mutationKey: ['instance', stackName, instanceId], status: 'error' },
+    select: (mutation) => ({
+      action: actionLabels[(mutation.options.mutationKey as string[])?.[3] ?? ''] ?? 'Action',
+      error: mutation.state.error,
+      submittedAt: mutation.state.submittedAt,
+    }),
+  })
+
+  // Deduplicate: prefer local errors, only show cached ones not already shown locally
+  const extraCached = cachedErrors.filter((ce) => !localActions.has(ce.action))
+  // Keep only the most recent cached error per action
+  const uniqueCached = useMemo(() => {
+    const map = new Map<string, typeof extraCached[number]>()
+    for (const ce of extraCached) {
+      const existing = map.get(ce.action)
+      if (!existing || ce.submittedAt > existing.submittedAt) map.set(ce.action, ce)
+    }
+    return Array.from(map.values())
+  }, [extraCached])
+
+  const dismissCached = (action: string) => {
+    const cache = queryClient.getMutationCache()
+    const actionKey = Object.entries(actionLabels).find(([, v]) => v === action)?.[0]
+    if (!actionKey) return
+    cache.findAll({ mutationKey: ['instance', stackName, instanceId, actionKey], status: 'error' }).forEach((m) => m.reset())
+  }
+
+  const allErrors = [
+    ...localErrors.map((e) => ({ ...e, source: 'local' as const })),
+    ...uniqueCached.map((e) => ({ ...e, reset: () => dismissCached(e.action), source: 'cached' as const })),
+  ]
+
+  if (allErrors.length === 0) return null
+
+  return (
+    <div className="space-y-2">
+      {allErrors.map((item) => {
+        const details = getErrorDetails(item.error)
+        return (
+          <div key={item.action} className="bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-md">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="size-4 mt-0.5 shrink-0" />
+              <div className="flex-1 text-sm">
+                <span className="font-medium">{item.action} failed</span>
+                <span className="opacity-80"> — {getErrorMessage(item.error, 'Unknown error')}</span>
+              </div>
+              <button onClick={() => item.reset()} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity">
+                <X className="size-4" />
+              </button>
+            </div>
+            {details && (
+              <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-xs font-mono opacity-80 bg-red-100 dark:bg-red-950/40 rounded p-2">{details}</pre>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 function InstanceDetailPage() {
   const { name: stackName, instance: instanceId } = Route.useParams()
@@ -219,39 +297,7 @@ function InstanceDetailPage() {
         </div>
       </div>
 
-      {(() => {
-        const errors = [
-          ctrl.startInstance.isError && { action: 'Start', error: ctrl.startInstance.error, reset: ctrl.startInstance.reset },
-          ctrl.stopInstance.isError && { action: 'Stop', error: ctrl.stopInstance.error, reset: ctrl.stopInstance.reset },
-          ctrl.restartInstance.isError && { action: 'Restart', error: ctrl.restartInstance.error, reset: ctrl.restartInstance.reset },
-          ctrl.updateInstance.isError && { action: 'Update', error: ctrl.updateInstance.error, reset: ctrl.updateInstance.reset },
-        ].filter((e): e is { action: string; error: unknown; reset: () => void } => !!e)
-        if (errors.length === 0) return null
-        return (
-          <div className="space-y-2">
-            {errors.map((item) => {
-              const details = getErrorDetails(item.error)
-              return (
-                <div key={item.action} className="bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-md">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="size-4 mt-0.5 shrink-0" />
-                    <div className="flex-1 text-sm">
-                      <span className="font-medium">{item.action} failed</span>
-                      <span className="opacity-80"> — {getErrorMessage(item.error, 'Unknown error')}</span>
-                    </div>
-                    <button onClick={() => item.reset()} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity">
-                      <X className="size-4" />
-                    </button>
-                  </div>
-                  {details && (
-                    <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-xs font-mono opacity-80 bg-red-100 dark:bg-red-950/40 rounded p-2">{details}</pre>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )
-      })()}
+      <InstanceErrors ctrl={ctrl} stackName={stackName} instanceId={instanceId} />
 
       <Tabs
         value={activeTab}

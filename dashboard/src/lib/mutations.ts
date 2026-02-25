@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api'
 
 interface MutationHelperConfig<TData, TVariables> {
+  mutationKey?: string[]
   mutationFn: (vars: TVariables) => Promise<TData>
   loadingMessage?: string | ((vars: TVariables) => string)
   successMessage?: string | ((vars: TVariables, data: TData) => string)
@@ -19,6 +20,7 @@ export function useMutationHelper<TData = unknown, TVariables = void>(
   const toastIdRef = useRef<string | number | undefined>(undefined)
 
   return useMutation({
+    mutationKey: config.mutationKey,
     mutationFn: config.mutationFn,
     onMutate: (vars) => {
       if (config.loadingMessage) {
