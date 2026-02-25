@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import { ArrowLeft, Loader2, Edit, Terminal, Minimize2, Maximize2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Edit, Terminal, Minimize2, Maximize2, AlertTriangle, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,6 +37,7 @@ import { InstanceLogViewer } from '@/components/instances/instance-log-viewer'
 import { ProxyConfigPanel } from '@/components/proxy/proxy-config-panel'
 import { CodeEditor } from '@/components/services/code-editor'
 import { cn } from '@/lib/utils'
+import { getErrorMessage } from '@/lib/api'
 
 function timeAgo(dateStr: string): string {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
@@ -217,6 +218,32 @@ function InstanceDetailPage() {
           </MoreActionsMenu>
         </div>
       </div>
+
+      {(() => {
+        const errors = [
+          ctrl.startInstance.isError && { action: 'Start', error: ctrl.startInstance.error, reset: ctrl.startInstance.reset },
+          ctrl.stopInstance.isError && { action: 'Stop', error: ctrl.stopInstance.error, reset: ctrl.stopInstance.reset },
+          ctrl.restartInstance.isError && { action: 'Restart', error: ctrl.restartInstance.error, reset: ctrl.restartInstance.reset },
+          ctrl.updateInstance.isError && { action: 'Update', error: ctrl.updateInstance.error, reset: ctrl.updateInstance.reset },
+        ].filter((e): e is { action: string; error: unknown; reset: () => void } => !!e)
+        if (errors.length === 0) return null
+        return (
+          <div className="space-y-2">
+            {errors.map((item) => (
+              <div key={item.action} className="flex items-start gap-2 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-md">
+                <AlertTriangle className="size-4 mt-0.5 shrink-0" />
+                <div className="flex-1 text-sm">
+                  <span className="font-medium">{item.action} failed</span>
+                  <span className="opacity-80"> — {getErrorMessage(item.error, 'Unknown error')}</span>
+                </div>
+                <button onClick={() => item.reset()} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity">
+                  <X className="size-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
 
       <Tabs
         value={activeTab}
