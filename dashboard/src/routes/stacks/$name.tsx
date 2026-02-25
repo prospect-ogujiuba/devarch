@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { createFileRoute, Link, Outlet, useMatch, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import { ArrowLeft, Loader2, Layers, Power, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2, Play, Square, RotateCcw, Network, Unplug, Clock3, Upload, PowerOff } from 'lucide-react'
+import { ArrowLeft, Loader2, Layers, Power, Copy, Edit, Trash2, FileEdit, Plus, Globe, Download, AlertTriangle, Maximize2, Minimize2, Play, Square, RotateCcw, Network, Unplug, Clock3, Upload, PowerOff, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,7 @@ import {
 } from '@/components/instances/instance-actions'
 import type { Instance, StackPlan } from '@/types/api'
 import { cn } from '@/lib/utils'
+import { getErrorMessage } from '@/lib/api'
 import { StatCard } from '@/components/ui/stat-card'
 
 function timeAgo(dateStr: string): string {
@@ -60,6 +61,8 @@ function InstanceCard({ instance, stackName, onDelete, onDuplicate }: InstanceCa
   const canStart = instance.enabled && !isRunning && !startInstance.isPending
   const canStop = isRunning && !stopInstance.isPending
   const canRestart = isRunning && !restartInstance.isPending
+  const instanceError = startInstance.error || stopInstance.error || restartInstance.error || updateInstance.error
+  const instanceErrorReset = () => { startInstance.reset(); stopInstance.reset(); restartInstance.reset(); updateInstance.reset() }
 
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -145,6 +148,15 @@ function InstanceCard({ instance, stackName, onDelete, onDuplicate }: InstanceCa
           </DropdownMenuItem>
         </MoreActionsMenu>
       </div>
+      {instanceError && (
+        <div className="mx-4 mb-3 flex items-start gap-1.5 rounded bg-red-50 px-2.5 py-2 text-xs text-red-600 dark:bg-red-950/20 dark:text-red-400">
+          <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+          <span className="line-clamp-2 flex-1">{getErrorMessage(instanceError, 'Action failed')}</span>
+          <button onClick={instanceErrorReset} className="shrink-0 opacity-60 hover:opacity-100">
+            <X className="size-3" />
+          </button>
+        </div>
+      )}
     </Card>
   )
 }
@@ -261,6 +273,18 @@ function StackDetailPage() {
     { value: 'proxy', label: 'Proxy' },
   ]
 
+  const mutationErrors = [
+    ctrl.startStack.isError && { action: 'Start', error: ctrl.startStack.error, reset: ctrl.startStack.reset },
+    ctrl.stopStack.isError && { action: 'Stop', error: ctrl.stopStack.error, reset: ctrl.stopStack.reset },
+    ctrl.restartStack.isError && { action: 'Restart', error: ctrl.restartStack.error, reset: ctrl.restartStack.reset },
+    ctrl.enableStack.isError && { action: 'Enable', error: ctrl.enableStack.error, reset: ctrl.enableStack.reset },
+    ctrl.disableStack.isError && { action: 'Disable', error: ctrl.disableStack.error, reset: ctrl.disableStack.reset },
+    ctrl.createNetwork.isError && { action: 'Create network', error: ctrl.createNetwork.error, reset: ctrl.createNetwork.reset },
+    ctrl.removeNetwork.isError && { action: 'Remove network', error: ctrl.removeNetwork.error, reset: ctrl.removeNetwork.reset },
+    ctrl.exportStack.isError && { action: 'Export', error: ctrl.exportStack.error, reset: ctrl.exportStack.reset },
+    ctrl.importStack.isError && { action: 'Import', error: ctrl.importStack.error, reset: ctrl.importStack.reset },
+  ].filter((e): e is { action: string; error: unknown; reset: () => void } => !!e)
+
   return (
     <div className="space-y-5 sm:space-y-6">
       <div className="space-y-3">
@@ -350,6 +374,23 @@ function StackDetailPage() {
         />
         <StatCard icon={Clock3} label="Updated" value={updatedAgo} />
       </div>
+
+      {mutationErrors.length > 0 && (
+        <div className="space-y-2">
+          {mutationErrors.map((item) => (
+            <div key={item.action} className="flex items-start gap-2 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-md">
+              <AlertTriangle className="size-4 mt-0.5 shrink-0" />
+              <div className="flex-1 text-sm">
+                <span className="font-medium">{item.action} failed</span>
+                <span className="opacity-80"> — {getErrorMessage(item.error, 'Unknown error')}</span>
+              </div>
+              <button onClick={() => item.reset()} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity">
+                <X className="size-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <Tabs
         value={activeTab}
