@@ -25,6 +25,17 @@ function getObjectErrorMessage(data: unknown): string | null {
   return null
 }
 
+export function getErrorDetails(error: unknown): string | null {
+  if (isAxiosError(error)) {
+    const errObj = (error.response?.data as Record<string, unknown>)?.error
+    if (errObj && typeof errObj === 'object') {
+      const details = (errObj as Record<string, unknown>).details
+      if (typeof details === 'string' && details.trim()) return details
+    }
+  }
+  return null
+}
+
 export function getErrorMessage(error: unknown, fallback: string): string {
   if (isAxiosError(error)) {
     if (typeof error.response?.data === 'string' && error.response.data.trim()) {
