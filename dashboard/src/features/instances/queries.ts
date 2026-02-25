@@ -115,7 +115,12 @@ export function useUpdateInstance(stackName: string, instanceId: string) {
       const response = await api.put(`/stacks/${stackName}/instances/${instanceId}`, data)
       return response.data
     },
-    successMessage: 'Instance updated',
+    loadingMessage: (data) => data.enabled !== undefined
+      ? (data.enabled ? `Enabling ${instanceId}...` : `Disabling ${instanceId}...`)
+      : 'Updating instance...',
+    successMessage: (data) => data.enabled !== undefined
+      ? (data.enabled ? `Enabled ${instanceId}` : `Disabled ${instanceId}`)
+      : 'Instance updated',
     errorMessage: (error) => getErrorMessage(error, 'Failed to update instance'),
     invalidate: [
       ['stacks', stackName, 'instances', instanceId],

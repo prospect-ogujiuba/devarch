@@ -124,7 +124,7 @@ function InstanceCard({ instance, stackName, onDelete, onDuplicate }: InstanceCa
             Restart
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleToggle}>
+          <DropdownMenuItem disabled={updateInstance.isPending} onClick={handleToggle}>
             {instance.enabled ? <PowerOff className="size-4" /> : <Power className="size-4" />}
             {instance.enabled ? 'Disable' : 'Enable'}
           </DropdownMenuItem>
