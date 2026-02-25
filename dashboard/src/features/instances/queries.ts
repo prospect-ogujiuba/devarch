@@ -186,6 +186,7 @@ export function useRenameInstance(stackName: string, instanceId: string) {
 
 export function useStopInstance(stackName: string, instanceId: string) {
   return useMutationHelper({
+    mutationKey: ['instance', stackName, instanceId, 'stop'],
     mutationFn: async () => {
       const response = await api.post(`/stacks/${stackName}/instances/${instanceId}/stop`)
       return response.data
@@ -202,6 +203,7 @@ export function useStopInstance(stackName: string, instanceId: string) {
 
 export function useStartInstance(stackName: string, instanceId: string) {
   return useMutationHelper({
+    mutationKey: ['instance', stackName, instanceId, 'start'],
     mutationFn: async () => {
       const response = await api.post(`/stacks/${stackName}/instances/${instanceId}/start`)
       return response.data
@@ -218,6 +220,7 @@ export function useStartInstance(stackName: string, instanceId: string) {
 
 export function useRestartInstance(stackName: string, instanceId: string) {
   return useMutationHelper({
+    mutationKey: ['instance', stackName, instanceId, 'restart'],
     mutationFn: async () => {
       const response = await api.post(`/stacks/${stackName}/instances/${instanceId}/restart`)
       return response.data
