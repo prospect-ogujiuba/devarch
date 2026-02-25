@@ -37,7 +37,7 @@ import { InstanceLogViewer } from '@/components/instances/instance-log-viewer'
 import { ProxyConfigPanel } from '@/components/proxy/proxy-config-panel'
 import { CodeEditor } from '@/components/services/code-editor'
 import { cn } from '@/lib/utils'
-import { getErrorMessage } from '@/lib/api'
+import { getErrorMessage, getErrorDetails } from '@/lib/api'
 
 function timeAgo(dateStr: string): string {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
@@ -229,18 +229,26 @@ function InstanceDetailPage() {
         if (errors.length === 0) return null
         return (
           <div className="space-y-2">
-            {errors.map((item) => (
-              <div key={item.action} className="flex items-start gap-2 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-md">
-                <AlertTriangle className="size-4 mt-0.5 shrink-0" />
-                <div className="flex-1 text-sm">
-                  <span className="font-medium">{item.action} failed</span>
-                  <span className="opacity-80"> — {getErrorMessage(item.error, 'Unknown error')}</span>
+            {errors.map((item) => {
+              const details = getErrorDetails(item.error)
+              return (
+                <div key={item.action} className="bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-md">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="size-4 mt-0.5 shrink-0" />
+                    <div className="flex-1 text-sm">
+                      <span className="font-medium">{item.action} failed</span>
+                      <span className="opacity-80"> — {getErrorMessage(item.error, 'Unknown error')}</span>
+                    </div>
+                    <button onClick={() => item.reset()} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity">
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                  {details && (
+                    <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-xs font-mono opacity-80 bg-red-100 dark:bg-red-950/40 rounded p-2">{details}</pre>
+                  )}
                 </div>
-                <button onClick={() => item.reset()} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity">
-                  <X className="size-4" />
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )
       })()}
