@@ -42,7 +42,16 @@ export function OverrideDomains({ instance, templateData, stackName, instanceId 
   const cancel = () => setEditing(false)
 
   const save = () => {
-    updateDomains.mutate(drafts, { onSuccess: () => setEditing(false) })
+    const draftDomains = new Set(drafts.map((d) => d.domain))
+    const preserved = templateDomains
+      .filter((d) => !draftDomains.has(d.domain))
+      .map((d) => ({
+        domain: d.domain,
+        proxy_port: d.proxy_port,
+      }))
+    updateDomains.mutate([...preserved, ...drafts], {
+      onSuccess: () => setEditing(false),
+    })
   }
 
   const resetAll = () => {

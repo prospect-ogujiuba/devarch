@@ -23,7 +23,11 @@ export function OverrideEnvFiles({ instance, templateData, stackName, instanceId
   const updateEnvFiles = useUpdateInstanceEnvFiles(stackName, instanceId)
 
   const save = () => {
-    updateEnvFiles.mutate(section.drafts, { onSuccess: () => section.setEditing(false) })
+    const draftSet = new Set(section.drafts)
+    const preserved = templateEnvFiles.filter((f) => !draftSet.has(f))
+    updateEnvFiles.mutate([...preserved, ...section.drafts], {
+      onSuccess: () => section.setEditing(false),
+    })
   }
 
   const resetAll = () => {
