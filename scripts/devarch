@@ -10,6 +10,11 @@ set -eo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${(%):-%x}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Source container name overrides from .env
+if [[ -f "$PROJECT_ROOT/.env" ]]; then
+    eval $(grep -E '^(PHP_CONTAINER|MARIADB_CONTAINER)=' "$PROJECT_ROOT/.env" 2>/dev/null | sed 's/^/export /')
+fi
+
 # =============================================================================
 # CONTAINER RUNTIME DETECTION
 # =============================================================================

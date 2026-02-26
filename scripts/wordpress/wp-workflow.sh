@@ -7,7 +7,7 @@ PROJECT_ROOT="${PROJECT_ROOT:-$HOME/projects/devarch}"
 SCRIPTS_DIR="$PROJECT_ROOT/scripts"
 
 if [ -f "$PROJECT_ROOT/.env" ]; then
-    export $(grep -E '^(GITHUB_TOKEN|GITHUB_USER)=' "$PROJECT_ROOT/.env" | xargs)
+    export $(grep -E '^(GITHUB_TOKEN|GITHUB_USER|PHP_CONTAINER|MARIADB_CONTAINER)=' "$PROJECT_ROOT/.env" | xargs)
 fi
 
 # =============================================================================
