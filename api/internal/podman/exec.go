@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 )
@@ -24,7 +25,14 @@ func (c *Client) ExecCreate(ctx context.Context, containerName string, config Ex
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		return "", fmt.Errorf("exec create: unexpected status %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		var podmanErr struct {
+			Message string `json:"message"`
+		}
+		if err := json.Unmarshal(body, &podmanErr); err == nil && podmanErr.Message != "" {
+			return "", fmt.Errorf("exec create: %s", podmanErr.Message)
+		}
+		return "", fmt.Errorf("exec create: unexpected status %d: %s", resp.StatusCode, bytes.TrimSpace(body))
 	}
 
 	var result ExecCreateResponse
@@ -62,8 +70,16 @@ func (c *Client) ExecStart(execID string, tty bool) (net.Conn, *bufio.Reader, er
 	}
 
 	if resp.StatusCode != http.StatusSwitchingProtocols {
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
 		conn.Close()
-		return nil, nil, fmt.Errorf("exec start: expected 101, got %d", resp.StatusCode)
+		var podmanErr struct {
+			Message string `json:"message"`
+		}
+		if err := json.Unmarshal(body, &podmanErr); err == nil && podmanErr.Message != "" {
+			return nil, nil, fmt.Errorf("exec start: %s", podmanErr.Message)
+		}
+		return nil, nil, fmt.Errorf("exec start: expected 101, got %d: %s", resp.StatusCode, bytes.TrimSpace(body))
 	}
 
 	return conn, reader, nil
