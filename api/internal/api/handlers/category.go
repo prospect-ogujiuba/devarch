@@ -13,6 +13,7 @@ import (
 	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/crypto"
 	"github.com/priz/devarch-api/internal/podman"
 	"github.com/priz/devarch-api/pkg/models"
 )
@@ -22,14 +23,16 @@ type CategoryHandler struct {
 	containerClient *container.Client
 	podmanClient    *podman.Client
 	generator       *compose.Generator
+	cipher          *crypto.Cipher
 }
 
-func NewCategoryHandler(db *sql.DB, cc *container.Client, pc *podman.Client) *CategoryHandler {
+func NewCategoryHandler(db *sql.DB, cc *container.Client, pc *podman.Client, cipher *crypto.Cipher) *CategoryHandler {
 	return &CategoryHandler{
 		db:              db,
 		containerClient: cc,
 		podmanClient:    pc,
-		generator:       compose.NewGenerator(db, "microservices-net"),
+		generator:       compose.NewGenerator(db, "microservices-net", cipher),
+		cipher:          cipher,
 	}
 }
 

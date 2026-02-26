@@ -653,7 +653,7 @@ func (g *Generator) loadEffectiveEnvVarsWithSecrets(instancePK, templateServiceI
 	secretKeys := make(map[string]bool)
 
 	rows, err := g.db.Query(`
-		SELECT key, value, is_secret FROM service_env_vars WHERE service_id = $1
+		SELECT key, value, is_secret, encrypted_value, encryption_version FROM service_env_vars WHERE service_id = $1
 	`, templateServiceID)
 	if err != nil {
 		return nil, nil, err
@@ -663,8 +663,15 @@ func (g *Generator) loadEffectiveEnvVarsWithSecrets(instancePK, templateServiceI
 	for rows.Next() {
 		var k, v string
 		var isSecret bool
-		if err := rows.Scan(&k, &v, &isSecret); err != nil {
+		var encryptedValue sql.NullString
+		var encryptionVersion int
+		if err := rows.Scan(&k, &v, &isSecret, &encryptedValue, &encryptionVersion); err != nil {
 			return nil, nil, err
+		}
+		if encryptionVersion > 0 && encryptedValue.Valid && g.cipher != nil {
+			if decrypted, err := g.cipher.Decrypt(encryptedValue.String); err == nil {
+				v = decrypted
+			}
 		}
 		merged[k] = v
 		if isSecret {
@@ -684,7 +691,7 @@ func (g *Generator) loadEffectiveEnvVarsWithSecrets(instancePK, templateServiceI
 	}
 
 	rows, err = g.db.Query(`
-		SELECT key, value, is_secret FROM instance_env_vars WHERE instance_id = $1
+		SELECT key, value, is_secret, encrypted_value, encryption_version FROM instance_env_vars WHERE instance_id = $1
 	`, instancePK)
 	if err != nil {
 		return nil, nil, err
@@ -694,8 +701,15 @@ func (g *Generator) loadEffectiveEnvVarsWithSecrets(instancePK, templateServiceI
 	for rows.Next() {
 		var k, v string
 		var isSecret bool
-		if err := rows.Scan(&k, &v, &isSecret); err != nil {
+		var encryptedValue sql.NullString
+		var encryptionVersion int
+		if err := rows.Scan(&k, &v, &isSecret, &encryptedValue, &encryptionVersion); err != nil {
 			return nil, nil, err
+		}
+		if encryptionVersion > 0 && encryptedValue.Valid && g.cipher != nil {
+			if decrypted, err := g.cipher.Decrypt(encryptedValue.String); err == nil {
+				v = decrypted
+			}
 		}
 		merged[k] = v
 		if isSecret {

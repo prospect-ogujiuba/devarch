@@ -14,6 +14,7 @@ import (
 	"github.com/priz/devarch-api/internal/api/respond"
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/crypto"
 	"github.com/priz/devarch-api/internal/identity"
 	"github.com/priz/devarch-api/internal/orchestration"
 )
@@ -22,13 +23,15 @@ type StackHandler struct {
 	db                   *sql.DB
 	containerClient      *container.Client
 	orchestrationService *orchestration.Service
+	cipher               *crypto.Cipher
 }
 
-func NewStackHandler(db *sql.DB, cc *container.Client, os *orchestration.Service) *StackHandler {
+func NewStackHandler(db *sql.DB, cc *container.Client, os *orchestration.Service, cipher *crypto.Cipher) *StackHandler {
 	return &StackHandler{
 		db:                   db,
 		containerClient:      cc,
 		orchestrationService: os,
+		cipher:               cipher,
 	}
 }
 
@@ -65,7 +68,7 @@ func (h *StackHandler) stackCompose(stackName string) ([]byte, error) {
 		netName = networkName.String
 	}
 
-	gen := compose.NewGenerator(h.db, netName)
+	gen := compose.NewGenerator(h.db, netName, h.cipher)
 	if root := os.Getenv("PROJECT_ROOT"); root != "" {
 		gen.SetProjectRoot(root)
 	}

@@ -34,7 +34,7 @@ type ServiceHandler struct {
 
 func NewServiceHandler(db *sql.DB, cc *container.Client, pc *podman.Client, cipher *crypto.Cipher) *ServiceHandler {
 	projectRoot := os.Getenv("PROJECT_ROOT")
-	gen := compose.NewGenerator(db, "microservices-net")
+	gen := compose.NewGenerator(db, "microservices-net", cipher)
 	if projectRoot != "" {
 		gen.SetProjectRoot(projectRoot)
 	}

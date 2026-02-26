@@ -9,16 +9,18 @@ import (
 
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/crypto"
 	"github.com/priz/devarch-api/internal/identity"
 )
 
 type Controller struct {
 	db              *sql.DB
 	containerClient *container.Client
+	cipher          *crypto.Cipher
 }
 
-func NewController(db *sql.DB, containerClient *container.Client) *Controller {
-	return &Controller{db: db, containerClient: containerClient}
+func NewController(db *sql.DB, containerClient *container.Client, cipher *crypto.Cipher) *Controller {
+	return &Controller{db: db, containerClient: containerClient, cipher: cipher}
 }
 
 type ServiceStatus struct {
@@ -165,7 +167,7 @@ func (c *Controller) stackStatus(si *stackInfo) ([]ServiceStatus, error) {
 }
 
 func (c *Controller) stackCompose(si *stackInfo) (string, []byte, error) {
-	gen := compose.NewGenerator(c.db, si.networkName)
+	gen := compose.NewGenerator(c.db, si.networkName, c.cipher)
 	if root := os.Getenv("PROJECT_ROOT"); root != "" {
 		gen.SetProjectRoot(root)
 	}
