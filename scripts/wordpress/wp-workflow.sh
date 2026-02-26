@@ -584,7 +584,7 @@ run_full_workflow() {
     
     log_info "Running full workflow for site: $site_name"
     
-    local site_exists=$($CONTAINER_CMD exec $PHP_CONTAINER zsh -c "[ -d $site_name ] && echo 'yes' || echo 'no'")
+    local site_exists=$($CONTAINER_CMD exec $PHP_CONTAINER zsh -c "[ -d $site_name ] && [ -f $site_name/wp-config.php ] && echo 'yes' || echo 'no'")
     
     if [[ "$site_exists" == "yes" ]]; then
         if [[ -n "$source_file" ]]; then
