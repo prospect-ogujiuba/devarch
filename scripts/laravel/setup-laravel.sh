@@ -219,7 +219,7 @@ create_fresh_project() {
     # Use composer create-project (more reliable than installer CLI)
     local create_command="composer create-project laravel/laravel $PROJECT_NAME"
 
-    if ! eval "$CONTAINER_CMD exec -w /var/www/html php zsh -c '$create_command'"; then
+    if ! eval "$CONTAINER_CMD exec -w /var/www/html $PHP_CONTAINER zsh -c '$create_command'"; then
         handle_error "Failed to create Laravel project. Ensure Composer is available in PHP container."
     fi
 
@@ -242,8 +242,8 @@ setup_project_environment() {
     
     # Set proper permissions using config.sh container commands
     print_status "step" "Setting file permissions..."
-    eval "$CONTAINER_CMD exec -w /var/www/html/$PROJECT_NAME php zsh -c 'chmod -R 775 /var/www/html/$PROJECT_NAME'"
-    eval "$CONTAINER_CMD exec -w /var/www/html/$PROJECT_NAME php zsh -c 'chown -R www-data:www-data .'"
+    eval "$CONTAINER_CMD exec -w /var/www/html/$PROJECT_NAME $PHP_CONTAINER zsh -c 'chmod -R 775 /var/www/html/$PROJECT_NAME'"
+    eval "$CONTAINER_CMD exec -w /var/www/html/$PROJECT_NAME $PHP_CONTAINER zsh -c 'chown -R www-data:www-data .'"
     
     print_status "success" "Project environment configured"
 }
@@ -253,14 +253,14 @@ install_dependencies() {
     
     # Install Composer dependencies
     print_status "info" "Installing Composer dependencies..."
-    if ! eval "$CONTAINER_CMD exec -w /var/www/html/$PROJECT_NAME php composer install"; then
+    if ! eval "$CONTAINER_CMD exec -w /var/www/html/$PROJECT_NAME $PHP_CONTAINER composer install"; then
         handle_error "Composer install failed"
     fi
     
     # Install NPM dependencies (unless skipped)
     if [[ "$opt_skip_npm" == "false" ]]; then
         print_status "info" "Installing NPM dependencies..."
-        if ! eval "$CONTAINER_CMD exec -w /var/www/html/$PROJECT_NAME php npm install"; then
+        if ! eval "$CONTAINER_CMD exec -w /var/www/html/$PROJECT_NAME $PHP_CONTAINER npm install"; then
             print_status "warning" "NPM install failed, continuing..."
         else
             print_status "success" "NPM dependencies installed"
@@ -278,7 +278,7 @@ configure_application() {
     # Generate application key (only if .env exists and APP_KEY is empty)
     if [[ -f '.env' ]] && ! grep -q 'APP_KEY=.*[^=]' .env; then
         print_status "info" "Generating application key..."
-        if ! eval "$CONTAINER_CMD exec -w /var/www/html/$PROJECT_NAME php php artisan key:generate"; then
+        if ! eval "$CONTAINER_CMD exec -w /var/www/html/$PROJECT_NAME $PHP_CONTAINER php artisan key:generate"; then
             print_status "warning" "Key generation failed"
         else
             print_status "success" "Application key generated"
@@ -288,7 +288,7 @@ configure_application() {
     # Build assets (unless NPM was skipped)
     if [[ "$opt_skip_npm" == "false" ]]; then
         print_status "info" "Building frontend assets..."
-        if eval "$CONTAINER_CMD exec -w /var/www/html/$PROJECT_NAME php npm run build"; then
+        if eval "$CONTAINER_CMD exec -w /var/www/html/$PROJECT_NAME $PHP_CONTAINER npm run build"; then
             print_status "success" "Assets built successfully"
         else
             print_status "warning" "Asset build failed, continuing..."
@@ -299,7 +299,7 @@ configure_application() {
     if [[ "$opt_skip_migrate" == "false" ]]; then
         if grep -q 'DB_DATABASE=.*[^=]' .env 2>/dev/null; then
             print_status "info" "Running database migrations..."
-            if eval "$CONTAINER_CMD exec -w /var/www/html/$PROJECT_NAME php php artisan migrate --force"; then
+            if eval "$CONTAINER_CMD exec -w /var/www/html/$PROJECT_NAME $PHP_CONTAINER php artisan migrate --force"; then
                 print_status "success" "Database migrations completed"
             else
                 print_status "warning" "Migration failed (database might not be configured)"
