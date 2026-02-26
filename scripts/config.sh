@@ -33,6 +33,7 @@ export LOGS_DIR="${PROJECT_ROOT}/logs"
 
 export NETWORK_NAME="microservices-net"
 export CONTAINER_RUNTIME="podman"
+export PHP_CONTAINER="${PHP_CONTAINER:-php}"
 
 # =============================================================================
 # OUTPUT HELPERS
