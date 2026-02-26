@@ -195,7 +195,7 @@ ensure_database_ready() {
 
 exec_php() {
     local command="$1"
-    eval "$CONTAINER_CMD exec php $command"
+    eval "$CONTAINER_CMD exec ${PHP_CONTAINER} $command"
 }
 
 exec_php_wp() {
