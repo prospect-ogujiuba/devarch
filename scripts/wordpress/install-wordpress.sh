@@ -361,19 +361,19 @@ validate_environment() {
         handle_error "PHP container ($PHP_CONTAINER) not found. Ensure it's created first."
     fi
 
-    # Check MariaDB via API
-    if validate_service_exists "mariadb"; then
-        local mariadb_status=$(get_service_status "mariadb")
-        if [[ "$mariadb_status" != "running" ]]; then
-            print_status "warning" "mariadb container is not running (status: $mariadb_status)"
-            print_status "info" "Starting mariadb container..."
-            if ! start_single_service "mariadb"; then
-                handle_error "Failed to start mariadb container. Run: ./scripts/service-manager.sh up mariadb"
-            fi
-            sleep 3
-        else
-            print_status "success" "mariadb container is running"
+    # Check MariaDB via direct container inspect
+    local mariadb_state=$($CONTAINER_CMD inspect --format '{{.State.Status}}' "$MARIADB_CONTAINER" 2>/dev/null || echo "not_found")
+
+    if [[ "$mariadb_state" == "running" ]]; then
+        print_status "success" "MariaDB container ($MARIADB_CONTAINER) is running"
+    elif [[ "$mariadb_state" != "not_found" ]]; then
+        print_status "warning" "MariaDB container ($MARIADB_CONTAINER) is $mariadb_state, attempting start..."
+        if ! $CONTAINER_CMD start "$MARIADB_CONTAINER" 2>/dev/null; then
+            handle_error "Failed to start MariaDB container ($MARIADB_CONTAINER)"
         fi
+        sleep 3
+    else
+        handle_error "MariaDB container ($MARIADB_CONTAINER) not found. Ensure it's created first."
     fi
     
     # Check apps directory exists
