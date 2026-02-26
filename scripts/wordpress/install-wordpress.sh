@@ -345,29 +345,36 @@ parse_arguments() {
 validate_environment() {
     print_status "step" "Validating WordPress environment..."
     
-    # Check if required services exist and are running
-    local required_services=("php" "mariadb")
-    
-    for service in "${required_services[@]}"; do
-        if ! validate_service_exists "$service"; then
-            handle_error "$service service not found. Please ensure it's configured in your compose files."
+    # Check PHP container directly via runtime (avoids API service-name mismatch)
+    local php_state
+    php_state=$($CONTAINER_CMD inspect --format '{{.State.Status}}' "$PHP_CONTAINER" 2>/dev/null || echo "not_found")
+
+    if [[ "$php_state" == "running" ]]; then
+        print_status "success" "PHP container ($PHP_CONTAINER) is running"
+    elif [[ "$php_state" != "not_found" ]]; then
+        print_status "warning" "PHP container ($PHP_CONTAINER) is $php_state, attempting start..."
+        if ! $CONTAINER_CMD start "$PHP_CONTAINER" 2>/dev/null; then
+            handle_error "Failed to start PHP container ($PHP_CONTAINER)"
         fi
-        
-        local service_status=$(get_service_status "$service")
-        if [[ "$service_status" != "running" ]]; then
-            print_status "warning" "$service container is not running (status: $service_status)"
-            print_status "info" "Starting $service container..."
-            
-            if ! start_single_service "$service"; then
-                handle_error "Failed to start $service container. Run: ./scripts/service-manager.sh up $service"
+        sleep 3
+    else
+        handle_error "PHP container ($PHP_CONTAINER) not found. Ensure it's created first."
+    fi
+
+    # Check MariaDB via API
+    if validate_service_exists "mariadb"; then
+        local mariadb_status=$(get_service_status "mariadb")
+        if [[ "$mariadb_status" != "running" ]]; then
+            print_status "warning" "mariadb container is not running (status: $mariadb_status)"
+            print_status "info" "Starting mariadb container..."
+            if ! start_single_service "mariadb"; then
+                handle_error "Failed to start mariadb container. Run: ./scripts/service-manager.sh up mariadb"
             fi
-            
-            # Wait a moment for container to be ready
             sleep 3
         else
-            print_status "success" "$service container is running"
+            print_status "success" "mariadb container is running"
         fi
-    done
+    fi
     
     # Check apps directory exists
     local host_apps=$(get_path "host_apps")
