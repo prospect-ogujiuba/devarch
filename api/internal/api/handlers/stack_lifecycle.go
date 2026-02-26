@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"net/http"
 	"os"
 
@@ -66,7 +67,10 @@ func (h *StackHandler) Start(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var networkName *string
-	h.db.QueryRow(`SELECT network_name FROM stacks WHERE name = $1 AND deleted_at IS NULL`, name).Scan(&networkName)
+	if err := h.db.QueryRow(`SELECT network_name FROM stacks WHERE name = $1 AND deleted_at IS NULL`, name).Scan(&networkName); err != nil && err != sql.ErrNoRows {
+		respond.InternalError(w, r, err)
+		return
+	}
 
 	netName := identity.NetworkName(name)
 	if networkName != nil && *networkName != "" {
@@ -152,7 +156,10 @@ func (h *StackHandler) Restart(w http.ResponseWriter, r *http.Request) {
 	h.containerClient.StopStack("devarch-"+name, stopYaml)
 
 	var networkName *string
-	h.db.QueryRow(`SELECT network_name FROM stacks WHERE name = $1 AND deleted_at IS NULL`, name).Scan(&networkName)
+	if err := h.db.QueryRow(`SELECT network_name FROM stacks WHERE name = $1 AND deleted_at IS NULL`, name).Scan(&networkName); err != nil && err != sql.ErrNoRows {
+		respond.InternalError(w, r, err)
+		return
+	}
 
 	netName := identity.NetworkName(name)
 	if networkName != nil && *networkName != "" {
