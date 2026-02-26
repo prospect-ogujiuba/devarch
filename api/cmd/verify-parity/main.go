@@ -123,7 +123,7 @@ func main() {
 	}
 
 	// Run verification for each service
-	gen := compose.NewGenerator(db, "")
+	gen := compose.NewGenerator(db, "", nil)
 	gen.SetProjectRoot(*projectRoot)
 	gen.SetHostProjectRoot(*projectRoot)
 
