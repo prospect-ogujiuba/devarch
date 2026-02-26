@@ -146,14 +146,19 @@ ensure_plugin_available() {
         local plugins_dir="wp-content/plugins"
         local plugin_repo="https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/all-in-one-wp-migration.git"
 
-        $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "
-            cd $site_name && \
-            git clone '$plugin_repo' '$plugins_dir/all-in-one-wp-migration'
-        "
+        # Skip clone if plugin directory already exists (e.g. from a previous partial install)
+        if $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "[ -d '$site_name/$plugins_dir/all-in-one-wp-migration' ]" 2>/dev/null; then
+            log_info "Plugin directory already exists, skipping clone"
+        else
+            $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "
+                cd $site_name && \
+                git clone '$plugin_repo' '$plugins_dir/all-in-one-wp-migration'
+            "
 
-        if [ $? -ne 0 ]; then
-            log_error "Failed to install All-in-One WP Migration plugin"
-            exit 1
+            if [ $? -ne 0 ]; then
+                log_error "Failed to install All-in-One WP Migration plugin"
+                exit 1
+            fi
         fi
 
         log_success "Plugin installed successfully"
