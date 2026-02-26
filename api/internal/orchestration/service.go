@@ -12,6 +12,7 @@ import (
 
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
+	"github.com/priz/devarch-api/internal/crypto"
 	"github.com/priz/devarch-api/internal/export"
 	"github.com/priz/devarch-api/internal/identity"
 	"github.com/priz/devarch-api/internal/lock"
@@ -22,12 +23,14 @@ import (
 type Service struct {
 	db              *sql.DB
 	containerClient *container.Client
+	cipher          *crypto.Cipher
 }
 
-func NewService(db *sql.DB, cc *container.Client) *Service {
+func NewService(db *sql.DB, cc *container.Client, cipher *crypto.Cipher) *Service {
 	return &Service{
 		db:              db,
 		containerClient: cc,
+		cipher:          cipher,
 	}
 }
 
@@ -215,7 +218,7 @@ func (s *Service) ApplyPlan(ctx context.Context, stackName string, token string,
 		return nil, ErrProjectRoot
 	}
 
-	gen := compose.NewGenerator(s.db, netName)
+	gen := compose.NewGenerator(s.db, netName, s.cipher)
 	if root := os.Getenv("PROJECT_ROOT"); root != "" {
 		gen.SetProjectRoot(root)
 	}

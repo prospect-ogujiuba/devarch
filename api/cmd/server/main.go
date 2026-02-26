@@ -109,7 +109,7 @@ func main() {
 		slog.Warn("container client unavailable (compose operations disabled)", "error", err)
 	}
 
-	projectController := project.NewController(db, containerClient)
+	projectController := project.NewController(db, containerClient, cipher)
 
 	appsDir := os.Getenv("APPS_DIR")
 	if appsDir == "" {

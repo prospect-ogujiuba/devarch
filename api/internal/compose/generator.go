@@ -9,22 +9,25 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/priz/devarch-api/internal/crypto"
 	"github.com/priz/devarch-api/pkg/models"
 	"gopkg.in/yaml.v3"
 )
 
 type Generator struct {
 	db              *sql.DB
+	cipher          *crypto.Cipher
 	networkName     string
 	projectRoot     string
 	hostProjectRoot string
 	workspaceRoot   string
 }
 
-func NewGenerator(db *sql.DB, networkName string) *Generator {
+func NewGenerator(db *sql.DB, networkName string, cipher *crypto.Cipher) *Generator {
 	return &Generator{
 		db:          db,
 		networkName: networkName,
+		cipher:      cipher,
 	}
 }
 
@@ -293,7 +296,7 @@ func (g *Generator) loadServiceRelations(service *models.Service) error {
 	}
 
 	rows, err = g.db.Query(`
-		SELECT key, value, is_secret
+		SELECT key, value, is_secret, encrypted_value, encryption_version
 		FROM service_env_vars WHERE service_id = $1
 	`, service.ID)
 	if err != nil {
@@ -303,8 +306,15 @@ func (g *Generator) loadServiceRelations(service *models.Service) error {
 
 	for rows.Next() {
 		var e models.ServiceEnvVar
-		if err := rows.Scan(&e.Key, &e.Value, &e.IsSecret); err != nil {
+		var encryptedValue sql.NullString
+		var encryptionVersion int
+		if err := rows.Scan(&e.Key, &e.Value, &e.IsSecret, &encryptedValue, &encryptionVersion); err != nil {
 			return err
+		}
+		if encryptionVersion > 0 && encryptedValue.Valid && g.cipher != nil {
+			if decrypted, err := g.cipher.Decrypt(encryptedValue.String); err == nil {
+				e.Value = decrypted
+			}
 		}
 		service.EnvVars = append(service.EnvVars, e)
 	}

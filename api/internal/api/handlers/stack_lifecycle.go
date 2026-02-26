@@ -82,7 +82,7 @@ func (h *StackHandler) Start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gen := compose.NewGenerator(h.db, netName)
+	gen := compose.NewGenerator(h.db, netName, h.cipher)
 	if root := os.Getenv("PROJECT_ROOT"); root != "" {
 		gen.SetProjectRoot(root)
 	}
@@ -168,7 +168,7 @@ func (h *StackHandler) Restart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gen := compose.NewGenerator(h.db, netName)
+	gen := compose.NewGenerator(h.db, netName, h.cipher)
 	if root := os.Getenv("PROJECT_ROOT"); root != "" {
 		gen.SetProjectRoot(root)
 	}

@@ -46,7 +46,7 @@ func (h *StackHandler) Compose(w http.ResponseWriter, r *http.Request) {
 		netName = identity.NetworkName(stackName)
 	}
 
-	gen := compose.NewGenerator(h.db, netName)
+	gen := compose.NewGenerator(h.db, netName, h.cipher)
 	if root := os.Getenv("PROJECT_ROOT"); root != "" {
 		gen.SetProjectRoot(root)
 	}

@@ -37,7 +37,7 @@ func (h *InstanceHandler) instanceCompose(stackName string) (projectName string,
 		netName = networkName.String
 	}
 
-	gen := compose.NewGenerator(h.db, netName)
+	gen := compose.NewGenerator(h.db, netName, h.cipher)
 	if root := os.Getenv("PROJECT_ROOT"); root != "" {
 		gen.SetProjectRoot(root)
 	}
