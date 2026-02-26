@@ -39,7 +39,7 @@ fi
 # Wait for MariaDB to be ready
 echo "Waiting for MariaDB to be ready..."
 for i in {1..30}; do
-    if $CONTAINER_CMD exec mariadb mariadb -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "SELECT 1" &>/dev/null; then
+    if $CONTAINER_CMD exec ${MARIADB_CONTAINER:-mariadb} mariadb -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "SELECT 1" &>/dev/null; then
         echo "MariaDB is ready!"
         break
     fi
@@ -52,7 +52,7 @@ done
 
 # Create databases
 echo "Creating databases..."
-$CONTAINER_CMD exec -i mariadb mariadb -uroot -p"${MYSQL_ROOT_PASSWORD}" <<EOF
+$CONTAINER_CMD exec -i ${MARIADB_CONTAINER:-mariadb} mariadb -uroot -p"${MYSQL_ROOT_PASSWORD}" <<EOF
 -- Databases for Containers
 CREATE DATABASE IF NOT EXISTS npm;
 CREATE DATABASE IF NOT EXISTS metabase;
