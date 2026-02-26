@@ -167,8 +167,12 @@ func (h *RegistryHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 		}
 		tags = append(tags, t)
 	}
+	if err := rows.Err(); err != nil {
+		respond.InternalError(w, r, err)
+		return
+	}
 
-	respond.JSON(w, r, http.StatusOK,tags)
+	respond.JSON(w, r, http.StatusOK, tags)
 }
 
 type vulnResponse struct {
@@ -243,8 +247,12 @@ func (h *RegistryHandler) GetVulnerabilities(w http.ResponseWriter, r *http.Requ
 		}
 		vulns = append(vulns, vr)
 	}
+	if err := rows.Err(); err != nil {
+		respond.InternalError(w, r, err)
+		return
+	}
 
-	respond.JSON(w, r, http.StatusOK,vulns)
+	respond.JSON(w, r, http.StatusOK, vulns)
 }
 
 type registryListItem struct {
