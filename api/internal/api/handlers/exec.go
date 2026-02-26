@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
@@ -103,14 +104,14 @@ func (h *ExecHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		log.Printf("exec: create failed: %v", err)
-		ws.WriteMessage(websocket.TextMessage, []byte("Error: "+err.Error()))
+		writeCloseError(ws, "Error: "+err.Error())
 		return
 	}
 
 	rawConn, reader, err := h.podmanClient.ExecStart(execID, true)
 	if err != nil {
 		log.Printf("exec: start failed: %v", err)
-		ws.WriteMessage(websocket.TextMessage, []byte("Error: "+err.Error()))
+		writeCloseError(ws, "Error: "+err.Error())
 		return
 	}
 	defer rawConn.Close()
@@ -170,4 +171,16 @@ func (h *ExecHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	<-done
 
 	h.podmanClient.ExecInspect(context.Background(), execID)
+}
+
+func writeCloseError(ws *websocket.Conn, reason string) {
+	const maxReason = 123
+	if len(reason) > maxReason {
+		reason = reason[:maxReason]
+	}
+	ws.WriteControl(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(4000, reason),
+		time.Now().Add(time.Second),
+	)
 }
