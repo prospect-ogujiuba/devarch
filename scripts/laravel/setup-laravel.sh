@@ -121,24 +121,20 @@ parse_arguments() {
 validate_environment() {
     print_status "step" "Validating Laravel setup environment..."
     
-    # Check if PHP service exists and is running
-    if ! validate_service_exists "php"; then
-        handle_error "PHP service not found. Please ensure PHP service is configured in your compose files."
-    fi
-    
-    local php_status=$(get_service_status "php")
-    if [[ "$php_status" != "running" ]]; then
-        print_status "warning" "PHP container is not running (status: $php_status)"
-        print_status "info" "Starting PHP container..."
-        
-        if ! start_single_service "php"; then
-            handle_error "Failed to start PHP container. Run: ./scripts/service-manager.sh up php"
+    # Check PHP container directly via runtime (avoids API service-name mismatch)
+    local php_state
+    php_state=$($CONTAINER_CMD inspect --format '{{.State.Status}}' "$PHP_CONTAINER" 2>/dev/null || echo "not_found")
+
+    if [[ "$php_state" == "running" ]]; then
+        print_status "success" "PHP container ($PHP_CONTAINER) is running"
+    elif [[ "$php_state" != "not_found" ]]; then
+        print_status "warning" "PHP container ($PHP_CONTAINER) is $php_state, attempting start..."
+        if ! $CONTAINER_CMD start "$PHP_CONTAINER" 2>/dev/null; then
+            handle_error "Failed to start PHP container ($PHP_CONTAINER)"
         fi
-        
-        # Wait a moment for container to be ready
         sleep 3
     else
-        print_status "success" "PHP container is running"
+        handle_error "PHP container ($PHP_CONTAINER) not found. Ensure it's created first."
     fi
     
     # Check apps directory exists
