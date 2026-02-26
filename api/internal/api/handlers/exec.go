@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -93,7 +92,6 @@ func (h *ExecHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		log.Printf("exec: websocket upgrade failed: %v", err)
 		return
 	}
-	defer ws.Close()
 
 	execID, err := h.podmanClient.ExecCreate(r.Context(), containerName, podman.ExecConfig{
 		AttachStdin:  true,
@@ -114,18 +112,16 @@ func (h *ExecHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		writeCloseError(ws, "Error: "+err.Error())
 		return
 	}
-	defer rawConn.Close()
 
 	if cols != 80 || rows != 24 {
 		h.podmanClient.ExecResize(r.Context(), execID, rows, cols)
 	}
 
-	var wg sync.WaitGroup
-	done := make(chan struct{})
+	done := make(chan struct{}, 1)
 
-	wg.Add(1)
+	// container → browser
 	go func() {
-		defer wg.Done()
+		defer func() { done <- struct{}{} }()
 		buf := make([]byte, 4096)
 		for {
 			n, err := reader.Read(buf)
@@ -138,9 +134,9 @@ func (h *ExecHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	wg.Add(1)
+	// browser → container
 	go func() {
-		defer wg.Done()
+		defer func() { done <- struct{}{} }()
 		for {
 			msgType, data, err := ws.ReadMessage()
 			if err != nil {
@@ -163,12 +159,10 @@ func (h *ExecHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
-
+	// When either goroutine exits, close both ends to unblock the other
 	<-done
+	rawConn.Close()
+	ws.Close()
 
 	h.podmanClient.ExecInspect(context.Background(), execID)
 }
@@ -183,4 +177,12 @@ func writeCloseError(ws *websocket.Conn, reason string) {
 		websocket.FormatCloseMessage(4000, reason),
 		time.Now().Add(time.Second),
 	)
+	// Wait for client to acknowledge close frame before TCP teardown,
+	// otherwise the client sees code 1006 instead of 4000.
+	ws.SetReadDeadline(time.Now().Add(time.Second))
+	for {
+		if _, _, err := ws.ReadMessage(); err != nil {
+			break
+		}
+	}
 }
