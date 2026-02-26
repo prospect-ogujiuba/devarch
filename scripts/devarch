@@ -34,6 +34,7 @@ detect_container_runtime() {
 }
 
 CONTAINER_RUNTIME=$(detect_container_runtime)
+PHP_CONTAINER="${PHP_CONTAINER:-php}"
 
 get_exec_cmd() {
     if [[ "$CONTAINER_RUNTIME" == "docker" ]]; then
@@ -63,7 +64,7 @@ handle_wp() {
         echo "  devarch wp db export backup.sql"
         return 1
     fi
-    eval "$container_cmd exec php wp --allow-root $@"
+    eval "$container_cmd exec $PHP_CONTAINER wp --allow-root $@"
 }
 
 handle_artisan() {
@@ -93,7 +94,7 @@ handle_artisan() {
         return 1
     fi
 
-    eval "$container_cmd exec -w $workdir php php artisan $@"
+    eval "$container_cmd exec -w $workdir $PHP_CONTAINER php artisan $@"
 }
 
 handle_wordpress() {
