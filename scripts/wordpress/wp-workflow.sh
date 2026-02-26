@@ -22,6 +22,8 @@ else
     exit 1
 fi
 
+PHP_CONTAINER="${PHP_CONTAINER:-php}"
+
 print_usage() {
     cat << EOF
 WordPress Multi System Workflow Manager
@@ -117,7 +119,7 @@ ORIGINAL_WP_DEBUG=""
 
 get_wp_debug_state() {
     local site_name="$1"
-    ORIGINAL_WP_DEBUG=$($CONTAINER_CMD exec -it php zsh -c "
+    ORIGINAL_WP_DEBUG=$($CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "
         cd $site_name && \
         wp config get WP_DEBUG --allow-root 2>/dev/null || echo '0'
     " | tr -d '\r\n')
@@ -128,7 +130,7 @@ restore_wp_debug_state() {
     local site_name="$1"
     if [[ -n "$ORIGINAL_WP_DEBUG" && ("$ORIGINAL_WP_DEBUG" == "1" || "$ORIGINAL_WP_DEBUG" == "true") ]]; then
         log_info "Restoring WP_DEBUG to: $ORIGINAL_WP_DEBUG"
-        $CONTAINER_CMD exec -it php zsh -c "
+        $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "
             cd $site_name && \
             wp config set WP_DEBUG true --raw --allow-root
         "
@@ -138,13 +140,13 @@ restore_wp_debug_state() {
 ensure_plugin_available() {
     local site_name="$1"
 
-    if ! $CONTAINER_CMD exec -it php zsh -c "cd $site_name && wp plugin is-installed all-in-one-wp-migration --allow-root" 2>/dev/null; then
+    if ! $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "cd $site_name && wp plugin is-installed all-in-one-wp-migration --allow-root" 2>/dev/null; then
         log_info "Installing All-in-One WP Migration plugin"
 
         local plugins_dir="wp-content/plugins"
         local plugin_repo="https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/all-in-one-wp-migration.git"
 
-        $CONTAINER_CMD exec -it php zsh -c "
+        $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "
             cd $site_name && \
             git clone '$plugin_repo' '$plugins_dir/all-in-one-wp-migration'
         "
@@ -161,9 +163,9 @@ ensure_plugin_available() {
 ensure_plugin_activated() {
     local site_name="$1"
 
-    if ! $CONTAINER_CMD exec -it php zsh -c "cd $site_name && wp plugin is-active all-in-one-wp-migration --allow-root" 2>/dev/null; then
+    if ! $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "cd $site_name && wp plugin is-active all-in-one-wp-migration --allow-root" 2>/dev/null; then
         log_info "Activating All-in-One WP Migration plugin"
-        $CONTAINER_CMD exec -it php zsh -c "
+        $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "
             cd $site_name && \
             wp plugin activate all-in-one-wp-migration --allow-root
         " 2>&1 | grep -v "Warning: Undefined" || true
@@ -179,7 +181,7 @@ ensure_plugin_activated() {
 deactivate_aiowm_plugin() {
     local site_name="$1"
     log_info "Deactivating All-in-One WP Migration plugin"
-    $CONTAINER_CMD exec -it php zsh -c "
+    $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "
         cd $site_name && \
         wp plugin deactivate all-in-one-wp-migration --allow-root
     " 2>&1 | grep -v "Warning: Undefined" || true
@@ -197,7 +199,7 @@ ensure_debug_off() {
     local site_name="$1"
 
     log_info "Setting WP_DEBUG to false"
-    $CONTAINER_CMD exec -it php zsh -c "
+    $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "
         cd $site_name && \
         wp config set WP_DEBUG false --raw --allow-root
     "
@@ -208,7 +210,7 @@ ensure_backup_permissions() {
     local backup_dir="wp-content/ai1wm-backups"
 
     log_info "Ensuring backup directory permissions"
-    $CONTAINER_CMD exec -it php zsh -c "
+    $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "
         cd $site_name && \
         mkdir -p '$backup_dir' && \
         chmod -R 777 '$backup_dir'
@@ -248,7 +250,7 @@ remove_previous_site() {
     
     log_info "Removing existing site if present: $site_name"
     
-    $CONTAINER_CMD exec -it php zsh -c "
+    $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "
         if [ -d $site_name ]; then
             cd $site_name && \
             wp db drop --yes --allow-root 2>/dev/null || true && \
@@ -317,7 +319,7 @@ prepare_migration() {
     
     log_info "Setting permissions on backup directory"
 
-    $CONTAINER_CMD exec -it php zsh -c "
+    $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "
         cd $site_name && \
         chmod -R 777 "$backup_dir"
     "
@@ -356,7 +358,7 @@ activate_plugin() {
 
     log_info "Configuring WordPress and activating plugin in container"
 
-    $CONTAINER_CMD exec -it php zsh -c "
+    $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "
         cd $site_name && \
         wp config set WP_DEBUG false --raw --allow-root && \
         wp plugin activate all-in-one-wp-migration --allow-root
@@ -453,7 +455,7 @@ backup_site() {
     log_info "Creating backup for site: $site_name"
     echo "Backup in progress..."
 
-    $CONTAINER_CMD exec -it php zsh -c "
+    $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "
         cd $site_name && \
         wp ai1wm backup $backup_flags --allow-root
     " 2>&1 | while IFS= read -r line; do
@@ -537,7 +539,7 @@ restore_site() {
     
     log_info "Restoring backup: $backup_filename"
     
-    $CONTAINER_CMD exec -it php zsh -c "
+    $CONTAINER_CMD exec -it $PHP_CONTAINER zsh -c "
         cd $site_name && \
         wp ai1wm restore $backup_filename --allow-root
     "
@@ -582,7 +584,7 @@ run_full_workflow() {
     
     log_info "Running full workflow for site: $site_name"
     
-    local site_exists=$($CONTAINER_CMD exec php zsh -c "[ -d $site_name ] && echo 'yes' || echo 'no'")
+    local site_exists=$($CONTAINER_CMD exec $PHP_CONTAINER zsh -c "[ -d $site_name ] && echo 'yes' || echo 'no'")
     
     if [[ "$site_exists" == "yes" ]]; then
         if [[ -n "$source_file" ]]; then
