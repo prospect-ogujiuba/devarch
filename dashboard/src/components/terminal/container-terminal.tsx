@@ -54,14 +54,22 @@ export function ContainerTerminal({ containerName, onDisconnect }: ContainerTerm
         term.write(event.data)
       }
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         setStatus('disconnected')
-        term.write('\r\n\x1b[31mDisconnected\x1b[0m\r\n')
+        console.error('terminal ws closed', event.code, event.reason)
+        if (event.code === 4000 && event.reason) {
+          term.write(`\r\n\x1b[31m${event.reason}\x1b[0m\r\n`)
+        } else if (event.code === 1000) {
+          term.write('\r\n\x1b[33mSession ended\x1b[0m\r\n')
+        } else {
+          term.write('\r\n\x1b[31mDisconnected\x1b[0m\r\n')
+        }
         onDisconnect?.()
       }
 
       ws.onerror = () => {
         setStatus('disconnected')
+        term.write('\r\n\x1b[31mConnection error\x1b[0m\r\n')
       }
 
       term.onData((data) => {
