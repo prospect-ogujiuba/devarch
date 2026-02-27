@@ -18,7 +18,8 @@ api/.runtime/
 node_modules/
 dist/
 
-# Claude Code / Gentic tooling
-.claude/
+# Gentic
 .gentic/
+.claude/
 gentic.json
+.mcp.json
