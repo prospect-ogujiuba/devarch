@@ -70,12 +70,33 @@ func main() {
 		if err := migrateDown(db); err != nil {
 			log.Fatalf("rollback failed: %v", err)
 		}
+	case "down-all":
+		if err := migrateDownAll(db); err != nil {
+			log.Fatalf("rollback-all failed: %v", err)
+		}
+	case "refresh":
+		if err := migrateDownAll(db); err != nil {
+			log.Fatalf("rollback-all failed: %v", err)
+		}
+		if err := migrateUp(db); err != nil {
+			log.Fatalf("migration failed: %v", err)
+		}
+	case "reset":
+		if err := resetSchema(db); err != nil {
+			log.Fatalf("reset failed: %v", err)
+		}
+		if err := ensureMigrationsTable(db); err != nil {
+			log.Fatalf("failed to create migrations table: %v", err)
+		}
+		if err := migrateUp(db); err != nil {
+			log.Fatalf("migration failed: %v", err)
+		}
 	case "status":
 		if err := showStatus(db); err != nil {
 			log.Fatalf("status failed: %v", err)
 		}
 	default:
-		log.Fatalf("unknown command: %s", *command)
+		log.Fatalf("unknown command: %s (valid: up, down, down-all, refresh, reset, status, create-db)", *command)
 	}
 }
 
@@ -208,6 +229,56 @@ func migrateDown(db *sql.DB) error {
 	}
 
 	log.Printf("rolled back: %s", lastVersion)
+	return nil
+}
+
+func migrateDownAll(db *sql.DB) error {
+	for {
+		var lastVersion string
+		err := db.QueryRow("SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1").Scan(&lastVersion)
+		if err == sql.ErrNoRows {
+			log.Println("all migrations rolled back")
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		downFile := lastVersion + ".down.sql"
+		content, err := os.ReadFile(filepath.Join(migrationsDir, downFile))
+		if err != nil {
+			return fmt.Errorf("read %s: %w", downFile, err)
+		}
+
+		tx, err := db.Begin()
+		if err != nil {
+			return err
+		}
+
+		if _, err := tx.Exec(string(content)); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("execute %s: %w", downFile, err)
+		}
+
+		if _, err := tx.Exec("DELETE FROM schema_migrations WHERE version = $1", lastVersion); err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		if err := tx.Commit(); err != nil {
+			return err
+		}
+
+		log.Printf("rolled back: %s", lastVersion)
+	}
+}
+
+func resetSchema(db *sql.DB) error {
+	_, err := db.Exec("DROP SCHEMA public CASCADE; CREATE SCHEMA public;")
+	if err != nil {
+		return fmt.Errorf("reset schema: %w", err)
+	}
+	log.Println("schema reset")
 	return nil
 }
 
