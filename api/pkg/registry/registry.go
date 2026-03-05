@@ -49,11 +49,11 @@ type TagInfo struct {
 }
 
 type ArchInfo struct {
-	OS           string
-	Architecture string
-	Variant      string
-	Digest       string
-	SizeBytes    int64
+	OS           string `json:"os"`
+	Architecture string `json:"architecture"`
+	Variant      string `json:"variant,omitempty"`
+	Digest       string `json:"digest,omitempty"`
+	SizeBytes    int64  `json:"size_bytes"`
 }
 
 type ListTagsOptions struct {

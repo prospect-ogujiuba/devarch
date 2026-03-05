@@ -54,6 +54,7 @@ type repoResponse struct {
 }
 
 func (c *Client) GetImageInfo(ctx context.Context, repository string) (*registry.ImageInfo, error) {
+	repository = normalizeRepo(repository)
 	url := fmt.Sprintf("%s/repositories/%s", hubAPIURL, repository)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -88,7 +89,7 @@ func (c *Client) GetImageInfo(ctx context.Context, repository string) (*registry
 	}
 
 	if repoResp.LastUpdated != "" {
-		if t, err := time.Parse(time.RFC3339, repoResp.LastUpdated); err == nil {
+		if t, err := parseDockerHubTime(repoResp.LastUpdated); err == nil {
 			info.LastUpdated = t
 		}
 	}
@@ -114,6 +115,7 @@ type tagsResponse struct {
 }
 
 func (c *Client) ListTags(ctx context.Context, repository string, opts registry.ListTagsOptions) ([]registry.TagInfo, error) {
+	repository = normalizeRepo(repository)
 	pageSize := opts.PageSize
 	if pageSize == 0 {
 		pageSize = 25
@@ -157,7 +159,7 @@ func (c *Client) ListTags(ctx context.Context, repository string, opts registry.
 		}
 
 		if t.LastUpdated != "" {
-			if pt, err := time.Parse(time.RFC3339, t.LastUpdated); err == nil {
+			if pt, err := parseDockerHubTime(t.LastUpdated); err == nil {
 				tag.PushedAt = pt
 			}
 		}
@@ -212,6 +214,7 @@ func (c *Client) SearchImages(ctx context.Context, query string, opts registry.S
 		url = fmt.Sprintf("%s/repositories/library/?page_size=%d&page=%d", hubAPIURL, pageSize, page)
 	} else {
 		url = fmt.Sprintf("%s/search/repositories?query=%s&page_size=%d&page=%d", hubAPIURL, query, pageSize, page)
+
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -256,8 +259,12 @@ func (c *Client) SearchImages(ctx context.Context, query string, opts registry.S
 
 	results := make([]registry.SearchResult, len(sr.Results))
 	for i, r := range sr.Results {
+		name := r.RepoName
+		if r.IsOfficial && !containsSlash(name) {
+			name = "library/" + name
+		}
 		results[i] = registry.SearchResult{
-			Name:        r.RepoName,
+			Name:        name,
 			Description: r.Description,
 			StarCount:   r.StarCount,
 			PullCount:   r.PullCount,
@@ -266,6 +273,30 @@ func (c *Client) SearchImages(ctx context.Context, query string, opts registry.S
 	}
 
 	return results, nil
+}
+
+func parseDockerHubTime(s string) (time.Time, error) {
+	t, err := time.Parse(time.RFC3339Nano, s)
+	if err != nil {
+		t, err = time.Parse(time.RFC3339, s)
+	}
+	return t, err
+}
+
+func normalizeRepo(repository string) string {
+	if !containsSlash(repository) {
+		return "library/" + repository
+	}
+	return repository
+}
+
+func containsSlash(s string) bool {
+	for _, c := range s {
+		if c == '/' {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Client) GetTagManifest(ctx context.Context, repository, tag string) (*registry.TagInfo, error) {
