@@ -18,6 +18,7 @@ import (
 	"github.com/priz/devarch-api/internal/compose"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/crypto"
+	"github.com/priz/devarch-api/internal/embedding"
 	"github.com/priz/devarch-api/internal/podman"
 	"github.com/priz/devarch-api/pkg/models"
 )
@@ -30,6 +31,7 @@ type ServiceHandler struct {
 	validator       *compose.Validator
 	projectRoot     string
 	cipher          *crypto.Cipher
+	embedNotifier   *embedding.Notifier
 }
 
 func NewServiceHandler(db *sql.DB, cc *container.Client, pc *podman.Client, cipher *crypto.Cipher) *ServiceHandler {
@@ -52,6 +54,7 @@ func NewServiceHandler(db *sql.DB, cc *container.Client, pc *podman.Client, ciph
 		validator:       compose.NewValidator(db),
 		projectRoot:     projectRoot,
 		cipher:          cipher,
+		embedNotifier:   embedding.NewNotifier(),
 	}
 }
 
@@ -711,6 +714,7 @@ func (h *ServiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.notifyEmbedIndex(req.Name)
 	respond.JSON(w, r, http.StatusCreated, map[string]int{"id": serviceID})
 }
 
@@ -779,6 +783,7 @@ func (h *ServiceHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.notifyEmbedIndex(name)
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "updated"})
 }
 
@@ -849,6 +854,7 @@ func (h *ServiceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.embedNotifier.DeleteService(name)
 	respond.JSON(w, r, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
@@ -1619,6 +1625,34 @@ func (h *ServiceHandler) snapshotAndUpdate(serviceID int) {
 	h.loadServiceRelations(&s)
 	h.snapshotConfig(&s, "sub-resource update")
 	h.db.Exec(`UPDATE services SET config_status = 'modified', updated_at = NOW() WHERE id = $1`, serviceID)
+	h.notifyEmbedIndex(s.Name)
+}
+
+func (h *ServiceHandler) notifyEmbedIndex(serviceName string) {
+	if h.embedNotifier == nil || serviceName == "" {
+		return
+	}
+	s, err := h.loadServiceByName(serviceName)
+	if err != nil {
+		return
+	}
+	h.loadServiceRelations(s)
+
+	data := map[string]interface{}{
+		"name":           s.Name,
+		"image":          s.ImageName + ":" + s.ImageTag,
+		"restart_policy": s.RestartPolicy,
+		"ports":          s.Ports,
+		"volumes":        s.Volumes,
+		"env_vars":       s.EnvVars,
+		"dependencies":   s.Dependencies,
+		"healthcheck":    s.Healthcheck,
+		"labels":         s.Labels,
+	}
+	if s.Command.Valid {
+		data["command"] = s.Command.String
+	}
+	h.embedNotifier.IndexService(serviceName, data)
 }
 
 // UpdatePorts godoc
