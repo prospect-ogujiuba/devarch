@@ -220,6 +220,10 @@ func (i *Importer) stripProjectRoot(absPath string) string {
 	return absPath
 }
 
+func (i *Importer) ImportParsedService(parsed *ParsedService, categoryID int) (int, error) {
+	return i.importService(parsed, categoryID)
+}
+
 func (i *Importer) importService(parsed *ParsedService, categoryID int) (int, error) {
 	tx, err := i.db.Begin()
 	if err != nil {

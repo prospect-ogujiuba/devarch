@@ -129,7 +129,10 @@ func ParseFileAll(path string) ([]*ParsedService, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
+	return ParseBytes(data, extractCategory(path))
+}
 
+func ParseBytes(data []byte, category string) ([]*ParsedService, error) {
 	var compose ComposeFile
 	if err := yaml.Unmarshal(data, &compose); err != nil {
 		return nil, fmt.Errorf("parse yaml: %w", err)
@@ -144,7 +147,6 @@ func ParseFileAll(path string) ([]*ParsedService, error) {
 	}
 	yaml.Unmarshal(data, &rawCompose)
 
-	category := extractCategory(path)
 	var services []*ParsedService
 
 	for name, svc := range compose.Services {
