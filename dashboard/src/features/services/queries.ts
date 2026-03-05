@@ -197,6 +197,85 @@ export function useDeleteService() {
   })
 }
 
+interface ParsedServiceResult {
+  name: string
+  image_name: string
+  image_tag: string
+  restart_policy: string
+  command?: string
+  user_spec?: string
+  ports: { host_ip: string; host_port: number; container_port: number; protocol: string }[]
+  volumes: { volume_type: string; source: string; target: string; read_only: boolean; is_external: boolean }[]
+  env_vars: { key: string; value: string; is_secret: boolean }[]
+  labels: { key: string; value: string }[]
+  dependencies: string[]
+  networks: string[]
+  healthcheck?: { test: string; interval_seconds: number; timeout_seconds: number; retries: number; start_period_seconds: number } | null
+}
+
+export function useParseCompose() {
+  return useMutationHelper({
+    mutationFn: async (file: File): Promise<ParsedServiceResult[]> => {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('dry_run', 'true')
+      const response = await api.post('/services/import-compose', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      return response.data as ParsedServiceResult[]
+    },
+    successMessage: 'Compose file parsed',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to parse compose file'),
+    invalidate: [],
+  })
+}
+
+export function useImportCompose() {
+  return useMutationHelper({
+    mutationFn: async ({ file, categoryId }: { file: File; categoryId: number }) => {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('category_id', String(categoryId))
+      const response = await api.post('/services/import-compose', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      return response.data as { created: string[]; errors: string[] }
+    },
+    successMessage: (_, data) => {
+      const n = data.created?.length ?? 0
+      return `Imported ${n} service${n !== 1 ? 's' : ''}`
+    },
+    errorMessage: (error) => getErrorMessage(error, 'Failed to import compose file'),
+    invalidate: [['services']],
+  })
+}
+
+export { type ParsedServiceResult }
+
+export function useParseComposeText() {
+  return useMutationHelper({
+    mutationFn: async (yamlText: string): Promise<ParsedServiceResult[]> => {
+      const response = await api.post('/services/parse-compose', { yaml: yamlText })
+      return response.data as ParsedServiceResult[]
+    },
+    successMessage: 'Compose YAML parsed',
+    errorMessage: (error) => getErrorMessage(error, 'Failed to parse compose YAML'),
+    invalidate: [],
+  })
+}
+
+export function usePersistToLibrary() {
+  return useMutationHelper({
+    mutationFn: async (name: string) => {
+      const response = await api.post(`/services/${name}/persist`)
+      return response.data as { path: string; written: string[] }
+    },
+    successMessage: (_, data) => `Saved to library: ${data.written.length} file${data.written.length !== 1 ? 's' : ''}`,
+    errorMessage: (error) => getErrorMessage(error, 'Failed to persist to library'),
+    invalidate: [],
+  })
+}
+
 export function useImportLibrary() {
   return useMutationHelper({
     mutationFn: async () => {
