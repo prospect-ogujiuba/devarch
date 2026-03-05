@@ -158,6 +158,39 @@ handle_doctor() {
     "$SCRIPT_DIR/devarch-doctor.sh" "$@"
 }
 
+handle_import() {
+    local container_cmd=$(get_exec_cmd)
+    local container="devarch-api"
+    local extra_args=()
+
+    local running
+    running=$(eval "$container_cmd inspect --format '{{.State.Running}}' $container" 2>/dev/null)
+    if [[ "$running" != "true" ]]; then
+        echo "Error: $container container is not running"
+        echo "Start it with: docker compose up -d"
+        return 1
+    fi
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -l|--library-dir)
+                extra_args+=(-library-dir "$2")
+                shift 2
+                ;;
+            --count)
+                extra_args+=(-count-only)
+                shift
+                ;;
+            *)
+                extra_args+=("$1")
+                shift
+                ;;
+        esac
+    done
+
+    eval "$container_cmd exec -w /app $container go run ./cmd/import ${extra_args[*]}"
+}
+
 # =============================================================================
 # HELP & USAGE
 # =============================================================================
@@ -166,7 +199,7 @@ show_brief_usage() {
     cat << 'EOF'
 devarch <namespace> [command] [args...]
 
-Namespaces: service, wp, artisan, wordpress, laravel, socket, runtime, db, context, run, shell, init, doctor
+Namespaces: service, wp, artisan, wordpress, laravel, socket, runtime, db, context, run, shell, init, import, doctor
 
 Use -h or --help for detailed help, or <namespace> -h for namespace help
 EOF
@@ -192,6 +225,7 @@ NAMESPACES:
   run         Run command in any container
   shell       Open shell in container (defaults to php)
   init        Bootstrap stack from devarch.yml (import + pull + apply)
+  import      Import service templates from services-library
   doctor      Run diagnostics (runtime, API, disk, tools, ports)
 
 EXAMPLES:
@@ -239,6 +273,11 @@ EXAMPLES:
     devarch run postgres psql -U postgres
     devarch shell php
     devarch shell node
+
+  Service Library:
+    devarch import
+    devarch import --library-dir /path/to/services-library
+    devarch import --count
 
   Bootstrap & Diagnostics:
     devarch init devarch.yml
@@ -482,6 +521,26 @@ EXAMPLES:
   DEVARCH_API_URL=http://api:8550 devarch init
 EOF
             ;;
+        import)
+            cat << 'EOF'
+devarch import - Import Service Templates
+
+USAGE:
+  devarch import [options]
+
+Imports service templates from a services-library directory into the database.
+Runs inside the devarch-api container. Auto-detects /workspace/services-library.
+
+OPTIONS:
+  -l, --library-dir <path>    Path to services-library directory (inside container)
+  --count                     Print service count and exit
+
+EXAMPLES:
+  devarch import
+  devarch import --library-dir /path/to/services-library
+  devarch import --count
+EOF
+            ;;
         doctor)
             cat << 'EOF'
 devarch doctor - Run Diagnostics
@@ -527,6 +586,7 @@ resolve_namespace() {
         run|r) echo "run" ;;
         shell|sh) echo "shell" ;;
         init) echo "init" ;;
+        import|imp) echo "import" ;;
         doctor|doc) echo "doctor" ;;
         *) echo "" ;;
     esac
@@ -597,6 +657,9 @@ main() {
             ;;
         init)
             handle_init "$@"
+            ;;
+        import)
+            handle_import "$@"
             ;;
         doctor)
             handle_doctor "$@"
