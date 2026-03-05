@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import { ArrowLeft, Loader2, Clock, RefreshCw, Cpu, MemoryStick, Network, Pencil, Trash2, Download, Maximize2, Minimize2, Terminal } from 'lucide-react'
+import { ArrowLeft, Loader2, Clock, RefreshCw, Cpu, MemoryStick, Network, Pencil, Trash2, Download, Maximize2, Minimize2, Terminal, Save } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ResponsiveTabsList } from '@/components/ui/responsive-tabs-list'
 import { useServiceDetailController } from '@/features/services/useServiceDetailController'
+import { usePersistToLibrary } from '@/features/services/queries'
 import { ProxyConfigPanel } from '@/components/proxy/proxy-config-panel'
 import { StatusBadge } from '@/components/services/status-badge'
 import { ActionButton } from '@/components/services/action-button'
@@ -52,6 +53,7 @@ function ServiceDetailPage() {
   const navigate = useNavigate()
   const ctrl = useServiceDetailController(name)
 
+  const persistToLibrary = usePersistToLibrary()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [composeExpanded, setComposeExpanded] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -156,6 +158,16 @@ function ServiceDetailPage() {
                 Terminal
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+              disabled={persistToLibrary.isPending}
+              onClick={() => persistToLibrary.mutate(name)}
+            >
+              {persistToLibrary.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              Save to Library
+            </Button>
             <Button variant="outline" size="sm" onClick={openEdit} className="w-full sm:w-auto">
               <Pencil className="size-4" />
               Edit
