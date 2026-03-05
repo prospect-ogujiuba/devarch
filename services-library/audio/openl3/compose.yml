@@ -20,39 +20,26 @@ services:
       OPENL3_BATCH_SIZE: "8"
     command: >
       bash -lc '
-        set -euo pipefail
-
-        apt-get update -y >/dev/null
-        apt-get install -y --no-install-recommends git ffmpeg libsndfile1 >/dev/null
-        rm -rf /var/lib/apt/lists/*
-
-        python -m pip install --no-cache-dir -U pip wheel setuptools >/dev/null
-        python -m pip install --no-cache-dir
-          "tensorflow-cpu>=2.10,<3"
-          "openl3"
-          "soundfile"
-          "librosa"
-          "numpy" >/dev/null
-
-        echo "OpenL3 ready."
-        echo "Run: docker compose exec openl3 python /work/state/embed_all.py"
+        set -euo pipefail;
+        apt-get update -y >/dev/null;
+        apt-get install -y --no-install-recommends git ffmpeg libsndfile1 >/dev/null;
+        rm -rf /var/lib/apt/lists/*;
+        pip install --no-cache-dir -U pip wheel "setuptools<81" >/dev/null;
+        pip install --no-cache-dir tensorflow-cpu openl3 soundfile librosa numpy >/dev/null;
+        echo "OpenL3 ready.";
+        echo "Run: podman exec openl3 python /work/state/embed_all.py";
         tail -f /dev/null
       '
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import openl3; print('ok')\" >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "python -c 'import openl3' 2>/dev/null"]
       interval: 30s
       timeout: 15s
       retries: 3
-      start_period: 60s
+      start_period: 120s
     restart: unless-stopped
     networks:
       - microservices-net
     container_name: openl3
-    x-devarch-config:
-      tool: openl3
-      in_dir: /work/in
-      out_dir: /work/out
-      batch_cmd: "docker compose exec openl3 python /work/state/embed_all.py"
 
 volumes:
   openl3_keras: null

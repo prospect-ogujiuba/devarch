@@ -3,65 +3,23 @@ services:
     image: ghcr.io/mtg/essentia:latest
     working_dir: /work
     ports:
-      # optional: keep a port reserved if you later wrap this with an API
       - "127.0.0.1:8091:8091"
     volumes:
-      # drop audio in here
       - ../../../data/daw_agent/in:/work/in:rw
-      # extracted descriptor outputs land here
       - ../../../data/daw_agent/out:/work/out:rw
-      # optional: drop Essentia TF models (.pb + .json) here
       - ../../../data/daw_agent/models:/work/models:rw
-      # persistent scratch/state
       - essentia_state:/work/state:rw
+      - ./config/extract_all.sh:/work/state/extract_all.sh:ro
     environment:
       TZ: America/Toronto
-      # You can use this for your agent to know where things are
       DAW_IN_DIR: /work/in
       DAW_OUT_DIR: /work/out
       DAW_MODELS_DIR: /work/models
     command: >
-      bash -lc '
-        set -euo pipefail
-
-        # Create a "max extraction" helper script at runtime (self-contained).
-        cat >/work/state/extract_all.sh <<'"'"'EOF'"'"'
-        #!/usr/bin/env bash
-        set -euo pipefail
-
-        IN_DIR="${DAW_IN_DIR:-/work/in}"
-        OUT_DIR="${DAW_OUT_DIR:-/work/out}"
-
-        mkdir -p "$OUT_DIR"
-
-        shopt -s nullglob
-        for f in "$IN_DIR"/*; do
-          base="$(basename "$f")"
-          stem="${base%.*}"
-
-          # 1) Broad music descriptor extraction (very large feature set)
-          # Produces a YAML/JSON-like output depending on config; we keep the default signature output.
-          essentia_streaming_extractor_music "$f" "$OUT_DIR/${stem}.sig" || true
-
-          # 2) Also run the Freesound-style extractor for complementary descriptors (sound/clip oriented)
-          # (If present in the image; harmless if not.)
-          if command -v essentia_streaming_extractor_freesound >/dev/null 2>&1; then
-            essentia_streaming_extractor_freesound "$f" "$OUT_DIR/${stem}.freesound.sig" || true
-          fi
-
-          echo "done: $base"
-        done
-        EOF
-
-        chmod +x /work/state/extract_all.sh
-
-        echo "Essentia ready."
-        echo "Drop audio into:  /work/in"
-        echo "Outputs go to:    /work/out"
-        echo ""
-        echo "Run batch extract:"
-        echo "  docker compose exec essentia /work/state/extract_all.sh"
-        echo ""
+      bash -c '
+        chmod +x /work/state/extract_all.sh;
+        echo "Essentia ready.";
+        echo "Run: podman exec essentia /work/state/extract_all.sh";
         tail -f /dev/null
       '
     healthcheck:
@@ -78,12 +36,6 @@ services:
     networks:
       - microservices-net
     container_name: essentia
-    x-devarch-config:
-      tool: essentia
-      in_dir: /work/in
-      out_dir: /work/out
-      models_dir: /work/models
-      batch_cmd: "docker compose exec essentia /work/state/extract_all.sh"
 
 volumes:
   essentia_state: null
