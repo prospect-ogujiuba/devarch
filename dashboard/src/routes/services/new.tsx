@@ -1,14 +1,16 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import { ArrowLeft, Plus, Trash2, Loader2 } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Loader2, Upload, FileUp, Code } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { TagPicker } from '@/components/services/tag-picker'
-import { useCreateService } from '@/features/services/queries'
+import { CodeEditor } from '@/components/services/code-editor'
+import { useCreateService, useParseCompose, useImportCompose, useParseComposeText } from '@/features/services/queries'
+import type { ParsedServiceResult } from '@/features/services/queries'
 import { useCategories } from '@/features/categories/queries'
 import { useServices } from '@/features/services/queries'
 
@@ -83,6 +85,107 @@ function NewServicePage() {
     retries: 3,
     start_period_seconds: 0,
   })
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const parseCompose = useParseCompose()
+  const parseComposeText = useParseComposeText()
+  const importCompose = useImportCompose()
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [multiServiceCount, setMultiServiceCount] = useState(0)
+  const [dragOver, setDragOver] = useState(false)
+  const [importMode, setImportMode] = useState<'upload' | 'editor'>('upload')
+  const [editorYaml, setEditorYaml] = useState('')
+
+  const fillFormFromParsed = useCallback((svc: ParsedServiceResult) => {
+    setForm((prev) => ({
+      ...prev,
+      name: svc.name || prev.name,
+      image_name: svc.image_name || prev.image_name,
+      image_tag: svc.image_tag || prev.image_tag,
+      restart_policy: svc.restart_policy || prev.restart_policy,
+      command: svc.command || '',
+      user_spec: svc.user_spec || '',
+    }))
+    if (svc.ports?.length) {
+      setPorts(svc.ports.map((p) => ({
+        host_ip: p.host_ip || '0.0.0.0',
+        host_port: String(p.host_port),
+        container_port: String(p.container_port),
+        protocol: p.protocol || 'tcp',
+      })))
+    }
+    if (svc.volumes?.length) {
+      setVolumes(svc.volumes.map((v) => ({
+        volume_type: v.volume_type || 'bind',
+        source: v.source,
+        target: v.target,
+        read_only: v.read_only,
+        is_external: v.is_external,
+      })))
+    }
+    if (svc.env_vars?.length) {
+      setEnvVars(svc.env_vars.map((e) => ({
+        key: e.key,
+        value: e.value,
+        is_secret: e.is_secret,
+      })))
+    }
+    if (svc.labels?.length) {
+      setLabels(svc.labels.map((l) => ({ key: l.key, value: l.value })))
+    }
+    if (svc.dependencies?.length) {
+      setDependencies(svc.dependencies)
+    }
+    if (svc.healthcheck) {
+      setHealthcheck({
+        enabled: true,
+        test: svc.healthcheck.test,
+        interval_seconds: svc.healthcheck.interval_seconds,
+        timeout_seconds: svc.healthcheck.timeout_seconds,
+        retries: svc.healthcheck.retries,
+        start_period_seconds: svc.healthcheck.start_period_seconds,
+      })
+    }
+  }, [])
+
+  const handleParsedServices = useCallback((services: ParsedServiceResult[]) => {
+    if (services.length === 0) return
+    if (services.length > 1) {
+      setMultiServiceCount(services.length)
+      return
+    }
+    setMultiServiceCount(0)
+    fillFormFromParsed(services[0])
+  }, [fillFormFromParsed])
+
+  const handleFileSelect = useCallback(async (file: File) => {
+    setPendingFile(file)
+    setMultiServiceCount(0)
+    parseCompose.mutate(file, { onSuccess: handleParsedServices })
+  }, [parseCompose, handleParsedServices])
+
+  const handleEditorParse = () => {
+    if (!editorYaml.trim()) return
+    setMultiServiceCount(0)
+    parseComposeText.mutate(editorYaml, { onSuccess: handleParsedServices })
+  }
+
+  const handleBulkImport = () => {
+    if (!pendingFile || !form.category_id) return
+    importCompose.mutate(
+      { file: pendingFile, categoryId: parseInt(form.category_id, 10) },
+      { onSuccess: () => navigate({ to: '/services' }) },
+    )
+  }
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file && (file.name.endsWith('.yml') || file.name.endsWith('.yaml'))) {
+      handleFileSelect(file)
+    }
+  }, [handleFileSelect])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -170,6 +273,115 @@ function NewServicePage() {
           {createService.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Create Service'}
         </Button>
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Import from Compose</CardTitle>
+          <div className="flex gap-1 rounded-md border p-0.5">
+            <button
+              type="button"
+              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${importMode === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => setImportMode('upload')}
+            >
+              <Upload className="inline size-3 mr-1 -mt-0.5" />
+              Upload
+            </button>
+            <button
+              type="button"
+              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${importMode === 'editor' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => setImportMode('editor')}
+            >
+              <Code className="inline size-3 mr-1 -mt-0.5" />
+              Editor
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {importMode === 'upload' ? (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".yml,.yaml"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handleFileSelect(file)
+                  e.target.value = ''
+                }}
+              />
+              <div
+                className={`flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-6 transition-colors cursor-pointer ${dragOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-muted-foreground/50'}`}
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+              >
+                {parseCompose.isPending ? (
+                  <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                ) : (
+                  <Upload className="size-6 text-muted-foreground" />
+                )}
+                <div className="text-center">
+                  <p className="text-sm font-medium">
+                    {pendingFile ? pendingFile.name : 'Drop a compose.yml here or click to browse'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Parses the file and pre-fills the form below
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-3">
+              <CodeEditor
+                value={editorYaml}
+                onChange={setEditorYaml}
+                language="yaml"
+                className="rounded-md border overflow-hidden"
+              />
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!editorYaml.trim() || parseComposeText.isPending}
+                  onClick={handleEditorParse}
+                >
+                  {parseComposeText.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Parse & Fill Form'}
+                </Button>
+              </div>
+            </div>
+          )}
+          {multiServiceCount > 1 && (
+            <div className="mt-3 flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
+              <p className="text-sm">
+                <FileUp className="inline size-4 mr-1 -mt-0.5" />
+                {multiServiceCount} services found — bulk import into a category?
+              </p>
+              <div className="flex items-center gap-2">
+                <Select value={form.category_id} onValueChange={(v) => setForm({ ...form, category_id: v })}>
+                  <SelectTrigger className="w-40 h-8 text-xs">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(categories ?? []).map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>{c.display_name || c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!form.category_id || importCompose.isPending}
+                  onClick={handleBulkImport}
+                >
+                  {importCompose.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Import All'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
