@@ -24,14 +24,14 @@ start_spinner() {
             i=$((i + 1))
             sleep 0.1
         done
-    ) &
+    ) </dev/null &
     SPINNER_PID=$!
 }
 
 stop_spinner() {
     if [[ -n "$SPINNER_PID" ]]; then
-        kill "$SPINNER_PID" 2>/dev/null
-        wait "$SPINNER_PID" 2>/dev/null
+        kill "$SPINNER_PID" 2>/dev/null || true
+        wait "$SPINNER_PID" 2>/dev/null || true
         SPINNER_PID=""
         printf "\b \b\033[0m\n" >&2
     fi
@@ -61,7 +61,7 @@ api_call() {
     if [[ -n "$data" ]]; then
         args+=(-d "$data")
     fi
-    curl "${args[@]}" "$url" 2>/dev/null || echo '{"error":{"message":"Request failed — is devarch-ai running?"}}'
+    curl "${args[@]}" "$url" </dev/null 2>/dev/null || echo '{"error":{"message":"Request failed — is devarch-ai running?"}}'
 }
 
 api_stream() {
@@ -161,10 +161,6 @@ cmd_generate() {
 
 cmd_chat() {
     ensure_llm_ready
-    local go_ver
-    go_ver=$(go version 2>/dev/null | grep -oP 'go\d+\.\d+(\.\d+)?' || echo "go")
-    local api_ver
-    api_ver=$(git -C "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" describe --tags --always 2>/dev/null || echo "dev")
     printf '\033[1;36m'
     cat <<'BANNER'
     ____            ___              __
@@ -174,7 +170,6 @@ cmd_chat() {
 /_____/\___/ |__/_/  |_/_/   \___/_/ /_/
 BANNER
     printf '\033[0m'
-    echo "  v${api_ver}, built with Go ${go_ver}"
     echo ""
     echo "type 'exit' to quit, 'exec' to run last command"
     echo "───"
@@ -182,9 +177,10 @@ BANNER
     local conv_id=""
     local last_command=""
 
+    set +e
     while true; do
         printf "> "
-        read -r input
+        read -r input || break
         [[ -z "$input" ]] && continue
 
         if [[ "$input" == "exit" || "$input" == "quit" ]]; then
@@ -197,9 +193,10 @@ BANNER
                 echo "No command to execute"
                 continue
             fi
+            local exec_cmd="${last_command//devarch/$SCRIPT_DIR/devarch}"
             read -r -p "Execute: $last_command ? [y/N] " confirm
             if [[ "$confirm" =~ ^[yY]$ ]]; then
-                eval "$last_command"
+                eval "$exec_cmd"
             fi
             continue
         fi
