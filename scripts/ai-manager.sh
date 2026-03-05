@@ -193,7 +193,7 @@ BANNER
                 echo "No command to execute"
                 continue
             fi
-            local exec_cmd="${last_command//devarch/$SCRIPT_DIR/devarch}"
+            local exec_cmd="${last_command/#devarch /$SCRIPT_DIR/devarch }"
             read -r -p "Execute: $last_command ? [y/N] " confirm
             if [[ "$confirm" =~ ^[yY]$ ]]; then
                 eval "$exec_cmd"
@@ -230,7 +230,7 @@ BANNER
 
         # Extract last command suggestion (line starting with $)
         local cmd
-        cmd=$(echo "$message" | grep '^\$ ' | tail -1 | sed 's/^\$ //' || true)
+        cmd=$(echo "$message" | grep '^\$ ' | grep -v '<.*>' | tail -1 | sed 's/^\$ //' || true)
         if [[ -n "$cmd" ]]; then
             last_command="$cmd"
         fi
