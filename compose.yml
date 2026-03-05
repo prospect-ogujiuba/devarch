@@ -49,6 +49,7 @@ services:
       - PROJECT_ROOT=/app
       - HOST_PROJECT_ROOT=/home/priz/projects/devarch
       - WORKSPACE_ROOT=/workspace
+      - LLM_NETWORK=devarch_microservices-net
     ports:
       - "127.0.0.1:8550:8080"
     volumes:
