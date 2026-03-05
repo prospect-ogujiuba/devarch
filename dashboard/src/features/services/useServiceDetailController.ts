@@ -1,4 +1,4 @@
-import { useService, useServiceCompose, useDeleteService, useUpdateService } from './queries'
+import { useService, useServiceCompose, useDeleteService, useUpdateService, useStartService, useStopService, useRestartService } from './queries'
 import { useGenerateServiceProxyConfig } from '@/features/proxy/queries'
 import { computeUptime } from '@/lib/format'
 
@@ -8,6 +8,9 @@ export function useServiceDetailController(serviceName: string) {
   const { data: composeYaml, isLoading: composeLoading } = useServiceCompose(serviceName)
   const deleteService = useDeleteService()
   const updateService = useUpdateService()
+  const startService = useStartService()
+  const stopService = useStopService()
+  const restartService = useRestartService()
   const generateProxyConfig = useGenerateServiceProxyConfig(serviceName)
 
   // Derived state
@@ -42,6 +45,9 @@ export function useServiceDetailController(serviceName: string) {
     // Mutations
     deleteService,
     updateService,
+    startService,
+    stopService,
+    restartService,
     generateProxyConfig,
   }
 }

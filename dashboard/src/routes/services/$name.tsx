@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import { ArrowLeft, Loader2, Clock, RefreshCw, Cpu, MemoryStick, Network, Pencil, Trash2, Download, Maximize2, Minimize2, Terminal, Save } from 'lucide-react'
+import { ArrowLeft, Loader2, Clock, RefreshCw, Cpu, MemoryStick, Network, Pencil, Trash2, Download, Maximize2, Minimize2, Terminal, Save, AlertTriangle, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -15,9 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ResponsiveTabsList } from '@/components/ui/responsive-tabs-list'
 import { useServiceDetailController } from '@/features/services/useServiceDetailController'
 import { usePersistToLibrary } from '@/features/services/queries'
+import { getErrorMessage } from '@/lib/api'
 import { ProxyConfigPanel } from '@/components/proxy/proxy-config-panel'
 import { StatusBadge } from '@/components/services/status-badge'
-import { ActionButton } from '@/components/services/action-button'
+import { LifecycleButtons } from '@/components/ui/entity-actions'
 import { LogViewer } from '@/components/services/log-viewer'
 import { EditablePorts } from '@/components/services/editable-ports'
 import { EditableVolumes } from '@/components/services/editable-volumes'
@@ -54,6 +55,16 @@ function ServiceDetailPage() {
   const ctrl = useServiceDetailController(name)
 
   const persistToLibrary = usePersistToLibrary()
+
+  const mutationErrors = [
+    ctrl.startService.isError && { action: 'Start', error: ctrl.startService.error, reset: ctrl.startService.reset },
+    ctrl.stopService.isError && { action: 'Stop', error: ctrl.stopService.error, reset: ctrl.stopService.reset },
+    ctrl.restartService.isError && { action: 'Restart', error: ctrl.restartService.error, reset: ctrl.restartService.reset },
+    ctrl.updateService.isError && { action: 'Update', error: ctrl.updateService.error, reset: ctrl.updateService.reset },
+    ctrl.deleteService.isError && { action: 'Delete', error: ctrl.deleteService.error, reset: ctrl.deleteService.reset },
+    persistToLibrary.isError && { action: 'Save to Library', error: persistToLibrary.error, reset: persistToLibrary.reset },
+  ].filter((e): e is { action: string; error: unknown; reset: () => void } => !!e)
+
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [composeExpanded, setComposeExpanded] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -145,9 +156,15 @@ function ServiceDetailPage() {
             <p className="mt-1 truncate text-sm text-muted-foreground sm:text-base">{ctrl.image}</p>
           </div>
           <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
-            <ActionButton
-              name={ctrl.service.name}
-              status={ctrl.status}
+            <LifecycleButtons
+              isRunning={ctrl.status === 'running'}
+              onStart={() => ctrl.startService.mutate(name)}
+              onStop={() => ctrl.stopService.mutate(name)}
+              onRestart={() => ctrl.restartService.mutate(name)}
+              isStartPending={ctrl.startService.isPending}
+              isStopPending={ctrl.stopService.isPending}
+              isRestartPending={ctrl.restartService.isPending}
+              startDisabled={ctrl.status === 'starting'}
               showRestart
               className="col-span-2"
               buttonClassName="w-full sm:w-auto"
@@ -198,6 +215,23 @@ function ServiceDetailPage() {
           value={ctrl.status === 'running' && ctrl.uptime > 0 ? formatUptime(ctrl.uptime) : '-'}
         />
       </div>
+
+      {mutationErrors.length > 0 && (
+        <div className="space-y-2">
+          {mutationErrors.map((item) => (
+            <div key={item.action} className="flex items-start gap-2 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-md">
+              <AlertTriangle className="size-4 mt-0.5 shrink-0" />
+              <div className="flex-1 text-sm">
+                <span className="font-medium">{item.action} failed</span>
+                <span className="opacity-80"> — {getErrorMessage(item.error, 'Unknown error')}</span>
+              </div>
+              <button onClick={() => item.reset()} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity">
+                <X className="size-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <ResponsiveTabsList tabs={serviceTabItems} value={activeTab} onValueChange={handleTabChange} />
