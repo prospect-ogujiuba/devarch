@@ -99,6 +99,8 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 			r.Post("/", serviceHandler.Create)
 			r.Post("/bulk", serviceHandler.Bulk)
 			r.Post("/import-library", serviceHandler.ImportLibrary)
+			r.Post("/import-compose", serviceHandler.ImportCompose)
+			r.Post("/parse-compose", serviceHandler.ParseComposeText)
 
 			r.Route("/{name}", func(r chi.Router) {
 				r.Get("/", serviceHandler.Get)
@@ -120,6 +122,7 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 				r.Post("/validate", serviceHandler.Validate)
 				r.Post("/export", serviceHandler.Export)
 				r.Post("/materialize", serviceHandler.Materialize)
+				r.Post("/persist", serviceHandler.PersistToLibrary)
 
 				r.Put("/ports", serviceHandler.UpdatePorts)
 				r.Put("/volumes", serviceHandler.UpdateVolumes)
