@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"log/slog"
 	"net/http"
@@ -16,18 +17,20 @@ import (
 	mw "github.com/priz/devarch-api/internal/api/middleware"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/crypto"
+	"github.com/priz/devarch-api/internal/llm"
 	"github.com/priz/devarch-api/internal/nginx"
 	"github.com/priz/devarch-api/internal/orchestration"
 	"github.com/priz/devarch-api/internal/podman"
 	"github.com/priz/devarch-api/internal/project"
 	"github.com/priz/devarch-api/internal/proxy"
+	"github.com/priz/devarch-api/internal/ramalama"
 	"github.com/priz/devarch-api/internal/scanner"
 	"github.com/priz/devarch-api/internal/security"
 	"github.com/priz/devarch-api/internal/sync"
 	"github.com/priz/devarch-api/pkg/registry"
 )
 
-func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podman.Client, syncManager *sync.Manager, projectScanner *scanner.Scanner, nginxGenerator *nginx.Generator, projectController *project.Controller, registryManager *registry.Manager, cipher *crypto.Cipher, secMode security.Mode, logger *slog.Logger) http.Handler {
+func NewRouter(ctx context.Context, db *sql.DB, containerClient *container.Client, podmanClient *podman.Client, syncManager *sync.Manager, projectScanner *scanner.Scanner, nginxGenerator *nginx.Generator, projectController *project.Controller, registryManager *registry.Manager, cipher *crypto.Cipher, secMode security.Mode, logger *slog.Logger, ramalamaManager *ramalama.Manager, llmClient *llm.Client) http.Handler {
 	r := chi.NewRouter()
 
 	// Read stack import size limit from env var (default 256MB)
@@ -79,6 +82,8 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 	authHandler := handlers.NewAuthHandler()
 	execHandler := handlers.NewExecHandler(podmanClient, allowedOrigins, secMode)
 	imageHandler := handlers.NewImageHandler(podmanClient)
+	contextBuilder := llm.NewContextBuilder(db, containerClient)
+	aiHandler := handlers.NewAIHandler(ctx, ramalamaManager, llmClient, contextBuilder)
 
 	r.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"),
@@ -216,6 +221,16 @@ func NewRouter(db *sql.DB, containerClient *container.Client, podmanClient *podm
 				r.Get("/search", registryHandler.SearchImages)
 				r.Get("/images/*", registryHandler.ImageRoute)
 			})
+		})
+
+		r.Route("/ai", func(r chi.Router) {
+			r.Get("/status", aiHandler.Status)
+			r.Post("/generate", aiHandler.Generate)
+			r.Post("/chat", aiHandler.Chat)
+			r.Post("/diagnose", aiHandler.Diagnose)
+			r.Post("/model/pull", aiHandler.PullModel)
+			r.Get("/models", aiHandler.ListModels)
+			r.Post("/stop", aiHandler.Stop)
 		})
 
 		r.Route("/images", func(r chi.Router) {

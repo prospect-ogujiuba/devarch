@@ -158,6 +158,10 @@ handle_doctor() {
     "$SCRIPT_DIR/devarch-doctor.sh" "$@"
 }
 
+handle_ai() {
+    "$SCRIPT_DIR/ai-manager.sh" "$@"
+}
+
 handle_import() {
     local container_cmd=$(get_exec_cmd)
     local container="devarch-api"
@@ -199,7 +203,7 @@ show_brief_usage() {
     cat << 'EOF'
 devarch <namespace> [command] [args...]
 
-Namespaces: service, wp, artisan, wordpress, laravel, socket, runtime, db, context, run, shell, init, import, doctor
+Namespaces: service, wp, artisan, wordpress, laravel, socket, runtime, db, context, run, shell, init, import, doctor, ai
 
 Use -h or --help for detailed help, or <namespace> -h for namespace help
 EOF
@@ -227,6 +231,7 @@ NAMESPACES:
   init        Bootstrap stack from devarch.yml (import + pull + apply)
   import      Import service templates from services-library
   doctor      Run diagnostics (runtime, API, disk, tools, ports)
+  ai          AI assistant (generate, chat, diagnose, model management)
 
 EXAMPLES:
   Service Management:
@@ -278,6 +283,13 @@ EXAMPLES:
     devarch import
     devarch import --library-dir /path/to/services-library
     devarch import --count
+
+  AI Assistant:
+    devarch ai status
+    devarch ai generate "redis cache with persistence"
+    devarch ai chat
+    devarch ai diagnose nginx
+    devarch ai model pull granite3.2:8b
 
   Bootstrap & Diagnostics:
     devarch init devarch.yml
@@ -561,6 +573,31 @@ EXAMPLES:
   devarch doctor
 EOF
             ;;
+        ai)
+            cat << 'EOF'
+devarch ai - AI Assistant
+
+USAGE:
+  devarch ai <command> [args...]
+
+COMMANDS:
+  status                  Show LLM runtime status
+  generate "description"  Generate service template from description
+  chat                    Interactive chat session
+  diagnose <target>       Diagnose service/stack/instance issues
+  model pull <name>       Pull a model
+  model list              List available models
+  stop                    Stop LLM container
+
+EXAMPLES:
+  devarch ai status
+  devarch ai generate "redis cache with persistence"
+  devarch ai chat
+  devarch ai diagnose nginx
+  devarch ai model pull granite3.2:8b
+  devarch ai stop
+EOF
+            ;;
         *)
             echo "Unknown namespace: $ns"
             return 1
@@ -588,6 +625,7 @@ resolve_namespace() {
         init) echo "init" ;;
         import|imp) echo "import" ;;
         doctor|doc) echo "doctor" ;;
+        ai) echo "ai" ;;
         *) echo "" ;;
     esac
 }
@@ -663,6 +701,9 @@ main() {
             ;;
         doctor)
             handle_doctor "$@"
+            ;;
+        ai)
+            handle_ai "$@"
             ;;
     esac
 }
