@@ -43,7 +43,15 @@ docker compose up      # postgres :5433, api :8550
 - `internal/podman/` — Podman-specific implementation
 - `internal/nginx/` — nginx config generation
 - `internal/project/` — project controller
-- `migrations/` — 12 SQL migrations (001-012)
+- `migrations/` — 15 SQL migrations (001-015)
+
+**AI** (`ai/`): Go 1.24, chi router, lib/pq — AI assistant with LLM chat + embeddings
+- `cmd/server` — entry point, wires ramalama managers + LLM/embed clients + DB
+- `internal/ramalama/` — ramalama CLI wrapper, manages `devarch-llm` (chat) and `devarch-llm-embed` (embeddings) containers with idle timeout
+- `internal/llm/` — OpenAI-compatible chat client, system prompts, context builder
+- `internal/embedding/` — embedding client (`/v1/embeddings`) + pgvector store (768-dim, HNSW cosine similarity)
+- `internal/api/` — HTTP handlers and routes for chat, generate, diagnose, embed, index, search
+- Models stored on host (`~/.local/share/ramalama`), bind-mounted into LLM containers by ramalama
 
 **Dashboard** (`dashboard/`): React 19, Vite, TanStack Router (file-based) + Query, Tailwind 4, Radix UI, Zod, CodeMirror
 - `src/routes/` — page components (services, projects, categories, settings)
@@ -64,6 +72,8 @@ docker compose up      # postgres :5433, api :8550
 - Compose YAML is never stored — always generated from DB state via `compose/generator.go`
 - WebSocket at `/api/v1/ws/status` for real-time container status
 - DB connection string via `DATABASE_URL` env var, API port via `PORT`
+- pgvector extension for vector similarity search (embeddings table, 768-dim HNSW index)
+- Ramalama manages LLM containers natively (GPU auto-detection, model pulling, idle timeout)
 
 ## Planning
 
