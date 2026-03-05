@@ -17,7 +17,7 @@ start_spinner() {
     local msg="${1:-Working}"
     printf "\033[90m%s " "$msg" >&2
     (
-        local chars='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+        local chars='⣾⣽⣻⢿⡿⣟⣯⣷'
         local i=0
         while true; do
             printf "\b%s" "${chars:i%${#chars}:1}" >&2
@@ -57,11 +57,11 @@ ensure_llm_ready() {
 api_call() {
     local method="$1" endpoint="$2" data="$3"
     local url="${DEVARCH_AI_URL}/api/v1${endpoint}"
-    local args=(-s -X "$method" -H "X-API-Key: ${DEVARCH_API_KEY}" -H "Content-Type: application/json")
+    local args=(-s --max-time 300 -X "$method" -H "X-API-Key: ${DEVARCH_API_KEY}" -H "Content-Type: application/json")
     if [[ -n "$data" ]]; then
         args+=(-d "$data")
     fi
-    curl "${args[@]}" "$url"
+    curl "${args[@]}" "$url" 2>/dev/null || echo '{"error":{"message":"Request failed — is devarch-ai running?"}}'
 }
 
 api_stream() {
@@ -218,7 +218,7 @@ cmd_chat() {
 
         # Extract last command suggestion (line starting with $)
         local cmd
-        cmd=$(echo "$message" | grep '^\$ ' | tail -1 | sed 's/^\$ //')
+        cmd=$(echo "$message" | grep '^\$ ' | tail -1 | sed 's/^\$ //' || true)
         if [[ -n "$cmd" ]]; then
             last_command="$cmd"
         fi
