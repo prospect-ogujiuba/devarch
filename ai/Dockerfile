@@ -1,6 +1,7 @@
 FROM golang:1.24-alpine AS base
 
-RUN apk add --no-cache git ca-certificates podman curl && \
+RUN apk add --no-cache git ca-certificates podman curl py3-pip && \
+    pip install --break-system-packages ramalama && \
     mkdir -p /etc/containers && \
     printf '[engine]\nremote = true\n' > /etc/containers/containers.conf
 
@@ -18,7 +19,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /devarch-ai ./cmd/server
 
 FROM alpine:3.19 AS production
 
-RUN apk add --no-cache ca-certificates podman curl && \
+RUN apk add --no-cache ca-certificates podman curl py3-pip && \
+    pip install --break-system-packages ramalama && \
     mkdir -p /etc/containers && \
     printf '[engine]\nremote = true\n' > /etc/containers/containers.conf
 

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/priz/devarch-ai/internal/embedding"
 	"github.com/priz/devarch-ai/internal/llm"
 	"github.com/priz/devarch-ai/internal/ramalama"
 	"github.com/priz/devarch-ai/internal/respond"
@@ -22,15 +23,19 @@ type Handler struct {
 	manager        *ramalama.Manager
 	client         *llm.Client
 	contextBuilder *llm.ContextBuilder
+	embedClient    *embedding.Client
+	embedStore     *embedding.Store
 	conversations  sync.Map
 	mu             sync.Mutex
 }
 
-func NewHandler(ctx context.Context, manager *ramalama.Manager, client *llm.Client, contextBuilder *llm.ContextBuilder) *Handler {
+func NewHandler(ctx context.Context, manager *ramalama.Manager, client *llm.Client, contextBuilder *llm.ContextBuilder, embedClient *embedding.Client, embedStore *embedding.Store) *Handler {
 	h := &Handler{
 		manager:        manager,
 		client:         client,
 		contextBuilder: contextBuilder,
+		embedClient:    embedClient,
+		embedStore:     embedStore,
 	}
 	go h.pruneConversations(ctx)
 	return h
@@ -308,4 +313,106 @@ func (h *Handler) ListModels(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond.JSON(w, http.StatusOK, map[string]interface{}{"models": models})
+}
+
+type embedRequest struct {
+	Text string `json:"text"`
+}
+
+func (h *Handler) Embed(w http.ResponseWriter, r *http.Request) {
+	var req embedRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.BadRequest(w, "invalid request body")
+		return
+	}
+	if req.Text == "" {
+		respond.BadRequest(w, "text is required")
+		return
+	}
+
+	vec, err := h.embedClient.EmbedSingle(req.Text)
+	if err != nil {
+		respond.InternalError(w, err)
+		return
+	}
+
+	respond.JSON(w, http.StatusOK, map[string]interface{}{
+		"embedding":  vec,
+		"dimensions": len(vec),
+	})
+}
+
+type indexRequest struct {
+	SourceType string `json:"source_type"`
+	SourceID   string `json:"source_id"`
+	Content    string `json:"content"`
+}
+
+func (h *Handler) IndexDocument(w http.ResponseWriter, r *http.Request) {
+	if h.embedStore == nil {
+		respond.InternalError(w, fmt.Errorf("embedding store not configured"))
+		return
+	}
+
+	var req indexRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.BadRequest(w, "invalid request body")
+		return
+	}
+	if req.SourceType == "" || req.SourceID == "" || req.Content == "" {
+		respond.BadRequest(w, "source_type, source_id, and content are required")
+		return
+	}
+
+	vec, err := h.embedClient.EmbedSingle(req.Content)
+	if err != nil {
+		respond.InternalError(w, err)
+		return
+	}
+
+	if err := h.embedStore.Upsert(req.SourceType, req.SourceID, req.Content, vec); err != nil {
+		respond.InternalError(w, err)
+		return
+	}
+
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "indexed"})
+}
+
+type searchRequest struct {
+	Query string `json:"query"`
+	Limit int    `json:"limit,omitempty"`
+}
+
+func (h *Handler) SearchDocuments(w http.ResponseWriter, r *http.Request) {
+	if h.embedStore == nil {
+		respond.InternalError(w, fmt.Errorf("embedding store not configured"))
+		return
+	}
+
+	var req searchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.BadRequest(w, "invalid request body")
+		return
+	}
+	if req.Query == "" {
+		respond.BadRequest(w, "query is required")
+		return
+	}
+	if req.Limit <= 0 {
+		req.Limit = 5
+	}
+
+	vec, err := h.embedClient.EmbedSingle(req.Query)
+	if err != nil {
+		respond.InternalError(w, err)
+		return
+	}
+
+	docs, err := h.embedStore.Search(vec, req.Limit)
+	if err != nil {
+		respond.InternalError(w, err)
+		return
+	}
+
+	respond.JSON(w, http.StatusOK, map[string]interface{}{"results": docs})
 }

@@ -2,6 +2,7 @@ package ramalama
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os/exec"
@@ -9,39 +10,46 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"encoding/json"
 )
-
-const containerName = "devarch-llm"
-const volumeName = "devarch-llm-models"
 
 type Status struct {
 	Running bool   `json:"running"`
 	Model   string `json:"model"`
 	Port    int    `json:"port"`
-	GPU     string `json:"gpu"`
 	Uptime  string `json:"uptime,omitempty"`
 }
 
 type Manager struct {
-	cfg     Config
-	mu      sync.Mutex
-	runtime string
-	lastUse time.Time
-	stopCh  chan struct{}
+	cfg           Config
+	containerName string
+	mu            sync.Mutex
+	runtime       string
+	lastUse       time.Time
+	stopCh        chan struct{}
+}
+
+func detectRuntime() string {
+	if _, err := exec.LookPath("podman"); err != nil {
+		return "docker"
+	}
+	return "podman"
 }
 
 func NewManager() *Manager {
-	runtime := "podman"
-	if _, err := exec.LookPath("podman"); err != nil {
-		runtime = "docker"
-	}
-
 	return &Manager{
-		cfg:    LoadConfig(),
-		runtime: runtime,
-		stopCh: make(chan struct{}),
+		cfg:           LoadConfig(),
+		containerName: "devarch-llm",
+		runtime:       detectRuntime(),
+		stopCh:        make(chan struct{}),
+	}
+}
+
+func NewEmbedManager() *Manager {
+	return &Manager{
+		cfg:           LoadEmbedConfig(),
+		containerName: "devarch-llm-embed",
+		runtime:       detectRuntime(),
+		stopCh:        make(chan struct{}),
 	}
 }
 
@@ -60,7 +68,7 @@ func (m *Manager) StartIdleWatcher(ctx context.Context) {
 				if !m.lastUse.IsZero() && time.Since(m.lastUse) > m.cfg.IdleTimeout {
 					m.mu.Unlock()
 					if running, _ := m.isRunning(); running {
-						slog.Info("stopping idle LLM container", "idle_for", time.Since(m.lastUse))
+						slog.Info("stopping idle container", "container", m.containerName, "idle_for", time.Since(m.lastUse))
 						m.Stop()
 					}
 				} else {
@@ -95,7 +103,6 @@ func (m *Manager) GetStatus() (*Status, error) {
 		Running: running,
 		Model:   m.cfg.Model,
 		Port:    m.cfg.Port,
-		GPU:     m.detectGPULabel(),
 	}
 
 	if running {
@@ -108,25 +115,15 @@ func (m *Manager) GetStatus() (*Status, error) {
 }
 
 func (m *Manager) Stop() error {
-	output, err := m.exec("stop", containerName)
+	output, err := m.ramalama("stop", "--ignore", m.containerName)
 	if err != nil {
-		combined := strings.ToLower(output + " " + err.Error())
-		if strings.Contains(combined, "no such container") || strings.Contains(combined, "no container with") {
-			return nil
-		}
-		return fmt.Errorf("%s: %w", strings.TrimSpace(output), err)
-	}
-	if _, err := m.exec("rm", containerName); err != nil {
-		slog.Warn("failed to remove LLM container", "error", err)
+		return fmt.Errorf("stop %s: %s: %w", m.containerName, strings.TrimSpace(output), err)
 	}
 	return nil
 }
 
 func (m *Manager) PullModel(model string) (string, error) {
-	if err := m.EnsureRunning(); err != nil {
-		return "", fmt.Errorf("start LLM container: %w", err)
-	}
-	output, err := m.exec("exec", containerName, "ramalama", "pull", model)
+	output, err := m.ramalama("pull", model)
 	if err != nil {
 		return "", fmt.Errorf("pull model: %s: %w", strings.TrimSpace(output), err)
 	}
@@ -134,17 +131,14 @@ func (m *Manager) PullModel(model string) (string, error) {
 }
 
 func (m *Manager) ListModels() ([]string, error) {
-	if err := m.EnsureRunning(); err != nil {
-		return nil, fmt.Errorf("start LLM container: %w", err)
-	}
-	output, err := m.exec("exec", containerName, "ramalama", "list")
+	output, err := m.ramalama("list", "--noheading")
 	if err != nil {
 		return nil, fmt.Errorf("list models: %s: %w", strings.TrimSpace(output), err)
 	}
 	var models []string
 	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
 		line = strings.TrimSpace(line)
-		if line != "" && !strings.HasPrefix(line, "NAME") {
+		if line != "" {
 			parts := strings.Fields(line)
 			if len(parts) > 0 {
 				models = append(models, parts[0])
@@ -156,7 +150,7 @@ func (m *Manager) ListModels() ([]string, error) {
 
 func (m *Manager) BaseURL() string {
 	if m.cfg.Network != "" {
-		return fmt.Sprintf("http://%s:8080", containerName)
+		return fmt.Sprintf("http://%s:%d", m.containerName, m.cfg.Port)
 	}
 	return fmt.Sprintf("http://localhost:%d", m.cfg.Port)
 }
@@ -166,68 +160,66 @@ func (m *Manager) Config() Config {
 }
 
 func (m *Manager) start() error {
-	m.exec("rm", "-f", containerName)
-	m.exec("volume", "create", volumeName)
+	m.ramalama("stop", "--ignore", m.containerName)
 
 	args := []string{
-		"run", "-d",
-		"--name", containerName,
-		"--replace",
-		"-p", fmt.Sprintf("%d:8080", m.cfg.Port),
-		"-v", volumeName + ":/root/.local/share/ramalama",
-		"--label", "devarch.managed_by=devarch",
-		"--label", "devarch.component=llm",
+		"serve", "-d",
+		"-n", m.containerName,
+		"-p", strconv.Itoa(m.cfg.Port),
 	}
 
 	if m.cfg.Network != "" {
 		args = append(args, "--network", m.cfg.Network)
 	}
 
-	gpuArgs := DetectGPU(m.cfg.GPUMode)
-	args = append(args, gpuArgs...)
-	args = append(args, m.cfg.Image, "ramalama", "serve", "--port", "8080", m.cfg.Model)
+	for _, extra := range m.cfg.RuntimeArgs {
+		args = append(args, "--runtime-args="+extra)
+	}
 
-	output, err := m.exec(args...)
+	args = append(args, m.cfg.Model)
+
+	output, err := m.ramalama(args...)
 	if err != nil {
-		return fmt.Errorf("start LLM container: %s: %w", strings.TrimSpace(output), err)
+		return fmt.Errorf("start container %s: %s: %w", m.containerName, strings.TrimSpace(output), err)
 	}
 
 	if err := m.waitReady(90 * time.Second); err != nil {
-		return fmt.Errorf("LLM container not ready: %w", err)
+		return fmt.Errorf("container %s not ready: %w", m.containerName, err)
 	}
 
 	m.TouchLastUse()
-	slog.Info("LLM container started", "model", m.cfg.Model, "port", m.cfg.Port)
+	slog.Info("container started", "container", m.containerName, "model", m.cfg.Model, "port", m.cfg.Port)
 	return nil
 }
 
 func (m *Manager) waitReady(timeout time.Duration) error {
+	url := m.BaseURL() + "/v1/models"
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		output, err := m.exec("exec", containerName, "curl", "-sf", "http://localhost:8080/v1/models")
-		if err == nil && strings.Contains(output, "model") {
+		cmd := exec.Command("curl", "-sf", url)
+		if output, err := cmd.CombinedOutput(); err == nil && strings.Contains(string(output), "model") {
 			return nil
 		}
 		time.Sleep(2 * time.Second)
 	}
-	return fmt.Errorf("timeout waiting for LLM to start after %s", timeout)
+	return fmt.Errorf("timeout waiting for %s after %s", m.containerName, timeout)
 }
 
 func (m *Manager) isRunning() (bool, error) {
-	output, err := m.exec("inspect", "--format", "{{.State.Running}}", containerName)
+	output, err := exec.Command(m.runtime, "inspect", "--format", "{{.State.Running}}", m.containerName).CombinedOutput()
 	if err != nil {
 		return false, nil
 	}
-	return strings.TrimSpace(output) == "true", nil
+	return strings.TrimSpace(string(output)) == "true", nil
 }
 
 func (m *Manager) getUptime() (string, error) {
-	output, err := m.exec("inspect", "--format", "{{json .State.StartedAt}}", containerName)
+	output, err := exec.Command(m.runtime, "inspect", "--format", "{{json .State.StartedAt}}", m.containerName).CombinedOutput()
 	if err != nil {
 		return "", err
 	}
 	var startedAt string
-	if err := json.Unmarshal([]byte(strings.TrimSpace(output)), &startedAt); err != nil {
+	if err := json.Unmarshal([]byte(strings.TrimSpace(string(output))), &startedAt); err != nil {
 		return "", err
 	}
 	t, err := time.Parse(time.RFC3339Nano, startedAt)
@@ -244,24 +236,11 @@ func (m *Manager) getUptime() (string, error) {
 	return fmt.Sprintf("%dh%dm", int(d.Hours()), int(d.Minutes())%60), nil
 }
 
-func (m *Manager) detectGPULabel() string {
-	gpuArgs := DetectGPU(m.cfg.GPUMode)
-	if len(gpuArgs) == 0 {
-		return "cpu"
+func (m *Manager) ramalama(args ...string) (string, error) {
+	if m.cfg.Store != "" {
+		args = append([]string{"--store", m.cfg.Store}, args...)
 	}
-	for _, a := range gpuArgs {
-		if strings.Contains(a, "nvidia") {
-			return "nvidia"
-		}
-		if strings.Contains(a, "kfd") {
-			return "amd"
-		}
-	}
-	return "cpu"
-}
-
-func (m *Manager) exec(args ...string) (string, error) {
-	cmd := exec.Command(m.runtime, args...)
+	cmd := exec.Command("ramalama", args...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
