@@ -162,6 +162,79 @@ handle_ai() {
     "$SCRIPT_DIR/ai-manager.sh" "$@"
 }
 
+handle_migrate() {
+    local container_cmd=$(get_exec_cmd)
+    local container="devarch-api"
+    local subcmd="${1:-status}"
+    shift 2>/dev/null || true
+
+    local running
+    running=$(eval "$container_cmd inspect --format '{{.State.Running}}' $container" 2>/dev/null)
+    if [[ "$running" != "true" ]]; then
+        echo "Error: $container container is not running"
+        echo "Start it with: docker compose up -d"
+        return 1
+    fi
+
+    case "$subcmd" in
+        up)
+            echo "Running migrations..."
+            eval "$container_cmd exec -w /app $container go run ./cmd/migrate -migrations ./migrations -cmd up"
+            ;;
+        down)
+            echo "Rolling back last migration..."
+            eval "$container_cmd exec -w /app $container go run ./cmd/migrate -migrations ./migrations -cmd down"
+            ;;
+        down-all)
+            echo "Rolling back ALL migrations..."
+            eval "$container_cmd exec -w /app $container go run ./cmd/migrate -migrations ./migrations -cmd down-all"
+            ;;
+        refresh)
+            echo "Refreshing database (down all + up all)..."
+            eval "$container_cmd exec -w /app $container go run ./cmd/migrate -migrations ./migrations -cmd refresh"
+            ;;
+        reset)
+            echo "Resetting database (drop schema + migrate up)..."
+            eval "$container_cmd exec -w /app $container go run ./cmd/migrate -migrations ./migrations -cmd reset"
+            ;;
+        status)
+            eval "$container_cmd exec -w /app $container go run ./cmd/migrate -migrations ./migrations -cmd status"
+            ;;
+        seed)
+            echo "Seeding database (importing service templates)..."
+            local extra_args=()
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    -l|--library-dir)
+                        extra_args+=(-library-dir "$2")
+                        shift 2
+                        ;;
+                    --count)
+                        extra_args+=(-count-only)
+                        shift
+                        ;;
+                    *)
+                        extra_args+=("$1")
+                        shift
+                        ;;
+                esac
+            done
+            eval "$container_cmd exec -w /app $container go run ./cmd/import ${extra_args[*]}"
+            ;;
+        fresh)
+            echo "Fresh database (reset + seed)..."
+            eval "$container_cmd exec -w /app $container go run ./cmd/migrate -migrations ./migrations -cmd reset"
+            echo "Seeding..."
+            eval "$container_cmd exec -w /app $container go run ./cmd/import"
+            ;;
+        *)
+            echo "Unknown migrate command: $subcmd"
+            echo "Run 'devarch migrate -h' for usage"
+            return 1
+            ;;
+    esac
+}
+
 handle_import() {
     local container_cmd=$(get_exec_cmd)
     local container="devarch-api"
@@ -203,7 +276,7 @@ show_brief_usage() {
     cat << 'EOF'
 devarch <namespace> [command] [args...]
 
-Namespaces: service, wp, artisan, wordpress, laravel, socket, runtime, db, context, run, shell, init, import, doctor, ai
+Namespaces: service, wp, artisan, wordpress, laravel, socket, runtime, db, context, run, shell, init, migrate, import, doctor, ai
 
 Use -h or --help for detailed help, or <namespace> -h for namespace help
 EOF
@@ -229,6 +302,7 @@ NAMESPACES:
   run         Run command in any container
   shell       Open shell in container (defaults to php)
   init        Bootstrap stack from devarch.yml (import + pull + apply)
+  migrate     Database migrations (up, down, refresh, reset, seed, fresh)
   import      Import service templates from services-library
   doctor      Run diagnostics (runtime, API, disk, tools, ports)
   ai          AI assistant (generate, chat, diagnose, model management)
@@ -278,6 +352,12 @@ EXAMPLES:
     devarch run postgres psql -U postgres
     devarch shell php
     devarch shell node
+
+  Database Migrations:
+    devarch migrate status
+    devarch migrate up
+    devarch migrate refresh
+    devarch migrate fresh
 
   Service Library:
     devarch import
@@ -533,6 +613,36 @@ EXAMPLES:
   DEVARCH_API_URL=http://api:8550 devarch init
 EOF
             ;;
+        migrate)
+            cat << 'EOF'
+devarch migrate - Database Migration Management
+
+USAGE:
+  devarch migrate <command> [options]
+
+COMMANDS:
+  up          Run all pending migrations
+  down        Rollback the last migration
+  down-all    Rollback ALL migrations
+  refresh     Rollback all then re-run all migrations
+  reset       Drop schema + recreate + run all migrations
+  status      Show migration status
+  seed        Import service templates from services-library
+  fresh       Reset + seed (clean slate with data)
+
+SEED OPTIONS:
+  -l, --library-dir <path>    Path to services-library (inside container)
+  --count                     Print service count and exit
+
+EXAMPLES:
+  devarch migrate status
+  devarch migrate up
+  devarch migrate down
+  devarch migrate refresh
+  devarch migrate fresh
+  devarch migrate seed --library-dir /path/to/library
+EOF
+            ;;
         import)
             cat << 'EOF'
 devarch import - Import Service Templates
@@ -623,6 +733,7 @@ resolve_namespace() {
         run|r) echo "run" ;;
         shell|sh) echo "shell" ;;
         init) echo "init" ;;
+        migrate|mig|m) echo "migrate" ;;
         import|imp) echo "import" ;;
         doctor|doc) echo "doctor" ;;
         ai) echo "ai" ;;
@@ -695,6 +806,9 @@ main() {
             ;;
         init)
             handle_init "$@"
+            ;;
+        migrate)
+            handle_migrate "$@"
             ;;
         import)
             handle_import "$@"
