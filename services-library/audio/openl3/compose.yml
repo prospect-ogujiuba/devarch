@@ -1,0 +1,144 @@
+services:
+  openl3:
+    image: python:3.10-slim
+    working_dir: /work
+    volumes:
+      # same convention as your Essentia container (mount the same host folders)
+      - ../../../data/daw_agent/in:/work/in:rw
+      - ../../../data/daw_agent/out:/work/out:rw
+
+      # persist model/cache downloads so you don't redownload every container start
+      - openl3_keras:/root/.keras:rw
+      - openl3_cache:/root/.cache:rw
+      - openl3_state:/work/state:rw
+    environment:
+      TZ: America/Toronto
+      DAW_IN_DIR: /work/in
+      DAW_OUT_DIR: /work/out
+
+      # OpenL3 knobs (agent can override via env later)
+      OPENL3_CONTENT_TYPE: music          # music | env
+      OPENL3_INPUT_REPR: mel256           # mel256 | mel128 | linear
+      OPENL3_EMBEDDING_SIZE: "6144"       # 512 | 6144
+      OPENL3_HOP_SIZE: "0.1"              # seconds between embeddings
+      OPENL3_BATCH_SIZE: "8"
+    command: >
+      bash -lc '
+        set -euo pipefail
+
+        apt-get update -y >/dev/null
+        apt-get install -y --no-install-recommends git ffmpeg libsndfile1 >/dev/null
+        rm -rf /var/lib/apt/lists/*
+
+        python -m pip install --no-cache-dir -U pip wheel setuptools >/dev/null
+
+        # Install OpenL3 + deps. OpenL3 uses TensorFlow 2+.
+        # We pin to tensorflow-cpu to avoid GPU surprises in containers.
+        python -m pip install --no-cache-dir \
+          "tensorflow-cpu>=2.10,<3" \
+          "openl3" \
+          "soundfile" \
+          "librosa" \
+          "numpy" >/dev/null
+
+        cat >/work/state/embed_all.py <<'"'"'PY'"'"'
+import os, json, pathlib
+import numpy as np
+import soundfile as sf
+import openl3
+
+IN_DIR  = os.environ.get("DAW_IN_DIR", "/work/in")
+OUT_DIR = os.environ.get("DAW_OUT_DIR", "/work/out")
+
+content_type   = os.environ.get("OPENL3_CONTENT_TYPE", "music")
+input_repr     = os.environ.get("OPENL3_INPUT_REPR", "mel256")
+embedding_size = int(os.environ.get("OPENL3_EMBEDDING_SIZE", "6144"))
+hop_size       = float(os.environ.get("OPENL3_HOP_SIZE", "0.1"))
+batch_size     = int(os.environ.get("OPENL3_BATCH_SIZE", "8"))
+
+pathlib.Path(OUT_DIR).mkdir(parents=True, exist_ok=True)
+
+def is_audio(p: pathlib.Path) -> bool:
+    return p.suffix.lower() in [".wav",".flac",".ogg",".mp3",".m4a",".aac",".aiff",".aif"]
+
+files = [p for p in pathlib.Path(IN_DIR).iterdir() if p.is_file() and is_audio(p)]
+files.sort()
+
+for p in files:
+    stem = p.stem
+    out_emb = pathlib.Path(OUT_DIR) / f"{stem}.openl3.npy"
+    out_ts  = pathlib.Path(OUT_DIR) / f"{stem}.openl3.timestamps.npy"
+    out_meta = pathlib.Path(OUT_DIR) / f"{stem}.openl3.json"
+
+    # Load (soundfile supports many formats; ffmpeg installed for broader format compatibility in some stacks)
+    audio, sr = sf.read(str(p), always_2d=False)
+    # If multi-channel, downmix to mono for stable embeddings
+    if isinstance(audio, np.ndarray) and audio.ndim == 2:
+        audio = np.mean(audio, axis=1)
+
+    emb, ts = openl3.get_audio_embedding(
+        audio,
+        sr,
+        content_type=content_type,
+        input_repr=input_repr,
+        embedding_size=embedding_size,
+        hop_size=hop_size,
+        batch_size=batch_size,
+    )
+
+    np.save(out_emb, emb)
+    np.save(out_ts, ts)
+
+    meta = {
+        "file": p.name,
+        "sr": int(sr),
+        "content_type": content_type,
+        "input_repr": input_repr,
+        "embedding_size": embedding_size,
+        "hop_size": hop_size,
+        "batch_size": batch_size,
+        "frames": int(emb.shape[0]),
+        "dims": int(emb.shape[1]),
+    }
+    out_meta.write_text(json.dumps(meta, indent=2))
+
+    print(f"ok: {p.name} -> {out_emb.name} ({emb.shape[0]}x{emb.shape[1]})")
+
+print("done")
+PY
+
+        cat >/work/state/embed_all.sh <<'"'"'EOF'"'"'
+        #!/usr/bin/env bash
+        set -euo pipefail
+        python /work/state/embed_all.py
+        EOF
+        chmod +x /work/state/embed_all.sh
+
+        echo "OpenL3 ready."
+        echo "Run: docker compose -f compose.openl3.yml exec openl3 /work/state/embed_all.sh"
+        tail -f /dev/null
+      '
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import openl3; print('ok')\" >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - microservices-net
+    container_name: openl3
+    x-devarch-config:
+      tool: openl3
+      in_dir: /work/in
+      out_dir: /work/out
+      batch_cmd: "docker compose -f compose.openl3.yml exec openl3 /work/state/embed_all.sh"
+
+volumes:
+  openl3_keras: null
+  openl3_cache: null
+  openl3_state: null
+
+networks:
+  microservices-net:
+    external: true
