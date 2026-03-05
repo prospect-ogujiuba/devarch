@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log/slog"
 	"net/http"
 	"os"
@@ -9,7 +10,10 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/lib/pq"
+
 	"github.com/priz/devarch-ai/internal/api"
+	"github.com/priz/devarch-ai/internal/embedding"
 	"github.com/priz/devarch-ai/internal/llm"
 	"github.com/priz/devarch-ai/internal/ramalama"
 )
@@ -19,6 +23,25 @@ func main() {
 
 	manager := ramalama.NewManager()
 	client := llm.NewClient(manager)
+
+	embedManager := ramalama.NewEmbedManager()
+	embedClient := embedding.NewClient(embedManager)
+
+	var embedStore *embedding.Store
+	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
+		db, err := sql.Open("postgres", dbURL)
+		if err != nil {
+			slog.Error("failed to connect to database", "error", err)
+			os.Exit(1)
+		}
+		defer db.Close()
+		if err := db.Ping(); err != nil {
+			slog.Error("failed to ping database", "error", err)
+			os.Exit(1)
+		}
+		embedStore = embedding.NewStore(db)
+		slog.Info("embedding store connected")
+	}
 
 	apiURL := os.Getenv("DEVARCH_API_URL")
 	if apiURL == "" {
@@ -32,8 +55,9 @@ func main() {
 	defer cancel()
 
 	manager.StartIdleWatcher(ctx)
+	embedManager.StartIdleWatcher(ctx)
 
-	router := api.NewRouter(ctx, manager, client, contextBuilder)
+	router := api.NewRouter(ctx, manager, client, contextBuilder, embedClient, embedStore)
 
 	port := os.Getenv("PORT")
 	if port == "" {

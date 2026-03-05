@@ -8,22 +8,20 @@ import (
 
 type Config struct {
 	Model       string
-	Image       string
 	Port        int
 	IdleTimeout time.Duration
 	MaxTokens   int
-	GPUMode     string
 	Network     string
+	Store       string
+	RuntimeArgs []string
 }
 
 func DefaultConfig() Config {
 	return Config{
 		Model:       "granite3.2:8b",
-		Image:       "quay.io/ramalama/ramalama:latest",
 		Port:        11435,
 		IdleTimeout: 15 * time.Minute,
 		MaxTokens:   4096,
-		GPUMode:     "auto",
 	}
 }
 
@@ -32,9 +30,6 @@ func LoadConfig() Config {
 
 	if v := os.Getenv("LLM_MODEL"); v != "" {
 		cfg.Model = v
-	}
-	if v := os.Getenv("LLM_IMAGE"); v != "" {
-		cfg.Image = v
 	}
 	if v := os.Getenv("LLM_PORT"); v != "" {
 		if p, err := strconv.Atoi(v); err == nil {
@@ -51,37 +46,47 @@ func LoadConfig() Config {
 			cfg.MaxTokens = n
 		}
 	}
-	if v := os.Getenv("LLM_GPU_MODE"); v != "" {
-		cfg.GPUMode = v
-	}
 	if v := os.Getenv("LLM_NETWORK"); v != "" {
 		cfg.Network = v
+	}
+	if v := os.Getenv("RAMALAMA_STORE"); v != "" {
+		cfg.Store = v
 	}
 
 	return cfg
 }
 
-func DetectGPU(mode string) []string {
-	if mode == "cpu" {
-		return nil
+func DefaultEmbedConfig() Config {
+	return Config{
+		Model:       "nomic-embed-text",
+		Port:        11436,
+		IdleTimeout: 15 * time.Minute,
+		RuntimeArgs: []string{"--embeddings"},
 	}
-
-	if mode == "nvidia" || (mode == "auto" && hasNvidiaGPU()) {
-		return []string{"--device", "nvidia.com/gpu=all"}
-	}
-	if mode == "amd" || (mode == "auto" && hasAMDGPU()) {
-		return []string{"--device", "/dev/kfd", "--device", "/dev/dri"}
-	}
-
-	return nil
 }
 
-func hasNvidiaGPU() bool {
-	_, err := os.Stat("/dev/nvidia0")
-	return err == nil
-}
+func LoadEmbedConfig() Config {
+	cfg := DefaultEmbedConfig()
 
-func hasAMDGPU() bool {
-	_, err := os.Stat("/dev/kfd")
-	return err == nil
+	if v := os.Getenv("EMBED_MODEL"); v != "" {
+		cfg.Model = v
+	}
+	if v := os.Getenv("EMBED_PORT"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil {
+			cfg.Port = p
+		}
+	}
+	if v := os.Getenv("EMBED_IDLE_TIMEOUT"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			cfg.IdleTimeout = d
+		}
+	}
+	if v := os.Getenv("LLM_NETWORK"); v != "" {
+		cfg.Network = v
+	}
+	if v := os.Getenv("RAMALAMA_STORE"); v != "" {
+		cfg.Store = v
+	}
+
+	return cfg
 }
