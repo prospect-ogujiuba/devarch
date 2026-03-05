@@ -24,13 +24,23 @@ podman network create microservices-net
 
 ### Start with compose
 
-The root `compose.yml` runs three containers:
+The root `compose.yml` runs four containers:
 
 | Container | Image | Host Port | Purpose |
 |-----------|-------|-----------|---------|
-| `devarch-db` | postgres:16-alpine | 5433 | PostgreSQL database |
+| `devarch-db` | pgvector/pgvector:pg16 | 5433 | PostgreSQL database with pgvector |
 | `devarch-api` | ./api (Dockerfile, dev target) | 8550 | Go API with air hot-reload |
+| `devarch-ai` | ./ai (Dockerfile, dev target) | 8551 | AI assistant (chat + embeddings) |
 | `devarch-app` | ./dashboard (Dockerfile) | 5174 | React dashboard (nginx) |
+
+The AI container spawns additional sibling containers on demand via ramalama:
+
+| Container | Model | Host Port | Purpose |
+|-----------|-------|-----------|---------|
+| `devarch-llm` | granite3.2:8b | 11435 | LLM chat inference |
+| `devarch-llm-embed` | nomic-embed-text | 11436 | Embedding generation (768-dim) |
+
+These start automatically on first request and stop after 15 minutes of idle time.
 
 ```bash
 # From project root — start all three services
@@ -445,6 +455,20 @@ All endpoints under `/api/v1/` require `X-API-Key` header (when auth is enabled)
 | DELETE | `/images/remove?name={ref}` | Remove image |
 | POST | `/images/prune` | Remove unused images |
 
+### AI (devarch-ai, port 8551)
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/v1/ai/status` | LLM container status |
+| POST | `/api/v1/ai/generate` | Generate service from description |
+| POST | `/api/v1/ai/chat` | Stateful conversation (supports streaming via SSE) |
+| POST | `/api/v1/ai/diagnose` | Diagnose container/service issues |
+| POST | `/api/v1/ai/model/pull` | Pull model into ramalama |
+| GET | `/api/v1/ai/models` | List available models |
+| POST | `/api/v1/ai/stop` | Stop LLM container |
+| POST | `/api/v1/ai/embed` | Generate embedding vector for text |
+| POST | `/api/v1/ai/embed/index` | Index document with embedding into pgvector |
+| POST | `/api/v1/ai/embed/search` | Semantic similarity search |
+
 ### Nginx
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -619,6 +643,22 @@ Import flags:
 | `SECURITY_MODE` | `dev-open` | Security profile: `dev-open`, `dev-keyed`, or `strict` |
 | `ALLOWED_ORIGINS` | `*` | CORS allowed origins (comma-separated) |
 | `LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
+
+### AI Server (devarch-ai)
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DEVARCH_API_URL` | `http://devarch-api:8080` | URL of the main API |
+| `DEVARCH_API_KEY` | — | API key for main API access |
+| `DATABASE_URL` | — | PostgreSQL connection (for pgvector embedding store) |
+| `LLM_MODEL` | `granite3.2:8b` | Chat model name |
+| `LLM_PORT` | `11435` | Host port for chat LLM container |
+| `LLM_NETWORK` | — | Container network for LLM containers |
+| `LLM_IDLE_TIMEOUT` | `15m` | Idle timeout before stopping LLM containers |
+| `LLM_MAX_TOKENS` | `4096` | Max tokens for chat completion |
+| `EMBED_MODEL` | `nomic-embed-text` | Embedding model name |
+| `EMBED_PORT` | `11436` | Host port for embedding container |
+| `EMBED_IDLE_TIMEOUT` | `15m` | Idle timeout for embedding container |
+| `RAMALAMA_STORE` | `~/.local/share/ramalama` | Host path to ramalama model store |
 
 ### CLI Scripts (config.sh)
 | Variable | Default | Purpose |
@@ -822,7 +862,7 @@ Manual sync can be triggered via `POST /api/v1/sync`. Job status visible at `GET
 
 ## 14. Database Schema
 
-13 migration files (001-013) creating ~40 tables:
+15 migration files (001-015) creating ~40 tables:
 
 | Migration | Tables Created |
 |-----------|---------------|
@@ -839,6 +879,8 @@ Manual sync can be triggered via `POST /api/v1/sync`. Job status visible at `GET
 | 011 | Drops `project_services`, adds `stacks.project_id`, makes `projects.stack_id NOT NULL` |
 | 012 | Fixes flowstate build context paths in `compose_overrides` |
 | 013 | `sync_jobs` (persisted sync job history) |
+| 014 | `ai_config` (key-value AI settings) |
+| 015 | `embeddings` (pgvector extension, 768-dim vectors, HNSW cosine index) |
 
 ---
 
@@ -879,12 +921,15 @@ Manual sync can be triggered via `POST /api/v1/sync`. Job status visible at `GET
 | Component | Technology |
 |-----------|------------|
 | **API** | Go 1.22, chi router, lib/pq, gorilla/websocket, yaml.v3, swaggo/http-swagger |
+| **AI** | Go 1.24, chi router, lib/pq, ramalama (LLM lifecycle) |
+| **LLM** | ramalama + llama.cpp (granite3.2:8b for chat, nomic-embed-text for embeddings) |
 | **Dashboard** | React 19, Vite 7, TanStack Router + Query, Tailwind CSS 4, Radix UI, CodeMirror 6, xterm.js, Zod, Axios, Sonner, cmdk, lucide-react |
 | **Dashboard Testing** | Vitest + Testing Library |
-| **Database** | PostgreSQL 16 |
+| **Database** | PostgreSQL 16 (pgvector/pgvector:pg16 with vector extension) |
 | **Container Runtime** | Docker or Podman (auto-detect, switchable) |
 | **CLI** | Bash/Zsh scripts |
 | **API Container** | Go 1.23 alpine + air hot-reload (dev), multi-stage build (production) |
+| **AI Container** | Go 1.24 alpine + ramalama + air hot-reload (dev), multi-stage build (production) |
 | **Dashboard Container** | Node 22 build → nginx alpine |
 | **CI** | GitHub Actions (dashboard tests, integration tests, OpenAPI spec check) |
 | **Registries** | DockerHub, GitHub Container Registry (GHCR) |
