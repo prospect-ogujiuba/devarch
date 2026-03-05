@@ -161,7 +161,22 @@ cmd_generate() {
 
 cmd_chat() {
     ensure_llm_ready
-    echo "DevArch AI Assistant (type 'exit' to quit, 'exec' to run last command)"
+    local go_ver
+    go_ver=$(go version 2>/dev/null | grep -oP 'go\d+\.\d+(\.\d+)?' || echo "go")
+    local api_ver
+    api_ver=$(git -C "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" describe --tags --always 2>/dev/null || echo "dev")
+    printf '\033[1;36m'
+    cat <<'BANNER'
+    ____            ___              __
+   / __ \___  _  __/   |  __________/ /_
+  / / / / _ \| |/ / /| | / ___/ ___/ __ \
+ / /_/ /  __/|   / ___ |/ /  / /__/ / / /
+/_____/\___/ |__/_/  |_/_/   \___/_/ /_/
+BANNER
+    printf '\033[0m'
+    echo "  v${api_ver}, built with Go ${go_ver}"
+    echo ""
+    echo "type 'exit' to quit, 'exec' to run last command"
     echo "───"
 
     local conv_id=""
