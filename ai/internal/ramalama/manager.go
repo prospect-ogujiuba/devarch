@@ -2,8 +2,6 @@ package ramalama
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os/exec"
@@ -11,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"encoding/json"
 )
 
 const containerName = "devarch-llm"
@@ -32,18 +32,17 @@ type Manager struct {
 	stopCh  chan struct{}
 }
 
-func NewManager(db *sql.DB) *Manager {
+func NewManager() *Manager {
 	runtime := "podman"
 	if _, err := exec.LookPath("podman"); err != nil {
 		runtime = "docker"
 	}
 
-	m := &Manager{
-		cfg:     LoadConfig(db),
+	return &Manager{
+		cfg:    LoadConfig(),
 		runtime: runtime,
-		stopCh:  make(chan struct{}),
+		stopCh: make(chan struct{}),
 	}
-	return m
 }
 
 func (m *Manager) StartIdleWatcher(ctx context.Context) {
@@ -167,10 +166,7 @@ func (m *Manager) Config() Config {
 }
 
 func (m *Manager) start() error {
-	// Remove stale container if exists
 	m.exec("rm", "-f", containerName)
-
-	// Ensure volume exists
 	m.exec("volume", "create", volumeName)
 
 	args := []string{
@@ -196,7 +192,6 @@ func (m *Manager) start() error {
 		return fmt.Errorf("start LLM container: %s: %w", strings.TrimSpace(output), err)
 	}
 
-	// Wait for container to be ready
 	if err := m.waitReady(90 * time.Second); err != nil {
 		return fmt.Errorf("LLM container not ready: %w", err)
 	}

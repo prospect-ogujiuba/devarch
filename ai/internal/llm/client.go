@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/priz/devarch-api/internal/ramalama"
+	"github.com/priz/devarch-ai/internal/ramalama"
 )
 
 type Client struct {

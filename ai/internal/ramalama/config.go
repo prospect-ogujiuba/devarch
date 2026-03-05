@@ -1,7 +1,6 @@
 package ramalama
 
 import (
-	"database/sql"
 	"os"
 	"strconv"
 	"time"
@@ -28,7 +27,7 @@ func DefaultConfig() Config {
 	}
 }
 
-func LoadConfig(db *sql.DB) Config {
+func LoadConfig() Config {
 	cfg := DefaultConfig()
 
 	if v := os.Getenv("LLM_MODEL"); v != "" {
@@ -59,49 +58,7 @@ func LoadConfig(db *sql.DB) Config {
 		cfg.Network = v
 	}
 
-	// Override from DB if ai_config table exists
-	if db != nil {
-		overrideFromDB(db, &cfg)
-	}
-
 	return cfg
-}
-
-func overrideFromDB(db *sql.DB, cfg *Config) {
-	rows, err := db.Query("SELECT key, value FROM ai_config")
-	if err != nil {
-		return // table may not exist yet
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var k, v string
-		if err := rows.Scan(&k, &v); err != nil {
-			continue
-		}
-		switch k {
-		case "model":
-			cfg.Model = v
-		case "image":
-			cfg.Image = v
-		case "port":
-			if p, err := strconv.Atoi(v); err == nil {
-				cfg.Port = p
-			}
-		case "idle_timeout":
-			if d, err := time.ParseDuration(v); err == nil {
-				cfg.IdleTimeout = d
-			}
-		case "max_tokens":
-			if n, err := strconv.Atoi(v); err == nil {
-				cfg.MaxTokens = n
-			}
-		case "gpu_mode":
-			cfg.GPUMode = v
-		case "network":
-			cfg.Network = v
-		}
-	}
 }
 
 func DetectGPU(mode string) []string {

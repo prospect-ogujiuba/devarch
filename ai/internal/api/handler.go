@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
 	"context"
@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/priz/devarch-api/internal/api/respond"
-	"github.com/priz/devarch-api/internal/llm"
-	"github.com/priz/devarch-api/internal/ramalama"
+	"github.com/priz/devarch-ai/internal/llm"
+	"github.com/priz/devarch-ai/internal/ramalama"
+	"github.com/priz/devarch-ai/internal/respond"
 )
 
 type Conversation struct {
@@ -18,7 +18,7 @@ type Conversation struct {
 	LastUsed time.Time
 }
 
-type AIHandler struct {
+type Handler struct {
 	manager        *ramalama.Manager
 	client         *llm.Client
 	contextBuilder *llm.ContextBuilder
@@ -26,8 +26,8 @@ type AIHandler struct {
 	mu             sync.Mutex
 }
 
-func NewAIHandler(ctx context.Context, manager *ramalama.Manager, client *llm.Client, contextBuilder *llm.ContextBuilder) *AIHandler {
-	h := &AIHandler{
+func NewHandler(ctx context.Context, manager *ramalama.Manager, client *llm.Client, contextBuilder *llm.ContextBuilder) *Handler {
+	h := &Handler{
 		manager:        manager,
 		client:         client,
 		contextBuilder: contextBuilder,
@@ -36,7 +36,7 @@ func NewAIHandler(ctx context.Context, manager *ramalama.Manager, client *llm.Cl
 	return h
 }
 
-func (h *AIHandler) pruneConversations(ctx context.Context) {
+func (h *Handler) pruneConversations(ctx context.Context) {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 	for {
@@ -59,35 +59,35 @@ func (h *AIHandler) pruneConversations(ctx context.Context) {
 	}
 }
 
-func (h *AIHandler) Status(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Status(w http.ResponseWriter, r *http.Request) {
 	status, err := h.manager.GetStatus()
 	if err != nil {
-		respond.InternalError(w, r, err)
+		respond.InternalError(w, err)
 		return
 	}
-	respond.JSON(w, r, http.StatusOK, status)
+	respond.JSON(w, http.StatusOK, status)
 }
 
-func (h *AIHandler) Stop(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Stop(w http.ResponseWriter, r *http.Request) {
 	if err := h.manager.Stop(); err != nil {
-		respond.InternalError(w, r, err)
+		respond.InternalError(w, err)
 		return
 	}
-	respond.Action(w, r, http.StatusOK, "stopped", respond.WithMessage("LLM container stopped"))
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "stopped", "message": "LLM container stopped"})
 }
 
 type generateRequest struct {
 	Description string `json:"description"`
 }
 
-func (h *AIHandler) Generate(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
 	var req generateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respond.BadRequest(w, r, "invalid request body")
+		respond.BadRequest(w, "invalid request body")
 		return
 	}
 	if req.Description == "" {
-		respond.BadRequest(w, r, "description is required")
+		respond.BadRequest(w, "description is required")
 		return
 	}
 
@@ -101,26 +101,24 @@ func (h *AIHandler) Generate(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.client.Complete(messages)
 	if err != nil {
-		respond.InternalError(w, r, err)
+		respond.InternalError(w, err)
 		return
 	}
 
 	if len(resp.Choices) == 0 {
-		respond.InternalError(w, r, fmt.Errorf("no response from LLM"))
+		respond.InternalError(w, fmt.Errorf("no response from LLM"))
 		return
 	}
 
 	content := resp.Choices[0].Message.Content
 
-	// Try to parse as JSON to validate
 	var service map[string]interface{}
 	if err := json.Unmarshal([]byte(content), &service); err != nil {
-		// Return raw if not valid JSON
-		respond.JSON(w, r, http.StatusOK, map[string]string{"raw": content})
+		respond.JSON(w, http.StatusOK, map[string]string{"raw": content})
 		return
 	}
 
-	respond.JSON(w, r, http.StatusOK, map[string]interface{}{"service": service})
+	respond.JSON(w, http.StatusOK, map[string]interface{}{"service": service})
 }
 
 type chatRequest struct {
@@ -129,18 +127,17 @@ type chatRequest struct {
 	Stream         bool   `json:"stream,omitempty"`
 }
 
-func (h *AIHandler) Chat(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Chat(w http.ResponseWriter, r *http.Request) {
 	var req chatRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respond.BadRequest(w, r, "invalid request body")
+		respond.BadRequest(w, "invalid request body")
 		return
 	}
 	if req.Message == "" {
-		respond.BadRequest(w, r, "message is required")
+		respond.BadRequest(w, "message is required")
 		return
 	}
 
-	// Get or create conversation
 	convID := req.ConversationID
 	if convID == "" {
 		convID = fmt.Sprintf("conv-%d", time.Now().UnixNano())
@@ -156,18 +153,18 @@ func (h *AIHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	h.mu.Unlock()
 
 	if req.Stream {
-		h.streamChat(w, r, conv, convID, messages)
+		h.streamChat(w, conv, convID, messages)
 		return
 	}
 
 	resp, err := h.client.Complete(messages)
 	if err != nil {
-		respond.InternalError(w, r, err)
+		respond.InternalError(w, err)
 		return
 	}
 
 	if len(resp.Choices) == 0 {
-		respond.InternalError(w, r, fmt.Errorf("no response from LLM"))
+		respond.InternalError(w, fmt.Errorf("no response from LLM"))
 		return
 	}
 
@@ -177,13 +174,13 @@ func (h *AIHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	h.mu.Unlock()
 	h.conversations.Store(convID, conv)
 
-	respond.JSON(w, r, http.StatusOK, map[string]interface{}{
+	respond.JSON(w, http.StatusOK, map[string]interface{}{
 		"message":         assistantMsg.Content,
 		"conversation_id": convID,
 	})
 }
 
-func (h *AIHandler) getOrCreateConversation(convID string) *Conversation {
+func (h *Handler) getOrCreateConversation(convID string) *Conversation {
 	if existing, ok := h.conversations.Load(convID); ok {
 		if conv, ok := existing.(*Conversation); ok {
 			return conv
@@ -200,10 +197,10 @@ func (h *AIHandler) getOrCreateConversation(convID string) *Conversation {
 	return conv
 }
 
-func (h *AIHandler) streamChat(w http.ResponseWriter, r *http.Request, conv *Conversation, convID string, messages []llm.ChatMessage) {
+func (h *Handler) streamChat(w http.ResponseWriter, conv *Conversation, convID string, messages []llm.ChatMessage) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		respond.InternalError(w, r, fmt.Errorf("streaming not supported"))
+		respond.InternalError(w, fmt.Errorf("streaming not supported"))
 		return
 	}
 
@@ -212,7 +209,6 @@ func (h *AIHandler) streamChat(w http.ResponseWriter, r *http.Request, conv *Con
 	w.Header().Set("Connection", "keep-alive")
 	w.WriteHeader(http.StatusOK)
 
-	// Send conversation ID first
 	fmt.Fprintf(w, "data: {\"conversation_id\":%q}\n\n", convID)
 	flusher.Flush()
 
@@ -246,14 +242,14 @@ type diagnoseRequest struct {
 	Target string `json:"target"`
 }
 
-func (h *AIHandler) Diagnose(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Diagnose(w http.ResponseWriter, r *http.Request) {
 	var req diagnoseRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respond.BadRequest(w, r, "invalid request body")
+		respond.BadRequest(w, "invalid request body")
 		return
 	}
 	if req.Target == "" {
-		respond.BadRequest(w, r, "target is required")
+		respond.BadRequest(w, "target is required")
 		return
 	}
 
@@ -267,49 +263,49 @@ func (h *AIHandler) Diagnose(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.client.Complete(messages)
 	if err != nil {
-		respond.InternalError(w, r, err)
+		respond.InternalError(w, err)
 		return
 	}
 
 	if len(resp.Choices) == 0 {
-		respond.InternalError(w, r, fmt.Errorf("no response from LLM"))
+		respond.InternalError(w, fmt.Errorf("no response from LLM"))
 		return
 	}
 
-	respond.JSON(w, r, http.StatusOK, map[string]interface{}{
+	respond.JSON(w, http.StatusOK, map[string]interface{}{
 		"target":    req.Target,
 		"diagnosis": resp.Choices[0].Message.Content,
 	})
 }
 
-func (h *AIHandler) PullModel(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) PullModel(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Model string `json:"model"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respond.BadRequest(w, r, "invalid request body")
+		respond.BadRequest(w, "invalid request body")
 		return
 	}
 	if req.Model == "" {
-		respond.BadRequest(w, r, "model is required")
+		respond.BadRequest(w, "model is required")
 		return
 	}
 
 	output, err := h.manager.PullModel(req.Model)
 	if err != nil {
-		respond.InternalError(w, r, err)
+		respond.InternalError(w, err)
 		return
 	}
 
-	respond.Action(w, r, http.StatusOK, "pulled", respond.WithMessage("Model pulled successfully"), respond.WithOutput(output))
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "pulled", "message": "Model pulled successfully", "output": output})
 }
 
-func (h *AIHandler) ListModels(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListModels(w http.ResponseWriter, r *http.Request) {
 	models, err := h.manager.ListModels()
 	if err != nil {
-		respond.InternalError(w, r, err)
+		respond.InternalError(w, err)
 		return
 	}
 
-	respond.JSON(w, r, http.StatusOK, map[string]interface{}{"models": models})
+	respond.JSON(w, http.StatusOK, map[string]interface{}{"models": models})
 }
