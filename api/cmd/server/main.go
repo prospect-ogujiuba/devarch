@@ -14,11 +14,9 @@ import (
 	"github.com/priz/devarch-api/internal/api"
 	"github.com/priz/devarch-api/internal/container"
 	"github.com/priz/devarch-api/internal/crypto"
-	"github.com/priz/devarch-api/internal/llm"
 	"github.com/priz/devarch-api/internal/nginx"
 	"github.com/priz/devarch-api/internal/podman"
 	"github.com/priz/devarch-api/internal/project"
-	"github.com/priz/devarch-api/internal/ramalama"
 	"github.com/priz/devarch-api/internal/scanner"
 	"github.com/priz/devarch-api/internal/security"
 	"github.com/priz/devarch-api/internal/sync"
@@ -160,15 +158,12 @@ func main() {
 	}
 	slog.Info("security mode", "mode", secMode)
 
-	ramalamaManager := ramalama.NewManager(db)
-	llmClient := llm.NewClient(ramalamaManager)
-
 	syncManager := sync.NewManager(db, podmanClient, registryManager, logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	router := api.NewRouter(ctx, db, containerClient, podmanClient, syncManager, projectScanner, nginxGenerator, projectController, registryManager, cipher, secMode, logger, ramalamaManager, llmClient)
+	router := api.NewRouter(db, containerClient, podmanClient, syncManager, projectScanner, nginxGenerator, projectController, registryManager, cipher, secMode, logger)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -182,7 +177,6 @@ func main() {
 	}
 
 	syncManager.Start(ctx)
-	ramalamaManager.StartIdleWatcher(ctx)
 
 	go func() {
 		slog.Info("starting server", "port", port)

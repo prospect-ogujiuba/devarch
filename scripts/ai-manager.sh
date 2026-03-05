@@ -8,12 +8,12 @@ set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-DEVARCH_API_URL="${DEVARCH_API_URL:-http://localhost:8550}"
+DEVARCH_AI_URL="${DEVARCH_AI_URL:-http://localhost:8551}"
 DEVARCH_API_KEY="${DEVARCH_API_KEY:-test}"
 
 api_call() {
     local method="$1" endpoint="$2" data="$3"
-    local url="${DEVARCH_API_URL}/api/v1${endpoint}"
+    local url="${DEVARCH_AI_URL}/api/v1${endpoint}"
     local args=(-s -X "$method" -H "X-API-Key: ${DEVARCH_API_KEY}" -H "Content-Type: application/json")
     if [[ -n "$data" ]]; then
         args+=(-d "$data")
@@ -23,7 +23,7 @@ api_call() {
 
 api_stream() {
     local endpoint="$1" data="$2"
-    local url="${DEVARCH_API_URL}/api/v1${endpoint}"
+    local url="${DEVARCH_AI_URL}/api/v1${endpoint}"
     curl -sN -X POST -H "X-API-Key: ${DEVARCH_API_KEY}" -H "Content-Type: application/json" -d "$data" "$url"
 }
 
