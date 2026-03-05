@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -2634,5 +2635,281 @@ func (h *ServiceHandler) ImportLibrary(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, r, http.StatusOK, map[string]interface{}{
 		"imported":      true,
 		"service_count": count,
+	})
+}
+
+type parsedServiceResponse struct {
+	Name          string                    `json:"name"`
+	ImageName     string                    `json:"image_name"`
+	ImageTag      string                    `json:"image_tag"`
+	RestartPolicy string                    `json:"restart_policy"`
+	Command       string                    `json:"command,omitempty"`
+	UserSpec      string                    `json:"user_spec,omitempty"`
+	Ports         []parsedPortResponse      `json:"ports"`
+	Volumes       []parsedVolumeResponse    `json:"volumes"`
+	EnvVars       []parsedEnvVarResponse    `json:"env_vars"`
+	Labels        []parsedLabelResponse     `json:"labels"`
+	Dependencies  []string                  `json:"dependencies"`
+	Networks      []string                  `json:"networks"`
+	Healthcheck   *parsedHealthcheckResponse `json:"healthcheck,omitempty"`
+}
+
+type parsedPortResponse struct {
+	HostIP        string `json:"host_ip"`
+	HostPort      int    `json:"host_port"`
+	ContainerPort int    `json:"container_port"`
+	Protocol      string `json:"protocol"`
+}
+
+type parsedVolumeResponse struct {
+	VolumeType string `json:"volume_type"`
+	Source     string `json:"source"`
+	Target     string `json:"target"`
+	ReadOnly   bool   `json:"read_only"`
+	IsExternal bool   `json:"is_external"`
+}
+
+type parsedEnvVarResponse struct {
+	Key      string `json:"key"`
+	Value    string `json:"value"`
+	IsSecret bool   `json:"is_secret"`
+}
+
+type parsedLabelResponse struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type parsedHealthcheckResponse struct {
+	Test               string `json:"test"`
+	IntervalSeconds    int    `json:"interval_seconds"`
+	TimeoutSeconds     int    `json:"timeout_seconds"`
+	Retries            int    `json:"retries"`
+	StartPeriodSeconds int    `json:"start_period_seconds"`
+}
+
+func parsedToResponse(p *compose.ParsedService) parsedServiceResponse {
+	resp := parsedServiceResponse{
+		Name:          p.Name,
+		ImageName:     p.ImageName,
+		ImageTag:      p.ImageTag,
+		RestartPolicy: p.RestartPolicy,
+		Command:       p.Command,
+		UserSpec:      p.UserSpec,
+		Dependencies:  p.Dependencies,
+		Networks:      p.Networks,
+	}
+	if resp.Dependencies == nil {
+		resp.Dependencies = []string{}
+	}
+	if resp.Networks == nil {
+		resp.Networks = []string{}
+	}
+	resp.Ports = make([]parsedPortResponse, len(p.Ports))
+	for i, port := range p.Ports {
+		resp.Ports[i] = parsedPortResponse{
+			HostIP: port.HostIP, HostPort: port.HostPort,
+			ContainerPort: port.ContainerPort, Protocol: port.Protocol,
+		}
+	}
+	resp.Volumes = make([]parsedVolumeResponse, len(p.Volumes))
+	for i, vol := range p.Volumes {
+		resp.Volumes[i] = parsedVolumeResponse{
+			VolumeType: vol.VolumeType, Source: vol.Source,
+			Target: vol.Target, ReadOnly: vol.ReadOnly, IsExternal: vol.IsExternal,
+		}
+	}
+	resp.EnvVars = make([]parsedEnvVarResponse, len(p.EnvVars))
+	for i, env := range p.EnvVars {
+		resp.EnvVars[i] = parsedEnvVarResponse{
+			Key: env.Key, Value: env.Value, IsSecret: env.IsSecret,
+		}
+	}
+	resp.Labels = make([]parsedLabelResponse, len(p.Labels))
+	for i, label := range p.Labels {
+		resp.Labels[i] = parsedLabelResponse{Key: label.Key, Value: label.Value}
+	}
+	if p.Healthcheck != nil {
+		resp.Healthcheck = &parsedHealthcheckResponse{
+			Test: p.Healthcheck.Test, IntervalSeconds: p.Healthcheck.IntervalSeconds,
+			TimeoutSeconds: p.Healthcheck.TimeoutSeconds, Retries: p.Healthcheck.Retries,
+			StartPeriodSeconds: p.Healthcheck.StartPeriodSeconds,
+		}
+	}
+	return resp
+}
+
+func (h *ServiceHandler) ParseComposeText(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		YAML string `json:"yaml"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		respond.BadRequest(w, r, "invalid request body")
+		return
+	}
+	if body.YAML == "" {
+		respond.BadRequest(w, r, "yaml field required")
+		return
+	}
+
+	services, err := compose.ParseBytes([]byte(body.YAML), "")
+	if err != nil {
+		respond.BadRequest(w, r, "failed to parse compose YAML: "+err.Error())
+		return
+	}
+
+	results := make([]parsedServiceResponse, len(services))
+	for i, svc := range services {
+		results[i] = parsedToResponse(svc)
+	}
+	respond.JSON(w, r, http.StatusOK, results)
+}
+
+func (h *ServiceHandler) ImportCompose(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		respond.BadRequest(w, r, "invalid multipart form: "+err.Error())
+		return
+	}
+
+	categoryIDStr := r.FormValue("category_id")
+	dryRun := r.FormValue("dry_run") == "true" || categoryIDStr == ""
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		respond.BadRequest(w, r, "file field required")
+		return
+	}
+	defer file.Close()
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		respond.InternalError(w, r, fmt.Errorf("read upload: %w", err))
+		return
+	}
+
+	services, err := compose.ParseBytes(data, "")
+	if err != nil {
+		respond.BadRequest(w, r, "failed to parse compose file: "+err.Error())
+		return
+	}
+
+	if dryRun {
+		results := make([]parsedServiceResponse, len(services))
+		for i, svc := range services {
+			results[i] = parsedToResponse(svc)
+		}
+		respond.JSON(w, r, http.StatusOK, results)
+		return
+	}
+
+	categoryID, err := strconv.Atoi(categoryIDStr)
+	if err != nil {
+		respond.BadRequest(w, r, "invalid category_id")
+		return
+	}
+
+	importer := compose.NewImporter(h.db, "")
+	var created []string
+	var errors []string
+	for _, parsed := range services {
+		_, err := importer.ImportParsedService(parsed, categoryID)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("%s: %s", parsed.Name, err.Error()))
+			continue
+		}
+		created = append(created, parsed.Name)
+		h.notifyEmbedIndex(parsed.Name)
+	}
+
+	respond.JSON(w, r, http.StatusOK, map[string]interface{}{
+		"created": created,
+		"errors":  errors,
+	})
+}
+
+func (h *ServiceHandler) PersistToLibrary(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	libraryDir := ""
+	if ws := os.Getenv("WORKSPACE_ROOT"); ws != "" {
+		libraryDir = ws + "/services-library"
+	} else if ld := os.Getenv("LIBRARY_DIR"); ld != "" {
+		libraryDir = ld
+	}
+	if libraryDir == "" {
+		respond.BadRequest(w, r, "LIBRARY_DIR or WORKSPACE_ROOT not set")
+		return
+	}
+
+	s, err := h.loadServiceByName(name)
+	if err == sql.ErrNoRows {
+		respond.NotFound(w, r, "service", name)
+		return
+	}
+	if err != nil {
+		respond.InternalError(w, r, err)
+		return
+	}
+
+	var categoryName string
+	if err := h.db.QueryRow(`SELECT c.name FROM categories c JOIN services s ON s.category_id = c.id WHERE s.id = $1`, s.ID).Scan(&categoryName); err != nil {
+		respond.InternalError(w, r, fmt.Errorf("get category: %w", err))
+		return
+	}
+
+	composeYAML, err := h.generator.Generate(s)
+	if err != nil {
+		respond.InternalError(w, r, err)
+		return
+	}
+
+	serviceDir := filepath.Join(libraryDir, categoryName, name)
+	if err := os.MkdirAll(serviceDir, 0755); err != nil {
+		respond.InternalError(w, r, fmt.Errorf("mkdir %s: %w", serviceDir, err))
+		return
+	}
+
+	composePath := filepath.Join(serviceDir, "compose.yml")
+	if err := os.WriteFile(composePath, composeYAML, 0644); err != nil {
+		respond.InternalError(w, r, fmt.Errorf("write compose.yml: %w", err))
+		return
+	}
+
+	written := []string{"compose.yml"}
+
+	// Write config files
+	rows, err := h.db.Query(`
+		SELECT file_path, content, file_mode
+		FROM service_config_files WHERE service_id = $1
+	`, s.ID)
+	if err != nil {
+		respond.InternalError(w, r, err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var filePath, content, fileMode string
+		if err := rows.Scan(&filePath, &content, &fileMode); err != nil {
+			continue
+		}
+		fullPath := filepath.Join(serviceDir, "config", filePath)
+		dir := filepath.Dir(fullPath)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			continue
+		}
+		mode := os.FileMode(0644)
+		if fileMode == "0755" {
+			mode = 0755
+		}
+		if err := os.WriteFile(fullPath, []byte(content), mode); err != nil {
+			continue
+		}
+		written = append(written, "config/"+filePath)
+	}
+
+	respond.JSON(w, r, http.StatusOK, map[string]interface{}{
+		"path":    serviceDir,
+		"written": written,
 	})
 }
