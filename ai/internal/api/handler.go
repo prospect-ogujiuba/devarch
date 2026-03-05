@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,6 +19,11 @@ type Conversation struct {
 	Messages []llm.ChatMessage
 	LastUsed time.Time
 }
+
+const (
+	ragScoreThreshold = 0.3
+	ragDefaultLimit   = 5
+)
 
 type Handler struct {
 	manager        *ramalama.Manager
@@ -97,6 +103,9 @@ func (h *Handler) Generate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := h.contextBuilder.ServiceAuthorContext()
+	if rag := h.ragContext(req.Description); rag != "" {
+		ctx += "\n\n" + rag
+	}
 	systemPrompt := llm.ServiceAuthorPrompt(ctx)
 
 	messages := []llm.ChatMessage{
@@ -150,8 +159,13 @@ func (h *Handler) Chat(w http.ResponseWriter, r *http.Request) {
 
 	conv := h.getOrCreateConversation(convID)
 
+	userContent := req.Message
+	if rag := h.ragContext(req.Message); rag != "" {
+		userContent = req.Message + "\n\n---\n" + rag
+	}
+
 	h.mu.Lock()
-	conv.Messages = append(conv.Messages, llm.ChatMessage{Role: "user", Content: req.Message})
+	conv.Messages = append(conv.Messages, llm.ChatMessage{Role: "user", Content: userContent})
 	conv.LastUsed = time.Now()
 	messages := make([]llm.ChatMessage, len(conv.Messages))
 	copy(messages, conv.Messages)
@@ -259,6 +273,9 @@ func (h *Handler) Diagnose(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := h.contextBuilder.DebugContext(req.Target)
+	if rag := h.ragContext(req.Target); rag != "" {
+		ctx += "\n\n" + rag
+	}
 	systemPrompt := llm.DebugPrompt(ctx)
 
 	messages := []llm.ChatMessage{
@@ -415,4 +432,103 @@ func (h *Handler) SearchDocuments(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond.JSON(w, http.StatusOK, map[string]interface{}{"results": docs})
+}
+
+func (h *Handler) DeleteDocument(w http.ResponseWriter, r *http.Request) {
+	if h.embedStore == nil {
+		respond.InternalError(w, fmt.Errorf("embedding store not configured"))
+		return
+	}
+
+	var req struct {
+		SourceType string `json:"source_type"`
+		SourceID   string `json:"source_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.BadRequest(w, "invalid request body")
+		return
+	}
+	if req.SourceType == "" || req.SourceID == "" {
+		respond.BadRequest(w, "source_type and source_id are required")
+		return
+	}
+
+	if err := h.embedStore.DeleteBySource(req.SourceType, req.SourceID); err != nil {
+		respond.InternalError(w, err)
+		return
+	}
+
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+// ragContext embeds the query, searches pgvector, and returns formatted context.
+// Returns empty string if embedding store is unavailable or no relevant results found.
+func (h *Handler) ragContext(query string) string {
+	if h.embedStore == nil || h.embedClient == nil {
+		return ""
+	}
+
+	vec, err := h.embedClient.EmbedSingle(query)
+	if err != nil {
+		return ""
+	}
+
+	docs, err := h.embedStore.Search(vec, ragDefaultLimit)
+	if err != nil || len(docs) == 0 {
+		return ""
+	}
+
+	var parts []string
+	for _, doc := range docs {
+		if doc.Score < ragScoreThreshold {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("[%s/%s] (relevance: %.0f%%)\n%s", doc.SourceType, doc.SourceID, doc.Score*100, doc.Content))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return "Relevant knowledge:\n" + strings.Join(parts, "\n\n")
+}
+
+func (h *Handler) IndexServices(w http.ResponseWriter, r *http.Request) {
+	if h.embedStore == nil {
+		respond.InternalError(w, fmt.Errorf("embedding store not configured"))
+		return
+	}
+
+	services := h.contextBuilder.FetchServices()
+	if len(services) == 0 {
+		respond.JSON(w, http.StatusOK, map[string]interface{}{"indexed": 0, "message": "no services found"})
+		return
+	}
+
+	indexed := 0
+	var errors []string
+	for _, svc := range services {
+		content, _ := json.MarshalIndent(svc, "", "  ")
+		name, _ := svc["name"].(string)
+		if name == "" {
+			continue
+		}
+
+		vec, err := h.embedClient.EmbedSingle(string(content))
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("%s: embed failed: %v", name, err))
+			continue
+		}
+
+		if err := h.embedStore.Upsert("service", name, string(content), vec); err != nil {
+			errors = append(errors, fmt.Sprintf("%s: store failed: %v", name, err))
+			continue
+		}
+		indexed++
+	}
+
+	result := map[string]interface{}{"indexed": indexed, "total": len(services)}
+	if len(errors) > 0 {
+		result["errors"] = errors
+	}
+	respond.JSON(w, http.StatusOK, result)
 }

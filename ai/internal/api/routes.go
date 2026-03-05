@@ -34,6 +34,8 @@ func NewRouter(ctx context.Context, manager *ramalama.Manager, client *llm.Clien
 
 		r.Post("/embed", h.Embed)
 		r.Post("/embed/index", h.IndexDocument)
+		r.Delete("/embed/index", h.DeleteDocument)
+		r.Post("/embed/index/services", h.IndexServices)
 		r.Post("/embed/search", h.SearchDocuments)
 	})
 

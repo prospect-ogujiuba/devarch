@@ -129,6 +129,31 @@ func (cb *ContextBuilder) fetchJSON(path string) map[string]interface{} {
 	return result
 }
 
+func (cb *ContextBuilder) FetchServices() []map[string]interface{} {
+	result := cb.fetchJSON("/api/v1/services")
+	if result == nil {
+		return nil
+	}
+
+	data, ok := result["data"]
+	if !ok {
+		return nil
+	}
+
+	items, ok := data.([]interface{})
+	if !ok {
+		return nil
+	}
+
+	var services []map[string]interface{}
+	for _, item := range items {
+		if m, ok := item.(map[string]interface{}); ok {
+			services = append(services, m)
+		}
+	}
+	return services
+}
+
 func (cb *ContextBuilder) fetchNames(path, dataKey, nameKey string) []string {
 	result := cb.fetchJSON(path)
 	if result == nil {
