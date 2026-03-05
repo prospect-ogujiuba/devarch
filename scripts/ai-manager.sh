@@ -11,6 +11,49 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEVARCH_AI_URL="${DEVARCH_AI_URL:-http://localhost:8551}"
 DEVARCH_API_KEY="${DEVARCH_API_KEY:-test}"
 
+SPINNER_PID=""
+
+start_spinner() {
+    local msg="${1:-Working}"
+    printf "\033[90m%s " "$msg" >&2
+    (
+        local chars='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+        local i=0
+        while true; do
+            printf "\b%s" "${chars:i%${#chars}:1}" >&2
+            i=$((i + 1))
+            sleep 0.1
+        done
+    ) &
+    SPINNER_PID=$!
+}
+
+stop_spinner() {
+    if [[ -n "$SPINNER_PID" ]]; then
+        kill "$SPINNER_PID" 2>/dev/null
+        wait "$SPINNER_PID" 2>/dev/null
+        SPINNER_PID=""
+        printf "\b \b\033[0m\n" >&2
+    fi
+}
+
+trap stop_spinner EXIT
+
+check_llm_status() {
+    local resp
+    resp=$(curl -sf --max-time 3 "${DEVARCH_AI_URL}/api/v1/ai/status" \
+        -H "X-API-Key: ${DEVARCH_API_KEY}" 2>/dev/null) || return 1
+    echo "$resp" | jq -r '.data.running' 2>/dev/null
+}
+
+ensure_llm_ready() {
+    local running
+    running=$(check_llm_status 2>/dev/null) || running="false"
+    if [[ "$running" != "true" ]]; then
+        echo "LLM not running — it will start automatically (this may take a minute)" >&2
+    fi
+}
+
 api_call() {
     local method="$1" endpoint="$2" data="$3"
     local url="${DEVARCH_AI_URL}/api/v1${endpoint}"
@@ -67,9 +110,11 @@ cmd_generate() {
         return 1
     fi
 
-    echo "Generating service template..."
+    ensure_llm_ready
+    start_spinner "Generating service template"
     local resp
     resp=$(api_call POST /ai/generate "{\"description\":$(echo "$description" | jq -Rs .)}")
+    stop_spinner
 
     # Check for error
     local err
@@ -115,6 +160,7 @@ cmd_generate() {
 }
 
 cmd_chat() {
+    ensure_llm_ready
     echo "DevArch AI Assistant (type 'exit' to quit, 'exec' to run last command)"
     echo "───"
 
@@ -150,8 +196,10 @@ cmd_chat() {
             payload="${payload}}"
         fi
 
+        start_spinner "Thinking"
         local resp
         resp=$(api_call POST /ai/chat "$payload")
+        stop_spinner
 
         local err
         err=$(echo "$resp" | jq -r '.error.message // empty')
@@ -184,9 +232,11 @@ cmd_diagnose() {
         return 1
     fi
 
-    echo "Diagnosing $target..."
+    ensure_llm_ready
+    start_spinner "Diagnosing $target"
     local resp
     resp=$(api_call POST /ai/diagnose "{\"target\":$(echo "$target" | jq -Rs .)}")
+    stop_spinner
 
     local err
     err=$(echo "$resp" | jq -r '.error.message // empty')
@@ -206,9 +256,10 @@ cmd_model_pull() {
         return 1
     fi
 
-    echo "Pulling model $model..."
+    start_spinner "Pulling model $model"
     local resp
     resp=$(api_call POST /ai/model/pull "{\"model\":$(echo "$model" | jq -Rs .)}")
+    stop_spinner
 
     local err
     err=$(echo "$resp" | jq -r '.error.message // empty')
