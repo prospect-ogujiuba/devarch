@@ -23,6 +23,7 @@ else
 fi
 
 PHP_CONTAINER="${PHP_CONTAINER:-php}"
+MARIADB_CONTAINER="${MARIADB_CONTAINER:-mariadb}"
 
 print_usage() {
     cat << EOF
@@ -220,6 +221,24 @@ ensure_backup_permissions() {
         mkdir -p '$backup_dir' && \
         chmod -R 777 '$backup_dir'
     "
+}
+
+ensure_db_exists() {
+    local site_name="$1"
+    local db_password="${MYSQL_ROOT_PASSWORD:-devarch}"
+
+    log_info "Ensuring database '$site_name' exists"
+    $CONTAINER_CMD exec $MARIADB_CONTAINER mariadb -u root -p"$db_password" -e "CREATE DATABASE IF NOT EXISTS \`$site_name\`;" 2>&1
+
+    if ! $CONTAINER_CMD exec $PHP_CONTAINER zsh -c "cd $site_name && wp core is-installed --allow-root" 2>/dev/null; then
+        log_info "Installing WordPress core tables"
+        $CONTAINER_CMD exec $PHP_CONTAINER zsh -c "
+            cd $site_name && \
+            wp core install --url='http://localhost' --title='$site_name' \
+                --admin_user='${ADMIN_USER:-admin}' --admin_password='${ADMIN_PASSWORD:-admin}' \
+                --admin_email='${ADMIN_EMAIL:-admin@test.local}' --skip-email --allow-root
+        "
+    fi
 }
 
 ensure_backup_ready() {
@@ -524,6 +543,7 @@ restore_site() {
         exit 1
     fi
 
+    ensure_db_exists "$site_name"
     ensure_backup_ready "$site_name"
 
     local backup_filename=$(basename "$source_file")
