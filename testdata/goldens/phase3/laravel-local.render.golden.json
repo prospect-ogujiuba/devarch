@@ -1,0 +1,215 @@
+{
+  "workspace": "laravel-local",
+  "provider": "auto",
+  "network": {
+    "name": "devarch-laravel-local-net",
+    "labels": {
+      "devarch.managed-by": "devarch-v2",
+      "devarch.workspace": "laravel-local"
+    }
+  },
+  "resources": [
+    {
+      "key": "app",
+      "logicalHost": "app",
+      "runtimeName": "devarch-laravel-local-app",
+      "source": {
+        "type": "project",
+        "path": "app"
+      },
+      "image": "php:8.3-cli",
+      "command": [
+        "sh",
+        "-c",
+        "php artisan serve --host=0.0.0.0 --port=8000"
+      ],
+      "workingDir": "/var/www/html",
+      "declaredEnv": {
+        "APP_DEBUG": true,
+        "APP_ENV": "local",
+        "APP_PORT": "8000",
+        "COMPOSER_ALLOW_SUPERUSER": "1"
+      },
+      "injectedEnv": {
+        "DB_HOST": "postgres",
+        "DB_NAME": "laravel",
+        "DB_PASSWORD": {
+          "secretRef": "laravel_postgres_password"
+        },
+        "DB_PORT": "5432",
+        "DB_USER": "laravel",
+        "REDIS_HOST": "redis",
+        "REDIS_PASSWORD": "devarch",
+        "REDIS_PORT": "6379",
+        "REDIS_URL": "redis://:devarch@redis:6379/0"
+      },
+      "env": {
+        "APP_DEBUG": true,
+        "APP_ENV": "local",
+        "APP_PORT": "8000",
+        "COMPOSER_ALLOW_SUPERUSER": "1",
+        "DB_HOST": "postgres",
+        "DB_NAME": "laravel",
+        "DB_PASSWORD": {
+          "secretRef": "laravel_postgres_password"
+        },
+        "DB_PORT": "5432",
+        "DB_USER": "laravel",
+        "REDIS_HOST": "redis",
+        "REDIS_PASSWORD": "devarch",
+        "REDIS_PORT": "6379",
+        "REDIS_URL": "redis://:devarch@redis:6379/0"
+      },
+      "ports": [
+        {
+          "container": 8000,
+          "published": 8100,
+          "protocol": "tcp"
+        }
+      ],
+      "volumes": [
+        {
+          "target": "/var/www/html/vendor",
+          "kind": "cache"
+        }
+      ],
+      "health": {
+        "test": [
+          "CMD-SHELL",
+          "php artisan about \u003e/dev/null"
+        ],
+        "interval": "30s",
+        "timeout": "10s",
+        "retries": 3,
+        "startPeriod": "20s"
+      },
+      "projectSource": {
+        "hostPath": "/home/priz/projects/devarch/examples/v2/workspaces/laravel-local/app",
+        "containerPath": "/var/www/html"
+      },
+      "developWatch": [
+        {
+          "path": "app",
+          "resolvedPath": "/home/priz/projects/devarch/examples/v2/workspaces/laravel-local/app",
+          "target": "/var/www/html",
+          "action": "sync"
+        }
+      ],
+      "labels": {
+        "devarch.example": "laravel-local",
+        "devarch.host": "app",
+        "devarch.managed-by": "devarch-v2",
+        "devarch.network": "devarch-laravel-local-net",
+        "devarch.resource": "app",
+        "devarch.workspace": "laravel-local"
+      }
+    },
+    {
+      "key": "postgres",
+      "logicalHost": "postgres",
+      "runtimeName": "devarch-laravel-local-postgres",
+      "image": "postgres:16",
+      "declaredEnv": {
+        "POSTGRES_DB": "laravel",
+        "POSTGRES_PASSWORD": {
+          "secretRef": "laravel_postgres_password"
+        },
+        "POSTGRES_USER": "laravel"
+      },
+      "env": {
+        "POSTGRES_DB": "laravel",
+        "POSTGRES_PASSWORD": {
+          "secretRef": "laravel_postgres_password"
+        },
+        "POSTGRES_USER": "laravel"
+      },
+      "ports": [
+        {
+          "container": 5432,
+          "protocol": "tcp"
+        }
+      ],
+      "volumes": [
+        {
+          "source": "workspace.laravel-postgres-data",
+          "target": "/var/lib/postgresql/data"
+        }
+      ],
+      "health": {
+        "test": [
+          "CMD-SHELL",
+          "pg_isready -U ${env.POSTGRES_USER}"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 5,
+        "startPeriod": "30s"
+      },
+      "labels": {
+        "devarch.host": "postgres",
+        "devarch.managed-by": "devarch-v2",
+        "devarch.network": "devarch-laravel-local-net",
+        "devarch.resource": "postgres",
+        "devarch.workspace": "laravel-local"
+      }
+    },
+    {
+      "key": "redis",
+      "logicalHost": "redis",
+      "runtimeName": "devarch-laravel-local-redis",
+      "image": "redis:7-alpine",
+      "command": [
+        "sh",
+        "-c",
+        "redis-server --requirepass \"$REDIS_PASSWORD\""
+      ],
+      "declaredEnv": {
+        "REDIS_PASSWORD": "devarch"
+      },
+      "env": {
+        "REDIS_PASSWORD": "devarch"
+      },
+      "ports": [
+        {
+          "container": 6379,
+          "protocol": "tcp"
+        }
+      ],
+      "volumes": [
+        {
+          "target": "/data",
+          "kind": "data"
+        }
+      ],
+      "health": {
+        "test": [
+          "CMD-SHELL",
+          "redis-cli -a ${env.REDIS_PASSWORD} ping"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 5,
+        "startPeriod": "10s"
+      },
+      "labels": {
+        "devarch.host": "redis",
+        "devarch.managed-by": "devarch-v2",
+        "devarch.network": "devarch-laravel-local-net",
+        "devarch.resource": "redis",
+        "devarch.workspace": "laravel-local"
+      }
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "secret-flatten",
+      "workspace": "laravel-local",
+      "resource": "app",
+      "contract": "postgres",
+      "provider": "postgres",
+      "envKey": "DATABASE_URL",
+      "message": "export env \"DATABASE_URL\" from provider \"postgres\" cannot flatten secretRef into composite string"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+apiVersion: devarch.io/v2alpha1
+kind: Template
+metadata:
+  name: vite-web
+  tags:
+    - frontend
+    - vite
+    - http
+  description: Vite development server for frontend projects.
+spec:
+  runtime:
+    image: node:22-alpine
+    workingDir: /workspace
+    command:
+      - sh
+      - -c
+      - npm install && npx vite --host 0.0.0.0 --port 5173
+  env:
+    NODE_ENV: development
+    PORT: "5173"
+  ports:
+    - container: 5173
+  volumes:
+    - target: /workspace/node_modules
+      kind: cache
+  imports:
+    - contract: http
+  exports:
+    - contract: http
+      env:
+        APP_URL: "http://${resource.host}:${resource.port.5173}"
+        PORT: "${resource.port.5173}"
+  health:
+    test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:5173/ || exit 1
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    startPeriod: 40s
+  develop:
+    watch:
+      - path: .
+        target: /workspace
+        action: sync

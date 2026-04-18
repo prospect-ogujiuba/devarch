@@ -1,0 +1,31 @@
+apiVersion: devarch.io/v2alpha1
+kind: Template
+metadata:
+  name: nginx
+  tags:
+    - proxy
+    - http
+    - nginx
+  description: Minimal nginx reverse proxy template for local workspaces.
+spec:
+  runtime:
+    image: nginx:1.27-alpine
+  ports:
+    - container: 80
+  volumes:
+    - target: /etc/nginx/conf.d
+      kind: config
+  imports:
+    - contract: http
+  exports:
+    - contract: http
+      env:
+        PROXY_URL: "http://${resource.host}:${resource.port.80}"
+  health:
+    test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost/ || exit 1
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    startPeriod: 10s

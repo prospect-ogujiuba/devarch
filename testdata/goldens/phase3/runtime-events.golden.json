@@ -1,0 +1,92 @@
+[
+  {
+    "sequence": 1,
+    "workspace": "shop-local",
+    "kind": "apply.started",
+    "timestamp": "2026-04-17T16:00:01Z",
+    "payload": {
+      "totalActions": 5
+    }
+  },
+  {
+    "sequence": 2,
+    "workspace": "shop-local",
+    "resource": "api",
+    "kind": "apply.progress",
+    "timestamp": "2026-04-17T16:00:02Z",
+    "payload": {
+      "scope": "resource",
+      "target": "api",
+      "runtimeName": "devarch-shop-local-api",
+      "action": "add",
+      "status": "success",
+      "message": "resource is not present in runtime snapshot"
+    }
+  },
+  {
+    "sequence": 3,
+    "workspace": "shop-local",
+    "kind": "apply.completed",
+    "timestamp": "2026-04-17T16:00:03Z",
+    "payload": {
+      "succeeded": true,
+      "operationCount": 5
+    }
+  },
+  {
+    "sequence": 4,
+    "workspace": "shop-local",
+    "resource": "api",
+    "kind": "logs.started",
+    "timestamp": "2026-04-17T16:00:04Z",
+    "payload": {
+      "tail": 20
+    }
+  },
+  {
+    "sequence": 5,
+    "workspace": "shop-local",
+    "resource": "api",
+    "kind": "logs.chunk",
+    "timestamp": "2026-04-17T16:00:05Z",
+    "payload": {
+      "stream": "combined",
+      "line": "server ready",
+      "timestamp": "2026-04-17T16:00:10Z"
+    }
+  },
+  {
+    "sequence": 6,
+    "workspace": "shop-local",
+    "resource": "api",
+    "kind": "logs.completed",
+    "timestamp": "2026-04-17T16:00:06Z",
+    "payload": {
+      "tail": 20
+    }
+  },
+  {
+    "sequence": 7,
+    "workspace": "shop-local",
+    "resource": "api",
+    "kind": "exec.started",
+    "timestamp": "2026-04-17T16:00:07Z",
+    "payload": {
+      "command": [
+        "php",
+        "artisan",
+        "about"
+      ]
+    }
+  },
+  {
+    "sequence": 8,
+    "workspace": "shop-local",
+    "resource": "api",
+    "kind": "exec.completed",
+    "timestamp": "2026-04-17T16:00:08Z",
+    "payload": {
+      "exitCode": 0
+    }
+  }
+]

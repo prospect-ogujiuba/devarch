@@ -1,0 +1,71 @@
+apiVersion: devarch.io/v2alpha1
+kind: Workspace
+metadata:
+  name: laravel-local
+  displayName: Laravel Local
+  description: Project-backed Phase 1 workspace example.
+runtime:
+  provider: auto
+  isolatedNetwork: true
+  namingStrategy: workspace-resource
+catalog:
+  sources:
+    - ../../../../catalog/builtin
+policies:
+  autoWire: true
+  secretSource: local
+resources:
+  postgres:
+    template: postgres
+    env:
+      POSTGRES_DB: laravel
+      POSTGRES_USER: laravel
+      POSTGRES_PASSWORD:
+        secretRef: laravel_postgres_password
+    volumes:
+      - source: workspace.laravel-postgres-data
+        target: /var/lib/postgresql/data
+    exports:
+      - postgres
+  redis:
+    template: redis
+    exports:
+      - redis
+  app:
+    template: laravel-app
+    source:
+      type: project
+      path: ./app
+    imports:
+      - contract: postgres
+        from: postgres
+      - contract: redis
+        from: redis
+    env:
+      APP_ENV: local
+      APP_DEBUG: true
+    ports:
+      - host: 8100
+        container: 8000
+    domains:
+      - laravel.local.test
+    exports:
+      - contract: http
+        env:
+          APP_URL: http://laravel.local.test
+    health:
+      test:
+        - CMD-SHELL
+        - php artisan about >/dev/null
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      startPeriod: 20s
+    develop:
+      watch:
+        - path: ./app
+          target: /var/www/html
+          action: sync
+    overrides:
+      labels:
+        devarch.example: laravel-local

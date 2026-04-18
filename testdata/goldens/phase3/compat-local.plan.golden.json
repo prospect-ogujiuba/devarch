@@ -1,0 +1,21 @@
+{
+  "workspace": "compat-local",
+  "provider": "docker",
+  "blocked": true,
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "unsupported-source-type",
+      "workspace": "compat-local",
+      "resource": "postgres",
+      "message": "resource \"postgres\" uses unsupported source.type \"raw-compose\" in Phase 3"
+    },
+    {
+      "severity": "error",
+      "code": "unsupported-source-type",
+      "workspace": "compat-local",
+      "resource": "redis",
+      "message": "resource \"redis\" uses unsupported source.type \"raw-compose\" in Phase 3"
+    }
+  ]
+}

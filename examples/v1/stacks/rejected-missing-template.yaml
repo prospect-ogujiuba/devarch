@@ -1,0 +1,9 @@
+version: 1
+stack:
+  name: broken-import
+instances:
+  api:
+    enabled: true
+    image: node:20-alpine
+    environment:
+      NODE_ENV: development

@@ -1,0 +1,35 @@
+services:
+  php:
+    build:
+      context: ../php/config
+      dockerfile: Dockerfile
+      args:
+        APP_ENV: development
+    working_dir: /var/www/html
+    command:
+      - php
+      - artisan
+      - serve
+      - --host=0.0.0.0
+      - --port=8000
+    user: "1000:1000"
+    restart: unless-stopped
+    container_name: php
+    ports:
+      - "127.0.0.1:8100:8000"
+    environment:
+      APP_ENV: local
+      APP_KEY: base64:devarch-secret
+    volumes:
+      - ../../../apps:/var/www/html
+      - php_vendor:/var/www/html/vendor
+    env_file:
+      - .env
+    labels:
+      com.example.role: backend
+    networks:
+      - microservices-net
+    x-devarch-config:
+      php.ini: /usr/local/etc/php/php.ini
+volumes:
+  php_vendor: {}

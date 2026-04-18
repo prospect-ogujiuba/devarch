@@ -1,0 +1,68 @@
+apiVersion: devarch.io/v2alpha1
+kind: Workspace
+metadata:
+  name: shop-local
+  displayName: Shop Local
+  description: Template-only Phase 1 workspace example.
+runtime:
+  provider: auto
+  isolatedNetwork: true
+  namingStrategy: workspace-resource
+catalog:
+  sources:
+    - ../../../../catalog/builtin
+policies:
+  autoWire: true
+  secretSource: local
+resources:
+  postgres:
+    template: postgres
+    enabled: true
+    env:
+      POSTGRES_DB: shop
+      POSTGRES_USER: shop
+      POSTGRES_PASSWORD:
+        secretRef: postgres_password
+    volumes:
+      - source: workspace.postgres-data
+        target: /var/lib/postgresql/data
+    exports:
+      - postgres
+  redis:
+    template: redis
+    enabled: true
+    exports:
+      - contract: redis
+        env:
+          REDIS_URL: redis://:devarch@redis:6379/0
+  api:
+    template: node-api
+    enabled: true
+    dependsOn:
+      - postgres
+      - redis
+    imports:
+      - contract: postgres
+        from: postgres
+      - contract: redis
+        from: redis
+    env:
+      NODE_ENV: development
+    ports:
+      - host: 8200
+        container: 3000
+    exports:
+      - contract: http
+        env:
+          API_URL: http://api:3000
+  web:
+    template: vite-web
+    enabled: true
+    imports:
+      - contract: http
+        from: api
+    ports:
+      - host: 8202
+        container: 5173
+    domains:
+      - shop.local.test

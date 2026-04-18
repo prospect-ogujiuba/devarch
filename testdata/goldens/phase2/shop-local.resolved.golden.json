@@ -1,0 +1,327 @@
+{
+  "workspace": {
+    "name": "shop-local",
+    "displayName": "Shop Local",
+    "description": "Template-only Phase 1 workspace example.",
+    "runtime": {
+      "provider": "auto",
+      "isolatedNetwork": true,
+      "namingStrategy": "workspace-resource"
+    },
+    "policies": {
+      "autoWire": true,
+      "secretSource": "local"
+    },
+    "catalogSources": [
+      "../../../../catalog/builtin"
+    ]
+  },
+  "resources": [
+    {
+      "key": "api",
+      "enabled": true,
+      "host": "api",
+      "template": {
+        "name": "node-api",
+        "path": "../../../../catalog/builtin/backend/node-api/template.yaml"
+      },
+      "runtime": {
+        "image": "node:22-alpine",
+        "command": [
+          "sh",
+          "-c",
+          "npm install \u0026\u0026 npm run dev"
+        ],
+        "workingDir": "/workspace"
+      },
+      "env": {
+        "NODE_ENV": "development",
+        "PORT": "3000"
+      },
+      "ports": [
+        {
+          "host": 8200,
+          "container": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "volumes": [
+        {
+          "target": "/workspace/node_modules",
+          "kind": "cache"
+        }
+      ],
+      "dependsOn": [
+        "postgres",
+        "redis"
+      ],
+      "imports": [
+        {
+          "contract": "postgres",
+          "from": "postgres"
+        },
+        {
+          "contract": "redis",
+          "from": "redis"
+        }
+      ],
+      "exports": [
+        {
+          "contract": "http",
+          "env": {
+            "API_URL": "http://api:3000",
+            "PORT": "${resource.port.3000}"
+          }
+        }
+      ],
+      "health": {
+        "test": [
+          "CMD-SHELL",
+          "wget --spider -q http://localhost:3000/ || exit 1"
+        ],
+        "interval": "30s",
+        "timeout": "10s",
+        "retries": 3,
+        "startPeriod": "40s"
+      },
+      "develop": {
+        "watch": [
+          {
+            "action": "sync",
+            "path": ".",
+            "target": "/workspace"
+          }
+        ]
+      }
+    },
+    {
+      "key": "postgres",
+      "enabled": true,
+      "host": "postgres",
+      "template": {
+        "name": "postgres",
+        "path": "../../../../catalog/builtin/database/postgres/template.yaml"
+      },
+      "runtime": {
+        "image": "postgres:16"
+      },
+      "env": {
+        "POSTGRES_DB": "shop",
+        "POSTGRES_PASSWORD": {
+          "secretRef": "postgres_password"
+        },
+        "POSTGRES_USER": "shop"
+      },
+      "ports": [
+        {
+          "container": 5432,
+          "protocol": "tcp"
+        }
+      ],
+      "volumes": [
+        {
+          "source": "workspace.postgres-data",
+          "target": "/var/lib/postgresql/data"
+        }
+      ],
+      "exports": [
+        {
+          "contract": "postgres",
+          "env": {
+            "DATABASE_URL": "postgres://${env.POSTGRES_USER}:${env.POSTGRES_PASSWORD}@${resource.host}:${resource.port.5432}/${env.POSTGRES_DB}",
+            "DB_HOST": "${resource.host}",
+            "DB_NAME": "${env.POSTGRES_DB}",
+            "DB_PASSWORD": "${env.POSTGRES_PASSWORD}",
+            "DB_PORT": "${resource.port.5432}",
+            "DB_USER": "${env.POSTGRES_USER}"
+          }
+        }
+      ],
+      "health": {
+        "test": [
+          "CMD-SHELL",
+          "pg_isready -U ${env.POSTGRES_USER}"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 5,
+        "startPeriod": "30s"
+      }
+    },
+    {
+      "key": "redis",
+      "enabled": true,
+      "host": "redis",
+      "template": {
+        "name": "redis",
+        "path": "../../../../catalog/builtin/cache/redis/template.yaml"
+      },
+      "runtime": {
+        "image": "redis:7-alpine",
+        "command": [
+          "sh",
+          "-c",
+          "redis-server --requirepass \"$REDIS_PASSWORD\""
+        ]
+      },
+      "env": {
+        "REDIS_PASSWORD": "devarch"
+      },
+      "ports": [
+        {
+          "container": 6379,
+          "protocol": "tcp"
+        }
+      ],
+      "volumes": [
+        {
+          "target": "/data",
+          "kind": "data"
+        }
+      ],
+      "exports": [
+        {
+          "contract": "redis",
+          "env": {
+            "REDIS_HOST": "${resource.host}",
+            "REDIS_PASSWORD": "${env.REDIS_PASSWORD}",
+            "REDIS_PORT": "${resource.port.6379}",
+            "REDIS_URL": "redis://:devarch@redis:6379/0"
+          }
+        }
+      ],
+      "health": {
+        "test": [
+          "CMD-SHELL",
+          "redis-cli -a ${env.REDIS_PASSWORD} ping"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 5,
+        "startPeriod": "10s"
+      }
+    },
+    {
+      "key": "web",
+      "enabled": true,
+      "host": "web",
+      "template": {
+        "name": "vite-web",
+        "path": "../../../../catalog/builtin/frontend/vite-web/template.yaml"
+      },
+      "runtime": {
+        "image": "node:22-alpine",
+        "command": [
+          "sh",
+          "-c",
+          "npm install \u0026\u0026 npx vite --host 0.0.0.0 --port 5173"
+        ],
+        "workingDir": "/workspace"
+      },
+      "env": {
+        "NODE_ENV": "development",
+        "PORT": "5173"
+      },
+      "ports": [
+        {
+          "host": 8202,
+          "container": 5173,
+          "protocol": "tcp"
+        }
+      ],
+      "volumes": [
+        {
+          "target": "/workspace/node_modules",
+          "kind": "cache"
+        }
+      ],
+      "imports": [
+        {
+          "contract": "http",
+          "from": "api"
+        }
+      ],
+      "exports": [
+        {
+          "contract": "http",
+          "env": {
+            "APP_URL": "http://${resource.host}:${resource.port.5173}",
+            "PORT": "${resource.port.5173}"
+          }
+        }
+      ],
+      "health": {
+        "test": [
+          "CMD-SHELL",
+          "wget --spider -q http://localhost:5173/ || exit 1"
+        ],
+        "interval": "30s",
+        "timeout": "10s",
+        "retries": 3,
+        "startPeriod": "40s"
+      },
+      "domains": [
+        "shop.local.test"
+      ],
+      "develop": {
+        "watch": [
+          {
+            "action": "sync",
+            "path": ".",
+            "target": "/workspace"
+          }
+        ]
+      }
+    }
+  ],
+  "links": [
+    {
+      "consumer": "api",
+      "contract": "postgres",
+      "provider": "postgres",
+      "source": "explicit",
+      "injectedEnv": {
+        "DB_HOST": "postgres",
+        "DB_NAME": "shop",
+        "DB_PASSWORD": {
+          "secretRef": "postgres_password"
+        },
+        "DB_PORT": "5432",
+        "DB_USER": "shop"
+      }
+    },
+    {
+      "consumer": "api",
+      "contract": "redis",
+      "provider": "redis",
+      "source": "explicit",
+      "injectedEnv": {
+        "REDIS_HOST": "redis",
+        "REDIS_PASSWORD": "devarch",
+        "REDIS_PORT": "6379",
+        "REDIS_URL": "redis://:devarch@redis:6379/0"
+      }
+    },
+    {
+      "consumer": "web",
+      "contract": "http",
+      "provider": "api",
+      "source": "explicit",
+      "injectedEnv": {
+        "API_URL": "http://api:3000",
+        "PORT": "3000"
+      }
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "secret-flatten",
+      "consumer": "api",
+      "contract": "postgres",
+      "provider": "postgres",
+      "envKey": "DATABASE_URL",
+      "message": "export env \"DATABASE_URL\" from provider \"postgres\" cannot flatten secretRef into composite string"
+    }
+  ]
+}

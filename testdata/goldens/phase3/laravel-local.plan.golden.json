@@ -1,0 +1,54 @@
+{
+  "workspace": "laravel-local",
+  "provider": "auto",
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "secret-flatten",
+      "workspace": "laravel-local",
+      "resource": "app",
+      "contract": "postgres",
+      "provider": "postgres",
+      "envKey": "DATABASE_URL",
+      "message": "export env \"DATABASE_URL\" from provider \"postgres\" cannot flatten secretRef into composite string"
+    }
+  ],
+  "actions": [
+    {
+      "scope": "workspace",
+      "target": "network",
+      "runtimeName": "devarch-laravel-local-net",
+      "kind": "add",
+      "reasons": [
+        "isolated workspace network is desired but missing from runtime snapshot"
+      ]
+    },
+    {
+      "scope": "resource",
+      "target": "app",
+      "runtimeName": "devarch-laravel-local-app",
+      "kind": "add",
+      "reasons": [
+        "resource is not present in runtime snapshot"
+      ]
+    },
+    {
+      "scope": "resource",
+      "target": "postgres",
+      "runtimeName": "devarch-laravel-local-postgres",
+      "kind": "add",
+      "reasons": [
+        "resource is not present in runtime snapshot"
+      ]
+    },
+    {
+      "scope": "resource",
+      "target": "redis",
+      "runtimeName": "devarch-laravel-local-redis",
+      "kind": "add",
+      "reasons": [
+        "resource is not present in runtime snapshot"
+      ]
+    }
+  ]
+}

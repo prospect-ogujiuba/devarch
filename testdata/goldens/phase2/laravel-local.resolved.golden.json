@@ -1,0 +1,255 @@
+{
+  "workspace": {
+    "name": "laravel-local",
+    "displayName": "Laravel Local",
+    "description": "Project-backed Phase 1 workspace example.",
+    "runtime": {
+      "provider": "auto",
+      "isolatedNetwork": true,
+      "namingStrategy": "workspace-resource"
+    },
+    "policies": {
+      "autoWire": true,
+      "secretSource": "local"
+    },
+    "catalogSources": [
+      "../../../../catalog/builtin"
+    ]
+  },
+  "resources": [
+    {
+      "key": "app",
+      "enabled": true,
+      "host": "app",
+      "template": {
+        "name": "laravel-app",
+        "path": "../../../../catalog/builtin/backend/laravel-app/template.yaml"
+      },
+      "source": {
+        "type": "project",
+        "path": "app"
+      },
+      "runtime": {
+        "image": "php:8.3-cli",
+        "command": [
+          "sh",
+          "-c",
+          "php artisan serve --host=0.0.0.0 --port=8000"
+        ],
+        "workingDir": "/var/www/html"
+      },
+      "env": {
+        "APP_DEBUG": true,
+        "APP_ENV": "local",
+        "APP_PORT": "8000",
+        "COMPOSER_ALLOW_SUPERUSER": "1"
+      },
+      "ports": [
+        {
+          "host": 8100,
+          "container": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "volumes": [
+        {
+          "target": "/var/www/html/vendor",
+          "kind": "cache"
+        }
+      ],
+      "imports": [
+        {
+          "contract": "postgres",
+          "from": "postgres"
+        },
+        {
+          "contract": "redis",
+          "from": "redis"
+        }
+      ],
+      "exports": [
+        {
+          "contract": "http",
+          "env": {
+            "APP_URL": "http://laravel.local.test",
+            "PORT": "${resource.port.8000}"
+          }
+        }
+      ],
+      "health": {
+        "test": [
+          "CMD-SHELL",
+          "php artisan about \u003e/dev/null"
+        ],
+        "interval": "30s",
+        "timeout": "10s",
+        "retries": 3,
+        "startPeriod": "20s"
+      },
+      "domains": [
+        "laravel.local.test"
+      ],
+      "develop": {
+        "watch": [
+          {
+            "action": "sync",
+            "path": "./app",
+            "target": "/var/www/html"
+          }
+        ]
+      },
+      "overrides": {
+        "labels": {
+          "devarch.example": "laravel-local"
+        }
+      }
+    },
+    {
+      "key": "postgres",
+      "enabled": true,
+      "host": "postgres",
+      "template": {
+        "name": "postgres",
+        "path": "../../../../catalog/builtin/database/postgres/template.yaml"
+      },
+      "runtime": {
+        "image": "postgres:16"
+      },
+      "env": {
+        "POSTGRES_DB": "laravel",
+        "POSTGRES_PASSWORD": {
+          "secretRef": "laravel_postgres_password"
+        },
+        "POSTGRES_USER": "laravel"
+      },
+      "ports": [
+        {
+          "container": 5432,
+          "protocol": "tcp"
+        }
+      ],
+      "volumes": [
+        {
+          "source": "workspace.laravel-postgres-data",
+          "target": "/var/lib/postgresql/data"
+        }
+      ],
+      "exports": [
+        {
+          "contract": "postgres",
+          "env": {
+            "DATABASE_URL": "postgres://${env.POSTGRES_USER}:${env.POSTGRES_PASSWORD}@${resource.host}:${resource.port.5432}/${env.POSTGRES_DB}",
+            "DB_HOST": "${resource.host}",
+            "DB_NAME": "${env.POSTGRES_DB}",
+            "DB_PASSWORD": "${env.POSTGRES_PASSWORD}",
+            "DB_PORT": "${resource.port.5432}",
+            "DB_USER": "${env.POSTGRES_USER}"
+          }
+        }
+      ],
+      "health": {
+        "test": [
+          "CMD-SHELL",
+          "pg_isready -U ${env.POSTGRES_USER}"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 5,
+        "startPeriod": "30s"
+      }
+    },
+    {
+      "key": "redis",
+      "enabled": true,
+      "host": "redis",
+      "template": {
+        "name": "redis",
+        "path": "../../../../catalog/builtin/cache/redis/template.yaml"
+      },
+      "runtime": {
+        "image": "redis:7-alpine",
+        "command": [
+          "sh",
+          "-c",
+          "redis-server --requirepass \"$REDIS_PASSWORD\""
+        ]
+      },
+      "env": {
+        "REDIS_PASSWORD": "devarch"
+      },
+      "ports": [
+        {
+          "container": 6379,
+          "protocol": "tcp"
+        }
+      ],
+      "volumes": [
+        {
+          "target": "/data",
+          "kind": "data"
+        }
+      ],
+      "exports": [
+        {
+          "contract": "redis",
+          "env": {
+            "REDIS_HOST": "${resource.host}",
+            "REDIS_PASSWORD": "${env.REDIS_PASSWORD}",
+            "REDIS_PORT": "${resource.port.6379}",
+            "REDIS_URL": "redis://:${env.REDIS_PASSWORD}@${resource.host}:${resource.port.6379}/0"
+          }
+        }
+      ],
+      "health": {
+        "test": [
+          "CMD-SHELL",
+          "redis-cli -a ${env.REDIS_PASSWORD} ping"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 5,
+        "startPeriod": "10s"
+      }
+    }
+  ],
+  "links": [
+    {
+      "consumer": "app",
+      "contract": "postgres",
+      "provider": "postgres",
+      "source": "explicit",
+      "injectedEnv": {
+        "DB_HOST": "postgres",
+        "DB_NAME": "laravel",
+        "DB_PASSWORD": {
+          "secretRef": "laravel_postgres_password"
+        },
+        "DB_PORT": "5432",
+        "DB_USER": "laravel"
+      }
+    },
+    {
+      "consumer": "app",
+      "contract": "redis",
+      "provider": "redis",
+      "source": "explicit",
+      "injectedEnv": {
+        "REDIS_HOST": "redis",
+        "REDIS_PASSWORD": "devarch",
+        "REDIS_PORT": "6379",
+        "REDIS_URL": "redis://:devarch@redis:6379/0"
+      }
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "secret-flatten",
+      "consumer": "app",
+      "contract": "postgres",
+      "provider": "postgres",
+      "envKey": "DATABASE_URL",
+      "message": "export env \"DATABASE_URL\" from provider \"postgres\" cannot flatten secretRef into composite string"
+    }
+  ]
+}

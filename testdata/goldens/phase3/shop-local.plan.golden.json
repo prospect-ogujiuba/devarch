@@ -1,0 +1,63 @@
+{
+  "workspace": "shop-local",
+  "provider": "auto",
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "secret-flatten",
+      "workspace": "shop-local",
+      "resource": "api",
+      "contract": "postgres",
+      "provider": "postgres",
+      "envKey": "DATABASE_URL",
+      "message": "export env \"DATABASE_URL\" from provider \"postgres\" cannot flatten secretRef into composite string"
+    }
+  ],
+  "actions": [
+    {
+      "scope": "workspace",
+      "target": "network",
+      "runtimeName": "devarch-shop-local-net",
+      "kind": "add",
+      "reasons": [
+        "isolated workspace network is desired but missing from runtime snapshot"
+      ]
+    },
+    {
+      "scope": "resource",
+      "target": "api",
+      "runtimeName": "devarch-shop-local-api",
+      "kind": "add",
+      "reasons": [
+        "resource is not present in runtime snapshot"
+      ]
+    },
+    {
+      "scope": "resource",
+      "target": "postgres",
+      "runtimeName": "devarch-shop-local-postgres",
+      "kind": "add",
+      "reasons": [
+        "resource is not present in runtime snapshot"
+      ]
+    },
+    {
+      "scope": "resource",
+      "target": "redis",
+      "runtimeName": "devarch-shop-local-redis",
+      "kind": "add",
+      "reasons": [
+        "resource is not present in runtime snapshot"
+      ]
+    },
+    {
+      "scope": "resource",
+      "target": "web",
+      "runtimeName": "devarch-shop-local-web",
+      "kind": "add",
+      "reasons": [
+        "resource is not present in runtime snapshot"
+      ]
+    }
+  ]
+}
