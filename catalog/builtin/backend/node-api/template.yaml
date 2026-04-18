@@ -1,0 +1,46 @@
+apiVersion: devarch.io/v2alpha1
+kind: Template
+metadata:
+  name: node-api
+  tags:
+    - backend
+    - node
+    - http
+  description: Node.js development API service with hot-reload-friendly defaults.
+spec:
+  runtime:
+    image: node:22-alpine
+    workingDir: /workspace
+    command:
+      - sh
+      - -c
+      - npm install && npm run dev
+  env:
+    NODE_ENV: development
+    PORT: "3000"
+  ports:
+    - container: 3000
+  volumes:
+    - target: /workspace/node_modules
+      kind: cache
+  imports:
+    - contract: postgres
+    - contract: redis
+  exports:
+    - contract: http
+      env:
+        API_URL: "http://${resource.host}:${resource.port.3000}"
+        PORT: "${resource.port.3000}"
+  health:
+    test:
+      - CMD-SHELL
+      - wget --spider -q http://localhost:3000/ || exit 1
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    startPeriod: 40s
+  develop:
+    watch:
+      - path: .
+        target: /workspace
+        action: sync

@@ -1,0 +1,38 @@
+apiVersion: devarch.io/v2alpha1
+kind: Template
+metadata:
+  name: redis
+  tags:
+    - cache
+    - queue
+    - redis
+  description: Redis cache and message broker with an authenticated default setup.
+spec:
+  runtime:
+    image: redis:7-alpine
+    command:
+      - sh
+      - -c
+      - redis-server --requirepass "$REDIS_PASSWORD"
+  env:
+    REDIS_PASSWORD: devarch
+  ports:
+    - container: 6379
+  volumes:
+    - target: /data
+      kind: data
+  exports:
+    - contract: redis
+      env:
+        REDIS_URL: "redis://:${env.REDIS_PASSWORD}@${resource.host}:${resource.port.6379}/0"
+        REDIS_HOST: "${resource.host}"
+        REDIS_PORT: "${resource.port.6379}"
+        REDIS_PASSWORD: "${env.REDIS_PASSWORD}"
+  health:
+    test:
+      - CMD-SHELL
+      - redis-cli -a ${env.REDIS_PASSWORD} ping
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    startPeriod: 10s

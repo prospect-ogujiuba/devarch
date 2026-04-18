@@ -1,0 +1,95 @@
+{
+  "workspace": "shop-local",
+  "provider": "auto",
+  "startedAt": "2026-04-17T14:00:00Z",
+  "finishedAt": "2026-04-17T14:00:00Z",
+  "operations": [
+    {
+      "scope": "workspace",
+      "target": "network",
+      "runtimeName": "devarch-shop-local-net",
+      "kind": "add",
+      "status": "success",
+      "message": "isolated workspace network is desired but missing from runtime snapshot"
+    },
+    {
+      "scope": "resource",
+      "target": "api",
+      "runtimeName": "devarch-shop-local-api",
+      "kind": "add",
+      "status": "success",
+      "message": "resource is not present in runtime snapshot"
+    },
+    {
+      "scope": "resource",
+      "target": "postgres",
+      "runtimeName": "devarch-shop-local-postgres",
+      "kind": "add",
+      "status": "success",
+      "message": "resource is not present in runtime snapshot"
+    },
+    {
+      "scope": "resource",
+      "target": "redis",
+      "runtimeName": "devarch-shop-local-redis",
+      "kind": "add",
+      "status": "success",
+      "message": "resource is not present in runtime snapshot"
+    },
+    {
+      "scope": "resource",
+      "target": "web",
+      "runtimeName": "devarch-shop-local-web",
+      "kind": "add",
+      "status": "success",
+      "message": "resource is not present in runtime snapshot"
+    }
+  ],
+  "snapshot": {
+    "workspace": {
+      "name": "shop-local",
+      "provider": "auto",
+      "network": {
+        "name": "devarch-shop-local-net"
+      }
+    },
+    "resources": [
+      {
+        "key": "api",
+        "runtimeName": "devarch-shop-local-api",
+        "state": {
+          "status": "running",
+          "running": true
+        },
+        "spec": {}
+      },
+      {
+        "key": "postgres",
+        "runtimeName": "devarch-shop-local-postgres",
+        "state": {
+          "status": "running",
+          "running": true
+        },
+        "spec": {}
+      },
+      {
+        "key": "redis",
+        "runtimeName": "devarch-shop-local-redis",
+        "state": {
+          "status": "running",
+          "running": true
+        },
+        "spec": {}
+      },
+      {
+        "key": "web",
+        "runtimeName": "devarch-shop-local-web",
+        "state": {
+          "status": "running",
+          "running": true
+        },
+        "spec": {}
+      }
+    ]
+  }
+}

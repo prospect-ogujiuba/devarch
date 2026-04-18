@@ -1,0 +1,48 @@
+apiVersion: devarch.io/v2alpha1
+kind: Template
+metadata:
+  name: laravel-app
+  tags:
+    - backend
+    - php
+    - laravel
+  description: Laravel application container with artisan serve defaults for local development.
+spec:
+  runtime:
+    image: php:8.3-cli
+    workingDir: /var/www/html
+    command:
+      - sh
+      - -c
+      - php artisan serve --host=0.0.0.0 --port=8000
+  env:
+    APP_ENV: local
+    APP_DEBUG: true
+    APP_PORT: "8000"
+    COMPOSER_ALLOW_SUPERUSER: "1"
+  ports:
+    - container: 8000
+  volumes:
+    - target: /var/www/html/vendor
+      kind: cache
+  imports:
+    - contract: postgres
+    - contract: redis
+  exports:
+    - contract: http
+      env:
+        APP_URL: "http://${resource.host}:${resource.port.8000}"
+        PORT: "${resource.port.8000}"
+  health:
+    test:
+      - CMD-SHELL
+      - php artisan about >/dev/null
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    startPeriod: 20s
+  develop:
+    watch:
+      - path: .
+        target: /var/www/html
+        action: sync

@@ -1,0 +1,81 @@
+version: 1
+stack:
+  name: shop-import
+  description: Imported shop workspace fixture.
+  network_name: custom-shop-net
+instances:
+  postgres:
+    template: postgres
+    enabled: true
+    environment:
+      POSTGRES_DB: shop
+      POSTGRES_USER: shop
+      POSTGRES_PASSWORD: ${SECRET:POSTGRES_PASSWORD}
+    ports:
+      - host_ip: 127.0.0.1
+        host_port: 15432
+        container_port: 5432
+        protocol: tcp
+    volumes:
+      - source: shop_postgres_data
+        target: /var/lib/postgresql/data
+    healthcheck:
+      test: CMD-SHELL pg_isready -U shop
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  api:
+    template: node-api
+    enabled: true
+    image: node:20-alpine
+    command: npm run dev
+    environment:
+      NODE_ENV: development
+      APP_KEY: ${SECRET:APP_KEY}
+    ports:
+      - host_ip: 127.0.0.1
+        host_port: 8300
+        container_port: 3000
+        protocol: tcp
+    dependencies:
+      - postgres
+    labels:
+      com.example.role: api
+    env_files:
+      - .env.local
+    networks:
+      - shop-net
+    config_files:
+      app.env:
+        content: |
+          FEATURE_FLAG=true
+        file_mode: "0644"
+    config_mounts:
+      - source_path: config/api/app.env
+        target_path: /app/.env
+        config_file_path: app.env
+    domains:
+      - domain: api.shop.local
+        proxy_port: 3000
+  web:
+    template: vite-web
+    enabled: true
+    environment:
+      VITE_API_URL: http://api:3000
+    ports:
+      - host_ip: 127.0.0.1
+        host_port: 5173
+        container_port: 5173
+        protocol: tcp
+wires:
+  - consumer_instance: api
+    provider_instance: postgres
+    import_contract: postgres
+    export_contract: postgres
+    source: explicit
+  - consumer_instance: web
+    provider_instance: api
+    import_contract: http
+    export_contract: http
+    source: auto

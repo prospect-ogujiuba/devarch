@@ -1,0 +1,38 @@
+apiVersion: devarch.io/v2alpha1
+kind: Template
+metadata:
+  name: postgres
+  tags:
+    - database
+    - sql
+    - postgres
+  description: PostgreSQL database with persisted application data.
+spec:
+  runtime:
+    image: postgres:16
+  env:
+    POSTGRES_DB: app
+    POSTGRES_USER: app
+    POSTGRES_PASSWORD: devarch
+  ports:
+    - container: 5432
+  volumes:
+    - target: /var/lib/postgresql/data
+      kind: data
+  exports:
+    - contract: postgres
+      env:
+        DATABASE_URL: "postgres://${env.POSTGRES_USER}:${env.POSTGRES_PASSWORD}@${resource.host}:${resource.port.5432}/${env.POSTGRES_DB}"
+        DB_HOST: "${resource.host}"
+        DB_PORT: "${resource.port.5432}"
+        DB_NAME: "${env.POSTGRES_DB}"
+        DB_USER: "${env.POSTGRES_USER}"
+        DB_PASSWORD: "${env.POSTGRES_PASSWORD}"
+  health:
+    test:
+      - CMD-SHELL
+      - pg_isready -U ${env.POSTGRES_USER}
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    startPeriod: 30s

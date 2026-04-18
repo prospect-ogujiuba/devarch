@@ -1,0 +1,29 @@
+apiVersion: devarch.io/v2alpha1
+kind: Workspace
+metadata:
+  name: compat-local
+  displayName: Compat Local
+  description: Raw compose compatibility Phase 1 workspace example.
+runtime:
+  provider: docker
+  isolatedNetwork: true
+  namingStrategy: workspace-resource
+policies:
+  autoWire: false
+resources:
+  postgres:
+    source:
+      type: raw-compose
+      path: ./compose.yml
+      service: postgres
+    exports:
+      - postgres
+  redis:
+    source:
+      type: raw-compose
+      path: ./compose.yml
+      service: redis
+    exports:
+      - contract: redis
+        env:
+          REDIS_URL: redis://:devarch@redis:6379/0
