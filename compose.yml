@@ -109,6 +109,8 @@ services:
     depends_on:
       devarch-api:
         condition: service_healthy
+      devarch-ai:
+        condition: service_healthy
     volumes:
       - ./dashboard/dist:/usr/share/nginx/html:ro
       - ./dashboard/nginx.conf:/etc/nginx/conf.d/default.conf:ro
