@@ -59,6 +59,7 @@ ENV PATH="/root/.composer/vendor/bin:${PATH}"
 
 RUN composer global require laravel/installer && \
     curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
+    /bin/bash -c "$(curl -fsSL https://php.new/install/linux/8.4)" \
     chmod +x wp-cli.phar && \
     mv wp-cli.phar /usr/local/bin/wp
 
