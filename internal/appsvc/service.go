@@ -21,6 +21,7 @@ import (
 	runtimepkg "github.com/prospect-ogujiuba/devarch/internal/runtime"
 	dockeradapter "github.com/prospect-ogujiuba/devarch/internal/runtime/docker"
 	podmanadapter "github.com/prospect-ogujiuba/devarch/internal/runtime/podman"
+	"github.com/prospect-ogujiuba/devarch/internal/workflows"
 	"github.com/prospect-ogujiuba/devarch/internal/workspace"
 	"gopkg.in/yaml.v3"
 )
@@ -34,6 +35,7 @@ type Config struct {
 	EventBus       *events.Bus
 	Cache          cachepkg.Store
 	LookPath       func(string) (string, error)
+	WorkflowRunner workflows.Runner
 }
 
 // Service is the narrow shared seam consumed by Phase 4 transports.
@@ -44,6 +46,7 @@ type Service struct {
 	bus            *events.Bus
 	cache          cachepkg.Store
 	lookPath       func(string) (string, error)
+	workflowRunner workflows.Runner
 }
 
 type workspaceState struct {
@@ -62,6 +65,7 @@ func New(config Config) (*Service, error) {
 		bus:            config.EventBus,
 		cache:          config.Cache,
 		lookPath:       config.LookPath,
+		workflowRunner: config.WorkflowRunner,
 	}
 	if len(service.adapters) == 0 {
 		service.adapters = defaultAdapters()
@@ -282,6 +286,45 @@ func (s *Service) ExecWorkspace(ctx context.Context, name, resource string, requ
 	}
 	ref := runtimepkg.ResourceRef{Workspace: state.Desired.Name, Key: item.Key, RuntimeName: item.RuntimeName}
 	return runtimepkg.ExecWithEvents(ctx, state.Adapter, s.bus, ref, request)
+}
+
+func (s *Service) Doctor(ctx context.Context) (*workflows.DoctorReport, error) {
+	return workflows.Doctor(ctx, s.workflowRunner, workflows.DoctorOptions{WorkspaceRoots: s.workspaceRoots, CatalogRoots: s.catalogRoots})
+}
+
+func (s *Service) RuntimeStatus(ctx context.Context) (*workflows.RuntimeStatusReport, error) {
+	return workflows.RuntimeStatus(ctx, s.workflowRunner), nil
+}
+
+func (s *Service) SocketStatus(ctx context.Context) (*workflows.SocketStatusReport, error) {
+	return workflows.SocketStatus(ctx, s.workflowRunner), nil
+}
+
+func (s *Service) SocketStart(ctx context.Context) (*workflows.CommandResult, error) {
+	return workflows.SocketStart(ctx, s.workflowRunner)
+}
+
+func (s *Service) SocketStop(ctx context.Context) (*workflows.CommandResult, error) {
+	return workflows.SocketStop(ctx, s.workflowRunner)
+}
+
+func (s *Service) RestartWorkspaceResource(ctx context.Context, name, resource string) error {
+	resource = strings.TrimSpace(resource)
+	if resource == "" {
+		return fmt.Errorf("resource is required")
+	}
+	state, err := s.loadRuntimeState(name, "restart")
+	if err != nil {
+		return err
+	}
+	item := state.Desired.Resource(resource)
+	if item == nil {
+		return &NotFoundError{Kind: "resource", Name: resource, Workspace: name}
+	}
+	if !state.Desired.Capabilities.Apply {
+		return unsupportedCapability(name, resource, state.Desired.Provider, "restart", "apply", "selected runtime does not support resource restart")
+	}
+	return state.Adapter.RestartResource(ctx, runtimepkg.ResourceRef{Workspace: state.Desired.Name, Key: item.Key, RuntimeName: item.RuntimeName})
 }
 
 func (s *Service) SubscribeWorkspaceEvents(ctx context.Context, name string, buffer int) (<-chan events.Envelope, func(), error) {

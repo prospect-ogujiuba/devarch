@@ -15,6 +15,7 @@ import (
 	"github.com/prospect-ogujiuba/devarch/internal/events"
 	planpkg "github.com/prospect-ogujiuba/devarch/internal/plan"
 	runtimepkg "github.com/prospect-ogujiuba/devarch/internal/runtime"
+	"github.com/prospect-ogujiuba/devarch/internal/workflows"
 )
 
 func TestDiscoverWorkspacesSortsByNameAndRejectsDuplicates(t *testing.T) {
@@ -308,6 +309,7 @@ type fakeAdapter struct {
 	logChunks    []runtimepkg.LogChunk
 	execResult   *runtimepkg.ExecResult
 	inspectCalls int
+	restartCalls int
 }
 
 func (f *fakeAdapter) Provider() string { return f.provider }
@@ -332,7 +334,10 @@ func (f *fakeAdapter) ApplyResource(context.Context, runtimepkg.ApplyResourceReq
 
 func (f *fakeAdapter) RemoveResource(context.Context, runtimepkg.ResourceRef) error { return nil }
 
-func (f *fakeAdapter) RestartResource(context.Context, runtimepkg.ResourceRef) error { return nil }
+func (f *fakeAdapter) RestartResource(context.Context, runtimepkg.ResourceRef) error {
+	f.restartCalls++
+	return nil
+}
 
 func (f *fakeAdapter) StreamLogs(_ context.Context, _ runtimepkg.ResourceRef, _ runtimepkg.LogsRequest, consume runtimepkg.LogsConsumer) error {
 	for _, chunk := range f.logChunks {
@@ -394,6 +399,56 @@ func repoRoot(t *testing.T) string {
 		t.Fatal("runtime.Caller failed")
 	}
 	return filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
+}
+
+func TestServiceWorkflowMethodsDelegate(t *testing.T) {
+	runner := &fakeWorkflowRunner{results: []workflows.CommandResult{{Status: workflows.StatusPass}, {Status: workflows.StatusPass}, {Status: workflows.StatusPass}, {Status: workflows.StatusPass}, {Status: workflows.StatusPass}, {Status: workflows.StatusPass}, {Status: workflows.StatusPass}}}
+	service := newTestService(t, Config{WorkspaceRoots: exampleWorkspaceRoots(t), CatalogRoots: exampleCatalogRoots(t), WorkflowRunner: runner})
+	if _, err := service.Doctor(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.RuntimeStatus(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.SocketStatus(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.SocketStart(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.SocketStop(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if len(runner.calls) == 0 {
+		t.Fatal("workflow runner was not used")
+	}
+}
+
+func TestRestartWorkspaceResourceDelegatesToRuntimeAdapter(t *testing.T) {
+	adapter := &fakeAdapter{provider: runtimepkg.ProviderPodman, capabilities: runtimepkg.AdapterCapabilities{Inspect: true, Apply: true}}
+	service := newTestService(t, Config{WorkspaceRoots: exampleWorkspaceRoots(t), CatalogRoots: exampleCatalogRoots(t), Adapters: map[string]runtimepkg.Adapter{runtimepkg.ProviderPodman: adapter}})
+	if err := service.RestartWorkspaceResource(context.Background(), "shop-local", "postgres"); err != nil {
+		t.Fatal(err)
+	}
+	if adapter.restartCalls != 1 {
+		t.Fatalf("restartCalls = %d, want 1", adapter.restartCalls)
+	}
+}
+
+type fakeWorkflowRunner struct {
+	results []workflows.CommandResult
+	calls   []workflows.CommandResult
+}
+
+func (f *fakeWorkflowRunner) Run(ctx context.Context, command string, args ...string) workflows.CommandResult {
+	_ = ctx
+	f.calls = append(f.calls, workflows.CommandResult{Command: command, Args: args})
+	if len(f.results) == 0 {
+		return workflows.CommandResult{Command: command, Args: args, Status: workflows.StatusFail, ExitCode: -1}
+	}
+	result := f.results[0]
+	f.results = f.results[1:]
+	return result
 }
 
 var _ runtimepkg.Adapter = (*fakeAdapter)(nil)
