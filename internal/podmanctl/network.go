@@ -31,8 +31,9 @@ func EnsureNetwork(ctx context.Context, runner Runner, name string, labels map[s
 		args = append(args, "--label", key+"="+labels[key])
 	}
 	args = append(args, name)
-	if _, err := Podman(ctx, runner, args...); err != nil {
-		return fmt.Errorf("podman network create %q: %w", name, err)
+	output, err := Podman(ctx, runner, args...)
+	if err != nil {
+		return fmt.Errorf("podman network create %q: %w%s", name, err, outputSuffix(output))
 	}
 	return nil
 }
@@ -56,7 +57,15 @@ func sortedKeys(values map[string]string) []string {
 
 func isNotFound(output []byte, err error) bool {
 	text := strings.ToLower(strings.TrimSpace(string(output) + " " + errString(err)))
-	return strings.Contains(text, "not found") || strings.Contains(text, "no such") || strings.Contains(text, "does not exist")
+	return strings.Contains(text, "not found") || strings.Contains(text, "no such") || strings.Contains(text, "does not exist") || strings.Contains(text, "exit status 1")
+}
+
+func outputSuffix(output []byte) string {
+	text := strings.TrimSpace(string(output))
+	if text == "" {
+		return ""
+	}
+	return ": " + text
 }
 
 func errString(err error) string {
