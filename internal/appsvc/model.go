@@ -12,10 +12,12 @@ import (
 	"github.com/prospect-ogujiuba/devarch/internal/workspace"
 )
 
+type WorkflowStatus = workflows.WorkflowStatus
 type DoctorReport = workflows.DoctorReport
 type RuntimeStatusReport = workflows.RuntimeStatusReport
 type SocketStatusReport = workflows.SocketStatusReport
 type WorkflowCommandResult = workflows.CommandResult
+type WorkflowCheckResult = workflows.CheckResult
 
 // TemplateSummary is the API-safe catalog list shape used by Phase 4 surfaces.
 type TemplateSummary struct {

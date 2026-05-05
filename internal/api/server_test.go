@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"reflect"
 	stdruntime "runtime"
 	"strings"
 	"testing"
@@ -16,7 +17,43 @@ import (
 	"github.com/prospect-ogujiuba/devarch/internal/events"
 	planpkg "github.com/prospect-ogujiuba/devarch/internal/plan"
 	runtimepkg "github.com/prospect-ogujiuba/devarch/internal/runtime"
+	"github.com/prospect-ogujiuba/devarch/internal/workflows"
 )
+
+func TestWorkflowRoutes(t *testing.T) {
+	server, _, _, _ := newTestHTTPServer(t)
+	defer server.Close()
+
+	var doctor appsvc.DoctorReport
+	getJSON(t, server.URL+"/api/v1/doctor", http.StatusOK, &doctor)
+	if doctor.Status == "" || len(doctor.Checks) == 0 {
+		t.Fatalf("doctor = %#v, want status and checks", doctor)
+	}
+
+	var runtimeStatus appsvc.RuntimeStatusReport
+	getJSON(t, server.URL+"/api/v1/runtime/status", http.StatusOK, &runtimeStatus)
+	if runtimeStatus.Status == "" || len(runtimeStatus.Checks) == 0 {
+		t.Fatalf("runtimeStatus = %#v, want status and checks", runtimeStatus)
+	}
+
+	var socketStatus appsvc.SocketStatusReport
+	getJSON(t, server.URL+"/api/v1/socket/status", http.StatusOK, &socketStatus)
+	if socketStatus.Check.ID != "podman.socket" {
+		t.Fatalf("socketStatus.Check.ID = %q, want podman.socket", socketStatus.Check.ID)
+	}
+
+	var start appsvc.WorkflowCommandResult
+	getJSONMethod(t, http.MethodPost, server.URL+"/api/v1/socket/start", http.StatusOK, &start)
+	if got, want := start.Args, []string{"--user", "start", "podman.socket"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("socket start args = %v, want %v", got, want)
+	}
+
+	var stop appsvc.WorkflowCommandResult
+	getJSONMethod(t, http.MethodPost, server.URL+"/api/v1/socket/stop", http.StatusOK, &stop)
+	if got, want := stop.Args, []string{"--user", "stop", "podman.socket"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("socket stop args = %v, want %v", got, want)
+	}
+}
 
 func TestReadRoutes(t *testing.T) {
 	server, _, _, _ := newTestHTTPServer(t)
@@ -277,6 +314,16 @@ func newTestHTTPServer(t *testing.T) (*httptest.Server, *events.Bus, *fakeAdapte
 			runtimepkg.ProviderDocker: adapter,
 		},
 		LookPath: func(file string) (string, error) { return "/usr/bin/" + file, nil },
+		WorkflowRunner: &workflows.FakeRunner{Results: []workflows.CommandResult{
+			{Status: workflows.StatusPass, StdoutSummary: "podman version 5.0"},
+			{Status: workflows.StatusPass, StdoutSummary: "socket ready"},
+			{Status: workflows.StatusPass, StdoutSummary: "package ok"},
+			{Status: workflows.StatusPass, StdoutSummary: "podman version 5.0"},
+			{Status: workflows.StatusFail, StderrSummary: "docker unavailable", Error: "not found", ExitCode: -1},
+			{Status: workflows.StatusPass, StdoutSummary: "socket ready"},
+			{Status: workflows.StatusPass, StdoutSummary: "socket started"},
+			{Status: workflows.StatusPass, StdoutSummary: "socket stopped"},
+		}},
 	})
 	if err != nil {
 		t.Fatalf("appsvc.New returned error: %v", err)

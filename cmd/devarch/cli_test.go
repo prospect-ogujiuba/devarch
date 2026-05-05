@@ -15,7 +15,60 @@ import (
 	"github.com/prospect-ogujiuba/devarch/internal/appsvc"
 	planpkg "github.com/prospect-ogujiuba/devarch/internal/plan"
 	runtimepkg "github.com/prospect-ogujiuba/devarch/internal/runtime"
+	"github.com/prospect-ogujiuba/devarch/internal/workflows"
 )
+
+func TestRunJSONWorkflowCommands(t *testing.T) {
+	args := append(baseCLIArgs(t), "--json", "doctor")
+	stdout, stderr, err := runCLI(args, newTestServiceFactory(t))
+	if err != nil {
+		t.Fatalf("runCLI doctor returned error: %v\nstderr:\n%s", err, stderr)
+	}
+	var doctor appsvc.DoctorReport
+	if err := json.Unmarshal([]byte(stdout), &doctor); err != nil {
+		t.Fatalf("json.Unmarshal doctor returned error: %v\nstdout:\n%s", err, stdout)
+	}
+	if doctor.Status == "" || len(doctor.Checks) == 0 {
+		t.Fatalf("doctor = %#v, want status and checks", doctor)
+	}
+
+	args = append(baseCLIArgs(t), "--json", "runtime", "status")
+	stdout, stderr, err = runCLI(args, newTestServiceFactory(t))
+	if err != nil {
+		t.Fatalf("runCLI runtime status returned error: %v\nstderr:\n%s", err, stderr)
+	}
+	var runtimeStatus appsvc.RuntimeStatusReport
+	if err := json.Unmarshal([]byte(stdout), &runtimeStatus); err != nil {
+		t.Fatalf("json.Unmarshal runtime status returned error: %v\nstdout:\n%s", err, stdout)
+	}
+	if runtimeStatus.Status == "" || len(runtimeStatus.Checks) == 0 {
+		t.Fatalf("runtimeStatus = %#v, want status and checks", runtimeStatus)
+	}
+
+	args = append(baseCLIArgs(t), "--json", "socket", "status")
+	stdout, stderr, err = runCLI(args, newTestServiceFactory(t))
+	if err != nil {
+		t.Fatalf("runCLI socket status returned error: %v\nstderr:\n%s", err, stderr)
+	}
+	var socketStatus appsvc.SocketStatusReport
+	if err := json.Unmarshal([]byte(stdout), &socketStatus); err != nil {
+		t.Fatalf("json.Unmarshal socket status returned error: %v\nstdout:\n%s", err, stdout)
+	}
+	if socketStatus.Check.ID != "podman.socket" {
+		t.Fatalf("socketStatus.Check.ID = %q, want podman.socket", socketStatus.Check.ID)
+	}
+}
+
+func TestRunInvalidWorkflowArgs(t *testing.T) {
+	_, _, err := runCLI(append(baseCLIArgs(t), "runtime"), newTestServiceFactory(t))
+	if err == nil || !strings.Contains(err.Error(), "runtime status") {
+		t.Fatalf("runtime error = %v, want runtime status usage error", err)
+	}
+	_, _, err = runCLI(append(baseCLIArgs(t), "socket", "bounce"), newTestServiceFactory(t))
+	if err == nil || !strings.Contains(err.Error(), "unknown socket subcommand") {
+		t.Fatalf("socket error = %v, want unknown socket subcommand", err)
+	}
+}
 
 func TestRunJSONWorkspaceCommands(t *testing.T) {
 	args := append(baseCLIArgs(t), "--json", "workspace", "plan", "shop-local")
@@ -199,6 +252,14 @@ func newTestServiceFactory(t *testing.T) serviceFactory {
 				},
 			},
 			LookPath: func(file string) (string, error) { return "/usr/bin/" + file, nil },
+			WorkflowRunner: &workflows.FakeRunner{Results: []workflows.CommandResult{
+				{Status: workflows.StatusPass, StdoutSummary: "podman version 5.0"},
+				{Status: workflows.StatusPass, StdoutSummary: "socket ready"},
+				{Status: workflows.StatusPass, StdoutSummary: "package ok"},
+				{Status: workflows.StatusPass, StdoutSummary: "podman version 5.0"},
+				{Status: workflows.StatusFail, StderrSummary: "docker unavailable", Error: "not found", ExitCode: -1},
+				{Status: workflows.StatusPass, StdoutSummary: "socket ready"},
+			}},
 		})
 	}
 }

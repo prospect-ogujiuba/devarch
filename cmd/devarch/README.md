@@ -1,6 +1,6 @@
 # `devarch` CLI
 
-Phase 4 exposes the shared engine through one CLI binary.
+Phase 5 exposes workflow services through one CLI binary. Command handlers are thin wrappers over `internal/appsvc`.
 
 ## Global flags
 
@@ -14,11 +14,26 @@ devarch --workspace-root ./examples/v2/workspaces --catalog-root ./catalog/built
 - `--catalog-root` repeatable catalog discovery root
 - `--json` stable machine-readable output
 
+## Operator workflow examples
+
+```bash
+devarch --json doctor
+devarch runtime status
+devarch socket status
+devarch socket start
+devarch socket stop
+devarch --workspace-root ./examples/v2/workspaces workspace status shop-local
+devarch --workspace-root ./examples/v2/workspaces workspace apply shop-local
+devarch --workspace-root ./examples/v2/workspaces workspace logs shop-local api
+devarch --workspace-root ./examples/v2/workspaces workspace exec shop-local api -- echo ok
+```
+
 ## Stable JSON contract
 
 `--json` emits the same service-backed payload shapes used by the thin API where they already exist:
 
-- `workspace list/open/plan/apply/status/logs/exec`
+- `doctor`, `runtime status`, `socket status/start/stop`
+- `workspace list/open/plan/apply/status/logs/exec/restart`
 - `catalog list/show`
 - `scan project`
 - `import v1-stack`
