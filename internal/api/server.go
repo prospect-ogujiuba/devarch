@@ -23,6 +23,11 @@ func NewServer(service *appsvc.Service) *Server {
 		},
 	}
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v1/doctor", server.handleDoctor)
+	mux.HandleFunc("GET /api/v1/runtime/status", server.handleRuntimeStatus)
+	mux.HandleFunc("GET /api/v1/socket/status", server.handleSocketStatus)
+	mux.HandleFunc("POST /api/v1/socket/start", server.handleSocketStart)
+	mux.HandleFunc("POST /api/v1/socket/stop", server.handleSocketStop)
 	mux.HandleFunc("GET /api/catalog/templates", server.handleCatalogTemplates)
 	mux.HandleFunc("GET /api/catalog/templates/{name}", server.handleCatalogTemplate)
 	mux.HandleFunc("GET /api/workspaces", server.handleWorkspaces)

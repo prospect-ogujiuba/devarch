@@ -42,6 +42,11 @@ func (f *stringSliceFlag) Set(value string) error {
 }
 
 type serviceAPI interface {
+	Doctor(context.Context) (*appsvc.DoctorReport, error)
+	RuntimeStatus(context.Context) (*appsvc.RuntimeStatusReport, error)
+	SocketStatus(context.Context) (*appsvc.SocketStatusReport, error)
+	SocketStart(context.Context) (*appsvc.WorkflowCommandResult, error)
+	SocketStop(context.Context) (*appsvc.WorkflowCommandResult, error)
 	CatalogTemplates(context.Context) ([]appsvc.TemplateSummary, error)
 	CatalogTemplate(context.Context, string) (*appsvc.TemplateDetail, error)
 	Workspaces(context.Context) ([]appsvc.WorkspaceSummary, error)
@@ -51,6 +56,7 @@ type serviceAPI interface {
 	WorkspaceStatus(context.Context, string) (*appsvc.WorkspaceStatusView, error)
 	WorkspaceLogs(context.Context, string, string, runtimepkg.LogsRequest) ([]runtimepkg.LogChunk, error)
 	ExecWorkspace(context.Context, string, string, runtimepkg.ExecRequest) (*runtimepkg.ExecResult, error)
+	RestartWorkspaceResource(context.Context, string, string) error
 	ScanProject(context.Context, string) (*appsvc.ProjectScanView, error)
 	ImportV1Stack(context.Context, string) (*appsvc.ImportPreview, error)
 	ImportV1Library(context.Context, string) (*appsvc.ImportPreview, error)
@@ -76,6 +82,9 @@ func defaultServiceFactory(cfg cliConfig) (serviceAPI, error) {
 func run(ctx context.Context, args []string, stdout, stderr io.Writer, factory serviceFactory) error {
 	cfg, rest, err := parseRootFlags(args, stderr)
 	if err != nil {
+		if err == flag.ErrHelp {
+			return nil
+		}
 		return err
 	}
 	if len(rest) == 0 {
@@ -87,6 +96,12 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, factory s
 	}
 
 	switch rest[0] {
+	case "doctor":
+		return runDoctor(ctx, cfg, rest[1:], stdout, stderr, factory)
+	case "runtime":
+		return runRuntime(ctx, cfg, rest[1:], stdout, stderr, factory)
+	case "socket":
+		return runSocket(ctx, cfg, rest[1:], stdout, stderr, factory)
 	case "workspace":
 		return runWorkspace(ctx, cfg, rest[1:], stdout, stderr, factory)
 	case "catalog":
@@ -116,6 +131,95 @@ func parseRootFlags(args []string, stderr io.Writer) (cliConfig, []string, error
 		return cliConfig{}, nil, err
 	}
 	return cfg, fs.Args(), nil
+}
+
+func runDoctor(ctx context.Context, cfg cliConfig, args []string, stdout, stderr io.Writer, factory serviceFactory) error {
+	if len(args) != 0 {
+		fmt.Fprintln(stderr, "Usage: devarch [global flags] doctor")
+		return fmt.Errorf("doctor does not accept positional arguments")
+	}
+	svc, err := factory(cfg)
+	if err != nil {
+		return err
+	}
+	report, err := svc.Doctor(ctx)
+	if err != nil {
+		return err
+	}
+	if cfg.json {
+		return writeJSON(stdout, report)
+	}
+	printChecks(stdout, "Doctor", report.Status, report.Checks)
+	return nil
+}
+
+func runRuntime(ctx context.Context, cfg cliConfig, args []string, stdout, stderr io.Writer, factory serviceFactory) error {
+	if len(args) != 1 || args[0] != "status" {
+		fmt.Fprintln(stderr, "Usage: devarch [global flags] runtime status")
+		return fmt.Errorf("runtime status requires no positional arguments")
+	}
+	svc, err := factory(cfg)
+	if err != nil {
+		return err
+	}
+	report, err := svc.RuntimeStatus(ctx)
+	if err != nil {
+		return err
+	}
+	if cfg.json {
+		return writeJSON(stdout, report)
+	}
+	printChecks(stdout, "Runtime", report.Status, report.Checks)
+	return nil
+}
+
+func runSocket(ctx context.Context, cfg cliConfig, args []string, stdout, stderr io.Writer, factory serviceFactory) error {
+	if len(args) != 1 {
+		writeSocketUsage(stderr)
+		return fmt.Errorf("socket subcommand is required")
+	}
+	svc, err := factory(cfg)
+	if err != nil {
+		return err
+	}
+	switch args[0] {
+	case "status":
+		report, err := svc.SocketStatus(ctx)
+		if err != nil {
+			return err
+		}
+		if cfg.json {
+			return writeJSON(stdout, report)
+		}
+		printChecks(stdout, "Socket", report.Status, []appsvc.WorkflowCheckResult{report.Check})
+		return nil
+	case "start":
+		result, err := svc.SocketStart(ctx)
+		if err != nil {
+			return err
+		}
+		if cfg.json {
+			return writeJSON(stdout, result)
+		}
+		printCommandResult(stdout, result)
+		return nil
+	case "stop":
+		result, err := svc.SocketStop(ctx)
+		if err != nil {
+			return err
+		}
+		if cfg.json {
+			return writeJSON(stdout, result)
+		}
+		printCommandResult(stdout, result)
+		return nil
+	case "help", "-h", "--help":
+		writeSocketUsage(stdout)
+		return nil
+	default:
+		writeSocketUsage(stderr)
+		return fmt.Errorf("unknown socket subcommand %q", args[0])
+	}
 }
 
 func runWorkspace(ctx context.Context, cfg cliConfig, args []string, stdout, stderr io.Writer, factory serviceFactory) error {
@@ -206,6 +310,20 @@ func runWorkspace(ctx context.Context, cfg cliConfig, args []string, stdout, std
 		return runWorkspaceLogs(ctx, cfg, svc, args[1:], stdout, stderr)
 	case "exec":
 		return runWorkspaceExec(ctx, cfg, svc, args[1:], stdout, stderr)
+	case "restart":
+		if len(args) != 3 {
+			fmt.Fprintln(stderr, "Usage: devarch [global flags] workspace restart <name> <resource>")
+			return fmt.Errorf("workspace restart requires <name> and <resource>")
+		}
+		if err := svc.RestartWorkspaceResource(ctx, args[1], args[2]); err != nil {
+			return err
+		}
+		result := map[string]string{"workspace": args[1], "resource": args[2], "status": "restarted"}
+		if cfg.json {
+			return writeJSON(stdout, result)
+		}
+		fmt.Fprintf(stdout, "Restarted %s/%s\n", args[1], args[2])
+		return nil
 	case "help", "-h", "--help":
 		writeWorkspaceUsage(stdout)
 		return nil
@@ -421,6 +539,38 @@ func writeJSON(w io.Writer, value any) error {
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(value)
+}
+
+func printChecks(w io.Writer, title string, status appsvc.WorkflowStatus, checks []appsvc.WorkflowCheckResult) {
+	fmt.Fprintf(w, "%s status: %s\n", title, status)
+	if len(checks) == 0 {
+		fmt.Fprintln(w, "Checks: none")
+		return
+	}
+	tw := newTabWriter(w)
+	fmt.Fprintln(tw, "ID\tSTATUS\tMESSAGE")
+	for _, check := range checks {
+		fmt.Fprintf(tw, "%s\t%s\t%s\n", check.ID, check.Status, orDash(check.Message))
+	}
+	_ = tw.Flush()
+}
+
+func printCommandResult(w io.Writer, result *appsvc.WorkflowCommandResult) {
+	if result == nil {
+		fmt.Fprintln(w, "No command result.")
+		return
+	}
+	fmt.Fprintf(w, "Command: %s %s\n", result.Command, strings.Join(result.Args, " "))
+	fmt.Fprintf(w, "Status: %s\n", result.Status)
+	if result.StdoutSummary != "" {
+		fmt.Fprintf(w, "Stdout: %s\n", result.StdoutSummary)
+	}
+	if result.StderrSummary != "" {
+		fmt.Fprintf(w, "Stderr: %s\n", result.StderrSummary)
+	}
+	if result.Error != "" {
+		fmt.Fprintf(w, "Error: %s\n", result.Error)
+	}
 }
 
 func printWorkspaceList(w io.Writer, workspaces []appsvc.WorkspaceSummary) {
@@ -788,6 +938,12 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  workspace status <name>")
 	fmt.Fprintln(w, "  workspace logs [--tail N] [--since RFC3339] [--follow] <name> <resource>")
 	fmt.Fprintln(w, "  workspace exec <name> <resource> [--] <command...>")
+	fmt.Fprintln(w, "  workspace restart <name> <resource>")
+	fmt.Fprintln(w, "  doctor")
+	fmt.Fprintln(w, "  runtime status")
+	fmt.Fprintln(w, "  socket status")
+	fmt.Fprintln(w, "  socket start")
+	fmt.Fprintln(w, "  socket stop")
 	fmt.Fprintln(w, "  catalog list")
 	fmt.Fprintln(w, "  catalog show <template>")
 	fmt.Fprintln(w, "  import v1-stack <file>")
@@ -804,6 +960,14 @@ func writeWorkspaceUsage(w io.Writer) {
 	fmt.Fprintln(w, "  devarch [global flags] workspace status <name>")
 	fmt.Fprintln(w, "  devarch [global flags] workspace logs [--tail N] [--since RFC3339] [--follow] <name> <resource>")
 	fmt.Fprintln(w, "  devarch [global flags] workspace exec <name> <resource> [--] <command...>")
+	fmt.Fprintln(w, "  devarch [global flags] workspace restart <name> <resource>")
+}
+
+func writeSocketUsage(w io.Writer) {
+	fmt.Fprintln(w, "Socket commands:")
+	fmt.Fprintln(w, "  devarch [global flags] socket status")
+	fmt.Fprintln(w, "  devarch [global flags] socket start")
+	fmt.Fprintln(w, "  devarch [global flags] socket stop")
 }
 
 func writeCatalogUsage(w io.Writer) {
