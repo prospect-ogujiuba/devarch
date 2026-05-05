@@ -8,8 +8,14 @@ import (
 	"github.com/prospect-ogujiuba/devarch/internal/projectscan"
 	"github.com/prospect-ogujiuba/devarch/internal/resolve"
 	runtimepkg "github.com/prospect-ogujiuba/devarch/internal/runtime"
+	"github.com/prospect-ogujiuba/devarch/internal/workflows"
 	"github.com/prospect-ogujiuba/devarch/internal/workspace"
 )
+
+type DoctorReport = workflows.DoctorReport
+type RuntimeStatusReport = workflows.RuntimeStatusReport
+type SocketStatusReport = workflows.SocketStatusReport
+type WorkflowCommandResult = workflows.CommandResult
 
 // TemplateSummary is the API-safe catalog list shape used by Phase 4 surfaces.
 type TemplateSummary struct {
