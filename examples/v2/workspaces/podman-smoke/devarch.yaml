@@ -1,0 +1,22 @@
+apiVersion: devarch.io/v2alpha1
+kind: Workspace
+metadata:
+  name: podman-smoke
+  displayName: Podman Smoke
+  description: Minimal opt-in Podman apply smoke fixture.
+runtime:
+  provider: podman
+  isolatedNetwork: true
+  namingStrategy: workspace-resource
+catalog:
+  sources:
+    - ../../../../catalog/builtin
+policies:
+  autoWire: false
+  secretSource: local
+resources:
+  redis:
+    template: redis
+    enabled: true
+    env:
+      REDIS_PASSWORD: devarch

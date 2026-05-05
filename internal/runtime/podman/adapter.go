@@ -3,20 +3,20 @@ package podman
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"strconv"
 	"strings"
 
+	"github.com/prospect-ogujiuba/devarch/internal/podmanctl"
 	runtimepkg "github.com/prospect-ogujiuba/devarch/internal/runtime"
 )
 
 type Adapter struct {
-	runner runtimepkg.CommandRunner
+	runner podmanctl.Runner
 }
 
-func New(runner runtimepkg.CommandRunner) *Adapter {
+func New(runner podmanctl.Runner) *Adapter {
 	if runner == nil {
-		runner = execRunner{}
+		runner = podmanctl.ExecRunner{}
 	}
 	return &Adapter{runner: runner}
 }
@@ -26,7 +26,7 @@ func (a *Adapter) Provider() string {
 }
 
 func (a *Adapter) Capabilities() runtimepkg.AdapterCapabilities {
-	return runtimepkg.AdapterCapabilities{Inspect: true, Logs: true, Exec: true}
+	return runtimepkg.AdapterCapabilities{Inspect: true, Apply: true, Logs: true, Exec: true, Network: true}
 }
 
 func (a *Adapter) InspectWorkspace(ctx context.Context, desired *runtimepkg.DesiredWorkspace) (*runtimepkg.Snapshot, error) {
@@ -63,23 +63,39 @@ func (a *Adapter) InspectWorkspace(ctx context.Context, desired *runtimepkg.Desi
 }
 
 func (a *Adapter) EnsureNetwork(ctx context.Context, network *runtimepkg.DesiredNetwork) error {
-	return unsupported("ensure-network")
+	if network == nil || network.Name == "" {
+		return fmt.Errorf("podman ensure-network: network name is required")
+	}
+	return podmanctl.EnsureNetwork(ctx, a.runner, network.Name, network.Labels)
 }
 
 func (a *Adapter) RemoveNetwork(ctx context.Context, network *runtimepkg.DesiredNetwork) error {
-	return unsupported("remove-network")
+	if network == nil || network.Name == "" {
+		return fmt.Errorf("podman remove-network: network name is required")
+	}
+	return podmanctl.RemoveNetwork(ctx, a.runner, network.Name)
 }
 
 func (a *Adapter) ApplyResource(ctx context.Context, request runtimepkg.ApplyResourceRequest) error {
-	return unsupported("apply-resource")
+	spec, err := containerSpecFromRequest(request)
+	if err != nil {
+		return err
+	}
+	return podmanctl.ApplyContainer(ctx, a.runner, spec)
 }
 
 func (a *Adapter) RemoveResource(ctx context.Context, resource runtimepkg.ResourceRef) error {
-	return unsupported("remove-resource")
+	if resource.RuntimeName == "" {
+		return fmt.Errorf("podman remove-resource: runtime name is required")
+	}
+	return podmanctl.RemoveContainer(ctx, a.runner, resource.RuntimeName)
 }
 
 func (a *Adapter) RestartResource(ctx context.Context, resource runtimepkg.ResourceRef) error {
-	return unsupported("restart-resource")
+	if resource.RuntimeName == "" {
+		return fmt.Errorf("podman restart-resource: runtime name is required")
+	}
+	return podmanctl.RestartContainer(ctx, a.runner, resource.RuntimeName)
 }
 
 func (a *Adapter) StreamLogs(ctx context.Context, resource runtimepkg.ResourceRef, request runtimepkg.LogsRequest, consume runtimepkg.LogsConsumer) error {
@@ -121,11 +137,66 @@ func (a *Adapter) Exec(ctx context.Context, resource runtimepkg.ResourceRef, req
 	return &runtimepkg.ExecResult{ExitCode: 0, Stdout: string(output)}, nil
 }
 
-type execRunner struct{}
+func containerSpecFromRequest(request runtimepkg.ApplyResourceRequest) (podmanctl.ContainerSpec, error) {
+	resource := request.Resource
+	if resource.RuntimeName == "" {
+		return podmanctl.ContainerSpec{}, fmt.Errorf("podman apply-resource: runtime name is required")
+	}
+	if resource.Spec.Build != nil && resource.Spec.Image == "" {
+		return podmanctl.ContainerSpec{}, unsupported("apply-resource-build")
+	}
+	if resource.Spec.ProjectSource != nil {
+		return podmanctl.ContainerSpec{}, unsupported("apply-resource-project-source")
+	}
+	if len(resource.Spec.DevelopWatch) > 0 {
+		return podmanctl.ContainerSpec{}, unsupported("apply-resource-develop-watch")
+	}
 
-func (execRunner) Run(ctx context.Context, command string, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, command, args...)
-	return cmd.CombinedOutput()
+	spec := podmanctl.ContainerSpec{
+		Name:          resource.RuntimeName,
+		Image:         resource.Spec.Image,
+		Command:       append([]string(nil), resource.Spec.Command...),
+		Entrypoint:    append([]string(nil), resource.Spec.Entrypoint...),
+		WorkingDir:    resource.Spec.WorkingDir,
+		Env:           resource.Spec.Env,
+		Labels:        cloneStringMap(resource.Spec.Labels),
+		Network:       request.NetworkName,
+		RestartPolicy: "unless-stopped",
+		Health:        resource.Spec.Health,
+	}
+	if spec.Labels == nil {
+		spec.Labels = map[string]string{}
+	}
+	if request.Workspace != "" {
+		spec.Labels[runtimepkg.LabelWorkspace] = request.Workspace
+	}
+	if resource.Key != "" {
+		spec.Labels[runtimepkg.LabelResource] = resource.Key
+	}
+	if resource.LogicalHost != "" {
+		spec.Labels[runtimepkg.LabelHostAlias] = resource.LogicalHost
+	}
+	if request.NetworkName != "" {
+		spec.Labels[runtimepkg.LabelNetwork] = request.NetworkName
+	}
+	for _, port := range resource.Spec.Ports {
+		spec.Ports = append(spec.Ports, podmanctl.PortSpec{Container: port.Container, Published: port.Published, Protocol: port.Protocol, HostIP: port.HostIP})
+	}
+	for _, volume := range resource.Spec.Volumes {
+		spec.Volumes = append(spec.Volumes, podmanctl.VolumeSpec{Source: volume.Source, Target: volume.Target, ReadOnly: volume.ReadOnly, Kind: volume.Kind, Type: volume.Type})
+	}
+	return spec, nil
+}
+
+func cloneStringMap(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+	cloned := make(map[string]string, len(values))
+	for key, value := range values {
+		cloned[key] = value
+	}
+	return cloned
 }
 
 func parseLines(output []byte) []string {
@@ -153,11 +224,11 @@ func isNotFoundError(err error) bool {
 		return false
 	}
 	message := strings.ToLower(err.Error())
-	return strings.Contains(message, "no such network") || strings.Contains(message, "not found")
+	return strings.Contains(message, "no such network") || strings.Contains(message, "not found") || strings.Contains(message, "exit status 125")
 }
 
 func unsupported(operation string) error {
-	return &runtimepkg.UnsupportedOperationError{Provider: runtimepkg.ProviderPodman, Operation: operation, Reason: "apply mutations are deferred behind explicit seams in Phase 3"}
+	return &runtimepkg.UnsupportedOperationError{Provider: runtimepkg.ProviderPodman, Operation: operation, Reason: "field cannot be safely mapped to podman run yet"}
 }
 
 func timeLayout() string {

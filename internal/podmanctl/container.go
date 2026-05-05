@@ -87,8 +87,9 @@ func ApplyContainer(ctx context.Context, runner Runner, spec ContainerSpec) erro
 	if spec.Image == "" {
 		return fmt.Errorf("podman run %q: image is required", spec.Name)
 	}
-	if _, err := Podman(ctx, runner, BuildRunArgs(spec)...); err != nil {
-		return fmt.Errorf("podman run %q: %w", spec.Name, err)
+	output, err := Podman(ctx, runner, BuildRunArgs(spec)...)
+	if err != nil {
+		return fmt.Errorf("podman run %q: %w%s", spec.Name, err, outputSuffix(output))
 	}
 	return nil
 }
@@ -140,7 +141,10 @@ func portValue(port PortSpec) string {
 }
 
 func volumeValue(volume VolumeSpec) string {
-	parts := []string{volume.Source, volume.Target}
+	parts := []string{volume.Target}
+	if volume.Source != "" {
+		parts = []string{volume.Source, volume.Target}
+	}
 	if volume.ReadOnly {
 		parts = append(parts, "ro")
 	}
