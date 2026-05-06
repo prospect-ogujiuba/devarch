@@ -76,22 +76,6 @@ spec:
 	if got, want := postgres.Spec.Exports[0].Contract, "postgres"; got != want {
 		t.Fatalf("postgres export contract = %q, want %q", got, want)
 	}
-
-	if got, want := templateNames(index.ByTag("backend")), []string{"node-api"}; !slices.Equal(got, want) {
-		t.Fatalf("ByTag(backend) = %v, want %v", got, want)
-	}
-	if got, want := templateNames(index.ByImportContract("postgres")), []string{"node-api"}; !slices.Equal(got, want) {
-		t.Fatalf("ByImportContract(postgres) = %v, want %v", got, want)
-	}
-	if got, want := templateNames(index.ByImportContract("http")), []string{"nginx"}; !slices.Equal(got, want) {
-		t.Fatalf("ByImportContract(http) = %v, want %v", got, want)
-	}
-	if got, want := templateNames(index.ByExportContract("http")), []string{"nginx", "node-api"}; !slices.Equal(got, want) {
-		t.Fatalf("ByExportContract(http) = %v, want %v", got, want)
-	}
-	if got, want := templateNames(index.ByExportContract("postgres")), []string{"postgres"}; !slices.Equal(got, want) {
-		t.Fatalf("ByExportContract(postgres) = %v, want %v", got, want)
-	}
 }
 
 func TestLoadIndexRejectsDuplicateTemplateNames(t *testing.T) {

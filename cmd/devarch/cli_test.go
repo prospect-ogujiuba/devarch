@@ -252,7 +252,7 @@ func newTestServiceFactory(t *testing.T) serviceFactory {
 				},
 			},
 			LookPath: func(file string) (string, error) { return "/usr/bin/" + file, nil },
-			WorkflowRunner: &workflows.FakeRunner{Results: []workflows.CommandResult{
+			WorkflowRunner: &fakeWorkflowCommandRunner{Results: []workflows.CommandResult{
 				{Status: workflows.StatusPass, StdoutSummary: "podman version 5.0"},
 				{Status: workflows.StatusPass, StdoutSummary: "socket ready"},
 				{Status: workflows.StatusPass, StdoutSummary: "package ok"},
@@ -262,6 +262,29 @@ func newTestServiceFactory(t *testing.T) serviceFactory {
 			}},
 		})
 	}
+}
+
+type fakeWorkflowCommandRunner struct {
+	Results []workflows.CommandResult
+	Calls   []workflows.CommandResult
+}
+
+func (f *fakeWorkflowCommandRunner) Run(ctx context.Context, command string, args ...string) workflows.CommandResult {
+	_ = ctx
+	call := workflows.CommandResult{Command: command, Args: append([]string(nil), args...)}
+	f.Calls = append(f.Calls, call)
+	if len(f.Results) == 0 {
+		return workflows.CommandResult{Command: command, Args: append([]string(nil), args...), Status: workflows.StatusFail, ExitCode: -1, Error: "fake result missing"}
+	}
+	result := f.Results[0]
+	f.Results = f.Results[1:]
+	if result.Command == "" {
+		result.Command = command
+	}
+	if result.Args == nil {
+		result.Args = append([]string(nil), args...)
+	}
+	return result
 }
 
 type fakeAdapter struct {
