@@ -4,14 +4,14 @@
 
 - Go 1.21+
 - Node.js 18+
-- PostgreSQL (via devarch service)
+- PostgreSQL (via local compose/runtime tooling)
 - Podman or Docker
 
 ## Quick Start
 
 ```bash
 # 1. Start PostgreSQL
-./scripts/service-manager.sh up postgres
+podman compose -f ../compose.yml up -d postgres
 
 # 2. Run migrations
 cd api

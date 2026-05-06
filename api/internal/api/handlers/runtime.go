@@ -185,27 +185,21 @@ func (h *RuntimeHandler) Switch(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if servicesStopped > 0 {
-			args := []string{"stop-all"}
+			containerIDs := strings.Fields(out)
+			args := append([]string{"stop"}, containerIDs...)
+			execRuntime(current, args...)
 			if !req.Options.PreserveData {
-				args = append(args, "--remove-volumes")
+				rmArgs := append([]string{"rm", "-v"}, containerIDs...)
+				execRuntime(current, rmArgs...)
 			}
-			exec.Command("/workspace/scripts/service-manager.sh", args...).Run()
 		}
 	}
 
 	configUpdated := false
 	if req.Options.UpdateConfig {
-		configPath := "/workspace/scripts/config.sh"
-		if data, err := os.ReadFile(configPath); err == nil {
-			content := string(data)
-			content = strings.ReplaceAll(content,
-				fmt.Sprintf(`export CONTAINER_RUNTIME="%s"`, current),
-				fmt.Sprintf(`export CONTAINER_RUNTIME="%s"`, req.Runtime),
-			)
-			if os.WriteFile(configPath, []byte(content), 0644) == nil {
-				configUpdated = true
-			}
-		}
+		// Legacy scripts/config.sh runtime mutation was retired with shell shims.
+		// Runtime changes are now reported through API metadata; persisted runtime
+		// selection belongs in the v2 Go configuration surface when needed.
 	}
 
 	respond.Action(w, r, http.StatusOK, "switched",

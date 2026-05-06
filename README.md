@@ -514,89 +514,50 @@ Allowed `size` values: 12, 24, 50, 100, 200.
 
 ---
 
-## 7. CLI (`scripts/devarch`)
+## 7. CLI (`devarch`)
 
-The CLI is a namespace-based dispatcher. All commands follow the pattern `devarch <namespace> <command> [args...]`.
+The Go CLI is the DevArch v2 operator surface. All commands follow the pattern `devarch <command> [args...]`.
 
-### Namespace Reference
+### Command Reference
 
-| Namespace | Aliases | Purpose |
-|-----------|---------|---------|
-| `service` | `svc`, `s` | Service lifecycle (up, down, restart, rebuild, logs, status) |
-| `wp` | — | WP-CLI passthrough (runs in php container) |
-| `artisan` | `art`, `a` | Laravel Artisan passthrough |
-| `wordpress` | `wf` | WordPress workflows (install, backup, restore) |
-| `laravel` | `lara`, `l` | Laravel project setup |
-| `socket` | `sock` | Podman socket management |
-| `runtime` | `rt` | Container runtime switching (Docker/Podman) |
-| `db` | `database` | Database initialization |
-| `context` | `ctx`, `c` | Generate project context files |
-| `run` | `r` | Run command in any container |
-| `shell` | `sh` | Open interactive shell in container |
-| `init` | — | Bootstrap stack from devarch.yml |
-| `doctor` | `doc` | System diagnostics |
+| Command | Purpose |
+|---------|---------|
+| `doctor` | System diagnostics |
+| `runtime status` | Report the active container runtime |
+| `socket status|start|stop` | Manage the Podman socket |
+| `catalog list|show` | Inspect catalog templates |
+| `scan project <path>` | Analyze a project path |
+| `import v1-stack <file>` | Import a legacy v1 stack file |
+| `import v1-library <path>` | Import a legacy v1 services-library path |
+| `workspace list|open|plan|apply|status|logs|exec|restart` | Manage v2 workspaces and resources |
 
 ### Examples
 
 ```bash
-# Service management
-devarch service up postgres
-devarch service down php
-devarch service logs nginx -f
-devarch service status
-devarch service rebuild php --no-cache
-
-# WordPress CLI
-devarch wp plugin list
-devarch wp theme activate theme-name
-
-# Laravel Artisan
-devarch artisan migrate
-devarch artisan -p myapp make:model User
-
-# WordPress workflows
-devarch wordpress install -n mysite -p bare
-devarch wordpress backup -n mysite
-
-# Runtime and socket
+devarch --json doctor
 devarch runtime status
-devarch runtime podman
 devarch socket status
-devarch socket start-rootless
-
-# Container access
-devarch run php bash
-devarch run postgres psql -U postgres
-devarch shell php
-
-# Bootstrap and diagnostics
-devarch init devarch.yml
-devarch doctor
-
-# Context generation (hosts file for WSL)
-devarch context --apply-hosts
+devarch socket start
+devarch --workspace-root ./examples/v2/workspaces workspace status shop-local
+devarch --workspace-root ./examples/v2/workspaces workspace apply shop-local
+devarch --workspace-root ./examples/v2/workspaces workspace logs shop-local api
+devarch --workspace-root ./examples/v2/workspaces workspace exec shop-local api -- echo ok
 ```
 
-### Aliases
+### Legacy Script Migration
 
-After running `scripts/setup-aliases.sh`, these aliases are available: `devarch`, `dvrc`, `dv`, `da`. Supports bash, zsh, and fish shells.
+Retired shell shims are replaced by the Go binary:
 
-### Scripts Reference
+| Removed script | Replacement |
+| --- | --- |
+| `scripts/devarch` | `devarch <command>` |
+| `scripts/devarch-doctor.sh` | `devarch doctor` or `devarch --json doctor` |
+| `scripts/runtime-switcher.sh` | `devarch runtime status` |
+| `scripts/socket-manager.sh` | `devarch socket status|start|stop` |
+| `scripts/service-manager.sh` | `devarch --workspace-root <root> workspace <status|logs|exec|restart|apply> ...` |
+| `scripts/setup-aliases.sh` | Install the Go binary on `PATH`; no aliases are required. |
 
-| Script | Purpose |
-|--------|---------|
-| `devarch` | Main CLI dispatcher (namespace router) |
-| `service-manager.sh` | Service lifecycle operations |
-| `config.sh` | Central configuration (paths, runtime, network, env vars) |
-| `runtime-switcher.sh` | Switch between Docker and Podman |
-| `socket-manager.sh` | Manage Podman socket (rootless/rootful) |
-| `setup-aliases.sh` | Install shell aliases (bash/zsh/fish) |
-| `devarch-init.sh` | Bootstrap stack from devarch.yml (import + pull + apply) |
-| `devarch-doctor.sh` | System health checks (runtime, API, disk, tools, ports) |
-| `init-databases.sh` | Database initialization scripts |
-| `generate-context.sh` | Generate project context files + hosts |
-| `wordpress/wp-workflow.sh` | WordPress install, backup, restore |
-| `laravel/setup-laravel.sh` | Laravel project creation |
+Remaining scripts are legacy or developer tooling pending separate product-scope decisions.
 
 ---
 
@@ -660,19 +621,11 @@ Import flags:
 | `EMBED_IDLE_TIMEOUT` | `15m` | Idle timeout for embedding container |
 | `RAMALAMA_STORE` | `~/.local/share/ramalama` | Host path to ramalama model store |
 
-### CLI Scripts (config.sh)
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `NETWORK_NAME` | `microservices-net` | Shared bridge network name |
-| `CONTAINER_RUNTIME` | `podman` | Container runtime |
-| `VERBOSE` | `0` | Enable verbose output |
-| `QUIET` | `0` | Suppress non-error output |
+### Legacy Script Configuration
 
-Default passwords set in `config.sh` (override via `.env` at project root):
-- `MARIADB_ROOT_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `POSTGRES_PASSWORD`, `MONGO_ROOT_PASSWORD` — all default to `123456`
-- `ADMIN_USER` / `ADMIN_PASSWORD` / `ADMIN_EMAIL` — `admin` / `123456` / `admin@test.local`
+The legacy `scripts/config.sh` shell configuration has been removed with the script surface. Use Go CLI flags, workspace specs, compose files, or environment variables at the service boundary instead.
 
-### Port Allocation Strategy (from config.sh)
+### Port Allocation Strategy
 
 | Language | Port Range | Primary | Vite | Other |
 |----------|-----------|---------|------|-------|
