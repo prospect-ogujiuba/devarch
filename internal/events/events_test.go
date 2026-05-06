@@ -41,29 +41,29 @@ func TestBusSequencingAndCodecGolden(t *testing.T) {
 		if got, want := captured[i].Sequence, uint64(i+1); got != want {
 			t.Fatalf("envelope[%d].Sequence = %d, want %d", i, got, want)
 		}
-		encoded, err := events.MarshalEnvelope(captured[i])
+		encoded, err := json.Marshal(captured[i])
 		if err != nil {
-			t.Fatalf("events.MarshalEnvelope returned error: %v", err)
+			t.Fatalf("json.Marshal(envelope) returned error: %v", err)
 		}
-		decoded, err := events.UnmarshalEnvelope(encoded)
-		if err != nil {
-			t.Fatalf("events.UnmarshalEnvelope returned error: %v", err)
+		var decoded events.Envelope
+		if err := json.Unmarshal(encoded, &decoded); err != nil {
+			t.Fatalf("json.Unmarshal(envelope) returned error: %v", err)
 		}
 		if got, want := decoded.Kind, captured[i].Kind; got != want {
 			t.Fatalf("decoded.Kind = %q, want %q", got, want)
 		}
 	}
 
-	progress, err := events.DecodePayload[events.ApplyProgressPayload](captured[1])
-	if err != nil {
-		t.Fatalf("DecodePayload[ApplyProgressPayload] returned error: %v", err)
+	var progress events.ApplyProgressPayload
+	if err := json.Unmarshal(captured[1].Payload, &progress); err != nil {
+		t.Fatalf("json.Unmarshal(ApplyProgressPayload) returned error: %v", err)
 	}
 	if got, want := progress.Target, "api"; got != want {
 		t.Fatalf("progress.Target = %q, want %q", got, want)
 	}
-	logsChunk, err := events.DecodePayload[events.LogsChunkPayload](captured[4])
-	if err != nil {
-		t.Fatalf("DecodePayload[LogsChunkPayload] returned error: %v", err)
+	var logsChunk events.LogsChunkPayload
+	if err := json.Unmarshal(captured[4].Payload, &logsChunk); err != nil {
+		t.Fatalf("json.Unmarshal(LogsChunkPayload) returned error: %v", err)
 	}
 	if got, want := logsChunk.Line, "server ready"; got != want {
 		t.Fatalf("logs chunk line = %q, want %q", got, want)

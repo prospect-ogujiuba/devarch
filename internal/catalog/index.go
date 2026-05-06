@@ -102,22 +102,16 @@ func (e *DuplicateTemplateNameError) Error() string {
 
 // Index provides deterministic catalog template lookups.
 type Index struct {
-	templates        []*Template
-	byName           map[string]*Template
-	byTag            map[string][]*Template
-	byImportContract map[string][]*Template
-	byExportContract map[string][]*Template
+	templates []*Template
+	byName    map[string]*Template
 }
 
 // LoadIndex loads, validates, decodes, and indexes template files.
 func LoadIndex(paths []string) (*Index, error) {
 	cleanPaths := uniqueSortedPaths(paths)
 	index := &Index{
-		templates:        make([]*Template, 0, len(cleanPaths)),
-		byName:           make(map[string]*Template, len(cleanPaths)),
-		byTag:            make(map[string][]*Template),
-		byImportContract: make(map[string][]*Template),
-		byExportContract: make(map[string][]*Template),
+		templates: make([]*Template, 0, len(cleanPaths)),
+		byName:    make(map[string]*Template, len(cleanPaths)),
 	}
 
 	for _, path := range cleanPaths {
@@ -137,27 +131,9 @@ func LoadIndex(paths []string) (*Index, error) {
 		index.templates = append(index.templates, template)
 		index.byName[template.Metadata.Name] = template
 
-		for _, tag := range uniqueStrings(template.Metadata.Tags) {
-			index.byTag[tag] = append(index.byTag[tag], template)
-		}
-		for _, contract := range template.importContracts() {
-			index.byImportContract[contract] = append(index.byImportContract[contract], template)
-		}
-		for _, contract := range template.exportContracts() {
-			index.byExportContract[contract] = append(index.byExportContract[contract], template)
-		}
 	}
 
 	sortTemplates(index.templates)
-	for key := range index.byTag {
-		sortTemplates(index.byTag[key])
-	}
-	for key := range index.byImportContract {
-		sortTemplates(index.byImportContract[key])
-	}
-	for key := range index.byExportContract {
-		sortTemplates(index.byExportContract[key])
-	}
 
 	return index, nil
 }
@@ -179,30 +155,6 @@ func (i *Index) ByName(name string) (*Template, bool) {
 	return template, ok
 }
 
-// ByTag returns templates carrying the provided metadata tag.
-func (i *Index) ByTag(tag string) []*Template {
-	if i == nil {
-		return nil
-	}
-	return copyTemplates(i.byTag[tag])
-}
-
-// ByImportContract returns templates requiring the provided contract name.
-func (i *Index) ByImportContract(contract string) []*Template {
-	if i == nil {
-		return nil
-	}
-	return copyTemplates(i.byImportContract[contract])
-}
-
-// ByExportContract returns templates providing the provided contract name.
-func (i *Index) ByExportContract(contract string) []*Template {
-	if i == nil {
-		return nil
-	}
-	return copyTemplates(i.byExportContract[contract])
-}
-
 func loadTemplate(path string) (*Template, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -218,32 +170,6 @@ func loadTemplate(path string) (*Template, error) {
 	}
 	template.Path = filepath.Clean(path)
 	return &template, nil
-}
-
-func (t *Template) importContracts() []string {
-	contracts := make([]string, 0, len(t.Spec.Imports))
-	seen := make(map[string]struct{}, len(t.Spec.Imports))
-	for _, imp := range t.Spec.Imports {
-		if _, ok := seen[imp.Contract]; ok {
-			continue
-		}
-		seen[imp.Contract] = struct{}{}
-		contracts = append(contracts, imp.Contract)
-	}
-	return contracts
-}
-
-func (t *Template) exportContracts() []string {
-	contracts := make([]string, 0, len(t.Spec.Exports))
-	seen := make(map[string]struct{}, len(t.Spec.Exports))
-	for _, export := range t.Spec.Exports {
-		if _, ok := seen[export.Contract]; ok {
-			continue
-		}
-		seen[export.Contract] = struct{}{}
-		contracts = append(contracts, export.Contract)
-	}
-	return contracts
 }
 
 func uniqueSortedPaths(paths []string) []string {
@@ -266,23 +192,6 @@ func uniqueSortedPaths(paths []string) []string {
 	return unique
 }
 
-func uniqueStrings(values []string) []string {
-	if len(values) == 0 {
-		return nil
-	}
-
-	seen := make(map[string]struct{}, len(values))
-	unique := make([]string, 0, len(values))
-	for _, value := range values {
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		seen[value] = struct{}{}
-		unique = append(unique, value)
-	}
-	return unique
-}
-
 func sortTemplates(templates []*Template) {
 	sort.Slice(templates, func(i, j int) bool {
 		if templates[i].Metadata.Name != templates[j].Metadata.Name {
@@ -290,11 +199,4 @@ func sortTemplates(templates []*Template) {
 		}
 		return templates[i].Path < templates[j].Path
 	})
-}
-
-func copyTemplates(templates []*Template) []*Template {
-	if len(templates) == 0 {
-		return nil
-	}
-	return append([]*Template(nil), templates...)
 }

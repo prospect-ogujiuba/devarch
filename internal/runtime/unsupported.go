@@ -20,10 +20,6 @@ func (e *UnsupportedOperationError) Error() string {
 	return fmt.Sprintf("runtime %q does not support operation %q: %s", e.Provider, e.Operation, e.Reason)
 }
 
-func unsupportedOperation(provider, operation, reason string) error {
-	return &UnsupportedOperationError{Provider: provider, Operation: operation, Reason: reason}
-}
-
 func UnsupportedSourceDiagnostic(workspaceName, resourceKey, sourceType string) Diagnostic {
 	return Diagnostic{
 		Severity:  SeverityError,

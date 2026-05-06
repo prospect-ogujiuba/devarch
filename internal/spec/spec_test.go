@@ -3,6 +3,7 @@ package spec
 import (
 	"errors"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -17,8 +18,12 @@ func TestValidateWorkspaceExamples(t *testing.T) {
 		example := example
 		t.Run(example, func(t *testing.T) {
 			manifestPath := filepath.Join(repoRoot(t), "examples", "v2", "workspaces", example, ManifestFilename)
-			if err := ValidateWorkspaceFile(manifestPath); err != nil {
-				t.Fatalf("ValidateWorkspaceFile(%s) returned error: %v", manifestPath, err)
+			data, err := os.ReadFile(manifestPath)
+			if err != nil {
+				t.Fatalf("os.ReadFile(%s): %v", manifestPath, err)
+			}
+			if err := ValidateWorkspaceBytes(data); err != nil {
+				t.Fatalf("ValidateWorkspaceBytes(%s) returned error: %v", manifestPath, err)
 			}
 		})
 	}
@@ -224,8 +229,12 @@ func TestValidateBuiltinTemplates(t *testing.T) {
 		}
 		relativePaths[filepath.Clean(relativePath)] = struct{}{}
 
-		if err := ValidateTemplateFile(path); err != nil {
-			t.Fatalf("ValidateTemplateFile(%s) returned error: %v", path, err)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("os.ReadFile(%s): %v", path, err)
+		}
+		if err := ValidateTemplateBytes(data); err != nil {
+			t.Fatalf("ValidateTemplateBytes(%s) returned error: %v", path, err)
 		}
 	}
 
@@ -242,67 +251,6 @@ func TestValidateBuiltinTemplates(t *testing.T) {
 		if _, ok := relativePaths[filepath.Clean(requiredPath)]; !ok {
 			t.Fatalf("expected builtin template path %s to exist", requiredPath)
 		}
-	}
-}
-
-func TestValidatePlanDocuments(t *testing.T) {
-	validPlan := `apiVersion: devarch.io/v2alpha1
-kind: Plan
-metadata:
-  workspace: shop-local
-actions:
-  - action: add
-    resource: postgres
-    reason: resource missing from runtime
-  - action: noop
-    resource: redis
-    reason: already matches desired state
-`
-	if err := ValidatePlanBytes([]byte(validPlan)); err != nil {
-		t.Fatalf("ValidatePlanBytes(validPlan) returned error: %v", err)
-	}
-
-	tests := []struct {
-		name      string
-		document  string
-		wantField string
-		wantText  string
-	}{
-		{
-			name: "invalid action enum",
-			document: `apiVersion: devarch.io/v2alpha1
-kind: Plan
-metadata:
-  workspace: shop-local
-actions:
-  - action: migrate
-    resource: postgres
-    reason: unsupported action for phase 1
-`,
-			wantField: "actions.0.action",
-			wantText:  "must be one of the following",
-		},
-		{
-			name: "missing reason",
-			document: `apiVersion: devarch.io/v2alpha1
-kind: Plan
-metadata:
-  workspace: shop-local
-actions:
-  - action: restart
-    resource: api
-`,
-			wantField: "actions.0",
-			wantText:  "reason is required",
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidatePlanBytes([]byte(tt.document))
-			assertValidationErrorContains(t, err, tt.wantField, tt.wantText)
-		})
 	}
 }
 

@@ -2,7 +2,6 @@ package spec
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -15,7 +14,6 @@ const (
 	ManifestFilename    = "devarch.workspace.yaml"
 	WorkspaceSchemaFile = "workspace.schema.json"
 	TemplateSchemaFile  = "template.schema.json"
-	PlanSchemaFile      = "plan.schema.json"
 )
 
 // ValidationError captures one schema validation failure.
@@ -57,41 +55,9 @@ func ValidateWorkspaceBytes(data []byte) error {
 	return validateDocument(WorkspaceSchemaFile, data)
 }
 
-// ValidateWorkspaceFile validates a workspace manifest file from disk.
-func ValidateWorkspaceFile(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("read workspace file %s: %w", path, err)
-	}
-	return ValidateWorkspaceBytes(data)
-}
-
 // ValidateTemplateBytes validates a template document.
 func ValidateTemplateBytes(data []byte) error {
 	return validateDocument(TemplateSchemaFile, data)
-}
-
-// ValidateTemplateFile validates a template file from disk.
-func ValidateTemplateFile(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("read template file %s: %w", path, err)
-	}
-	return ValidateTemplateBytes(data)
-}
-
-// ValidatePlanBytes validates a plan document.
-func ValidatePlanBytes(data []byte) error {
-	return validateDocument(PlanSchemaFile, data)
-}
-
-// ValidatePlanFile validates a plan file from disk.
-func ValidatePlanFile(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("read plan file %s: %w", path, err)
-	}
-	return ValidatePlanBytes(data)
 }
 
 func validateDocument(schemaName string, data []byte) error {

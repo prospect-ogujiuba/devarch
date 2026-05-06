@@ -11,33 +11,6 @@ import (
 	runtimepkg "github.com/prospect-ogujiuba/devarch/internal/runtime"
 )
 
-func TestStreamLogsWithEventsPublishesLifecycleAndChunks(t *testing.T) {
-	bus := events.NewBus()
-	bus.SetNow(func() time.Time { return time.Date(2026, 4, 17, 12, 0, 0, 0, time.UTC) })
-	stream, cancel := bus.Subscribe(8)
-	defer cancel()
-
-	adapter := &fakeAdapter{
-		logChunks: []runtimepkg.LogChunk{
-			{Line: "first", Stream: "combined"},
-			{Line: "second", Stream: "combined"},
-		},
-	}
-	ref := runtimepkg.ResourceRef{Workspace: "shop-local", Key: "api", RuntimeName: "devarch-shop-local-api"}
-	if err := runtimepkg.StreamLogsWithEvents(context.Background(), adapter, bus, ref, runtimepkg.LogsRequest{Tail: 20}); err != nil {
-		t.Fatalf("StreamLogsWithEvents returned error: %v", err)
-	}
-
-	var kinds []events.Kind
-	for i := 0; i < 4; i++ {
-		envelope := <-stream
-		kinds = append(kinds, envelope.Kind)
-	}
-	if want := []events.Kind{events.KindLogsStarted, events.KindLogsChunk, events.KindLogsChunk, events.KindLogsCompleted}; !reflect.DeepEqual(kinds, want) {
-		t.Fatalf("event kinds = %v, want %v", kinds, want)
-	}
-}
-
 func TestExecWithEventsPublishesLifecycleAndReturnsResult(t *testing.T) {
 	bus := events.NewBus()
 	bus.SetNow(func() time.Time { return time.Date(2026, 4, 17, 12, 30, 0, 0, time.UTC) })
