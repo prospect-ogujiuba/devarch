@@ -1,9 +1,0 @@
-{
-  "entries": [
-    {
-      "service": "zammad",
-      "field": "dependencies",
-      "reason": "Service references zammad-db and zammad-elasticsearch which are not standalone services in catalog; external dependencies provided at runtime"
-    }
-  ]
-}
