@@ -64,6 +64,7 @@ devarch --workspace-root ./examples/v2/workspaces --catalog-root ./catalog/built
 - [Getting started](docs/getting-started.md) — install, verify, and first commands.
 - [Concepts](docs/concepts.md) — workspaces, resources, templates, catalogs, runtimes, contracts.
 - [Small DB tutorial](docs/tutorial-small-db.md) — end-to-end MariaDB + Adminer workflow.
+- [DB admin/proxy stack from scratch](docs/tutorial-db-admin-proxy.md) — starts at `devarch: command not found`, then uses native DevArch commands for PostgreSQL and service-library import preview for MariaDB/Adminer/Nginx Proxy Manager.
 - [Troubleshooting](docs/troubleshooting.md) — aliases, missing binary, Podman/socket, pcleanall, API/container questions.
 - [CLI details](cmd/devarch/README.md) — command-specific notes and legacy migration table.
 

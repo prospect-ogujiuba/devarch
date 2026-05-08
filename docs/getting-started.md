@@ -15,12 +15,36 @@ podman ps
 
 ## Install the CLI
 
-From the DevArch repository root:
+If your first command fails like this:
+
+```console
+$ devarch doctor
+zsh: command not found: devarch
+```
+
+then the CLI is not installed or is not on `PATH` yet.
+
+From the DevArch repository root, you can run it without installing:
+
+```bash
+go run ./cmd/devarch --help
+go run ./cmd/devarch doctor
+```
+
+Install the `devarch` command:
 
 ```bash
 go install ./cmd/devarch
 export PATH="$HOME/go/bin:$PATH"
+command -v devarch
 devarch --help
+```
+
+For zsh, persist the PATH update if needed:
+
+```bash
+echo 'export PATH="$HOME/go/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
 If you prefer a stable user-local path:
@@ -126,3 +150,5 @@ devarch workspace list --workspace-root ./examples/v2/workspaces
 ## Next step
 
 For a full small-container walkthrough, see [Small DB tutorial](tutorial-small-db.md).
+
+For the requested PostgreSQL/MariaDB + Adminer + Nginx Proxy Manager path, see [DB admin/proxy stack from scratch](tutorial-db-admin-proxy.md).

@@ -32,13 +32,27 @@ devarch --help
 
 Cause: the Go binary is not installed or not on `PATH`.
 
-Fix:
+From the DevArch repository root, run without installing:
+
+```bash
+go run ./cmd/devarch --help
+go run ./cmd/devarch doctor
+```
+
+Install the command:
 
 ```bash
 go install ./cmd/devarch
 export PATH="$HOME/go/bin:$PATH"
 command -v devarch
 devarch --help
+```
+
+For zsh, persist the PATH update if needed:
+
+```bash
+echo 'export PATH="$HOME/go/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
 Optional symlink:
