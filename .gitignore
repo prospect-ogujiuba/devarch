@@ -24,3 +24,4 @@ dist/
 gentic.json
 .mcp.json
 .model-artifacts
+/.pi/pi-gate/pi-gate-audit.jsonl
