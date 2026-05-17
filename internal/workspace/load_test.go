@@ -8,7 +8,7 @@ import (
 )
 
 func TestLoadAcceptsManifestFileOrDirectory(t *testing.T) {
-	dirPath := filepath.Join(repoRoot(t), "examples", "v2", "workspaces", "shop-local")
+	dirPath := filepath.Join(repoRoot(t), "examples", "workspaces", "shop-local")
 	filePath := filepath.Join(dirPath, "devarch.workspace.yaml")
 
 	fromDir, err := Load(dirPath)
@@ -50,7 +50,7 @@ func TestLoadRejectsMissingManifestInDirectory(t *testing.T) {
 }
 
 func TestLoadRejectsInvalidWorkspaceDocument(t *testing.T) {
-	manifestPath := writeWorkspaceFixture(t, filepath.Join(t.TempDir(), "devarch.workspace.yaml"), `apiVersion: devarch.io/v2alpha1
+	manifestPath := writeWorkspaceFixture(t, filepath.Join(t.TempDir(), "devarch.workspace.yaml"), `apiVersion: devarch.io/alpha1
 kind: Workspace
 metadata:
   name: invalid
@@ -70,7 +70,7 @@ resources:
 }
 
 func TestLoadRejectsRawComposeWithoutService(t *testing.T) {
-	manifestPath := writeWorkspaceFixture(t, filepath.Join(t.TempDir(), "devarch.workspace.yaml"), `apiVersion: devarch.io/v2alpha1
+	manifestPath := writeWorkspaceFixture(t, filepath.Join(t.TempDir(), "devarch.workspace.yaml"), `apiVersion: devarch.io/alpha1
 kind: Workspace
 metadata:
   name: compat

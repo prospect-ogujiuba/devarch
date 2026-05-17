@@ -21,7 +21,7 @@ type Diagnostic struct {
 }
 
 // ComposeService captures the small structured compose slice exposed by the
-// Phase 4 scan command.
+// scan command.
 type ComposeService struct {
 	Name        string   `json:"name"`
 	Image       string   `json:"image,omitempty"`
@@ -30,8 +30,8 @@ type ComposeService struct {
 	DependsOn   []string `json:"dependsOn,omitempty"`
 }
 
-// Result is the transport-safe project scan shape used by the shared Phase 4
-// service boundary and CLI.
+// Result is the transport-safe project scan shape used by the shared service
+// boundary and CLI.
 type Result struct {
 	Name               string           `json:"name"`
 	Path               string           `json:"path"`
@@ -62,7 +62,7 @@ type composeServiceDef struct {
 }
 
 // Scan inspects a project directory and returns a small structured summary plus
-// suggested builtin templates when there is a clear Phase 4 mapping.
+// suggested builtin templates when there is a clear mapping.
 func Scan(path string) (*Result, error) {
 	cleanPath, err := filepath.Abs(filepath.Clean(path))
 	if err != nil {
@@ -330,7 +330,7 @@ func suggestedTemplates(result *Result) []string {
 		result.Diagnostics = append(result.Diagnostics, Diagnostic{
 			Severity: "warning",
 			Code:     "no-builtin-app-template",
-			Message:  fmt.Sprintf("Phase 4 has no direct builtin app template for project type %q", result.ProjectType),
+			Message:  fmt.Sprintf("no direct builtin app template for project type %q", result.ProjectType),
 		})
 	}
 

@@ -106,14 +106,14 @@ devarch --catalog-root ./catalog/builtin catalog show postgres
 List workspaces:
 
 ```bash
-devarch --workspace-root ./examples/v2/workspaces workspace list
+devarch --workspace-root ./examples/workspaces workspace list
 ```
 
 Plan an example:
 
 ```bash
 devarch \
-  --workspace-root ./examples/v2/workspaces \
+  --workspace-root ./examples/workspaces \
   --catalog-root ./catalog/builtin \
   workspace plan shop-local
 ```
@@ -122,7 +122,7 @@ Apply an example only when you are ready for DevArch to create/update local cont
 
 ```bash
 devarch \
-  --workspace-root ./examples/v2/workspaces \
+  --workspace-root ./examples/workspaces \
   --catalog-root ./catalog/builtin \
   workspace apply shop-local
 ```
@@ -130,9 +130,9 @@ devarch \
 Observe:
 
 ```bash
-devarch --workspace-root ./examples/v2/workspaces --catalog-root ./catalog/builtin workspace status shop-local
-devarch --workspace-root ./examples/v2/workspaces --catalog-root ./catalog/builtin workspace logs shop-local api
-devarch --workspace-root ./examples/v2/workspaces --catalog-root ./catalog/builtin workspace exec shop-local api -- echo ok
+devarch --workspace-root ./examples/workspaces --catalog-root ./catalog/builtin workspace status shop-local
+devarch --workspace-root ./examples/workspaces --catalog-root ./catalog/builtin workspace logs shop-local api
+devarch --workspace-root ./examples/workspaces --catalog-root ./catalog/builtin workspace exec shop-local api -- echo ok
 ```
 
 ## Important flag rule
@@ -141,10 +141,10 @@ Global flags go before the command:
 
 ```bash
 # Good
-devarch --workspace-root ./examples/v2/workspaces workspace list
+devarch --workspace-root ./examples/workspaces workspace list
 
 # Wrong
-devarch workspace list --workspace-root ./examples/v2/workspaces
+devarch workspace list --workspace-root ./examples/workspaces
 ```
 
 ## Next step

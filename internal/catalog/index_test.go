@@ -10,7 +10,7 @@ import (
 
 func TestLoadIndexBuildsDeterministicLookups(t *testing.T) {
 	root := t.TempDir()
-	postgresPath := writeCatalogFixture(t, filepath.Join(root, "database", "postgres", TemplateFilename), `apiVersion: devarch.io/v2alpha1
+	postgresPath := writeCatalogFixture(t, filepath.Join(root, "database", "postgres", TemplateFilename), `apiVersion: devarch.io/alpha1
 kind: Template
 metadata:
   name: postgres
@@ -23,7 +23,7 @@ spec:
   exports:
     - postgres
 `)
-	nodeAPIPath := writeCatalogFixture(t, filepath.Join(root, "backend", "node-api", TemplateFilename), `apiVersion: devarch.io/v2alpha1
+	nodeAPIPath := writeCatalogFixture(t, filepath.Join(root, "backend", "node-api", TemplateFilename), `apiVersion: devarch.io/alpha1
 kind: Template
 metadata:
   name: node-api
@@ -40,7 +40,7 @@ spec:
       env:
         API_URL: "http://${resource.host}:${resource.port.3000}"
 `)
-	nginxPath := writeCatalogFixture(t, filepath.Join(root, "proxy", "nginx", TemplateFilename), `apiVersion: devarch.io/v2alpha1
+	nginxPath := writeCatalogFixture(t, filepath.Join(root, "proxy", "nginx", TemplateFilename), `apiVersion: devarch.io/alpha1
 kind: Template
 metadata:
   name: nginx
@@ -80,7 +80,7 @@ spec:
 
 func TestLoadIndexRejectsDuplicateTemplateNames(t *testing.T) {
 	root := t.TempDir()
-	firstPath := writeCatalogFixture(t, filepath.Join(root, "database", "postgres", TemplateFilename), `apiVersion: devarch.io/v2alpha1
+	firstPath := writeCatalogFixture(t, filepath.Join(root, "database", "postgres", TemplateFilename), `apiVersion: devarch.io/alpha1
 kind: Template
 metadata:
   name: postgres
@@ -88,7 +88,7 @@ spec:
   runtime:
     image: postgres:16
 `)
-	secondPath := writeCatalogFixture(t, filepath.Join(root, "custom", "postgres-alt", TemplateFilename), `apiVersion: devarch.io/v2alpha1
+	secondPath := writeCatalogFixture(t, filepath.Join(root, "custom", "postgres-alt", TemplateFilename), `apiVersion: devarch.io/alpha1
 kind: Template
 metadata:
   name: postgres
@@ -123,7 +123,7 @@ spec:
 
 func TestLoadIndexRejectsInvalidTemplateDocuments(t *testing.T) {
 	root := t.TempDir()
-	invalidPath := writeCatalogFixture(t, filepath.Join(root, "backend", "broken", TemplateFilename), `apiVersion: devarch.io/v2alpha1
+	invalidPath := writeCatalogFixture(t, filepath.Join(root, "backend", "broken", TemplateFilename), `apiVersion: devarch.io/alpha1
 kind: Template
 metadata:
   name: broken

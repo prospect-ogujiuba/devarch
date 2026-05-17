@@ -157,7 +157,7 @@ func isNotFoundError(err error) bool {
 }
 
 func unsupported(operation string) error {
-	return &runtimepkg.UnsupportedOperationError{Provider: runtimepkg.ProviderDocker, Operation: operation, Reason: "apply mutations are deferred behind explicit seams in Phase 3"}
+	return &runtimepkg.UnsupportedOperationError{Provider: runtimepkg.ProviderDocker, Operation: operation, Reason: "apply mutations are unsupported by this runtime adapter"}
 }
 
 func timeLayout() string {

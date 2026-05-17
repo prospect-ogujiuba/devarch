@@ -12,7 +12,7 @@ import (
 
 func TestDockerAdapterContractInspectLogsAndExec(t *testing.T) {
 	runner := &fakeRunner{responses: map[string]fakeResponse{
-		"docker ps -aq --filter label=devarch.workspace=shop-local --filter label=devarch.managed-by=devarch-v2": {
+		"docker ps -aq --filter label=devarch.workspace=shop-local --filter label=devarch.managed-by=devarch": {
 			stdout: []byte("container-api\n"),
 		},
 		"docker inspect container-api": {
@@ -26,7 +26,7 @@ func TestDockerAdapterContractInspectLogsAndExec(t *testing.T) {
       "Cmd": ["npm", "run", "dev"],
       "WorkingDir": "/workspace",
       "Labels": {
-        "devarch.managed-by": "devarch-v2",
+        "devarch.managed-by": "devarch",
         "devarch.workspace": "shop-local",
         "devarch.resource": "api",
         "devarch.host": "api",

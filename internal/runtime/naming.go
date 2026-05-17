@@ -11,7 +11,7 @@ const (
 	LabelHostAlias = "devarch.host"
 	LabelNetwork   = "devarch.network"
 
-	ManagedByValue = "devarch-v2"
+	ManagedByValue = "devarch"
 )
 
 func WorkspaceNetworkName(workspaceName, namingStrategy string) string {

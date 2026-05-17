@@ -46,7 +46,7 @@ func TestRenderLaravelLocalGolden(t *testing.T) {
 	}
 
 	actual := marshalJSON(t, payload)
-	goldenPath := filepath.Join(repoRoot(t), "testdata", "goldens", "phase3", "laravel-local.render.golden.json")
+	goldenPath := filepath.Join(repoRoot(t), "testdata", "goldens", "runtime", "laravel-local.render.golden.json")
 	if updateGoldens() {
 		if err := os.MkdirAll(filepath.Dir(goldenPath), 0o755); err != nil {
 			t.Fatalf("os.MkdirAll(%s): %v", filepath.Dir(goldenPath), err)
@@ -66,7 +66,7 @@ func TestRenderLaravelLocalGolden(t *testing.T) {
 
 func loadDesiredWorkspace(t *testing.T, name string) *runtimepkg.DesiredWorkspace {
 	t.Helper()
-	manifestPath := filepath.Join(repoRoot(t), "examples", "v2", "workspaces", name, "devarch.workspace.yaml")
+	manifestPath := filepath.Join(repoRoot(t), "examples", "workspaces", name, "devarch.workspace.yaml")
 	ws, err := workspacepkg.Load(manifestPath)
 	if err != nil {
 		t.Fatalf("workspace.Load(%s): %v", manifestPath, err)

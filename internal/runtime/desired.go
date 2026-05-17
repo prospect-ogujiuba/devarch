@@ -11,8 +11,8 @@ import (
 	"github.com/prospect-ogujiuba/devarch/internal/workspace"
 )
 
-// BuildDesiredWorkspace derives the Phase 3 runtime boundary from the stable
-// Phase 2 resolve graph and contract result without mutating either input.
+// BuildDesiredWorkspace derives the runtime boundary from the stable resolve
+// graph and contract result without mutating either input.
 func BuildDesiredWorkspace(graph *resolve.Graph, result *contracts.Result) (*DesiredWorkspace, error) {
 	if graph == nil {
 		return nil, fmt.Errorf("build desired workspace: nil graph")
@@ -180,7 +180,7 @@ func extractLabels(workspaceName, resourceKey string, overrides map[string]any) 
 	sort.Strings(keys)
 	for _, key := range keys {
 		if key != "labels" {
-			diagnostics = append(diagnostics, UnsupportedFieldDiagnostic(workspaceName, resourceKey, "unsupported-override", fmt.Sprintf("resource %q override %q is unsupported in Phase 3", resourceKey, key)))
+			diagnostics = append(diagnostics, UnsupportedFieldDiagnostic(workspaceName, resourceKey, "unsupported-override", fmt.Sprintf("resource %q override %q is unsupported", resourceKey, key)))
 			continue
 		}
 		typed, ok := toStringMap(overrides[key])
@@ -214,7 +214,7 @@ func extractWatchRules(workspaceName, manifestDir string, source *SourceRef, res
 	sort.Strings(keys)
 	for _, key := range keys {
 		if key != "watch" {
-			diagnostics = append(diagnostics, UnsupportedFieldDiagnostic(workspaceName, resourceKey, "unsupported-develop", fmt.Sprintf("resource %q develop.%s is unsupported in Phase 3", resourceKey, key)))
+			diagnostics = append(diagnostics, UnsupportedFieldDiagnostic(workspaceName, resourceKey, "unsupported-develop", fmt.Sprintf("resource %q develop.%s is unsupported", resourceKey, key)))
 			continue
 		}
 		entries, ok := develop[key].([]any)

@@ -81,7 +81,7 @@ cd ~/devarch-workspaces/db-admin-stack
 Create `devarch.workspace.yaml`:
 
 ```yaml
-apiVersion: devarch.io/v2alpha1
+apiVersion: devarch.io/alpha1
 kind: Workspace
 metadata:
   name: db-admin-stack
@@ -168,19 +168,7 @@ services-library/dbms/adminer/compose.yml
 services-library/proxy/nginx-proxy-manager/compose.yml
 ```
 
-Current caveat: these are service-library Compose entries, not first-class builtin v2 templates. DevArch can inspect/import-preview them with a native command:
-
-```bash
-devarch import v1-library /path/to/devarch/services-library
-```
-
-JSON output is useful when you want to review generated template documents:
-
-```bash
-devarch --json import v1-library /path/to/devarch/services-library
-```
-
-The import preview suggests template paths such as:
+Current caveat: these service-library Compose entries need first-class DevArch catalog templates before they can be used directly. Use template paths such as:
 
 ```txt
 catalog/imported/database/mariadb/template.yaml
@@ -215,4 +203,4 @@ devarch --workspace-root ~/devarch-workspaces --catalog-root ./catalog/imported 
 devarch --workspace-root ~/devarch-workspaces --catalog-root ./catalog/imported workspace status db-admin-stack
 ```
 
-Do not use a made-up `devarch add service` command; it does not exist in the current CLI. Use `workspace` commands for native runtime operations and `import v1-library` for migration/preview of service-library Compose entries.
+Do not use a made-up `devarch add service` command; it does not exist in the current CLI. Use `workspace` commands for native runtime operations after the services have catalog templates.

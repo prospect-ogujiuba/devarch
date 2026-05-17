@@ -13,7 +13,7 @@ import (
 )
 
 func TestBuildRejectsMissingTemplate(t *testing.T) {
-	manifestPath := writeResolveWorkspaceFixture(t, filepath.Join(t.TempDir(), "devarch.workspace.yaml"), `apiVersion: devarch.io/v2alpha1
+	manifestPath := writeResolveWorkspaceFixture(t, filepath.Join(t.TempDir(), "devarch.workspace.yaml"), `apiVersion: devarch.io/alpha1
 kind: Workspace
 metadata:
   name: missing-template
@@ -97,7 +97,7 @@ func TestBuildMergesTemplateDefaultsWithWorkspaceOverrides(t *testing.T) {
 }
 
 func TestBuildMergesPortsVolumesHealthAndDevelop(t *testing.T) {
-	manifestPath := writeResolveWorkspaceFixture(t, filepath.Join(t.TempDir(), "devarch.workspace.yaml"), `apiVersion: devarch.io/v2alpha1
+	manifestPath := writeResolveWorkspaceFixture(t, filepath.Join(t.TempDir(), "devarch.workspace.yaml"), `apiVersion: devarch.io/alpha1
 kind: Workspace
 metadata:
   name: merge-check
@@ -257,7 +257,7 @@ func TestBuildKeepsSourceOnlyRawComposePassThrough(t *testing.T) {
 func loadExampleGraphInputs(t *testing.T, name string) (*workspacepkg.Workspace, *catalog.Index) {
 	t.Helper()
 
-	manifestPath := filepath.Join(repoRoot(t), "examples", "v2", "workspaces", name, "devarch.workspace.yaml")
+	manifestPath := filepath.Join(repoRoot(t), "examples", "workspaces", name, "devarch.workspace.yaml")
 	ws, err := workspacepkg.Load(manifestPath)
 	if err != nil {
 		t.Fatalf("workspace.Load(%s) returned error: %v", manifestPath, err)

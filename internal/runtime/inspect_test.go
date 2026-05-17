@@ -80,7 +80,7 @@ func TestNormalizeInspectSnapshotPreservesPublishedPortsAndHealth(t *testing.T) 
       "Cmd": ["sh", "-c", "npm install && npm run dev"],
       "WorkingDir": "/workspace",
       "Labels": {
-        "devarch.managed-by": "devarch-v2",
+        "devarch.managed-by": "devarch",
         "devarch.workspace": "shop-local",
         "devarch.resource": "api",
         "devarch.host": "api",
@@ -121,7 +121,7 @@ func TestNormalizeInspectSnapshotPreservesPublishedPortsAndHealth(t *testing.T) 
     "Id": "network-123",
     "Driver": "bridge",
     "Labels": {
-      "devarch.managed-by": "devarch-v2",
+      "devarch.managed-by": "devarch",
       "devarch.workspace": "shop-local"
     }
   }
@@ -167,7 +167,7 @@ func TestNormalizeInspectSnapshotPreservesPublishedPortsAndHealth(t *testing.T) 
 
 func loadDesiredWorkspace(t *testing.T, name string) *runtimepkg.DesiredWorkspace {
 	t.Helper()
-	manifestPath := filepath.Join(repoRoot(t), "examples", "v2", "workspaces", name, "devarch.workspace.yaml")
+	manifestPath := filepath.Join(repoRoot(t), "examples", "workspaces", name, "devarch.workspace.yaml")
 	ws, err := workspacepkg.Load(manifestPath)
 	if err != nil {
 		t.Fatalf("workspace.Load(%s): %v", manifestPath, err)

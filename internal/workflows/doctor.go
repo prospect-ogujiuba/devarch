@@ -61,9 +61,9 @@ func packageDiscovery(ctx context.Context, runner Runner, rootDir string) CheckR
 	}
 	result := runner.Run(ctx, "go", "list", "./cmd/devarch", "./internal/appsvc", "./internal/runtime/...", "./internal/workflows/...")
 	if result.Status == StatusPass {
-		return CheckResult{ID: "go.discovery", Name: "Go package discovery", Status: StatusPass, Message: "root V2 packages discoverable"}
+		return CheckResult{ID: "go.discovery", Name: "Go package discovery", Status: StatusPass, Message: "root packages discoverable"}
 	}
-	return CheckResult{ID: "go.discovery", Name: "Go package discovery", Status: StatusFail, Message: "root V2 package discovery failed", Diagnostics: []Diagnostic{{ID: "go.discovery.failed", Severity: StatusFail, Message: result.StderrSummary, Detail: result.Error}}}
+	return CheckResult{ID: "go.discovery", Name: "Go package discovery", Status: StatusFail, Message: "root package discovery failed", Diagnostics: []Diagnostic{{ID: "go.discovery.failed", Severity: StatusFail, Message: result.StderrSummary, Detail: result.Error}}}
 }
 
 func firstNonEmpty(values ...string) string {

@@ -2,17 +2,17 @@ package resolve
 
 import "github.com/prospect-ogujiuba/devarch/internal/workspace"
 
-// Graph is the deterministic Phase 2 effective graph shared by resolve,
-// contracts, and later planning work. It intentionally omits runtime snapshot,
-// apply state, and compose-materialized data. raw-compose resources remain
-// pass-through source references in this phase.
+// Graph is the deterministic effective graph shared by resolve, contracts, and
+// runtime planning. It intentionally omits runtime snapshot, apply state, and
+// compose-materialized data. raw-compose resources remain pass-through source
+// references.
 type Graph struct {
 	Workspace Workspace   `json:"workspace"`
 	Resources []*Resource `json:"resources"`
 }
 
-// Workspace captures the stable workspace metadata needed by later phases while
-// keeping manifest-local absolute paths out of serialized output.
+// Workspace captures the stable workspace metadata needed by downstream runtime
+// planning while keeping manifest-local absolute paths out of serialized output.
 type Workspace struct {
 	Name           string                       `json:"name"`
 	DisplayName    string                       `json:"displayName,omitempty"`

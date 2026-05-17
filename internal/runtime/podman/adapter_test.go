@@ -13,7 +13,7 @@ import (
 
 func TestPodmanAdapterContractInspectLogsAndExec(t *testing.T) {
 	runner := &fakeRunner{responses: map[string]fakeResponse{
-		"podman ps -aq --filter label=devarch.workspace=shop-local --filter label=devarch.managed-by=devarch-v2": {
+		"podman ps -aq --filter label=devarch.workspace=shop-local --filter label=devarch.managed-by=devarch": {
 			stdout: []byte("container-api\n"),
 		},
 		"podman inspect container-api": {
@@ -27,7 +27,7 @@ func TestPodmanAdapterContractInspectLogsAndExec(t *testing.T) {
       "Cmd": ["npm", "run", "dev"],
       "WorkingDir": "/workspace",
       "Labels": {
-        "devarch.managed-by": "devarch-v2",
+        "devarch.managed-by": "devarch",
         "devarch.workspace": "shop-local",
         "devarch.resource": "api",
         "devarch.host": "api",
@@ -93,7 +93,7 @@ func TestPodmanAdapterMutationsCallPodmanctl(t *testing.T) {
 	runner := &fakeRunner{responses: map[string]fakeResponse{
 		"podman network exists devarch-shop-local-net": {},
 		"podman network rm devarch-shop-local-net":     {},
-		"podman run --detach --replace --name devarch-shop-local-api --workdir /app --env APP_ENV=local --publish 127.0.0.1:8080:80/tcp --volume ./app:/app:ro --label devarch.host=api --label devarch.managed-by=devarch-v2 --label devarch.network=devarch-shop-local-net --label devarch.resource=api --label devarch.workspace=shop-local --label tier=web --network devarch-shop-local-net --restart unless-stopped --health-cmd curl -f http://localhost/health --health-interval 10s nginx:alpine nginx -g daemon off;": {},
+		"podman run --detach --replace --name devarch-shop-local-api --workdir /app --env APP_ENV=local --publish 127.0.0.1:8080:80/tcp --volume ./app:/app:ro --label devarch.host=api --label devarch.managed-by=devarch --label devarch.network=devarch-shop-local-net --label devarch.resource=api --label devarch.workspace=shop-local --label tier=web --network devarch-shop-local-net --restart unless-stopped --health-cmd curl -f http://localhost/health --health-interval 10s nginx:alpine nginx -g daemon off;": {},
 		"podman rm --force devarch-shop-local-api": {},
 		"podman restart devarch-shop-local-api":    {},
 	}}

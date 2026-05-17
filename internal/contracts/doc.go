@@ -1,2 +1,2 @@
-// Package contracts will resolve imports and exports for DevArch V2 resources in Phase 2.
+// Package contracts resolves imports and exports for DevArch resources.
 package contracts

@@ -1,15 +1,15 @@
 # `devarch` CLI
 
-Phase 5 exposes workflow services through one CLI binary. Command handlers are thin wrappers over `internal/appsvc`.
+DevArch exposes workflow services through one CLI binary. Command handlers are thin wrappers over `internal/appsvc`.
 
-DevArch v2 product scope is the Go CLI workflow surface: `doctor`, `runtime`, `socket`, `catalog`, `scan`, `import`, and `workspace`. Legacy shell entrypoints are retired; AI, WordPress, Laravel, database bootstrap, and generated context scripts require separate product decisions before becoming v2 CLI commands.
+DevArch product scope is the Go CLI workflow surface: `doctor`, `runtime`, `socket`, `catalog`, `scan`, and `workspace`. Legacy shell entrypoints, AI APIs, WordPress/Laravel scaffolding, database bootstrap scripts, and generated context scripts are outside this CLI surface.
 
 ## Global flags
 
 Place global flags before the command:
 
 ```bash
-devarch --workspace-root ./examples/v2/workspaces --catalog-root ./catalog/builtin --json workspace plan shop-local
+devarch --workspace-root ./examples/workspaces --catalog-root ./catalog/builtin --json workspace plan shop-local
 ```
 
 - `--workspace-root` repeatable workspace discovery root
@@ -24,10 +24,10 @@ devarch runtime status
 devarch socket status
 devarch socket start
 devarch socket stop
-devarch --workspace-root ./examples/v2/workspaces workspace status shop-local
-devarch --workspace-root ./examples/v2/workspaces workspace apply shop-local
-devarch --workspace-root ./examples/v2/workspaces workspace logs shop-local api
-devarch --workspace-root ./examples/v2/workspaces workspace exec shop-local api -- echo ok
+devarch --workspace-root ./examples/workspaces workspace status shop-local
+devarch --workspace-root ./examples/workspaces workspace apply shop-local
+devarch --workspace-root ./examples/workspaces workspace logs shop-local api
+devarch --workspace-root ./examples/workspaces workspace exec shop-local api -- echo ok
 ```
 
 ## Legacy script migration
@@ -51,12 +51,6 @@ Use the Go `devarch` binary directly instead of retired shell shims:
 - `workspace list/open/plan/apply/status/logs/exec/restart`
 - `catalog list/show`
 - `scan project`
-- `import v1-stack`
-- `import v1-library`
 
 Human-readable output is operator-oriented and may change.
 
-## Import output
-
-`import v1-stack` and `import v1-library` now execute the Phase 6 importer slice.
-JSON output returns structured statuses, diagnostics, and emitted artifact documents so callers can distinguish supported, lossy, and rejected mappings explicitly.

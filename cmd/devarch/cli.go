@@ -58,8 +58,6 @@ type serviceAPI interface {
 	ExecWorkspace(context.Context, string, string, runtimepkg.ExecRequest) (*runtimepkg.ExecResult, error)
 	RestartWorkspaceResource(context.Context, string, string) error
 	ScanProject(context.Context, string) (*appsvc.ProjectScanView, error)
-	ImportV1Stack(context.Context, string) (*appsvc.ImportPreview, error)
-	ImportV1Library(context.Context, string) (*appsvc.ImportPreview, error)
 }
 
 type serviceFactory func(cliConfig) (serviceAPI, error)
@@ -106,8 +104,6 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, factory s
 		return runWorkspace(ctx, cfg, rest[1:], stdout, stderr, factory)
 	case "catalog":
 		return runCatalog(ctx, cfg, rest[1:], stdout, stderr, factory)
-	case "import":
-		return runImport(ctx, cfg, rest[1:], stdout, stderr, factory)
 	case "scan":
 		return runScan(ctx, cfg, rest[1:], stdout, stderr, factory)
 	case "help", "-h", "--help":
@@ -453,54 +449,6 @@ func runCatalog(ctx context.Context, cfg cliConfig, args []string, stdout, stder
 	}
 }
 
-func runImport(ctx context.Context, cfg cliConfig, args []string, stdout, stderr io.Writer, factory serviceFactory) error {
-	if len(args) == 0 {
-		writeImportUsage(stderr)
-		return fmt.Errorf("import subcommand is required")
-	}
-	svc, err := factory(cfg)
-	if err != nil {
-		return err
-	}
-
-	switch args[0] {
-	case "v1-stack":
-		if len(args) != 2 {
-			fmt.Fprintln(stderr, "Usage: devarch [global flags] import v1-stack <file>")
-			return fmt.Errorf("import v1-stack requires <file>")
-		}
-		preview, err := svc.ImportV1Stack(ctx, args[1])
-		if err != nil {
-			return err
-		}
-		if cfg.json {
-			return writeJSON(stdout, preview)
-		}
-		printImportPreview(stdout, preview)
-		return nil
-	case "v1-library":
-		if len(args) != 2 {
-			fmt.Fprintln(stderr, "Usage: devarch [global flags] import v1-library <path>")
-			return fmt.Errorf("import v1-library requires <path>")
-		}
-		preview, err := svc.ImportV1Library(ctx, args[1])
-		if err != nil {
-			return err
-		}
-		if cfg.json {
-			return writeJSON(stdout, preview)
-		}
-		printImportPreview(stdout, preview)
-		return nil
-	case "help", "-h", "--help":
-		writeImportUsage(stdout)
-		return nil
-	default:
-		writeImportUsage(stderr)
-		return fmt.Errorf("unknown import subcommand %q", args[0])
-	}
-}
-
 func runScan(ctx context.Context, cfg cliConfig, args []string, stdout, stderr io.Writer, factory serviceFactory) error {
 	if len(args) == 0 {
 		writeScanUsage(stderr)
@@ -776,41 +724,6 @@ func printCatalogDetail(w io.Writer, template *appsvc.TemplateDetail) {
 	printStructuredBlock(w, "Develop", template.Develop)
 }
 
-func printImportPreview(w io.Writer, preview *appsvc.ImportPreview) {
-	if preview == nil {
-		fmt.Fprintln(w, "No import result.")
-		return
-	}
-	fmt.Fprintf(w, "Mode: %s\n", preview.Mode)
-	fmt.Fprintf(w, "Source: %s\n", preview.SourcePath)
-	fmt.Fprintf(w, "Status: %s\n", preview.Status)
-	if preview.Message != "" {
-		fmt.Fprintf(w, "Message: %s\n", preview.Message)
-	}
-	if preview.Summary.Total > 0 {
-		fmt.Fprintf(w, "Artifacts: %d total (%d succeeded, %d partial, %d rejected)\n", preview.Summary.Total, preview.Summary.Succeeded, preview.Summary.Partial, preview.Summary.Rejected)
-	}
-	if len(preview.Diagnostics) > 0 {
-		fmt.Fprintln(w, "Diagnostics:")
-		for _, diagnostic := range preview.Diagnostics {
-			fmt.Fprintf(w, "- [%s] %s: %s\n", diagnostic.Severity, diagnostic.Code, diagnostic.Message)
-		}
-	}
-	if len(preview.Artifacts) == 0 {
-		return
-	}
-	fmt.Fprintln(w, "Artifacts:")
-	for _, artifact := range preview.Artifacts {
-		fmt.Fprintf(w, "- [%s] %s %s\n", artifact.Status, artifact.Kind, artifact.Name)
-		if artifact.SuggestedPath != "" {
-			fmt.Fprintf(w, "  Path: %s\n", artifact.SuggestedPath)
-		}
-		for _, diagnostic := range artifact.Diagnostics {
-			fmt.Fprintf(w, "  - [%s] %s: %s\n", diagnostic.Severity, diagnostic.Code, diagnostic.Message)
-		}
-	}
-}
-
 func printScanResult(w io.Writer, result *appsvc.ProjectScanView) {
 	if result == nil {
 		fmt.Fprintln(w, "No scan result.")
@@ -946,8 +859,6 @@ func writeRootUsage(w io.Writer) {
 	fmt.Fprintln(w, "  socket stop")
 	fmt.Fprintln(w, "  catalog list")
 	fmt.Fprintln(w, "  catalog show <template>")
-	fmt.Fprintln(w, "  import v1-stack <file>")
-	fmt.Fprintln(w, "  import v1-library <path>")
 	fmt.Fprintln(w, "  scan project <path>")
 }
 
@@ -974,12 +885,6 @@ func writeCatalogUsage(w io.Writer) {
 	fmt.Fprintln(w, "Catalog commands:")
 	fmt.Fprintln(w, "  devarch [global flags] catalog list")
 	fmt.Fprintln(w, "  devarch [global flags] catalog show <template>")
-}
-
-func writeImportUsage(w io.Writer) {
-	fmt.Fprintln(w, "Import commands:")
-	fmt.Fprintln(w, "  devarch [global flags] import v1-stack <file>")
-	fmt.Fprintln(w, "  devarch [global flags] import v1-library <path>")
 }
 
 func writeScanUsage(w io.Writer) {

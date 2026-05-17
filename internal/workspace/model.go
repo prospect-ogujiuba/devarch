@@ -10,8 +10,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Workspace is the normalized in-memory representation of a DevArch V2
-// workspace manifest. ManifestPath and ManifestDir are internal metadata and are
+// Workspace is the normalized in-memory representation of a DevArch workspace
+// manifest. ManifestPath and ManifestDir are internal metadata and are
 // intentionally omitted from serialized output.
 type Workspace struct {
 	APIVersion string               `yaml:"apiVersion" json:"apiVersion,omitempty"`

@@ -70,7 +70,7 @@ func TestBusSequencingAndCodecGolden(t *testing.T) {
 	}
 
 	actual := marshalJSON(t, captured)
-	goldenPath := filepath.Join(repoRoot(t), "testdata", "goldens", "phase3", "runtime-events.golden.json")
+	goldenPath := filepath.Join(repoRoot(t), "testdata", "goldens", "runtime", "runtime-events.golden.json")
 	if updateGoldens() {
 		if err := os.MkdirAll(filepath.Dir(goldenPath), 0o755); err != nil {
 			t.Fatalf("os.MkdirAll(%s): %v", filepath.Dir(goldenPath), err)

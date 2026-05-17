@@ -120,7 +120,7 @@ func TestRunJSONWorkspaceCommands(t *testing.T) {
 	}
 }
 
-func TestRunJSONCatalogImportAndScanCommands(t *testing.T) {
+func TestRunJSONCatalogAndScanCommands(t *testing.T) {
 	args := append(baseCLIArgs(t), "--json", "catalog", "show", "postgres")
 	stdout, stderr, err := runCLI(args, newTestServiceFactory(t))
 	if err != nil {
@@ -132,23 +132,6 @@ func TestRunJSONCatalogImportAndScanCommands(t *testing.T) {
 	}
 	if got, want := template["name"], any("postgres"); got != want {
 		t.Fatalf("template[name] = %#v, want %#v", got, want)
-	}
-
-	stackPath := filepath.Join(repoRoot(t), "examples", "v1", "stacks", "shop-export.yaml")
-	args = append(baseCLIArgs(t), "--json", "import", "v1-stack", stackPath)
-	stdout, stderr, err = runCLI(args, newTestServiceFactory(t))
-	if err != nil {
-		t.Fatalf("runCLI import returned error: %v\nstderr:\n%s", err, stderr)
-	}
-	var preview appsvc.ImportPreview
-	if err := json.Unmarshal([]byte(stdout), &preview); err != nil {
-		t.Fatalf("json.Unmarshal preview returned error: %v\nstdout:\n%s", err, stdout)
-	}
-	if got, want := preview.Status, "partial"; got != want {
-		t.Fatalf("preview.Status = %q, want %q", got, want)
-	}
-	if got, want := preview.Summary.Total, 1; got != want {
-		t.Fatalf("preview.Summary.Total = %d, want %d", got, want)
 	}
 
 	projectRoot := t.TempDir()
@@ -225,7 +208,7 @@ func runCLI(args []string, factory serviceFactory) (string, string, error) {
 func baseCLIArgs(t *testing.T) []string {
 	t.Helper()
 	return []string{
-		"--workspace-root", filepath.Join(repoRoot(t), "examples", "v2", "workspaces"),
+		"--workspace-root", filepath.Join(repoRoot(t), "examples", "workspaces"),
 		"--catalog-root", filepath.Join(repoRoot(t), "catalog", "builtin"),
 	}
 }

@@ -53,7 +53,7 @@ func TestExecutorShopLocalGolden(t *testing.T) {
 	}
 
 	actual := marshalJSON(t, result)
-	goldenPath := filepath.Join(repoRoot(t), "testdata", "goldens", "phase3", "shop-local.apply.golden.json")
+	goldenPath := filepath.Join(repoRoot(t), "testdata", "goldens", "runtime", "shop-local.apply.golden.json")
 	if updateGoldens() {
 		if err := os.MkdirAll(filepath.Dir(goldenPath), 0o755); err != nil {
 			t.Fatalf("os.MkdirAll(%s): %v", filepath.Dir(goldenPath), err)
