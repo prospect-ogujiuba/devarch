@@ -1,6 +1,6 @@
 # Builtin Catalog
 
-This tree contains first-party DevArch V2 templates owned by `surgeon-catalog`.
+This tree contains first-party DevArch templates owned by `surgeon-catalog`.
 
 ## Canonical layout
 
@@ -19,4 +19,4 @@ Current seeded corpus:
 - `catalog/builtin/frontend/vite-web/template.yaml`
 - `catalog/builtin/proxy/nginx/template.yaml`
 
-Templates stay plain-file, deterministic, and human-readable so later catalog discovery and indexing can treat this tree as committed source-of-truth data.
+Templates stay plain-file, deterministic, and human-readable so catalog discovery and indexing treat this tree as committed source-of-truth data.

@@ -16,7 +16,7 @@ import (
 	workspacepkg "github.com/prospect-ogujiuba/devarch/internal/workspace"
 )
 
-func TestPhase3PlanGoldens(t *testing.T) {
+func TestPlanGoldens(t *testing.T) {
 	tests := []struct {
 		name       string
 		workspace  string
@@ -26,7 +26,7 @@ func TestPhase3PlanGoldens(t *testing.T) {
 		{
 			name:       "shop-local-empty",
 			workspace:  "shop-local",
-			goldenPath: filepath.Join(repoRoot(t), "testdata", "goldens", "phase3", "shop-local.plan.golden.json"),
+			goldenPath: filepath.Join(repoRoot(t), "testdata", "goldens", "runtime", "shop-local.plan.golden.json"),
 			snapshot: func(desired *runtimepkg.DesiredWorkspace) *runtimepkg.Snapshot {
 				return &runtimepkg.Snapshot{Workspace: runtimepkg.SnapshotWorkspace{Name: desired.Name, Provider: desired.Provider}}
 			},
@@ -34,7 +34,7 @@ func TestPhase3PlanGoldens(t *testing.T) {
 		{
 			name:       "laravel-local-empty",
 			workspace:  "laravel-local",
-			goldenPath: filepath.Join(repoRoot(t), "testdata", "goldens", "phase3", "laravel-local.plan.golden.json"),
+			goldenPath: filepath.Join(repoRoot(t), "testdata", "goldens", "runtime", "laravel-local.plan.golden.json"),
 			snapshot: func(desired *runtimepkg.DesiredWorkspace) *runtimepkg.Snapshot {
 				return &runtimepkg.Snapshot{Workspace: runtimepkg.SnapshotWorkspace{Name: desired.Name, Provider: desired.Provider}}
 			},
@@ -42,7 +42,7 @@ func TestPhase3PlanGoldens(t *testing.T) {
 		{
 			name:       "compat-local-empty",
 			workspace:  "compat-local",
-			goldenPath: filepath.Join(repoRoot(t), "testdata", "goldens", "phase3", "compat-local.plan.golden.json"),
+			goldenPath: filepath.Join(repoRoot(t), "testdata", "goldens", "runtime", "compat-local.plan.golden.json"),
 			snapshot: func(desired *runtimepkg.DesiredWorkspace) *runtimepkg.Snapshot {
 				return &runtimepkg.Snapshot{Workspace: runtimepkg.SnapshotWorkspace{Name: desired.Name, Provider: desired.Provider}}
 			},
@@ -157,7 +157,7 @@ func TestDiffComputesModifyRestartRemoveAndNoopReasons(t *testing.T) {
 
 func loadDesiredWorkspace(t *testing.T, name string) *runtimepkg.DesiredWorkspace {
 	t.Helper()
-	manifestPath := filepath.Join(repoRoot(t), "examples", "v2", "workspaces", name, "devarch.workspace.yaml")
+	manifestPath := filepath.Join(repoRoot(t), "examples", "workspaces", name, "devarch.workspace.yaml")
 	ws, err := workspacepkg.Load(manifestPath)
 	if err != nil {
 		t.Fatalf("workspace.Load(%s): %v", manifestPath, err)

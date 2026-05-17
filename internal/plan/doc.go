@@ -1,2 +1,2 @@
-// Package plan will compute desired-versus-runtime action plans in Phase 3.
+// Package plan computes desired-versus-runtime action plans.
 package plan

@@ -1,2 +1,2 @@
-// Package resolve will build the deterministic effective graph for DevArch V2 in Phase 2.
+// Package resolve builds the deterministic effective graph for DevArch workspaces.
 package resolve

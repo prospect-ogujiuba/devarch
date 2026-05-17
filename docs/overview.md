@@ -37,7 +37,7 @@ define -> plan -> apply -> observe -> iterate
 
 ## What DevArch is today
 
-DevArch v2 is intentionally narrow:
+DevArch is intentionally narrow:
 
 - a local Go CLI
 - workspace discovery
@@ -45,11 +45,10 @@ DevArch v2 is intentionally narrow:
 - deterministic planning
 - Podman-oriented apply/status/logs/exec/restart
 - project scanning
-- v1 import helpers for migration
 
-## What DevArch is not today
+## What DevArch CLI does not include
 
-DevArch CLI is not currently:
+DevArch CLI is not:
 
 - a required API container
 - a PHP/Laravel/WordPress scaffolding tool
@@ -57,7 +56,7 @@ DevArch CLI is not currently:
 - a shell alias collection
 - a replacement for every Compose feature
 
-Those can be added later as explicit, tested CLI/API contracts, but they are not required for the core local workflow.
+Those capabilities are outside the supported CLI workflow.
 
 ## Runtime requirement
 

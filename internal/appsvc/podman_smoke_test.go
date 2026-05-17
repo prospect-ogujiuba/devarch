@@ -31,7 +31,7 @@ func TestPodmanSmoke(t *testing.T) {
 
 	root := repoRoot(t)
 	workspaceRoot := t.TempDir()
-	fixture := filepath.Join(root, "examples", "v2", "workspaces", "podman-smoke", "devarch.yaml")
+	fixture := filepath.Join(root, "examples", "workspaces", "podman-smoke", "devarch.yaml")
 	data, err := os.ReadFile(fixture)
 	if err != nil {
 		t.Fatalf("read smoke fixture: %v", err)

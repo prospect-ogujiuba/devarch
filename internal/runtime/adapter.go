@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// AdapterCapabilities reports which Phase 3 runtime surfaces a provider can
-// satisfy without widening scope into live integration requirements.
+// AdapterCapabilities reports which runtime surfaces a provider can satisfy
+// without widening scope into live integration requirements.
 type AdapterCapabilities struct {
 	Inspect bool `json:"inspect,omitempty"`
 	Apply   bool `json:"apply,omitempty"`
@@ -60,8 +60,8 @@ type ExecResult struct {
 	Stderr   string `json:"stderr,omitempty"`
 }
 
-// Adapter is the common Phase 3 runtime seam for desired/snapshot inspection,
-// apply primitives, logs, and exec.
+// Adapter is the common runtime seam for desired/snapshot inspection, apply
+// primitives, logs, and exec.
 type Adapter interface {
 	Provider() string
 	Capabilities() AdapterCapabilities

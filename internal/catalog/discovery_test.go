@@ -14,9 +14,9 @@ func TestDiscoverTemplateFilesReturnsSortedCanonicalPaths(t *testing.T) {
 	rootA := filepath.Join(root, "catalog-a")
 	rootB := filepath.Join(root, "catalog-b")
 
-	postgresPath := writeCatalogFixture(t, filepath.Join(rootA, "database", "postgres", TemplateFilename), "apiVersion: devarch.io/v2alpha1\n")
-	nodeAPIPath := writeCatalogFixture(t, filepath.Join(rootA, "backend", "node-api", TemplateFilename), "apiVersion: devarch.io/v2alpha1\n")
-	vitePath := writeCatalogFixture(t, filepath.Join(rootB, "frontend", "vite-web", TemplateFilename), "apiVersion: devarch.io/v2alpha1\n")
+	postgresPath := writeCatalogFixture(t, filepath.Join(rootA, "database", "postgres", TemplateFilename), "apiVersion: devarch.io/alpha1\n")
+	nodeAPIPath := writeCatalogFixture(t, filepath.Join(rootA, "backend", "node-api", TemplateFilename), "apiVersion: devarch.io/alpha1\n")
+	vitePath := writeCatalogFixture(t, filepath.Join(rootB, "frontend", "vite-web", TemplateFilename), "apiVersion: devarch.io/alpha1\n")
 
 	writeCatalogFixture(t, filepath.Join(rootA, "backend", "node-api", "template.yml"), "ignored\n")
 	writeCatalogFixture(t, filepath.Join(rootA, "README.md"), "ignored\n")

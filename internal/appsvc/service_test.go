@@ -20,8 +20,8 @@ import (
 
 func TestDiscoverWorkspacesSortsByNameAndRejectsDuplicates(t *testing.T) {
 	root := t.TempDir()
-	writeWorkspaceCopy(t, filepath.Join(repoRoot(t), "examples", "v2", "workspaces", "shop-local", "devarch.workspace.yaml"), filepath.Join(root, "zeta", "devarch.workspace.yaml"), "zeta-local", "Zeta Local")
-	writeWorkspaceCopy(t, filepath.Join(repoRoot(t), "examples", "v2", "workspaces", "laravel-local", "devarch.workspace.yaml"), filepath.Join(root, "alpha", "devarch.workspace.yaml"), "alpha-local", "Alpha Local")
+	writeWorkspaceCopy(t, filepath.Join(repoRoot(t), "examples", "workspaces", "shop-local", "devarch.workspace.yaml"), filepath.Join(root, "zeta", "devarch.workspace.yaml"), "zeta-local", "Zeta Local")
+	writeWorkspaceCopy(t, filepath.Join(repoRoot(t), "examples", "workspaces", "laravel-local", "devarch.workspace.yaml"), filepath.Join(root, "alpha", "devarch.workspace.yaml"), "alpha-local", "Alpha Local")
 
 	workspaces, err := DiscoverWorkspaces([]string{root})
 	if err != nil {
@@ -32,8 +32,8 @@ func TestDiscoverWorkspacesSortsByNameAndRejectsDuplicates(t *testing.T) {
 	}
 
 	dupRoot := t.TempDir()
-	writeWorkspaceCopy(t, filepath.Join(repoRoot(t), "examples", "v2", "workspaces", "shop-local", "devarch.workspace.yaml"), filepath.Join(dupRoot, "one", "devarch.workspace.yaml"), "duplicate-local", "Duplicate Local")
-	writeWorkspaceCopy(t, filepath.Join(repoRoot(t), "examples", "v2", "workspaces", "laravel-local", "devarch.workspace.yaml"), filepath.Join(dupRoot, "two", "devarch.workspace.yaml"), "duplicate-local", "Duplicate Local")
+	writeWorkspaceCopy(t, filepath.Join(repoRoot(t), "examples", "workspaces", "shop-local", "devarch.workspace.yaml"), filepath.Join(dupRoot, "one", "devarch.workspace.yaml"), "duplicate-local", "Duplicate Local")
+	writeWorkspaceCopy(t, filepath.Join(repoRoot(t), "examples", "workspaces", "laravel-local", "devarch.workspace.yaml"), filepath.Join(dupRoot, "two", "devarch.workspace.yaml"), "duplicate-local", "Duplicate Local")
 
 	_, err = DiscoverWorkspaces([]string{dupRoot})
 	var duplicateErr *DuplicateWorkspaceNameError
@@ -125,7 +125,7 @@ func TestServiceReadFlowReturnsLockedWorkspaceAndCatalogShapes(t *testing.T) {
 	if got, want := workspaceDetail.Provider, runtimepkg.ProviderDocker; got != want {
 		t.Fatalf("workspaceDetail.Provider = %q, want %q", got, want)
 	}
-	if !strings.HasSuffix(filepath.ToSlash(workspaceDetail.ManifestPath), "/examples/v2/workspaces/shop-local/devarch.workspace.yaml") {
+	if !strings.HasSuffix(filepath.ToSlash(workspaceDetail.ManifestPath), "/examples/workspaces/shop-local/devarch.workspace.yaml") {
 		t.Fatalf("workspaceDetail.ManifestPath = %q, want shop-local manifest path", workspaceDetail.ManifestPath)
 	}
 	if got, want := workspaceDetail.ResourceKeys, []string{"api", "postgres", "redis", "web"}; !reflect.DeepEqual(got, want) {
@@ -259,32 +259,8 @@ func TestServiceLogsExecAndEventsUseSharedBoundary(t *testing.T) {
 	}
 }
 
-func TestServiceImportPreviewAndProjectScanUseSharedBoundary(t *testing.T) {
+func TestServiceProjectScanUsesSharedBoundary(t *testing.T) {
 	service := newTestService(t, Config{})
-
-	stackPath := filepath.Join(repoRoot(t), "examples", "v1", "stacks", "shop-export.yaml")
-	preview, err := service.ImportV1Stack(context.Background(), stackPath)
-	if err != nil {
-		t.Fatalf("ImportV1Stack returned error: %v", err)
-	}
-	if got, want := preview.Status, "partial"; got != want {
-		t.Fatalf("preview.Status = %q, want %q", got, want)
-	}
-	if got, want := len(preview.Artifacts), 1; got != want {
-		t.Fatalf("len(preview.Artifacts) = %d, want %d", got, want)
-	}
-
-	libraryPath := filepath.Join(repoRoot(t), "examples", "v1", "library")
-	preview, err = service.ImportV1Library(context.Background(), libraryPath)
-	if err != nil {
-		t.Fatalf("ImportV1Library returned error: %v", err)
-	}
-	if got, want := preview.Mode, "v1-library"; got != want {
-		t.Fatalf("preview.Mode = %q, want %q", got, want)
-	}
-	if got, want := preview.Summary.Total, 2; got != want {
-		t.Fatalf("preview.Summary.Total = %d, want %d", got, want)
-	}
 
 	projectRoot := t.TempDir()
 	if err := os.WriteFile(filepath.Join(projectRoot, "package.json"), []byte(`{"name":"shop-api","dependencies":{"express":"^4.19.0"}}`), 0o644); err != nil {
@@ -384,7 +360,7 @@ func writeWorkspaceCopy(t *testing.T, sourcePath, targetPath, name, displayName 
 
 func exampleWorkspaceRoots(t *testing.T) []string {
 	t.Helper()
-	return []string{filepath.Join(repoRoot(t), "examples", "v2", "workspaces")}
+	return []string{filepath.Join(repoRoot(t), "examples", "workspaces")}
 }
 
 func exampleCatalogRoots(t *testing.T) []string {

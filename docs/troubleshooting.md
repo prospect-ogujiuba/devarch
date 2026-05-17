@@ -69,10 +69,10 @@ Global flags must come before the command.
 
 ```bash
 # Good
-devarch --workspace-root ./examples/v2/workspaces workspace list
+devarch --workspace-root ./examples/workspaces workspace list
 
 # Wrong
-devarch workspace list --workspace-root ./examples/v2/workspaces
+devarch workspace list --workspace-root ./examples/workspaces
 ```
 
 ## `doctor` warns about workspace roots or catalog roots
@@ -83,7 +83,7 @@ Pass roots explicitly:
 
 ```bash
 devarch \
-  --workspace-root ./examples/v2/workspaces \
+  --workspace-root ./examples/workspaces \
   --catalog-root ./catalog/builtin \
   workspace list
 ```
@@ -140,13 +140,7 @@ Container requirements are resource-specific:
 
 ## Does the web UI need an API?
 
-The web UI is separate from the CLI workflow. `web/README.md` currently says the dev server proxies `/api` to `http://127.0.0.1:7777` for a local `devarchd` instance.
-
-That means:
-
-- CLI workflows do not need the web UI or API.
-- If you work on the web UI, you need whatever local `devarchd` API implementation is current for that UI slice.
-- Do not bring back the old custom PHP mega container just to run the CLI.
+The web UI is separate from the CLI workflow. CLI workflows do not need the web UI, an API, or the old custom PHP mega container.
 
 ## Plan after apply still shows `modify`
 
@@ -174,6 +168,6 @@ podman volume rm workspace.mariadb-data
 For any workspace, list managed resources first:
 
 ```bash
-podman ps -a --filter label=devarch.managed-by=devarch-v2 --format '{{.Names}} {{.Labels}}'
-podman network ls --filter label=devarch.managed-by=devarch-v2
+podman ps -a --filter label=devarch.managed-by=devarch --format '{{.Names}} {{.Labels}}'
+podman network ls --filter label=devarch.managed-by=devarch
 ```

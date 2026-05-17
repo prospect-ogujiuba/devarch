@@ -23,7 +23,7 @@ MariaDB template:
 
 ```bash
 cat > .model-artifacts/devarch-e2e/catalog/database/mariadb/template.yaml <<'YAML'
-apiVersion: devarch.io/v2alpha1
+apiVersion: devarch.io/alpha1
 kind: Template
 metadata:
   name: mariadb-small
@@ -61,7 +61,7 @@ Adminer template:
 
 ```bash
 cat > .model-artifacts/devarch-e2e/catalog/dbms/adminer/template.yaml <<'YAML'
-apiVersion: devarch.io/v2alpha1
+apiVersion: devarch.io/alpha1
 kind: Template
 metadata:
   name: adminer-small
@@ -96,7 +96,7 @@ YAML
 
 ```bash
 cat > .model-artifacts/devarch-e2e/workspaces/tiny-db/devarch.workspace.yaml <<'YAML'
-apiVersion: devarch.io/v2alpha1
+apiVersion: devarch.io/alpha1
 kind: Workspace
 metadata:
   name: tiny-db

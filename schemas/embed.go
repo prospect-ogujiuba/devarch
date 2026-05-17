@@ -2,7 +2,7 @@ package schemas
 
 import "embed"
 
-// FS contains the committed DevArch V2 JSON schemas.
+// FS contains the committed DevArch JSON schemas.
 //
 //go:embed *.json
 var FS embed.FS

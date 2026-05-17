@@ -14,7 +14,6 @@ import (
 	"github.com/prospect-ogujiuba/devarch/internal/catalog"
 	contractspkg "github.com/prospect-ogujiuba/devarch/internal/contracts"
 	"github.com/prospect-ogujiuba/devarch/internal/events"
-	"github.com/prospect-ogujiuba/devarch/internal/importv1"
 	planpkg "github.com/prospect-ogujiuba/devarch/internal/plan"
 	"github.com/prospect-ogujiuba/devarch/internal/projectscan"
 	resolvepkg "github.com/prospect-ogujiuba/devarch/internal/resolve"
@@ -26,8 +25,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config wires the shared Phase 4 service boundary without exposing transport
-// concerns.
+// Config wires the shared service boundary without exposing transport concerns.
 type Config struct {
 	WorkspaceRoots []string
 	CatalogRoots   []string
@@ -38,7 +36,7 @@ type Config struct {
 	WorkflowRunner workflows.Runner
 }
 
-// Service is the narrow shared seam consumed by Phase 4 transports.
+// Service is the narrow shared seam consumed by transports.
 type Service struct {
 	workspaceRoots []string
 	catalogRoots   []string
@@ -271,7 +269,7 @@ func (s *Service) ExecWorkspace(ctx context.Context, name, resource string, requ
 		return nil, fmt.Errorf("resource is required")
 	}
 	if request.Interactive || request.TTY {
-		return nil, unsupportedCapability(name, resource, "", "exec", "interactive", "interactive and tty exec are not supported in Phase 4")
+		return nil, unsupportedCapability(name, resource, "", "exec", "interactive", "interactive and tty exec are not supported")
 	}
 	state, err := s.loadRuntimeState(name, "exec")
 	if err != nil {
@@ -383,14 +381,6 @@ func (s *Service) CatalogTemplate(_ context.Context, name string) (*TemplateDeta
 		return nil, &NotFoundError{Kind: "template", Name: name}
 	}
 	return templateDetailFromCatalog(template)
-}
-
-func (s *Service) ImportV1Stack(_ context.Context, path string) (*ImportPreview, error) {
-	return importv1.PrepareStackImport(path)
-}
-
-func (s *Service) ImportV1Library(_ context.Context, path string) (*ImportPreview, error) {
-	return importv1.PrepareLibraryImport(path)
 }
 
 func (s *Service) ScanProject(_ context.Context, path string) (*ProjectScanView, error) {
@@ -747,11 +737,11 @@ func ensureApplyCapabilities(workspaceName, provider string, capabilities runtim
 		switch action.Scope {
 		case planpkg.ScopeWorkspace:
 			if !capabilities.Network {
-				return unsupportedCapability(workspaceName, "", provider, "apply", "network", "selected runtime does not implement workspace network mutations in Phase 4")
+				return unsupportedCapability(workspaceName, "", provider, "apply", "network", "selected runtime does not implement workspace network mutations")
 			}
 		case planpkg.ScopeResource:
 			if !capabilities.Apply {
-				return unsupportedCapability(workspaceName, action.Target, provider, "apply", "apply", "selected runtime does not implement resource mutations in Phase 4")
+				return unsupportedCapability(workspaceName, action.Target, provider, "apply", "apply", "selected runtime does not implement resource mutations")
 			}
 		}
 	}

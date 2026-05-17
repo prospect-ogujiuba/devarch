@@ -95,9 +95,9 @@ Plan is the safe preview step. Run it before apply when changing manifests.
 
 ## Apply
 
-`workspace apply` executes the planned changes through the runtime adapter.
+`workspace apply` executes the diff through the runtime adapter.
 
-For Podman, this means creating/replacing containers and networks with DevArch labels so later status/logs/exec operations can find them.
+For Podman, this means creating/replacing containers and networks with DevArch labels used by status/logs/exec operations.
 
 ## Status
 

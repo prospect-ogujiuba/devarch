@@ -17,7 +17,7 @@ func TestValidateWorkspaceExamples(t *testing.T) {
 	for _, example := range examples {
 		example := example
 		t.Run(example, func(t *testing.T) {
-			manifestPath := filepath.Join(repoRoot(t), "examples", "v2", "workspaces", example, ManifestFilename)
+			manifestPath := filepath.Join(repoRoot(t), "examples", "workspaces", example, ManifestFilename)
 			data, err := os.ReadFile(manifestPath)
 			if err != nil {
 				t.Fatalf("os.ReadFile(%s): %v", manifestPath, err)
@@ -38,7 +38,7 @@ func TestValidateWorkspaceRejectsMalformedDocuments(t *testing.T) {
 	}{
 		{
 			name: "missing metadata name",
-			document: `apiVersion: devarch.io/v2alpha1
+			document: `apiVersion: devarch.io/alpha1
 kind: Workspace
 metadata:
   displayName: Broken
@@ -51,7 +51,7 @@ resources:
 		},
 		{
 			name: "malformed import entry",
-			document: `apiVersion: devarch.io/v2alpha1
+			document: `apiVersion: devarch.io/alpha1
 kind: Workspace
 metadata:
   name: broken-import
@@ -66,7 +66,7 @@ resources:
 		},
 		{
 			name: "malformed export entry",
-			document: `apiVersion: devarch.io/v2alpha1
+			document: `apiVersion: devarch.io/alpha1
 kind: Workspace
 metadata:
   name: broken-export
@@ -82,7 +82,7 @@ resources:
 		},
 		{
 			name: "invalid source type",
-			document: `apiVersion: devarch.io/v2alpha1
+			document: `apiVersion: devarch.io/alpha1
 kind: Workspace
 metadata:
   name: broken-source
@@ -107,7 +107,7 @@ resources:
 }
 
 func TestValidateTemplateDocuments(t *testing.T) {
-	validTemplate := `apiVersion: devarch.io/v2alpha1
+	validTemplate := `apiVersion: devarch.io/alpha1
 kind: Template
 metadata:
   name: postgres
@@ -146,7 +146,7 @@ spec:
 	}{
 		{
 			name: "missing metadata name",
-			document: `apiVersion: devarch.io/v2alpha1
+			document: `apiVersion: devarch.io/alpha1
 kind: Template
 metadata:
   description: Broken
@@ -159,7 +159,7 @@ spec:
 		},
 		{
 			name: "malformed import entry",
-			document: `apiVersion: devarch.io/v2alpha1
+			document: `apiVersion: devarch.io/alpha1
 kind: Template
 metadata:
   name: broken-import
@@ -174,7 +174,7 @@ spec:
 		},
 		{
 			name: "malformed export entry",
-			document: `apiVersion: devarch.io/v2alpha1
+			document: `apiVersion: devarch.io/alpha1
 kind: Template
 metadata:
   name: broken-export
@@ -190,7 +190,7 @@ spec:
 		},
 		{
 			name: "reject contracts block in favor of imports and exports",
-			document: `apiVersion: devarch.io/v2alpha1
+			document: `apiVersion: devarch.io/alpha1
 kind: Template
 metadata:
   name: broken-contracts

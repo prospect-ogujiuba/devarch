@@ -110,7 +110,7 @@ func TestLoadNormalizesExamples(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			manifestPath := filepath.Join(repoRoot(t), "examples", "v2", "workspaces", tt.name, "devarch.workspace.yaml")
+			manifestPath := filepath.Join(repoRoot(t), "examples", "workspaces", tt.name, "devarch.workspace.yaml")
 			ws, err := Load(manifestPath)
 			if err != nil {
 				t.Fatalf("Load(%s) returned error: %v", manifestPath, err)
@@ -122,7 +122,7 @@ func TestLoadNormalizesExamples(t *testing.T) {
 
 func TestNormalizeCatalogSourcesDedupesAndSorts(t *testing.T) {
 	root := t.TempDir()
-	manifestPath := writeWorkspaceFixture(t, filepath.Join(root, "devarch.workspace.yaml"), `apiVersion: devarch.io/v2alpha1
+	manifestPath := writeWorkspaceFixture(t, filepath.Join(root, "devarch.workspace.yaml"), `apiVersion: devarch.io/alpha1
 kind: Workspace
 metadata:
   name: catalog-order

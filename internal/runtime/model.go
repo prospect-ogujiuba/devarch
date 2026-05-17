@@ -16,8 +16,8 @@ const (
 	SeverityError   = "error"
 )
 
-// DesiredWorkspace is the Phase 3 runtime-owned desired-state boundary derived
-// from the stable Phase 2 resolve/contracts output.
+// DesiredWorkspace is the runtime-owned desired-state boundary derived from
+// stable resolve/contracts output.
 type DesiredWorkspace struct {
 	Name           string              `json:"name"`
 	DisplayName    string              `json:"displayName,omitempty"`
@@ -266,8 +266,8 @@ func (d Diagnostic) Blocking() bool {
 	return strings.EqualFold(d.Severity, SeverityError)
 }
 
-// BlocksApply is intentionally narrower than severity alone. Phase 3 must carry
-// contract diagnostics forward, but not every error-level contract diagnostic is
+// BlocksApply is intentionally narrower than severity alone. Runtime planning
+// carries contract diagnostics forward, but not every error-level diagnostic is
 // a hard stop for the current runtime/apply surface. Unsupported runtime-owned
 // diagnostics still block side effects explicitly.
 func (d Diagnostic) BlocksApply() bool {

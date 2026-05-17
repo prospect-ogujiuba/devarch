@@ -14,7 +14,7 @@ import (
 	workspacepkg "github.com/prospect-ogujiuba/devarch/internal/workspace"
 )
 
-func TestPhase2Goldens(t *testing.T) {
+func TestResolveGoldens(t *testing.T) {
 	tests := []struct {
 		name         string
 		manifestPath string
@@ -22,18 +22,18 @@ func TestPhase2Goldens(t *testing.T) {
 	}{
 		{
 			name:         "shop-local",
-			manifestPath: filepath.Join(repoRoot(t), "examples", "v2", "workspaces", "shop-local", "devarch.workspace.yaml"),
-			goldenPath:   filepath.Join(repoRoot(t), "testdata", "goldens", "phase2", "shop-local.resolved.golden.json"),
+			manifestPath: filepath.Join(repoRoot(t), "examples", "workspaces", "shop-local", "devarch.workspace.yaml"),
+			goldenPath:   filepath.Join(repoRoot(t), "testdata", "goldens", "resolve", "shop-local.resolved.golden.json"),
 		},
 		{
 			name:         "laravel-local",
-			manifestPath: filepath.Join(repoRoot(t), "examples", "v2", "workspaces", "laravel-local", "devarch.workspace.yaml"),
-			goldenPath:   filepath.Join(repoRoot(t), "testdata", "goldens", "phase2", "laravel-local.resolved.golden.json"),
+			manifestPath: filepath.Join(repoRoot(t), "examples", "workspaces", "laravel-local", "devarch.workspace.yaml"),
+			goldenPath:   filepath.Join(repoRoot(t), "testdata", "goldens", "resolve", "laravel-local.resolved.golden.json"),
 		},
 		{
 			name:         "ambiguous-http",
-			manifestPath: filepath.Join(repoRoot(t), "testdata", "goldens", "phase2", "fixtures", "ambiguous-http", "devarch.workspace.yaml"),
-			goldenPath:   filepath.Join(repoRoot(t), "testdata", "goldens", "phase2", "ambiguous-http.resolved.golden.json"),
+			manifestPath: filepath.Join(repoRoot(t), "testdata", "goldens", "resolve", "fixtures", "ambiguous-http", "devarch.workspace.yaml"),
+			goldenPath:   filepath.Join(repoRoot(t), "testdata", "goldens", "resolve", "ambiguous-http.resolved.golden.json"),
 		},
 	}
 

@@ -3,7 +3,7 @@ package runtime
 import "fmt"
 
 // UnsupportedOperationError reports an adapter capability that is intentionally
-// unavailable for a provider in this phase.
+// unavailable for a provider.
 type UnsupportedOperationError struct {
 	Provider  string
 	Operation string
@@ -26,7 +26,7 @@ func UnsupportedSourceDiagnostic(workspaceName, resourceKey, sourceType string) 
 		Code:      "unsupported-source-type",
 		Workspace: workspaceName,
 		Resource:  resourceKey,
-		Message:   fmt.Sprintf("resource %q uses unsupported source.type %q in Phase 3", resourceKey, sourceType),
+		Message:   fmt.Sprintf("resource %q uses unsupported source.type %q", resourceKey, sourceType),
 	}
 }
 

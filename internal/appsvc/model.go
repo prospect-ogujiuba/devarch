@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/prospect-ogujiuba/devarch/internal/contracts"
-	"github.com/prospect-ogujiuba/devarch/internal/importv1"
 	"github.com/prospect-ogujiuba/devarch/internal/projectscan"
 	"github.com/prospect-ogujiuba/devarch/internal/resolve"
 	runtimepkg "github.com/prospect-ogujiuba/devarch/internal/runtime"
@@ -19,7 +18,7 @@ type SocketStatusReport = workflows.SocketStatusReport
 type WorkflowCommandResult = workflows.CommandResult
 type WorkflowCheckResult = workflows.CheckResult
 
-// TemplateSummary is the API-safe catalog list shape used by Phase 4 surfaces.
+// TemplateSummary is the API-safe catalog list shape used by service surfaces.
 type TemplateSummary struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description,omitempty"`
@@ -45,7 +44,7 @@ type TemplateDetail struct {
 	Develop     map[string]any                `json:"develop,omitempty"`
 }
 
-// WorkspaceSummary is the locked Phase 4 list shape for /api/workspaces.
+// WorkspaceSummary is the locked list shape for /api/workspaces.
 type WorkspaceSummary struct {
 	Name          string                         `json:"name"`
 	DisplayName   string                         `json:"displayName,omitempty"`
@@ -55,7 +54,7 @@ type WorkspaceSummary struct {
 	ResourceCount int                            `json:"resourceCount"`
 }
 
-// WorkspaceDetail is the locked Phase 4 detail shape for /api/workspaces/{name}.
+// WorkspaceDetail is the locked detail shape for /api/workspaces/{name}.
 type WorkspaceDetail struct {
 	Name          string                         `json:"name"`
 	DisplayName   string                         `json:"displayName,omitempty"`
@@ -84,10 +83,6 @@ type WorkspaceStatusView struct {
 // ProjectScanView is the transport-safe project scan result returned by the
 // shared service boundary.
 type ProjectScanView = projectscan.Result
-
-// ImportPreview is the transport-safe V1 import result returned by the shared
-// service boundary.
-type ImportPreview = importv1.Preview
 
 // NotFoundError reports a typed missing service object.
 type NotFoundError struct {

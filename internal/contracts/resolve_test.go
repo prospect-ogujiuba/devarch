@@ -68,7 +68,7 @@ func TestResolveExplicitLinksAndPreservesSecretRefs(t *testing.T) {
 }
 
 func TestResolveAutoLinksSingleProvider(t *testing.T) {
-	manifestPath := writeContractsWorkspaceFixture(t, filepath.Join(t.TempDir(), "devarch.workspace.yaml"), `apiVersion: devarch.io/v2alpha1
+	manifestPath := writeContractsWorkspaceFixture(t, filepath.Join(t.TempDir(), "devarch.workspace.yaml"), `apiVersion: devarch.io/alpha1
 kind: Workspace
 metadata:
   name: auto-link
@@ -113,7 +113,7 @@ resources:
 }
 
 func TestResolveAmbiguousImportProducesSortedDiagnostic(t *testing.T) {
-	manifestPath := writeContractsWorkspaceFixture(t, filepath.Join(t.TempDir(), "devarch.workspace.yaml"), `apiVersion: devarch.io/v2alpha1
+	manifestPath := writeContractsWorkspaceFixture(t, filepath.Join(t.TempDir(), "devarch.workspace.yaml"), `apiVersion: devarch.io/alpha1
 kind: Workspace
 metadata:
   name: ambiguous-http
@@ -160,7 +160,7 @@ resources:
 }
 
 func TestResolveUnresolvedImportProducesDiagnostic(t *testing.T) {
-	manifestPath := writeContractsWorkspaceFixture(t, filepath.Join(t.TempDir(), "devarch.workspace.yaml"), `apiVersion: devarch.io/v2alpha1
+	manifestPath := writeContractsWorkspaceFixture(t, filepath.Join(t.TempDir(), "devarch.workspace.yaml"), `apiVersion: devarch.io/alpha1
 kind: Workspace
 metadata:
   name: unresolved-http
@@ -186,7 +186,7 @@ resources:
 
 func loadExampleGraph(t *testing.T, name string) *resolvepkg.Graph {
 	t.Helper()
-	manifestPath := filepath.Join(repoRoot(t), "examples", "v2", "workspaces", name, "devarch.workspace.yaml")
+	manifestPath := filepath.Join(repoRoot(t), "examples", "workspaces", name, "devarch.workspace.yaml")
 	return loadGraphFromManifest(t, manifestPath)
 }
 
