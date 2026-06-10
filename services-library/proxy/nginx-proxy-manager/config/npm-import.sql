@@ -104,7 +104,7 @@ INSERT INTO proxy_host (
 ) VALUES (
     NOW(), NOW(), 1, 0,
     '["adminer.test"]',
-    'https', 'adminer', 8080,
+    'http', 'adminer', 8080,
     0, 1, 1, 0, 1, 0, 1, 1, 0,
     'error_page 502 503 504 = @fallback;\nlocation @fallback {\n    return 503 "Adminer service is temporarily unavailable";\n    add_header Content-Type text/plain always;\n}',
     '{"devarch_import":true,"category":"dbms","service":"adminer","source_file":"http.conf","log_prefix":"adminer"}'
