@@ -10,7 +10,7 @@ services:
     healthcheck:
       test:
       - CMD-SHELL
-      - php -r '$c=@fsockopen("localhost",8080);if(!$c)exit(1);'
+      - php -r '$$c=@fsockopen("localhost",8080);if(!$$c)exit(1);'
       interval: 10s
       timeout: 5s
       retries: 5

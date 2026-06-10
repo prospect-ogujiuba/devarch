@@ -10,6 +10,13 @@ services:
     - npm_data:/data
     - npm_letsencrypt:/etc/letsencrypt
     - ../../../apps:/var/www/html:ro
+    - ./config/custom/events.conf:/data/nginx/custom/events.conf
+    - ./config/custom/http.conf:/data/nginx/custom/http.conf
+    - ./config/custom/http_top.conf:/data/nginx/custom/http_top.conf
+    - ./config/custom/root_top.conf:/data/nginx/custom/root_top.conf
+    - ./config/custom/server_proxy.conf:/data/nginx/custom/server_proxy.conf
+    - ./config/certs/local.crt:/etc/ssl/certs/local.crt:ro
+    - ./config/certs/local.key:/etc/ssl/private/local.key:ro
     healthcheck:
       test:
       - CMD-SHELL
