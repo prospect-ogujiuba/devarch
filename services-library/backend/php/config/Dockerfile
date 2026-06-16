@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y \
   libonig-dev \
   libzip-dev \
   libpq-dev \
+  libsqlite3-dev \
   libmagickwand-dev \
   librabbitmq-dev \
   libicu-dev \
@@ -36,9 +37,9 @@ RUN apt-get update && apt-get install -y \
   mbstring \
   zip \
   opcache \
-  pdo \
   pdo_mysql \
   pdo_pgsql \
+  pdo_sqlite \
   mysqli \
   exif \
   intl \
