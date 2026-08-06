@@ -1,6 +1,6 @@
 # DevArch
 
-DevArch is now a simple local service library: a collection of ready-to-run Docker Compose service definitions plus a small PHP server-info app.
+DevArch is now a simple local service library: a collection of Podman-compatible Compose service definitions plus application workspaces.
 
 The old Go CLI, planning workflow, daemon/API code, and generated workspace surfaces have been removed. Use the compose files directly.
 
@@ -8,23 +8,27 @@ The old Go CLI, planning workflow, daemon/API code, and generated workspace surf
 
 - `services-library/<category>/<service>/compose.yml` — service compose definitions.
 - `services-library/<category>/<service>/config/` — optional service configuration.
-- `apps/serverinfo/` — small PHP server info app.
+- `apps/<app>/` — application workspaces, typically separate repositories ignored by the top-level DevArch repository.
 - `.env.example` — example environment values.
 
 ## Usage
 
-Pick a service and run it with Docker Compose or a compatible Compose implementation:
+Pick a service and run it with Podman and the configured Compose provider:
 
 ```bash
 cd services-library/database/postgres
-docker compose up -d
+podman compose up -d
 ```
 
-Most compose files attach to the external network `microservices-net`. Create it once if your Compose runtime reports it missing:
+Systems configured with the standalone provider may use `podman-compose up -d` instead. Do not mix rootless users: containers and networks created by one user are not visible to another.
+
+Most compose files attach to the external network `microservices-net`. Create it once as the same service user that runs the stack:
 
 ```bash
-docker network create microservices-net
+podman network create microservices-net
 ```
+
+For persistent production services, manage the containers with systemd/Quadlet (or reviewed generated units) and enable lingering for the rootless service user.
 
 ## Development checks
 
