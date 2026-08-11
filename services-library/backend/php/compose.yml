@@ -9,7 +9,7 @@ services:
     working_dir: /var/www/html
     volumes:
       - ../../../apps:/var/www/html
-      - php_config_php_ini:/usr/local/etc/php/php.ini:ro
+      - ./config/php.ini:/usr/local/etc/php/php.ini:ro
     environment:
       COMPOSER_ALLOW_SUPERUSER: "1"
       COMPOSER_MEMORY_LIMIT: "-1"
@@ -23,9 +23,6 @@ services:
     networks:
       - microservices-net
     container_name: php
-
-volumes:
-  php_config_php_ini: null
 
 networks:
   microservices-net:

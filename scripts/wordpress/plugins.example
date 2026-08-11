@@ -1,0 +1,8 @@
+# One plugin source per line.
+# Bare slugs and wp: slugs install from WordPress.org.
+wp:query-monitor
+
+# Git repositories clone with your host Git credentials, then activate by folder name.
+# Prefer SSH for private repositories.
+# git:git@github.com:your-user/your-private-plugin.git
+# git:https://github.com/your-user/your-public-plugin.git
