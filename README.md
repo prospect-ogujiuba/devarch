@@ -30,6 +30,46 @@ podman network create microservices-net
 
 For persistent production services, manage the containers with systemd/Quadlet (or reviewed generated units) and enable lingering for the rootless service user.
 
+## Rapid WordPress bootstrap
+
+The restored WordPress workflow starts the PHP and MariaDB services, creates an isolated database, downloads WordPress, installs it, and optionally clones plugin repositories. Sites use the existing Nginx Proxy Manager wildcard routing and PHP-FPM container rather than a separate `wp server` process:
+
+```bash
+cp .env.example .env                    # first run only; change the credentials
+scripts/wordpress/bootstrap.sh my-site
+# ensure 127.0.0.1 my-site.test resolves locally, then open https://my-site.test
+```
+
+Select one of the recovered Git-repository profiles with `--profile` (historical `--preset` is also accepted):
+
+```bash
+scripts/wordpress/bootstrap.sh my-site --profile clean
+scripts/wordpress/bootstrap.sh --list-profiles
+```
+
+- `bare` — All-in-One WP Migration.
+- `clean` — TypeRocket Pro, MakerMaker, All-in-One WP Migration, and Admin Site Enhancements Pro.
+- `custom` — `clean` plus Manual Image Crop.
+- `loaded` — `custom` plus the historical WordPress.org development/debugging plugins.
+
+Profile Git repositories are resolved under `GITHUB_USER` and cloned over SSH. TypeRocket and MakerMaker are installed as must-use plugins, and All-in-One WP Migration remains inactive as in the latest historical workflow. Profile files live in `scripts/wordpress/profiles/` and can be reviewed or extended without editing the installer. Profile repositories were last checked against `prospect-ogujiuba` over SSH; inaccessible historical entries were removed.
+
+Install additional WordPress.org or Git plugins in the same run:
+
+```bash
+scripts/wordpress/bootstrap.sh my-site \
+  --plugin wp:query-monitor \
+  --plugin git:git@github.com:your-user/private-plugin.git
+
+# Or maintain one source per line:
+scripts/wordpress/bootstrap.sh my-site \
+  --plugins-file scripts/wordpress/plugins.example
+```
+
+Private repositories use the host's Git/SSH credentials; tokens are not embedded in clone URLs. Use `--github-plugin NAME` with `GITHUB_USER` for repositories under one GitHub account. Existing sites are preserved unless `--force` is explicit, and forced replacements are moved to `apps/.devarch-backups/`. Run `scripts/wordpress/bootstrap.sh --help` for URL, build, and dry-run options.
+
+The wildcard proxy resolves `<site-name>.test`, serves `apps/<site-name>`, and passes PHP directly to `php:9000` over `microservices-net`. The first run may take longer while the PHP image builds. Warm runs reuse the image and container volumes.
+
 ## Development checks
 
 ```bash
