@@ -414,9 +414,12 @@ install_wordpress() {
   wp_exec "$container_site" core download
   wp_prompt_secret "$db_password" "create wp-config.php" "$container_site" \
     config create --dbname="$db_name" --dbuser="$db_user" --dbhost="$MARIADB_CONTAINER" --skip-check --prompt=dbpass
+  # Local sites use bind-mounted, writable content; avoid WordPress requesting FTP credentials.
+  wp_exec "$container_site" config set FS_METHOD direct
   wp_prompt_secret "$ADMIN_PASSWORD_VALUE" "install WordPress administrator" "$container_site" \
     core install --url="$SITE_URL" --title="$SITE_TITLE" --admin_user="$ADMIN_USER_VALUE" --admin_email="$ADMIN_EMAIL_VALUE" --prompt=admin_password
   wp_exec "$container_site" option update uploads_use_yearmonth_folders 0
+  wp_exec "$container_site" post delete 1 --force
   wp_exec "$container_site" plugin delete akismet hello || true
 }
 
@@ -477,6 +480,25 @@ install_plugins() {
   done
 }
 
+configure_typerocket_galaxy() {
+  local typerocket_dir="$APPS_DIR/$SITE_NAME/wp-content/mu-plugins/typerocket-pro-v6/typerocket"
+  local site_dir="$APPS_DIR/$SITE_NAME"
+  [[ "$DRY_RUN" == true || -f "$typerocket_dir/galaxy" ]] || die "TypeRocket Galaxy executable not found: $typerocket_dir/galaxy"
+
+  log "configure TypeRocket Galaxy CLI"
+  run cp "$typerocket_dir/galaxy" "$site_dir/galaxy"
+  if [[ "$DRY_RUN" == true ]]; then
+    log "TYPEROCKET_GALAXY_PATH: wp-content/mu-plugins/typerocket-pro-v6/typerocket"
+    print_command tee "$site_dir/galaxy-config.php"
+  else
+    cat > "$site_dir/galaxy-config.php" <<'PHP'
+<?php
+define('TYPEROCKET_GALAXY_PATH', __DIR__ . '/wp-content/mu-plugins/typerocket-pro-v6/typerocket');
+PHP
+  fi
+  run chmod a+rx "$site_dir/galaxy"
+}
+
 install_mu_plugins() {
   local url slug target container_dir host_mu="$APPS_DIR/$SITE_NAME/wp-content/mu-plugins"
   run mkdir -p "$host_mu"
@@ -494,7 +516,14 @@ install_mu_plugins() {
     else
       die "must-use plugin entry file not found: $target/$slug.php"
     fi
+    [[ "$slug" != typerocket-pro-v6 ]] || configure_typerocket_galaxy
   done
+}
+
+make_content_writable() {
+  local host_content="$APPS_DIR/$SITE_NAME/wp-content"
+  log "make local wp-content writable by PHP"
+  run chmod -R a+rwX "$host_content"
 }
 
 install_themes() {
@@ -512,6 +541,11 @@ install_themes() {
     fi
     wp_exec "$container_site" theme activate "$slug"
   done
+
+  if ((${#THEME_SOURCES[@]} > 0)); then
+    log "delete inactive bundled themes"
+    wp_exec "$container_site" theme delete --all
+  fi
 }
 
 main() {
@@ -533,6 +567,7 @@ main() {
   install_mu_plugins
   install_plugins
   install_themes
+  make_content_writable
 
   log "ready through the existing .test reverse proxy: $SITE_URL"
   log "admin: $SITE_URL/wp-admin (user: $ADMIN_USER_VALUE)"

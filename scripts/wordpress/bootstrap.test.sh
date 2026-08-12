@@ -42,6 +42,9 @@ grep -q 'example-plugin' <<<"$dry_run_output" || fail "dry-run should plan Git p
 grep -q 'start PHP and MariaDB services' <<<"$dry_run_output" || fail "dry-run should plan service startup"
 grep -q 'URL: https://demo-site.test' <<<"$dry_run_output" || fail "default URL should use wildcard .test routing"
 grep -q 'existing .test reverse proxy' <<<"$dry_run_output" || fail "completion should identify infrastructure routing"
+grep -q 'config set FS_METHOD direct' <<<"$dry_run_output" || fail "bootstrap should enable direct filesystem changes without FTP credentials"
+grep -q 'post delete 1 --force' <<<"$dry_run_output" || fail "bootstrap should delete the default WordPress post"
+grep -q 'chmod -R a+rwX.*/wp-content' <<<"$dry_run_output" || fail "bootstrap should keep local wp-content writable by PHP"
 if grep -Eq 'not-printed-secret|not-printed-db-secret' <<<"$dry_run_output"; then
   fail "dry-run must not print secrets"
 fi
@@ -65,9 +68,19 @@ for repo in all-in-one-wp-migration admin-site-enhancements-pro typerocket-pro-v
   grep -q "$repo" <<<"$profile_output" || fail "clean profile should include $repo"
 done
 grep -q 'clone Git must-use plugin: typerocket-pro-v6' <<<"$profile_output" || fail "clean profile should install TypeRocket as an MU plugin"
+grep -q 'configure TypeRocket Galaxy CLI' <<<"$profile_output" || fail "TypeRocket profiles should configure the site-root Galaxy CLI"
+grep -q 'cp .*typerocket-pro-v6/typerocket/galaxy.*/profile-site/galaxy' <<<"$profile_output" || fail "Galaxy setup should copy rather than move the TypeRocket executable"
+grep -q 'TYPEROCKET_GALAXY_PATH.*typerocket-pro-v6/typerocket' <<<"$profile_output" || fail "Galaxy config should target the installed TypeRocket directory"
 grep -q 'clone Git plugin: makermaker' <<<"$profile_output" || fail "clean profile should install MakerMaker as a plugin"
 grep -q 'clone Git plugin: makerblocks' <<<"$profile_output" || fail "clean profile should install MakerBlocks as a plugin"
 grep -q 'clone Git theme: makerstarter' <<<"$profile_output" || fail "clean profile should install MakerStarter as a theme"
+grep -q 'theme delete --all' <<<"$profile_output" || fail "custom-theme profiles should delete bundled inactive themes"
+
+bare_output="$(GITHUB_USER=example bash "$BOOTSTRAP" bare-site --profile bare --dry-run)" || fail "bare profile dry-run should succeed"
+grep -q 'post delete 1 --force' <<<"$bare_output" || fail "bare profile should delete the default WordPress post"
+if grep -q 'theme delete --all' <<<"$bare_output"; then
+  fail "profiles without a custom theme should retain bundled themes"
+fi
 
 loaded_output="$(GITHUB_USER=example bash "$BOOTSTRAP" loaded-site --profile loaded --dry-run)" || fail "loaded profile dry-run should succeed"
 grep -q 'query-monitor' <<<"$loaded_output" || fail "loaded profile should include WordPress.org development plugins"

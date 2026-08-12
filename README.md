@@ -52,7 +52,7 @@ scripts/wordpress/bootstrap.sh --list-profiles
 - `custom` — `clean` plus Manual Image Crop.
 - `loaded` — `custom` plus the historical WordPress.org development/debugging plugins.
 
-Profile Git repositories are resolved under `GITHUB_USER` and cloned over SSH. Every TypeRocket Pro v6 profile installs MakerMaker and MakerBlocks as regular plugins, and MakerStarter as the active theme. All-in-One WP Migration remains inactive. Profile files live in `scripts/wordpress/profiles/` and can be reviewed or extended without editing the installer.
+Profile Git repositories are resolved under `GITHUB_USER` and cloned over SSH. Every TypeRocket Pro v6 profile installs MakerMaker and MakerBlocks as regular plugins, and MakerStarter as the active theme; bundled inactive themes are then removed. Every new site deletes WordPress’s default post and configures direct, writable local plugin/theme management without FTP prompts. All-in-One WP Migration remains inactive. Profile files live in `scripts/wordpress/profiles/` and can be reviewed or extended without editing the installer.
 
 Install additional WordPress.org or Git plugins in the same run:
 
