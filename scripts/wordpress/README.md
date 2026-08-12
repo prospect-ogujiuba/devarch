@@ -100,7 +100,9 @@ Profiles are defined under `scripts/wordpress/profiles/`:
 - `custom` — `clean` plus accessible image tooling.
 - `loaded` — `custom` plus WordPress.org development and debugging plugins.
 
-Every profile containing TypeRocket Pro v6 (`clean`, `custom`, and `loaded`) also installs MakerMaker and MakerBlocks as regular plugins, and MakerStarter as the active theme. `bare` does not install these packages.
+Every profile containing TypeRocket Pro v6 (`clean`, `custom`, and `loaded`) also installs MakerMaker and MakerBlocks as regular plugins, and MakerStarter as the active theme. When a custom theme is installed, the bundled inactive WordPress themes are removed. All new sites delete the default “Hello world!” post. `bare` does not install the custom packages.
+
+Local sites set `FS_METHOD=direct` and keep `wp-content` writable by PHP, so plugin and theme management does not request FTP credentials. TypeRocket profiles also configure the site-root `galaxy` executable to load TypeRocket from its must-use plugin directory.
 
 `--preset` remains an alias for `--profile`.
 
