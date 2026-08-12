@@ -61,13 +61,13 @@ docker_output="$(CONTAINER_RUNTIME=docker bash "$BOOTSTRAP" demo-docker --dry-ru
 grep -q -- "--user $(id -u):$(id -g)" <<<"$docker_output" || fail "Docker should use the host UID/GID"
 
 profile_output="$(GITHUB_USER=example bash "$BOOTSTRAP" profile-site --profile clean --dry-run)" || fail "clean profile dry-run should succeed"
-for repo in all-in-one-wp-migration admin-site-enhancements-pro typerocket-pro-v6 makermaker; do
+for repo in all-in-one-wp-migration admin-site-enhancements-pro typerocket-pro-v6 makermaker makerblocks makerstarter; do
   grep -q "$repo" <<<"$profile_output" || fail "clean profile should include $repo"
 done
-for removed_repo in makerblocks makerstarter; do
-  if grep -q "$removed_repo" <<<"$profile_output"; then fail "clean profile should prune missing $removed_repo"; fi
-done
-grep -q 'must-use plugin' <<<"$profile_output" || fail "clean profile should install TypeRocket as an MU plugin"
+grep -q 'clone Git must-use plugin: typerocket-pro-v6' <<<"$profile_output" || fail "clean profile should install TypeRocket as an MU plugin"
+grep -q 'clone Git plugin: makermaker' <<<"$profile_output" || fail "clean profile should install MakerMaker as a plugin"
+grep -q 'clone Git plugin: makerblocks' <<<"$profile_output" || fail "clean profile should install MakerBlocks as a plugin"
+grep -q 'clone Git theme: makerstarter' <<<"$profile_output" || fail "clean profile should install MakerStarter as a theme"
 
 loaded_output="$(GITHUB_USER=example bash "$BOOTSTRAP" loaded-site --profile loaded --dry-run)" || fail "loaded profile dry-run should succeed"
 grep -q 'query-monitor' <<<"$loaded_output" || fail "loaded profile should include WordPress.org development plugins"
@@ -89,8 +89,16 @@ profile_entries() {
 }
 
 [[ "$(profile_entries bare)" == 'github-plugin all-in-one-wp-migration inactive' ]] || fail "bare profile drifted from history"
-[[ "$(profile_entries clean)" == $'github-mu-plugin typerocket-pro-v6\ngithub-mu-plugin makermaker\ngithub-plugin all-in-one-wp-migration inactive\ngithub-plugin admin-site-enhancements-pro' ]] || fail "clean profile should contain TypeRocket, MakerMaker, and accessible repositories"
-[[ "$(profile_entries custom)" == $'github-mu-plugin typerocket-pro-v6\ngithub-mu-plugin makermaker\ngithub-plugin all-in-one-wp-migration inactive\ngithub-plugin admin-site-enhancements-pro\ngithub-plugin manual-image-crop' ]] || fail "custom profile should contain TypeRocket, MakerMaker, and accessible repositories"
+expected_custom_repos=$'github-mu-plugin typerocket-pro-v6\ngithub-plugin makermaker\ngithub-plugin makerblocks\ngithub-theme makerstarter\ngithub-plugin all-in-one-wp-migration inactive\ngithub-plugin admin-site-enhancements-pro'
+[[ "$(profile_entries clean)" == "$expected_custom_repos" ]] || fail "clean profile should contain TypeRocket and all three custom plugins/themes"
+[[ "$(profile_entries custom)" == "$expected_custom_repos"$'\ngithub-plugin manual-image-crop' ]] || fail "custom profile should contain TypeRocket and all three custom plugins/themes"
+for profile in clean custom loaded; do
+  entries="$(profile_entries "$profile")"
+  grep -q '^github-mu-plugin typerocket-pro-v6$' <<<"$entries" || fail "$profile profile should contain TypeRocket Pro v6"
+  grep -q '^github-plugin makermaker$' <<<"$entries" || fail "$profile profile should contain MakerMaker as a regular plugin"
+  grep -q '^github-plugin makerblocks$' <<<"$entries" || fail "$profile profile should contain MakerBlocks"
+  grep -q '^github-theme makerstarter$' <<<"$entries" || fail "$profile profile should contain MakerStarter"
+done
 [[ "$(profile_entries loaded | grep -c '^wp-plugin ')" -eq 12 ]] || fail "loaded profile should retain all 12 development plugins"
 
 printf 'bootstrap tests passed\n'

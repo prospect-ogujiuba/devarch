@@ -96,11 +96,11 @@ scripts/wordpress/bootstrap.sh my-site --profile loaded
 Profiles are defined under `scripts/wordpress/profiles/`:
 
 - `bare` — minimal WordPress with the historical migration plugin.
-- `clean` — TypeRocket Pro, MakerMaker, migration, and core development repositories.
+- `clean` — TypeRocket Pro, the three custom packages, migration, and core development repositories.
 - `custom` — `clean` plus accessible image tooling.
 - `loaded` — `custom` plus WordPress.org development and debugging plugins.
 
-TypeRocket Pro v6 and MakerMaker are installed as must-use plugins in `clean`, `custom`, and `loaded`, in that order. `bare` does not install either dependency.
+Every profile containing TypeRocket Pro v6 (`clean`, `custom`, and `loaded`) also installs MakerMaker and MakerBlocks as regular plugins, and MakerStarter as the active theme. `bare` does not install these packages.
 
 `--preset` remains an alias for `--profile`.
 

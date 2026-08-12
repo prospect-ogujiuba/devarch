@@ -48,11 +48,11 @@ scripts/wordpress/bootstrap.sh --list-profiles
 ```
 
 - `bare` — All-in-One WP Migration.
-- `clean` — TypeRocket Pro, MakerMaker, All-in-One WP Migration, and Admin Site Enhancements Pro.
+- `clean` — TypeRocket Pro, MakerMaker, MakerBlocks, MakerStarter, All-in-One WP Migration, and Admin Site Enhancements Pro.
 - `custom` — `clean` plus Manual Image Crop.
 - `loaded` — `custom` plus the historical WordPress.org development/debugging plugins.
 
-Profile Git repositories are resolved under `GITHUB_USER` and cloned over SSH. TypeRocket and MakerMaker are installed as must-use plugins, and All-in-One WP Migration remains inactive as in the latest historical workflow. Profile files live in `scripts/wordpress/profiles/` and can be reviewed or extended without editing the installer. Profile repositories were last checked against `prospect-ogujiuba` over SSH; inaccessible historical entries were removed.
+Profile Git repositories are resolved under `GITHUB_USER` and cloned over SSH. Every TypeRocket Pro v6 profile installs MakerMaker and MakerBlocks as regular plugins, and MakerStarter as the active theme. All-in-One WP Migration remains inactive. Profile files live in `scripts/wordpress/profiles/` and can be reviewed or extended without editing the installer.
 
 Install additional WordPress.org or Git plugins in the same run:
 
