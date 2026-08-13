@@ -66,7 +66,9 @@ scripts/wordpress/bootstrap.sh my-site \
   --plugins-file scripts/wordpress/plugins.example
 ```
 
-Private repositories use the host's Git/SSH credentials; tokens are not embedded in clone URLs. Use `--github-plugin NAME` with `GITHUB_USER` for repositories under one GitHub account. Existing sites are preserved unless `--force` is explicit, and forced replacements are moved to `apps/.devarch-backups/`. Run `scripts/wordpress/bootstrap.sh --help` for URL, build, and dry-run options.
+Private repositories use the host's Git/SSH credentials; tokens are not embedded in clone URLs. Use `--github-plugin NAME` with `GITHUB_USER` for repositories under one GitHub account. Existing sites are preserved unless `--force` is explicit, and forced replacements are moved to `apps/.devarch-backups/`.
+
+Restore a `.wpress` archive with `--restore /path/to/site.wpress`. The bootstrap uses AIOWM's native `wp ai1wm backup` to protect an existing target, installs and activates the established `GITHUB_USER/all-in-one-wp-migration` native-CLI repository when needed, prepares its writable backup/storage directories, performs the normal installation, and restores through native `wp ai1wm restore`. The WordPress.org build is intentionally not used for this workflow because it gates CLI restore behind its Unlimited Extension. When invoked from within an existing WordPress tree under `apps/`, the site name can be inferred. See `scripts/wordpress/README.md` for the full safety and permissions workflow, or run `scripts/wordpress/bootstrap.sh --help`.
 
 The wildcard proxy resolves `<site-name>.test`, serves `apps/<site-name>`, and passes PHP directly to `php:9000` over `microservices-net`. The first run may take longer while the PHP image builds. Warm runs reuse the image and container volumes.
 

@@ -102,7 +102,7 @@ Profiles are defined under `scripts/wordpress/profiles/`:
 
 Every profile containing TypeRocket Pro v6 (`clean`, `custom`, and `loaded`) also installs MakerMaker and MakerBlocks as regular plugins, and MakerStarter as the active theme. When a custom theme is installed, the bundled inactive WordPress themes are removed. All new sites delete the default “Hello world!” post. `bare` does not install the custom packages.
 
-Local sites set `FS_METHOD=direct` and keep `wp-content` writable by PHP, so plugin and theme management does not request FTP credentials. TypeRocket profiles also configure the site-root `galaxy` executable to load TypeRocket from its must-use plugin directory.
+Local sites set `FS_METHOD=direct` and keep `wp-content` writable by PHP, so plugin and theme management does not request FTP credentials. TypeRocket profiles also configure the site-root `galaxy` executable to load TypeRocket from its must-use plugin directory, then invoke MakerMaker's idempotent `register-galaxy` command so fresh sites expose `make:maker-resource` without an untracked manual dependency edit.
 
 `--preset` remains an alias for `--profile`.
 
@@ -150,15 +150,48 @@ scripts/wordpress/bootstrap.sh my-site \
 
 Private repositories use the host's Git and SSH credentials. Credential-bearing HTTPS URLs are rejected.
 
+## Restore an All-in-One WP Migration backup
+
+Install a site normally and then restore a `.wpress` archive through AIOWM's native WP-CLI command:
+
+```bash
+scripts/wordpress/bootstrap.sh my-site --restore /path/to/site.wpress
+```
+
+The restore workflow uses the established `GITHUB_USER/all-in-one-wp-migration` repository because its native CLI implements backup and restore; the current WordPress.org build gates CLI restore behind the Unlimited Extension while returning a successful process status without restoring. Override the established repository with `AIOWM_GIT_URL` when necessary.
+
+When the target already contains WordPress, the bootstrap first installs and activates that All-in-One WP Migration repository if necessary, prepares its writable directories, and runs a native safety backup:
+
+```text
+wp ai1wm backup
+```
+
+It then preserves the old site under `apps/.devarch-backups/`, performs the normal installation, copies the supplied archive into `wp-content/ai1wm-backups`, and restores it natively:
+
+```text
+wp ai1wm restore site.wpress
+```
+
+Both `wp-content/ai1wm-backups` and the plugin's `storage` directory are created with local-development write permissions so AIOWM can detect archives and maintain restore state. The restored `home` and `siteurl` are normalized to the requested local URL.
+
+From anywhere beneath an existing `apps/<site-name>` WordPress root—including `wp-content/plugins` or `wp-content/themes`—the site name may be omitted:
+
+```bash
+cd apps/my-site/wp-content/plugins
+/path/to/devarch/scripts/wordpress/bootstrap.sh --restore /path/to/site.wpress
+```
+
+If the supplied archive is itself inside the site being replaced, it is staged under `apps/.devarch-backups/imports/` before replacement. AIOWM's native CLI does not support multisite restores.
+
 ## Replace an existing site
 
-The bootstrap refuses to overwrite an existing site unless `--force` is explicit:
+Without `--restore`, the bootstrap refuses to overwrite an existing site unless `--force` is explicit:
 
 ```bash
 scripts/wordpress/bootstrap.sh my-site --force
 ```
 
-The previous directory is moved under `apps/.devarch-backups/`, and the isolated site database is reset.
+The previous directory is moved under `apps/.devarch-backups/`, and the isolated site database is reset. With `--restore`, replacement is implied after the native AIOWM safety backup, so `--force` is not also required.
 
 ## Rebuild PHP
 

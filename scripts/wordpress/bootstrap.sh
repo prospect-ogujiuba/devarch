@@ -24,6 +24,8 @@ SITE_TITLE=""
 SITE_URL=""
 PROFILE=""
 PLUGINS_FILE=""
+RESTORE_FILE=""
+REPLACE_EXISTING=false
 PLUGIN_SOURCES=()
 PLUGIN_ACTIVATIONS=()
 THEME_SOURCES=()
@@ -36,6 +38,7 @@ ADMIN_USER_VALUE="${WP_ADMIN_USER:-${ADMIN_USER:-admin}}"
 ADMIN_PASSWORD_VALUE="${WP_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
 ADMIN_EMAIL_VALUE="${WP_ADMIN_EMAIL:-${ADMIN_EMAIL:-admin@devarch.test}}"
 DB_ROOT_PASSWORD="${MARIADB_ROOT_PASSWORD:-devarch}"
+AIOWM_GIT_URL="${AIOWM_GIT_URL:-${GITHUB_USER:+git@github.com:${GITHUB_USER}/all-in-one-wp-migration.git}}"
 COMPOSE=()
 
 log() {
@@ -49,10 +52,11 @@ die() {
 
 usage() {
   cat <<'EOF'
-Usage: scripts/wordpress/bootstrap.sh <site-name> [options]
+Usage: scripts/wordpress/bootstrap.sh [site-name] [options]
 
 Create a local WordPress site in apps/<site-name> using the existing PHP,
-MariaDB, and wildcard .test reverse-proxy infrastructure.
+MariaDB, and wildcard .test reverse-proxy infrastructure. When run anywhere
+inside an existing apps/<site-name> WordPress tree, site-name may be omitted.
 
 Options:
   -t, --title TITLE          Site title (default: title-cased site name)
@@ -66,6 +70,9 @@ Options:
                                git:https://github.com/owner/plugin.git
       --github-plugin NAME   Clone NAME from GITHUB_USER over SSH; repeatable
       --plugins-file FILE    Read one plugin source per line (# comments allowed)
+  -r, --restore FILE         Install normally, then restore a .wpress archive with
+                             native AIOWM. Existing sites receive a native AIOWM
+                             safety backup before replacement.
       --build                Rebuild the PHP image before starting services
   -f, --force                Replace an existing site and reset its database;
                              the old directory is moved to apps/.devarch-backups
@@ -83,6 +90,7 @@ Examples:
   scripts/wordpress/bootstrap.sh my-site --plugin wp:query-monitor
   scripts/wordpress/bootstrap.sh my-site --github-plugin makerblocks
   scripts/wordpress/bootstrap.sh my-site --plugins-file scripts/wordpress/plugins.example
+  scripts/wordpress/bootstrap.sh my-site --restore /backups/site.wpress
 EOF
 }
 
@@ -208,6 +216,11 @@ parse_args() {
         PLUGINS_FILE="$2"
         shift 2
         ;;
+      -r|--restore)
+        [[ $# -ge 2 ]] || die "$1 requires a value"
+        RESTORE_FILE="$2"
+        shift 2
+        ;;
       --build)
         BUILD=true
         shift
@@ -235,14 +248,40 @@ parse_args() {
   done
 }
 
+discover_site_name() {
+  [[ -z "$SITE_NAME" ]] || return 0
+
+  local candidate
+  candidate="$(pwd -P)"
+  while [[ "$candidate" != / ]]; do
+    if [[ -f "$candidate/wp-config.php" ]]; then
+      [[ "$(dirname "$candidate")" == "$APPS_DIR" ]] || die "detected WordPress root is not directly under $APPS_DIR: $candidate"
+      SITE_NAME="$(basename "$candidate")"
+      return
+    fi
+    candidate="$(dirname "$candidate")"
+  done
+}
+
 validate_config() {
-  [[ -n "$SITE_NAME" ]] || die "site-name is required"
+  discover_site_name
+  [[ -n "$SITE_NAME" ]] || die "site-name is required outside an existing apps/<site-name> WordPress tree"
   [[ "$SITE_NAME" =~ ^[a-z0-9][a-z0-9-]{0,59}$ ]] || die "site-name must match [a-z0-9][a-z0-9-]{0,59} for .test routing"
 
   SITE_TITLE="${SITE_TITLE:-$(title_case "$SITE_NAME") }"
   SITE_TITLE="${SITE_TITLE% }"
   SITE_URL="${SITE_URL:-https://$SITE_NAME.test}"
   [[ "$SITE_URL" =~ ^https?://[^[:space:]]+$ ]] || die "URL must start with http:// or https:// and contain no spaces"
+
+  if [[ -n "$RESTORE_FILE" ]]; then
+    [[ -n "$AIOWM_GIT_URL" ]] || die "restore requires AIOWM_GIT_URL or GITHUB_USER for the established native-CLI AIOWM repository"
+    [[ "$AIOWM_GIT_URL" == git@* || "$AIOWM_GIT_URL" == ssh://* || "$AIOWM_GIT_URL" == https://* ]] || die "unsupported AIOWM Git URL: $AIOWM_GIT_URL"
+    [[ ! "$AIOWM_GIT_URL" =~ ^https?://[^/@]+@ ]] || die "credential-bearing AIOWM Git URLs are not allowed"
+    [[ "$RESTORE_FILE" == *.wpress ]] || die "restore file must use the .wpress extension: $RESTORE_FILE"
+    [[ "$(basename "$RESTORE_FILE")" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.wpress$ ]] || die "restore filename contains unsupported characters: $RESTORE_FILE"
+    [[ -f "$RESTORE_FILE" ]] || die "restore file not found: $RESTORE_FILE"
+    RESTORE_FILE="$(cd "$(dirname "$RESTORE_FILE")" && pwd -P)/$(basename "$RESTORE_FILE")"
+  fi
 
   load_profile
 
@@ -342,7 +381,8 @@ wait_for_services() {
 prepare_site_dir() {
   local site_dir="$APPS_DIR/$SITE_NAME"
   if [[ -e "$site_dir" ]]; then
-    [[ "$FORCE" == true ]] || die "$site_dir already exists; use --force to replace it"
+    [[ "$FORCE" == true || -n "$RESTORE_FILE" ]] || die "$site_dir already exists; use --force to replace it"
+    REPLACE_EXISTING=true
     local backup_dir="$APPS_DIR/.devarch-backups/${SITE_NAME}-$(date +%Y%m%d-%H%M%S)"
     log "move existing site to $backup_dir"
     run mkdir -p "$(dirname "$backup_dir")"
@@ -367,7 +407,7 @@ reset_database() {
   [[ "$DRY_RUN" == true ]] && return
 
   local drop_sql=""
-  [[ "$FORCE" == true ]] && drop_sql="DROP DATABASE IF EXISTS \`$db_name\`;"
+  [[ "$FORCE" == true || "$REPLACE_EXISTING" == true ]] && drop_sql="DROP DATABASE IF EXISTS \`$db_name\`;"
   local sql="$drop_sql
 CREATE DATABASE IF NOT EXISTS \`$db_name\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER IF NOT EXISTS '$db_user'@'%' IDENTIFIED BY '$db_password';
@@ -382,6 +422,13 @@ wp_exec() {
   shift
   run "$RUNTIME" exec --user "$CONTAINER_USER" -e HOME=/tmp "$PHP_CONTAINER" \
     wp --path="$container_site" --allow-root "$@"
+}
+
+wp_is_successful() {
+  local container_site="$1"
+  shift
+  "$RUNTIME" exec --user "$CONTAINER_USER" -e HOME=/tmp "$PHP_CONTAINER" \
+    wp --path="$container_site" --allow-root "$@" >/dev/null 2>&1
 }
 
 wp_prompt_secret() {
@@ -442,6 +489,81 @@ run_component_composer() {
   fi
 }
 
+ensure_aiowm() {
+  local container_site="/var/www/html/$SITE_NAME"
+  local host_plugin="$APPS_DIR/$SITE_NAME/wp-content/plugins/all-in-one-wp-migration"
+  local host_backups="$APPS_DIR/$SITE_NAME/wp-content/ai1wm-backups"
+  local host_storage="$host_plugin/storage"
+
+  log "ensure established native-CLI All-in-One WP Migration repository is installed and active"
+  if [[ "$DRY_RUN" == true ]]; then
+    wp_exec "$container_site" plugin deactivate all-in-one-wp-migration
+    print_command rm -rf "$host_plugin"
+    print_command git clone --depth 1 "$AIOWM_GIT_URL" "$host_plugin"
+  elif [[ ! -d "$host_plugin/.git" ]]; then
+    wp_exec "$container_site" plugin deactivate all-in-one-wp-migration || true
+    rm -rf "$host_plugin"
+    run git clone --depth 1 "$AIOWM_GIT_URL" "$host_plugin"
+  fi
+  if [[ "$DRY_RUN" == true || -f "$host_plugin/composer.json" ]]; then
+    run_component_composer "/var/www/html/$SITE_NAME/wp-content/plugins/all-in-one-wp-migration" "all-in-one-wp-migration"
+  fi
+  wp_exec "$container_site" plugin activate all-in-one-wp-migration
+
+  log "prepare writable AIOWM backup and storage directories"
+  run mkdir -p "$host_backups" "$host_storage"
+  run chmod -R a+rwX "$host_backups" "$host_storage"
+}
+
+stage_restore_archive() {
+  [[ -n "$RESTORE_FILE" ]] || return 0
+  local site_dir="$APPS_DIR/$SITE_NAME"
+  if [[ "$RESTORE_FILE" == "$site_dir"/* ]]; then
+    local staging_dir="$APPS_DIR/.devarch-backups/imports"
+    local staged="$staging_dir/${SITE_NAME}-$(date +%Y%m%d-%H%M%S)-$(basename "$RESTORE_FILE")"
+    log "stage restore archive outside the site before replacement: $staged"
+    run mkdir -p "$staging_dir"
+    run cp "$RESTORE_FILE" "$staged"
+    RESTORE_FILE="$staged"
+  fi
+}
+
+backup_existing_site() {
+  [[ -n "$RESTORE_FILE" && -f "$APPS_DIR/$SITE_NAME/wp-config.php" ]] || return 0
+  local container_site="/var/www/html/$SITE_NAME"
+  log "create native AIOWM safety backup of existing site"
+  ensure_aiowm
+  wp_exec "$container_site" ai1wm backup
+}
+
+restore_aiowm_archive() {
+  [[ -n "$RESTORE_FILE" ]] || return 0
+  local container_site="/var/www/html/$SITE_NAME"
+  local host_backups="$APPS_DIR/$SITE_NAME/wp-content/ai1wm-backups"
+  local archive_name
+  archive_name="$(basename "$RESTORE_FILE")"
+
+  ensure_aiowm
+  log "copy restore archive into AIOWM backups: $archive_name"
+  run cp "$RESTORE_FILE" "$host_backups/$archive_name"
+  run chmod a+rw "$host_backups/$archive_name"
+  log "restore archive with native AIOWM WP-CLI"
+  wp_exec "$container_site" ai1wm restore "$archive_name"
+  wp_exec "$container_site" option update home "$SITE_URL"
+  wp_exec "$container_site" option update siteurl "$SITE_URL"
+  wp_exec "$container_site" cache flush || true
+}
+
+register_makermaker_galaxy() {
+  local host_makermaker="$APPS_DIR/$SITE_NAME/wp-content/plugins/makermaker"
+  [[ "$DRY_RUN" == true || -d "$host_makermaker" ]] || return 0
+
+  log "register MakerMaker Galaxy command idempotently using runtime TypeRocket path"
+  wp_exec "/var/www/html/$SITE_NAME" makermaker register-galaxy
+  wp_exec "/var/www/html/$SITE_NAME" makermaker register-plugin-galaxy \
+    --plugin=makermaker --namespace=Maker/MakerMaker
+}
+
 install_plugins() {
   local i source activate
   local container_site="/var/www/html/$SITE_NAME"
@@ -480,23 +602,16 @@ install_plugins() {
   done
 }
 
-configure_typerocket_galaxy() {
-  local typerocket_dir="$APPS_DIR/$SITE_NAME/wp-content/mu-plugins/typerocket-pro-v6/typerocket"
+configure_site_galaxy_config() {
   local site_dir="$APPS_DIR/$SITE_NAME"
-  [[ "$DRY_RUN" == true || -f "$typerocket_dir/galaxy" ]] || die "TypeRocket Galaxy executable not found: $typerocket_dir/galaxy"
-
-  log "configure TypeRocket Galaxy CLI"
-  run cp "$typerocket_dir/galaxy" "$site_dir/galaxy"
+  local context="$site_dir/wp-content/plugins/makermaker/app/Generator/GalaxyContext.php"
+  [[ "$DRY_RUN" == true || -f "$context" ]] || return 0
+  log "write portable MakerMaker-owned site Galaxy launcher and resolver"
   if [[ "$DRY_RUN" == true ]]; then
-    log "TYPEROCKET_GALAXY_PATH: wp-content/mu-plugins/typerocket-pro-v6/typerocket"
-    print_command tee "$site_dir/galaxy-config.php"
+    print_command php -r '<MakerMaker GalaxyContext::siteLauncher()/siteConfig()>' "$context" "$site_dir/galaxy" "$site_dir/galaxy-config.php"
   else
-    cat > "$site_dir/galaxy-config.php" <<'PHP'
-<?php
-define('TYPEROCKET_GALAXY_PATH', __DIR__ . '/wp-content/mu-plugins/typerocket-pro-v6/typerocket');
-PHP
+    php -r 'require $argv[1]; file_put_contents($argv[2], Maker\MakerMaker\Generator\GalaxyContext::siteLauncher()); file_put_contents($argv[3], Maker\MakerMaker\Generator\GalaxyContext::siteConfig()); chmod($argv[2], 0755); chmod($argv[3], 0644);' "$context" "$site_dir/galaxy" "$site_dir/galaxy-config.php"
   fi
-  run chmod a+rx "$site_dir/galaxy"
 }
 
 install_mu_plugins() {
@@ -516,7 +631,6 @@ install_mu_plugins() {
     else
       die "must-use plugin entry file not found: $target/$slug.php"
     fi
-    [[ "$slug" != typerocket-pro-v6 ]] || configure_typerocket_galaxy
   done
 }
 
@@ -557,16 +671,23 @@ main() {
   log "URL: $SITE_URL"
   [[ -z "$PROFILE" ]] || log "profile: $PROFILE"
   log "plugins: ${#PLUGIN_SOURCES[@]}, must-use plugins: ${#MU_PLUGIN_SOURCES[@]}, themes: ${#THEME_SOURCES[@]}"
+  [[ -z "$RESTORE_FILE" ]] || log "restore: $RESTORE_FILE (native AIOWM)"
   [[ "$DRY_RUN" == true ]] && log "dry run; no changes will be made"
 
   ensure_network
   start_services
   wait_for_services
+  stage_restore_archive
+  backup_existing_site
   prepare_site_dir
   install_wordpress
   install_mu_plugins
   install_plugins
+  configure_site_galaxy_config
+  register_makermaker_galaxy
   install_themes
+  make_content_writable
+  restore_aiowm_archive
   make_content_writable
 
   log "ready through the existing .test reverse proxy: $SITE_URL"
