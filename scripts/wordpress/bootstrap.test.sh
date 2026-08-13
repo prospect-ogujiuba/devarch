@@ -14,6 +14,7 @@ grep -q 'Usage:' <<<"$help_output" || fail "help should include usage"
 grep -q -- '--plugin' <<<"$help_output" || fail "help should document plugins"
 grep -q -- '--dry-run' <<<"$help_output" || fail "help should document dry-run"
 grep -q -- '--profile' <<<"$help_output" || fail "help should document profiles"
+grep -q -- '--restore' <<<"$help_output" || fail "help should document native AIOWM restore"
 
 profiles_output="$(bash "$BOOTSTRAP" --list-profiles)" || fail "--list-profiles should succeed"
 for profile in bare clean custom loaded; do
@@ -26,6 +27,36 @@ fi
 if bash "$BOOTSTRAP" 'unsafe/site' --dry-run >/dev/null 2>&1; then
   fail "unsafe site names should be rejected"
 fi
+if bash "$BOOTSTRAP" restore-site --restore missing.wpress --dry-run >/dev/null 2>&1; then
+  fail "missing restore archives should be rejected"
+fi
+if bash "$BOOTSTRAP" restore-site --restore bootstrap.test.sh --dry-run >/dev/null 2>&1; then
+  fail "restore archives must use the .wpress extension"
+fi
+
+restore_archive="$(mktemp --suffix=.wpress)"
+nested_site="$SCRIPT_DIR/../../apps/nested-restore-test"
+cleanup() {
+  rm -f "$restore_archive"
+  rm -rf "$nested_site"
+}
+trap cleanup EXIT
+mkdir -p "$nested_site/wp-content/plugins/example"
+touch "$nested_site/wp-config.php"
+
+restore_output="$(
+  cd "$nested_site/wp-content/plugins/example"
+  bash "$BOOTSTRAP" --restore "$restore_archive" --dry-run
+)" || fail "nested WordPress restore dry-run should succeed"
+grep -q 'site: nested-restore-test' <<<"$restore_output" || fail "site name should be discovered from a nested WordPress directory"
+grep -q 'create native AIOWM safety backup' <<<"$restore_output" || fail "existing restore targets should receive a native AIOWM safety backup"
+grep -q 'ai1wm backup' <<<"$restore_output" || fail "existing safety backup should use native AIOWM WP-CLI"
+grep -q 'git clone --depth 1.*all-in-one-wp-migration' <<<"$restore_output" || fail "restore should install the established native-CLI AIOWM repository"
+grep -q 'plugin activate all-in-one-wp-migration' <<<"$restore_output" || fail "restore should activate AIOWM"
+grep -q 'wp-content/ai1wm-backups' <<<"$restore_output" || fail "restore should prepare the AIOWM backups directory"
+grep -q 'all-in-one-wp-migration/storage' <<<"$restore_output" || fail "restore should prepare AIOWM storage"
+grep -q 'chmod -R a+rwX' <<<"$restore_output" || fail "AIOWM working directories should be writable"
+grep -q 'ai1wm restore' <<<"$restore_output" || fail "restore should use native AIOWM WP-CLI"
 
 dry_run_output="$(
   ADMIN_PASSWORD='not-printed-secret' \
@@ -68,10 +99,13 @@ for repo in all-in-one-wp-migration admin-site-enhancements-pro typerocket-pro-v
   grep -q "$repo" <<<"$profile_output" || fail "clean profile should include $repo"
 done
 grep -q 'clone Git must-use plugin: typerocket-pro-v6' <<<"$profile_output" || fail "clean profile should install TypeRocket as an MU plugin"
-grep -q 'configure TypeRocket Galaxy CLI' <<<"$profile_output" || fail "TypeRocket profiles should configure the site-root Galaxy CLI"
-grep -q 'cp .*typerocket-pro-v6/typerocket/galaxy.*/profile-site/galaxy' <<<"$profile_output" || fail "Galaxy setup should copy rather than move the TypeRocket executable"
-grep -q 'TYPEROCKET_GALAXY_PATH.*typerocket-pro-v6/typerocket' <<<"$profile_output" || fail "Galaxy config should target the installed TypeRocket directory"
+grep -q 'write portable MakerMaker-owned site Galaxy launcher and resolver' <<<"$profile_output" || fail "site Galaxy launcher should be MakerMaker-owned"
+grep -q 'GalaxyContext::siteLauncher.*siteConfig' <<<"$profile_output" || fail "site Galaxy launcher/config should use shared portable sources"
 grep -q 'clone Git plugin: makermaker' <<<"$profile_output" || fail "clean profile should install MakerMaker as a plugin"
+grep -q 'register MakerMaker Galaxy command idempotently using runtime TypeRocket path' <<<"$profile_output" || fail "clean profile should register MakerMaker with runtime TypeRocket discovery"
+grep -q 'makermaker register-galaxy' <<<"$profile_output" || fail "Galaxy registration should use MakerMaker's repeatable registrar"
+if grep -q 'register-galaxy.*typerocket-path=' <<<"$profile_output"; then fail "bootstrap should not embed a TypeRocket registration path"; fi
+grep -q 'makermaker register-plugin-galaxy.*plugin=makermaker.*namespace=Maker/MakerMaker' <<<"$profile_output" || fail "clean profile should backfill MakerMaker's plugin-specific Galaxy context"
 grep -q 'clone Git plugin: makerblocks' <<<"$profile_output" || fail "clean profile should install MakerBlocks as a plugin"
 grep -q 'clone Git theme: makerstarter' <<<"$profile_output" || fail "clean profile should install MakerStarter as a theme"
 grep -q 'theme delete --all' <<<"$profile_output" || fail "custom-theme profiles should delete bundled inactive themes"
@@ -114,4 +148,6 @@ for profile in clean custom loaded; do
 done
 [[ "$(profile_entries loaded | grep -c '^wp-plugin ')" -eq 12 ]] || fail "loaded profile should retain all 12 development plugins"
 
+cleanup
+trap - EXIT
 printf 'bootstrap tests passed\n'
