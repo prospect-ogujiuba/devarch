@@ -1,240 +1,271 @@
 # WordPress development scripts
 
-This directory contains the DevArch WordPress bootstrap workflow. It creates sites under `apps/` and serves them through the existing infrastructure:
+`scripts/wordpress/bootstrap.sh` provisions local WordPress sites in `apps/<site-name>` using DevArch's shared containers and wildcard proxy. It does not run `wp server` or create a container per site.
 
-- Nginx Proxy Manager handles wildcard `*.test` HTTPS routing.
-- PHP-FPM runs in the `php` container and is reached as `php:9000` over `microservices-net`.
-- MariaDB runs in the `mariadb` container.
-- Nginx maps `<site-name>.test` to `apps/<site-name>`.
+## What the bootstrap does
 
-The bootstrap does **not** start a separate `wp server` process.
+A successful run performs this sequence:
 
-## Initial setup
+1. Loads the repository `.env`, validates arguments, and resolves a site name.
+2. Selects Podman or Docker and a Compose provider.
+3. Creates `microservices-net` when it does not exist.
+4. Starts the shared `php` and `mariadb` services, optionally rebuilding PHP.
+5. Waits up to 60 seconds for WP-CLI and MariaDB.
+6. Protects and moves an existing site when replacement is requested.
+7. Creates a dedicated database and database user.
+8. Downloads WordPress and writes `wp-config.php` without logging passwords.
+9. Applies the selected profile and any extra plugins.
+10. Makes `wp-content` writable for local PHP-FPM use.
+11. Optionally restores an All-in-One WP Migration `.wpress` archive.
 
-Run commands from the DevArch repository root.
+The resulting site is served by Nginx Proxy Manager at `https://<site-name>.test`. PHP requests are sent to `php:9000` over `microservices-net`, and MariaDB is reached as `mariadb`.
+
+## Requirements
+
+Run the script from this repository or invoke it by absolute path from an existing site.
+
+- Podman or Docker
+- `podman compose`, `podman-compose`, or `docker compose`
+- Git; host SSH credentials or a Git credential helper for private repositories
+- PHP on the host when using a MakerMaker profile (used to generate the portable Galaxy launcher)
+- A trusted local wildcard certificate and a wildcard proxy configured for `*.test`
+- `/etc/hosts` or local DNS entries such as `127.0.0.1 my-site.test`
+
+Copy the environment template before the first real run:
 
 ```bash
 cp .env.example .env
 ```
 
-Set at least the following values in `.env`:
+## Configuration
 
-```dotenv
-ADMIN_USER=admin
-ADMIN_PASSWORD=choose-a-secure-password
-ADMIN_EMAIL=you@example.com
-MARIADB_ROOT_PASSWORD=devarch
-GITHUB_USER=prospect-ogujiuba
-```
+The script sources `<repository>/.env` before resolving its settings. Values exported by the caller are used when the file does not replace them; WordPress-specific variables take precedence over shared admin values.
 
-Add each site hostname to `/etc/hosts` or your local DNS:
+| Variable | Purpose | Default / requirement |
+| --- | --- | --- |
+| `WP_ADMIN_USER` / `ADMIN_USER` | WordPress administrator login | `admin` |
+| `WP_ADMIN_PASSWORD` / `ADMIN_PASSWORD` | WordPress administrator password | Required for a real run |
+| `WP_ADMIN_EMAIL` / `ADMIN_EMAIL` | WordPress administrator email | `admin@devarch.test` |
+| `MARIADB_ROOT_PASSWORD` | Root password passed to the MariaDB service and client | `devarch` |
+| `GITHUB_USER` | Owner used by profiles and `--github-plugin` | Required for those features; the placeholder `github-user` is rejected |
+| `AIOWM_GIT_URL` | Native-CLI All-in-One WP Migration repository used by `--restore` | `git@github.com:$GITHUB_USER/all-in-one-wp-migration.git` |
+| `CONTAINER_RUNTIME` | Force `podman` or `docker` instead of auto-detection | Podman first, then Docker |
+| `WORDPRESS_CONTAINER_USER` | User passed to WP-CLI and Composer inside PHP | `0:0` for Podman; host UID/GID for Docker |
 
-```text
-127.0.0.1 my-site.test
-```
+Passwords are supplied to WP-CLI through standard input. Dry runs redact both WordPress and MariaDB secrets.
 
-The local wildcard certificate must also be trusted by your browser if you want to avoid a certificate warning.
-
-## Create a site
-
-The default WordPress URL is `https://<site-name>.test`.
+## Quick start
 
 ```bash
 scripts/wordpress/bootstrap.sh my-site
 ```
 
-This creates `apps/my-site`, creates an isolated database and database user, installs WordPress, and configures its URL as:
+This creates:
 
-```text
-https://my-site.test
-```
+- document root: `apps/my-site`
+- database: `wp_my_site`
+- database user: `wp_my_site` (truncated to 32 characters when necessary)
+- site URL: `https://my-site.test`
+- admin URL: `https://my-site.test/wp-admin`
+- title: `My Site`
 
-Open:
+The database password is generated per run and written only to `wp-config.php`.
 
-```text
-https://my-site.test
-https://my-site.test/wp-admin
-```
-
-Set a custom title:
+Customize the title or URL:
 
 ```bash
-scripts/wordpress/bootstrap.sh my-site --title "My Company"
+scripts/wordpress/bootstrap.sh my-site \
+  --title "My Company" \
+  --url https://wordpress.custom.test
 ```
 
-Set a non-default URL when required:
+Site names must match `[a-z0-9][a-z0-9-]{0,59}`. URLs must start with `http://` or `https://` and contain no spaces.
+
+## CLI reference
+
+| Option | Behavior |
+| --- | --- |
+| `-t, --title TITLE` | Set the site title; otherwise title-case the site name. |
+| `-u, --url URL` | Set `home`/`siteurl`; otherwise use `https://<site-name>.test`. |
+| `--profile NAME` | Load `bare`, `clean`, `custom`, `loaded`, or another profile file. |
+| `--preset NAME` | Backward-compatible alias for `--profile`. |
+| `--list-profiles` | Print discovered profile names/descriptions and exit. |
+| `-p, --plugin SOURCE` | Add and activate a plugin; repeatable. |
+| `--github-plugin NAME` | Clone and activate `git@github.com:$GITHUB_USER/NAME.git`; repeatable. |
+| `--plugins-file FILE` | Read additional plugin sources, one per line. |
+| `-r, --restore FILE` | Replace/install the site, then restore a `.wpress` archive. |
+| `--build` | Pass `--build` while starting the PHP Compose service. |
+| `-f, --force` | Move an existing site aside and reset its database. |
+| `--dry-run` | Validate and print the plan without changing hosts, files, containers, or databases. |
+| `-h, --help` | Print built-in help. |
+| `--no-server` | Deprecated no-op retained for compatibility; shared proxy routing is always used. |
+
+Preview a complete plan safely:
 
 ```bash
-scripts/wordpress/bootstrap.sh my-site --url https://custom.test
+scripts/wordpress/bootstrap.sh my-site --profile clean --dry-run
 ```
 
-## Preview the plan
+## Base WordPress configuration
 
-A dry run validates arguments and prints the planned operations without changing files, containers, or databases:
+Every new installation:
 
-```bash
-scripts/wordpress/bootstrap.sh my-site --dry-run
-```
+- sets `FS_METHOD` to `direct`;
+- disables year/month upload folders;
+- deletes the default post;
+- deletes Akismet and Hello Dolly when present;
+- grants local read/write access to `wp-content` so PHP can manage plugins, themes, uploads, and migration state without FTP prompts.
+
+Git components are shallow-cloned on the host. If a cloned plugin, must-use plugin, or theme contains `composer.json`, `composer install --no-interaction` runs inside the PHP container as the configured container user.
 
 ## Profiles
 
-List available profiles:
+List profiles or select one during installation:
 
 ```bash
 scripts/wordpress/bootstrap.sh --list-profiles
-```
-
-Create a site with a profile:
-
-```bash
-scripts/wordpress/bootstrap.sh my-site --profile bare
 scripts/wordpress/bootstrap.sh my-site --profile clean
-scripts/wordpress/bootstrap.sh my-site --profile custom
-scripts/wordpress/bootstrap.sh my-site --profile loaded
 ```
 
-Profiles are defined under `scripts/wordpress/profiles/`:
+| Profile | Installed components |
+| --- | --- |
+| `bare` | All-in-One WP Migration, installed but inactive. |
+| `clean` | TypeRocket Pro v6 as an MU plugin; MakerMaker and MakerBlocks as plugins; MakerStarter as the active theme; All-in-One WP Migration inactive; Admin Site Enhancements Pro active. |
+| `custom` | Everything in `clean`, plus Manual Image Crop. |
+| `loaded` | Everything in `custom`, plus Debug Bar, Debug Bar Actions and Filters Addon, Classic Editor, Default Featured Image, Plugin Inspector, Log Deprecated Notices, Query Monitor, Theme Check, WordPress Beta Tester, Show Current Template, Theme Inspector, and View Admin As. |
 
-- `bare` — minimal WordPress with the historical migration plugin.
-- `clean` — TypeRocket Pro, the three custom packages, migration, and core development repositories.
-- `custom` — `clean` plus accessible image tooling.
-- `loaded` — `custom` plus WordPress.org development and debugging plugins.
+Repositories named by a profile are cloned over SSH from `GITHUB_USER`. All components are active unless a profile marks a Git plugin `inactive`. When a profile installs a custom theme, MakerStarter is activated and all other inactive bundled themes are deleted.
 
-Every profile containing TypeRocket Pro v6 (`clean`, `custom`, and `loaded`) also installs MakerMaker and MakerBlocks as regular plugins, and MakerStarter as the active theme. When a custom theme is installed, the bundled inactive WordPress themes are removed. All new sites delete the default “Hello world!” post. `bare` does not install the custom packages.
+### TypeRocket and MakerMaker integration
 
-Local sites set `FS_METHOD=direct` and keep `wp-content` writable by PHP, so plugin and theme management does not request FTP credentials. TypeRocket profiles also configure the site-root `galaxy` executable to load TypeRocket from its must-use plugin directory, then invoke MakerMaker's idempotent `register-galaxy` command so fresh sites expose `make:maker-resource` without an untracked manual dependency edit.
+The `clean`, `custom`, and `loaded` profiles additionally:
 
-`--preset` remains an alias for `--profile`.
+- install `typerocket-pro-v6` under `wp-content/mu-plugins/` and copy its root entry file into the MU-plugin directory;
+- install MakerMaker as a normal plugin;
+- generate executable `galaxy` and `galaxy-config.php` files in the site root from MakerMaker's `GalaxyContext`;
+- run the idempotent `wp makermaker register-galaxy` command;
+- backfill MakerMaker's plugin-specific Galaxy context with `register-plugin-galaxy`.
 
-## Install plugins
+This makes MakerMaker's Galaxy commands, including `make:maker-resource`, available without manually editing a dependency.
 
-Install a WordPress.org plugin:
+### Extending profiles
+
+Profiles are line-oriented files in `scripts/wordpress/profiles/<name>.profile`. The first `# ` comment becomes the description shown by `--list-profiles`.
+
+Supported directives are:
+
+```text
+github-plugin repository-name [active|inactive]
+github-theme repository-name
+github-mu-plugin repository-name
+wp-plugin wordpress-org-slug
+```
+
+Repository names are resolved as `git@github.com:$GITHUB_USER/<repository-name>.git`. Unknown directives, unsafe names, extra fields, and unsupported activation values stop the run before provisioning.
+
+## Additional plugins
+
+`--plugin` accepts:
 
 ```bash
+# WordPress.org; a bare slug is equivalent to wp:<slug>
 scripts/wordpress/bootstrap.sh my-site --plugin wp:query-monitor
-```
-
-A bare WordPress.org slug is also accepted:
-
-```bash
 scripts/wordpress/bootstrap.sh my-site --plugin query-monitor
-```
 
-Install multiple plugins:
-
-```bash
+# Git over SSH or HTTPS
 scripts/wordpress/bootstrap.sh my-site \
-  --plugin wp:query-monitor \
-  --plugin wp:debug-bar
-```
+  --plugin git:git@github.com:owner/private-plugin.git \
+  --plugin git:https://github.com/owner/public-plugin.git
 
-Clone a Git plugin:
-
-```bash
-scripts/wordpress/bootstrap.sh my-site \
-  --plugin git:git@github.com:owner/plugin.git
-```
-
-Clone a repository under `GITHUB_USER`:
-
-```bash
+# Repository beneath GITHUB_USER
 scripts/wordpress/bootstrap.sh my-site --github-plugin makerblocks
 ```
 
-Load sources from a file:
+The target directory is derived from the repository filename, minus `.git`. Existing plugin directories are not recloned, but activation and applicable Composer setup still run. Command-line plugins are activated; profiles may explicitly leave Git plugins inactive.
+
+A plugin file supports blank lines, full-line comments, and trailing `#` comments:
 
 ```bash
 scripts/wordpress/bootstrap.sh my-site \
   --plugins-file scripts/wordpress/plugins.example
 ```
 
-Private repositories use the host's Git and SSH credentials. Credential-bearing HTTPS URLs are rejected.
+Credential-bearing HTTPS URLs such as `https://token@github.com/...` are rejected. Use SSH or a configured Git credential helper instead.
 
-## Restore an All-in-One WP Migration backup
+## Replacing an existing site
 
-Install a site normally and then restore a `.wpress` archive through AIOWM's native WP-CLI command:
-
-```bash
-scripts/wordpress/bootstrap.sh my-site --restore /path/to/site.wpress
-```
-
-The restore workflow uses the established `GITHUB_USER/all-in-one-wp-migration` repository because its native CLI implements backup and restore; the current WordPress.org build gates CLI restore behind the Unlimited Extension while returning a successful process status without restoring. Override the established repository with `AIOWM_GIT_URL` when necessary.
-
-When the target already contains WordPress, the bootstrap first installs and activates that All-in-One WP Migration repository if necessary, prepares its writable directories, and runs a native safety backup:
-
-```text
-wp ai1wm backup
-```
-
-It then preserves the old site under `apps/.devarch-backups/`, performs the normal installation, copies the supplied archive into `wp-content/ai1wm-backups`, and restores it natively:
-
-```text
-wp ai1wm restore site.wpress
-```
-
-Both `wp-content/ai1wm-backups` and the plugin's `storage` directory are created with local-development write permissions so AIOWM can detect archives and maintain restore state. The restored `home` and `siteurl` are normalized to the requested local URL.
-
-From anywhere beneath an existing `apps/<site-name>` WordPress root—including `wp-content/plugins` or `wp-content/themes`—the site name may be omitted:
-
-```bash
-cd apps/my-site/wp-content/plugins
-/path/to/devarch/scripts/wordpress/bootstrap.sh --restore /path/to/site.wpress
-```
-
-If the supplied archive is itself inside the site being replaced, it is staged under `apps/.devarch-backups/imports/` before replacement. AIOWM's native CLI does not support multisite restores.
-
-## Replace an existing site
-
-Without `--restore`, the bootstrap refuses to overwrite an existing site unless `--force` is explicit:
+A normal run refuses to overwrite `apps/<site-name>`:
 
 ```bash
 scripts/wordpress/bootstrap.sh my-site --force
 ```
 
-The previous directory is moved under `apps/.devarch-backups/`, and the isolated site database is reset. With `--restore`, replacement is implied after the native AIOWM safety backup, so `--force` is not also required.
+With `--force`, the site directory is moved to:
 
-## Rebuild PHP
-
-Rebuild the PHP image before starting the services:
-
-```bash
-scripts/wordpress/bootstrap.sh my-site --build
+```text
+apps/.devarch-backups/<site-name>-YYYYMMDD-HHMMSS
 ```
 
-## CLI reference
+The matching database is dropped and recreated with a newly generated password. This is a local safety move, not a database export; use the restore workflow when a native WordPress backup is required.
+
+## Restoring a `.wpress` archive
 
 ```bash
-scripts/wordpress/bootstrap.sh --help
+scripts/wordpress/bootstrap.sh my-site --restore /absolute/or/relative/site.wpress
 ```
+
+Restore requires `AIOWM_GIT_URL` or a usable `GITHUB_USER`. DevArch deliberately installs that Git repository rather than the WordPress.org package because the established repository exposes native `wp ai1wm backup` and `wp ai1wm restore`; the WordPress.org build gates CLI restore behind the Unlimited Extension.
+
+For an existing WordPress target, the script:
+
+1. Installs/activates the native-CLI AIOWM repository in the old site if necessary.
+2. Creates writable `wp-content/ai1wm-backups` and plugin `storage` directories.
+3. Runs `wp ai1wm backup` before replacement.
+4. Moves the old site to `apps/.devarch-backups/`.
+5. Installs a fresh site and its requested profile/plugins.
+6. Copies the archive to the new `wp-content/ai1wm-backups/` directory.
+7. Runs `wp ai1wm restore <archive-name>`.
+8. Normalizes restored `home` and `siteurl` values and flushes the cache.
+
+`--restore` implies permission to replace the target, so `--force` is not required. If the input archive is inside the site being replaced, it is first copied to `apps/.devarch-backups/imports/`.
+
+The archive must exist, use `.wpress`, and have a filename containing only letters, numbers, dots, underscores, and hyphens. AIOWM's native CLI does not support multisite restores.
+
+When called from anywhere beneath an existing `apps/<site-name>` WordPress tree, the site name can be inferred:
+
+```bash
+cd apps/my-site/wp-content/plugins
+/path/to/devarch/scripts/wordpress/bootstrap.sh \
+  --restore /backups/my-site.wpress
+```
+
+Discovery requires `wp-config.php`, and the detected WordPress root must be directly below this repository's `apps/` directory.
+
+## Runtime and troubleshooting
+
+- Set `CONTAINER_RUNTIME=docker` or `podman` to bypass auto-detection.
+- Podman defaults WP-CLI to `--user 0:0`, which maps bind-mounted ownership through rootless Podman. Docker defaults to the host UID/GID.
+- Set `WORDPRESS_CONTAINER_USER` only when the service image or bind-mount ownership requires another mapping.
+- The script creates `microservices-net`, but Nginx Proxy Manager must already be configured to route `*.test` document roots to the shared PHP service.
+- A first run may take longer while service images and WordPress are downloaded. Subsequent runs reuse images and persistent container volumes.
+- A readiness timeout usually means the `php` container lacks WP-CLI, MariaDB rejected `MARIADB_ROOT_PASSWORD`, or the expected container names were changed.
 
 ## Tests
 
-Run the bootstrap regression suite:
+Run the shell regression suite without provisioning a real site:
 
 ```bash
 bash scripts/wordpress/bootstrap.test.sh
 ```
 
-The suite covers help and profile output, validation, secret-safe dry runs, runtime user mapping, plugin sources, and recovered profile contents.
+It covers help/profile output, validation, site discovery, secret-safe dry runs, Podman/Docker user mapping, plugin sources, profile contents, Galaxy integration, and native AIOWM backup/restore planning.
 
 ## Current Maker site
 
-The local architecture test site is at:
-
-```text
-apps/maker-site
-https://maker-site.test
-```
-
-Its local administrator credentials are stored with mode `0600` at:
-
-```text
-apps/maker-site/.devarch-admin-credentials
-```
-
-### MakerBlocks
+The local architecture test site is `apps/maker-site` at `https://maker-site.test`. Its administrator credentials are stored with mode `0600` in `apps/maker-site/.devarch-admin-credentials`.
 
 ```bash
+# MakerBlocks
 cd apps/maker-site/wp-content/plugins/makerblocks
 npm install
 npm start
@@ -242,18 +273,10 @@ npm run build
 npm test
 npm run lint
 npm run plugin-zip
-```
-
-Create another block:
-
-```bash
 npm run create:block -- testimonial
 npm run create:block -- listing --dynamic
-```
 
-### MakerStarter
-
-```bash
+# MakerStarter
 cd apps/maker-site/wp-content/themes/makerstarter
 npm install
 npm test
