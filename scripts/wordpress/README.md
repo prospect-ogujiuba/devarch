@@ -17,6 +17,7 @@ A successful run performs this sequence:
 9. Applies the selected profile and any extra plugins.
 10. Makes `wp-content` writable for local PHP-FPM use.
 11. Optionally restores an All-in-One WP Migration `.wpress` archive.
+12. Idempotently registers `127.0.0.1 <site-name>.test` in the system hosts file.
 
 The resulting site is served by Nginx Proxy Manager at `https://<site-name>.test`. PHP requests are sent to `php:9000` over `microservices-net`, and MariaDB is reached as `mariadb`.
 
@@ -29,7 +30,7 @@ Run the script from this repository or invoke it by absolute path from an existi
 - Git; host SSH credentials or a Git credential helper for private repositories
 - PHP on the host when using a MakerMaker profile (used to generate the portable Galaxy launcher)
 - A trusted local wildcard certificate and a wildcard proxy configured for `*.test`
-- `/etc/hosts` or local DNS entries such as `127.0.0.1 my-site.test`
+- `sudo` on Linux/macOS, or Windows PowerShell/UAC under WSL or Git Bash, for automatic hosts-file registration
 
 Copy the environment template before the first real run:
 
@@ -96,6 +97,7 @@ Site names must match `[a-z0-9][a-z0-9-]{0,59}`. URLs must start with `http://` 
 | `-r, --restore FILE` | Replace/install the site, then restore a `.wpress` archive. |
 | `--build` | Pass `--build` while starting the PHP Compose service. |
 | `-f, --force` | Move an existing site aside and reset its database. |
+| `--no-hosts` | Skip automatic registration of `127.0.0.1 <site-name>.test`. |
 | `--dry-run` | Validate and print the plan without changing hosts, files, containers, or databases. |
 | `-h, --help` | Print built-in help. |
 | `--no-server` | Deprecated no-op retained for compatibility; shared proxy routing is always used. |

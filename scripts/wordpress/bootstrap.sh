@@ -8,6 +8,7 @@ PHP_COMPOSE="$PROJECT_ROOT/services-library/backend/php/compose.yml"
 MARIADB_COMPOSE="$PROJECT_ROOT/services-library/database/mariadb/compose.yml"
 ENV_FILE="$PROJECT_ROOT/.env"
 PROFILE_DIR="$SCRIPT_DIR/profiles"
+HOSTS_HELPER="$PROJECT_ROOT/scripts/hosts/register-host.sh"
 
 if [[ -f "$ENV_FILE" ]]; then
   set -a
@@ -19,6 +20,7 @@ fi
 DRY_RUN=false
 FORCE=false
 BUILD=false
+REGISTER_HOSTS=true
 SITE_NAME=""
 SITE_TITLE=""
 SITE_URL=""
@@ -76,6 +78,7 @@ Options:
       --build                Rebuild the PHP image before starting services
   -f, --force                Replace an existing site and reset its database;
                              the old directory is moved to apps/.devarch-backups
+      --no-hosts             Do not register <site-name>.test in the system hosts file
       --dry-run              Validate and print the plan without changing anything
   -h, --help                 Show this help
 
@@ -231,6 +234,10 @@ parse_args() {
         ;;
       -f|--force)
         FORCE=true
+        shift
+        ;;
+      --no-hosts)
+        REGISTER_HOSTS=false
         shift
         ;;
       --dry-run)
@@ -662,6 +669,22 @@ install_themes() {
   fi
 }
 
+register_site_host() {
+  local hostname="$SITE_NAME.test"
+  [[ "$REGISTER_HOSTS" == true ]] || { log "hosts registration skipped: $hostname"; return 0; }
+  if [[ "$DRY_RUN" == true ]]; then
+    log "register local host: 127.0.0.1 $hostname"
+    return 0
+  fi
+  if [[ ! -x "$HOSTS_HELPER" ]]; then
+    log "warning: hosts helper is unavailable; manually map 127.0.0.1 $hostname"
+    return 0
+  fi
+  if ! "$HOSTS_HELPER" "$hostname"; then
+    log "warning: could not register $hostname; manually map it to 127.0.0.1"
+  fi
+}
+
 main() {
   parse_args "$@"
   validate_config
@@ -689,6 +712,7 @@ main() {
   make_content_writable
   restore_aiowm_archive
   make_content_writable
+  register_site_host
 
   log "ready through the existing .test reverse proxy: $SITE_URL"
   log "admin: $SITE_URL/wp-admin (user: $ADMIN_USER_VALUE)"

@@ -37,7 +37,7 @@ For persistent production services, manage the containers with systemd/Quadlet (
 ```bash
 cp .env.example .env                    # first run; replace example credentials
 scripts/wordpress/bootstrap.sh my-site
-# map 127.0.0.1 my-site.test locally, then open https://my-site.test
+# approve the hosts-file elevation prompt, then open https://my-site.test
 ```
 
 Each base install sets `FS_METHOD=direct`, disables date-based upload folders, deletes the default post and bundled sample plugins, and makes `wp-content` writable by the shared PHP container. The default database is `wp_<site_name>`, its password is generated per run and written only to `wp-config.php`, and the default URL/title are derived from the site name.
@@ -90,10 +90,10 @@ See [`scripts/wordpress/README.md`](scripts/wordpress/README.md) for prerequisit
 ```bash
 scripts/laravel/bootstrap.sh demo --dry-run
 scripts/laravel/bootstrap.sh demo
-# map 127.0.0.1 demo.test locally, then open https://demo.test
+# approve the hosts-file elevation prompt, then open https://demo.test
 ```
 
-The wildcard proxy automatically detects `apps/<app-name>/public/index.php`, selects `public/` as the document root, and routes PHP to `php:9000`; no per-app proxy entry or standalone server is required. Use `--force` only after reviewing its backup/recovery behavior. See [`scripts/laravel/README.md`](scripts/laravel/README.md) for prerequisites, configuration precedence, CLI options, profiles, package syntax, runtime mapping, safety, regression tests, and the optional real-provisioning smoke test.
+The wildcard proxy automatically detects `apps/<app-name>/public/index.php`, selects `public/` as the document root, and routes PHP to `php:9000`; no per-app proxy entry or standalone server is required. Both bootstraps idempotently register `127.0.0.1 <name>.test` through the shared cross-platform hosts helper; use `--no-hosts` to opt out. Use `--force` only after reviewing its backup/recovery behavior. See [`scripts/laravel/README.md`](scripts/laravel/README.md) for prerequisites, configuration precedence, CLI options, profiles, package syntax, runtime mapping, safety, regression tests, and the optional real-provisioning smoke test.
 
 ## Development checks
 
