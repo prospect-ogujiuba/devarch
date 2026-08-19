@@ -326,7 +326,9 @@ validate_composer_constraint() {
     clause="${clause//,/ , }"
     read -r -a tokens <<< "$clause"
     if [[ ${#tokens[@]} -eq 3 && "${tokens[1]}" == '-' ]]; then
-      is_composer_version_atom "${tokens[0]}" && is_composer_version_atom "${tokens[2]}" || die 'invalid Composer version constraint'
+      if ! is_composer_version_atom "${tokens[0]}" || ! is_composer_version_atom "${tokens[2]}"; then
+        die 'invalid Composer version constraint'
+      fi
       continue
     fi
     after_comma=false
@@ -342,7 +344,9 @@ validate_composer_constraint() {
         '='*|'>'*|'<'*|'^'*|'~'*) atom="${token:1}" ;;
         *) atom="$token" ;;
       esac
-      [[ -n "$atom" ]] && is_composer_version_atom "$atom" || die 'invalid Composer version constraint'
+      if [[ -z "$atom" ]] || ! is_composer_version_atom "$atom"; then
+        die 'invalid Composer version constraint'
+      fi
       seen_atom=true
       after_comma=false
     done
@@ -496,10 +500,7 @@ validate_config() {
   FAILED_PATH="$(choose_unique_path "$APPS_DIR/.devarch-failed/$APP_NAME-$stamp")"
   [[ "$DATABASE" == mariadb ]] && derive_identifiers
 
-  local file
-  for file in "$PHP_COMPOSE"; do
-    [[ -f "$file" ]] || die "required Compose file not found: $file"
-  done
+  [[ -f "$PHP_COMPOSE" ]] || die "required Compose file not found: $PHP_COMPOSE"
   [[ "$DATABASE" != mariadb || -f "$MARIADB_COMPOSE" ]] || die "required Compose file not found: $MARIADB_COMPOSE"
   [[ "$WITH_REDIS" != true || -f "$REDIS_COMPOSE" ]] || die "required Compose file not found: $REDIS_COMPOSE"
   [[ "$WITH_MAILPIT" != true || -f "$MAILPIT_COMPOSE" ]] || die "required Compose file not found: $MAILPIT_COMPOSE"
@@ -581,13 +582,15 @@ start_services() {
 }
 
 wait_for_services() {
-  local attempt ready
+  local ready
   log 'wait for required services'
-  for attempt in {1..90}; do
+  for _ in {1..90}; do
     ready=true
     "$RUNTIME" exec php php -v >/dev/null 2>&1 || ready=false
     "$RUNTIME" exec php composer --version >/dev/null 2>&1 || ready=false
     if [[ "$DATABASE" == mariadb ]]; then
+      # The password expands in the container shell, not on the host.
+      # shellcheck disable=SC2016
       "$RUNTIME" exec mariadb sh -c 'mariadb-admin ping -uroot -p"$MARIADB_ROOT_PASSWORD" --silent' >/dev/null 2>&1 || ready=false
     fi
     if [[ "$WITH_REDIS" == true ]]; then
@@ -604,6 +607,8 @@ wait_for_services() {
 
 db_exec() {
   local sql="$1"
+  # The password expands in the container shell, not on the host.
+  # shellcheck disable=SC2016
   if ! printf '%s\n' "$sql" | "$RUNTIME" exec -i mariadb sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' >/dev/null; then
     die 'MariaDB operation failed (SQL and credentials suppressed)'
   fi
@@ -611,6 +616,8 @@ db_exec() {
 
 db_query() {
   local sql="$1"
+  # The password expands in the container shell, not on the host.
+  # shellcheck disable=SC2016
   printf '%s\n' "$sql" | "$RUNTIME" exec -i mariadb sh -c 'mariadb -N -B -uroot -p"$MARIADB_ROOT_PASSWORD"' 2>/dev/null
 }
 
@@ -809,6 +816,8 @@ rollback() {
   fi
 
   if [[ "$DB_CREATED" == true ]]; then
+    # SQL backticks are literal; the password expands in the container shell.
+    # shellcheck disable=SC2016
     if [[ "${LARAVEL_TEST_FAIL_CLEANUP_DATABASE:-0}" == 1 ]]; then
       db_status=failed; incomplete=true
     elif printf 'DROP DATABASE `%s`;\n' "$DB_NAME" | "$RUNTIME" exec -i mariadb sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' >/dev/null 2>&1; then
@@ -818,6 +827,8 @@ rollback() {
     fi
   fi
   if [[ "$DB_USER_CREATED" == true ]]; then
+    # The password expands in the container shell, not on the host.
+    # shellcheck disable=SC2016
     if [[ "${LARAVEL_TEST_FAIL_CLEANUP_USER:-0}" == 1 ]]; then
       user_status=failed; incomplete=true
     elif printf "DROP USER '%s'@'%%';\n" "$DB_USER" | "$RUNTIME" exec -i mariadb sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' >/dev/null 2>&1; then

@@ -83,6 +83,18 @@ The WordPress.org AIOWM build is intentionally not used because it gates CLI res
 
 See [`scripts/wordpress/README.md`](scripts/wordpress/README.md) for prerequisites, environment-variable precedence, every option, exact profile contents/directives, plugin-source validation, runtime user mapping, restore safety details, troubleshooting, and tests. The wildcard proxy resolves `<site-name>.test`, serves `apps/<site-name>`, and sends PHP to `php:9000` over `microservices-net`.
 
+## Rapid Laravel bootstrap
+
+`scripts/laravel/bootstrap.sh` creates a fresh Laravel application in `apps/<app-name>` using the shared PHP-FPM container and either an isolated MariaDB database/user or SQLite. The default `bare` profile uses MariaDB and runs migrations; `standard` adds Mailpit, while `loaded` adds Mailpit and Redis.
+
+```bash
+scripts/laravel/bootstrap.sh demo --dry-run
+scripts/laravel/bootstrap.sh demo
+# map 127.0.0.1 demo.test locally, then open https://demo.test
+```
+
+The wildcard proxy automatically detects `apps/<app-name>/public/index.php`, selects `public/` as the document root, and routes PHP to `php:9000`; no per-app proxy entry or standalone server is required. Use `--force` only after reviewing its backup/recovery behavior. See [`scripts/laravel/README.md`](scripts/laravel/README.md) for prerequisites, configuration precedence, CLI options, profiles, package syntax, runtime mapping, safety, regression tests, and the optional real-provisioning smoke test.
+
 ## Development checks
 
 ```bash
