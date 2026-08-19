@@ -64,7 +64,7 @@ expect_failure() {
 
 # Informational modes are standalone and do not inspect a container runtime.
 help_output="$(PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" bash "$BOOTSTRAP" --help)" || fail '--help should succeed'
-for option in --version --profile --package --dev-package --packages-file --database --with-mailpit --with-redis --migrate --no-migrate --seed --force --dry-run; do
+for option in --version --profile --package --dev-package --packages-file --database --with-mailpit --with-redis --migrate --no-migrate --seed --force --no-hosts --dry-run; do
   assert_contains "$help_output" "$option" "help should document $option"
 done
 profiles_output="$(PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" bash "$BOOTSTRAP" --list-profiles)" || fail '--list-profiles should succeed'
@@ -140,10 +140,13 @@ for expected in \
   'Composer development package: vendor/cli-tool' \
   'configure APP_URL=https://service-rich.test and database=mariadb; generate APP_KEY' \
   'run migrations' \
-  'run database seeder once'; do
+  'run database seeder once' \
+  'register local host: 127.0.0.1 service-rich.test'; do
   assert_contains "$loaded_output" "$expected" 'loaded dry-run plan drifted'
 done
 assert_absent "$loaded_output" "$secret" 'database root password must be redacted'
+no_hosts_output="$(run_bootstrap podman no-hosts-app --no-hosts --dry-run)" || fail 'hosts opt-out dry-run should succeed'
+assert_contains "$no_hosts_output" 'hosts registration skipped: no-hosts-app.test' 'hosts opt-out should be visible'
 
 # SQLite/no-migrate omits database and optional-service provisioning.
 sqlite_output="$(run_bootstrap podman sqlite-app --database sqlite --no-migrate --dry-run)" || fail 'SQLite dry-run should succeed'

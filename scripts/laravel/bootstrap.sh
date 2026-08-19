@@ -11,6 +11,7 @@ MARIADB_COMPOSE="$PROJECT_ROOT/services-library/database/mariadb/compose.yml"
 REDIS_COMPOSE="$PROJECT_ROOT/services-library/database/redis/compose.yml"
 MAILPIT_COMPOSE="$PROJECT_ROOT/services-library/mail/mailpit/compose.yml"
 PROFILE_DIR="$SCRIPT_DIR/profiles"
+HOSTS_HELPER="$PROJECT_ROOT/scripts/hosts/register-host.sh"
 
 readonly REDIS_HOST=redis
 readonly REDIS_PASSWORD=devarch
@@ -33,6 +34,7 @@ NO_MIGRATE_EXPLICIT=false
 SEED=false
 FORCE=false
 DRY_RUN=false
+REGISTER_HOSTS=true
 RUNTIME=""
 CONTAINER_USER=""
 DB_ROOT_PASSWORD=""
@@ -79,6 +81,7 @@ Options:
   --no-migrate               Do not run migrations
   --seed                     Run db:seed once
   --force                    Preserve and replace an existing target
+  --no-hosts                 Do not register <app-name>.test in the system hosts file
   --dry-run                  Validate and print a redacted, mutation-free plan
   --help                     Show this help (must be the sole argument)
 
@@ -154,6 +157,7 @@ parse_args() {
       --no-migrate) MIGRATE=false; NO_MIGRATE_EXPLICIT=true; shift ;;
       --seed) SEED=true; shift ;;
       --force) FORCE=true; shift ;;
+      --no-hosts) REGISTER_HOSTS=false; shift ;;
       --dry-run) DRY_RUN=true; shift ;;
       --repository|--branch|--database-import|--npm-install|--build|--npm-build)
         usage_error "unsupported v1 option: $1"
@@ -555,6 +559,11 @@ print_plan() {
   [[ "$WITH_REDIS" == true ]] && log 'configure phpredis at redis:6379 (credentials redacted), cache DB 1, queue DB 0'
   [[ "$MIGRATE" != true ]] || log 'run migrations'
   [[ "$SEED" != true ]] || log 'run database seeder once'
+  if [[ "$REGISTER_HOSTS" == true ]]; then
+    log "register local host: 127.0.0.1 $APP_NAME.test"
+  else
+    log "hosts registration skipped: $APP_NAME.test"
+  fi
   return 0
 }
 
@@ -876,6 +885,18 @@ on_exit() {
     rollback "$status"
   fi
 }
+register_app_host() {
+  local hostname="$APP_NAME.test"
+  [[ "$REGISTER_HOSTS" == true ]] || { log "hosts registration skipped: $hostname"; return 0; }
+  if [[ ! -x "$HOSTS_HELPER" ]]; then
+    log "warning: hosts helper is unavailable; manually map 127.0.0.1 $hostname"
+    return 0
+  fi
+  if ! "$HOSTS_HELPER" "$hostname"; then
+    log "warning: could not register $hostname; manually map it to 127.0.0.1"
+  fi
+}
+
 main() {
   parse_args "$@"
   load_repository_env
@@ -904,6 +925,7 @@ main() {
   configure_application
   clear_recovery_guard || die "provisioning succeeded but durable recovery marker could not be removed: $RECOVERY_MARKER"
   SUCCESS=true
+  register_app_host
   log "ready through the wildcard proxy: $APP_URL"
   [[ "$BACKUP_MOVED" != true ]] || log "previous target preserved at: $BACKUP_PATH"
   return 0

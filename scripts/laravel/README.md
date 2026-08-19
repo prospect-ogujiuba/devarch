@@ -17,7 +17,8 @@ MariaDB applications receive an isolated database and user derived from the app 
 - `awk`, `tr`, `od`, and either `sha256sum` or `shasum`
 - `openssl` or `/dev/urandom` for real MariaDB provisioning
 - the Compose definitions under `services-library/`
-- a wildcard proxy, trusted local certificate, and local DNS/hosts routing for `*.test`
+- a wildcard proxy and trusted local certificate for `*.test`
+- `sudo` on Linux/macOS, or Windows PowerShell/UAC under WSL or Git Bash, for automatic hosts-file registration
 - access to Composer package sources from the shared PHP container
 
 The runtime user must be able to create `microservices-net`, start the selected services, and write beneath `apps/`. Do not mix rootless container users: their containers and networks are isolated.
@@ -28,7 +29,7 @@ The runtime user must be able to create `microservices-net`, start the selected 
 cp .env.example .env                    # first run; replace example credentials
 scripts/laravel/bootstrap.sh demo --dry-run
 scripts/laravel/bootstrap.sh demo
-# Resolve demo.test to 127.0.0.1, then open https://demo.test
+# Approve the hosts-file elevation prompt, then open https://demo.test
 ```
 
 Defaults are the `bare` profile, MariaDB, migrations enabled, no seeding, Laravel's `log` mailer, file cache, and synchronous queues.
@@ -60,6 +61,7 @@ scripts/laravel/bootstrap.sh <app-name> [options]
 | `--no-migrate` | Skip migrations. It cannot be combined with `--migrate`. |
 | `--seed` | Run `db:seed` once, independently of the migration choice. |
 | `--force` | Preserve and replace an existing target. |
+| `--no-hosts` | Skip automatic registration of `127.0.0.1 <app-name>.test`. |
 | `--dry-run` | Validate runtime and configuration, then print a redacted mutation-free plan. |
 | `--help` | Show help and exit. Must be the sole argument. |
 
