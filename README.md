@@ -32,7 +32,7 @@ For persistent production services, manage the containers with systemd/Quadlet (
 
 ## Rapid WordPress bootstrap
 
-`scripts/wordpress/bootstrap.sh` creates local sites in `apps/<site-name>` using the shared PHP-FPM, MariaDB, and Nginx Proxy Manager infrastructure. It creates `microservices-net` when needed, starts the PHP and MariaDB Compose services, waits for WP-CLI/database readiness, creates an isolated database and user, installs WordPress, and applies profiles or additional plugins. It never starts a separate `wp server` process.
+`scripts/wordpress/bootstrap.sh` creates local sites in `apps/<site-name>` using the shared PHP-FPM, MariaDB, and Nginx Proxy Manager infrastructure. It creates `microservices-net` when needed, starts the PHP, MariaDB, and Nginx Proxy Manager Compose services, waits for their readiness, creates an isolated database and user, installs WordPress, and applies profiles or additional plugins. It never starts a separate `wp server` process.
 
 ```bash
 cp .env.example .env                    # first run; replace example credentials
@@ -93,7 +93,7 @@ scripts/laravel/bootstrap.sh demo
 # approve the hosts-file elevation prompt, then open https://demo.test
 ```
 
-The wildcard proxy automatically detects `apps/<app-name>/public/index.php`, selects `public/` as the document root, and routes PHP to `php:9000`; no per-app proxy entry or standalone server is required. Both bootstraps idempotently register `127.0.0.1 <name>.test` through the shared cross-platform hosts helper; use `--no-hosts` to opt out. Use `--force` only after reviewing its backup/recovery behavior. See [`scripts/laravel/README.md`](scripts/laravel/README.md) for prerequisites, configuration precedence, CLI options, profiles, package syntax, runtime mapping, safety, regression tests, and the optional real-provisioning smoke test.
+The bootstrap starts Nginx Proxy Manager, whose wildcard proxy automatically detects `apps/<app-name>/public/index.php`, selects `public/` as the document root, and routes PHP to `php:9000`; no per-app proxy entry or standalone server is required. Both bootstraps idempotently register `127.0.0.1 <name>.test` through the shared cross-platform hosts helper; use `--no-hosts` to opt out. Use `--force` only after reviewing its backup/recovery behavior. See [`scripts/laravel/README.md`](scripts/laravel/README.md) for prerequisites, configuration precedence, CLI options, profiles, package syntax, runtime mapping, safety, regression tests, and the optional real-provisioning smoke test.
 
 ## Development checks
 

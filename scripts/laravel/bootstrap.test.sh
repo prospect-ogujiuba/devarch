@@ -24,7 +24,8 @@ for compose_file in \
   services-library/backend/php/compose.yml \
   services-library/database/mariadb/compose.yml \
   services-library/database/redis/compose.yml \
-  services-library/mail/mailpit/compose.yml; do
+  services-library/mail/mailpit/compose.yml \
+  services-library/proxy/nginx-proxy-manager/compose.yml; do
   mkdir -p "$PROJECT_ROOT/$(dirname "$compose_file")"
   cp "$SOURCE_PROJECT_ROOT/$compose_file" "$PROJECT_ROOT/$compose_file"
 done
@@ -130,6 +131,7 @@ for expected in \
   'runtime: podman; container user: 0:0' \
   'profile: loaded' \
   'start and wait: php' \
+  'start and wait: nginx-proxy-manager' \
   'start and wait: mariadb; create isolated database/user: laravel_service_rich / lv_service_rich' \
   'start and wait: mailpit' \
   'start and wait: redis (password redacted)' \
