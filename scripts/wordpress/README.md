@@ -9,8 +9,8 @@ A successful run performs this sequence:
 1. Loads the repository `.env`, validates arguments, and resolves a site name.
 2. Selects Podman or Docker and a Compose provider.
 3. Creates `microservices-net` when it does not exist.
-4. Starts the shared `php` and `mariadb` services, optionally rebuilding PHP.
-5. Waits up to 60 seconds for WP-CLI and MariaDB.
+4. Starts the shared `php`, `mariadb`, and Nginx Proxy Manager services, optionally rebuilding PHP.
+5. Waits up to 90 seconds for WP-CLI, MariaDB, and Nginx Proxy Manager.
 6. Protects and moves an existing site when replacement is requested.
 7. Creates a dedicated database and database user.
 8. Downloads WordPress and writes `wp-config.php` without logging passwords.
@@ -29,7 +29,7 @@ Run the script from this repository or invoke it by absolute path from an existi
 - `podman compose`, `podman-compose`, or `docker compose`
 - Git; host SSH credentials or a Git credential helper for private repositories
 - PHP on the host when using a MakerMaker profile (used to generate the portable Galaxy launcher)
-- A trusted local wildcard certificate and a wildcard proxy configured for `*.test`
+- The trusted local wildcard certificate files used by the repository's Nginx Proxy Manager Compose service
 - `sudo` on Linux/macOS, or Windows PowerShell/UAC under WSL or Git Bash, for automatic hosts-file registration
 
 Copy the environment template before the first real run:

@@ -142,6 +142,7 @@ DB_USER=lv_demo
 plan="$(print_plan)"
 assert_contains "$plan" 'ensure external network: microservices-net' 'ordered plan network step'
 assert_contains "$plan" 'start and wait: php' 'ordered plan PHP step'
+assert_contains "$plan" 'start and wait: nginx-proxy-manager' 'ordered plan proxy step'
 assert_contains "$plan" 'start and wait: mariadb' 'ordered plan MariaDB step'
 assert_contains "$plan" 'start and wait: redis' 'ordered plan Redis step'
 assert_contains "$plan" 'scaffold Laravel through Composer' 'ordered plan Composer step'

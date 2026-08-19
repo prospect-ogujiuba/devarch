@@ -4,7 +4,7 @@
 
 ## Architecture
 
-The host script validates every input before provisioning, selects existing Compose services, and runs Composer and Artisan inside the shared `php` container. The repository `apps/` directory is mounted there at `/var/www/html`, so `apps/demo` is `/var/www/html/demo` in the container.
+The host script validates every input before provisioning, starts the shared PHP and Nginx Proxy Manager Compose services plus selected dependencies, and runs Composer and Artisan inside the shared `php` container. The repository `apps/` directory is mounted there at `/var/www/html`, so `apps/demo` is `/var/www/html/demo` in the container.
 
 The wildcard proxy resolves `<app-name>.test` and sends PHP to `php:9000` over `microservices-net`. It automatically selects `apps/<app-name>/public` as the document root when `public/index.php` (or `public/index.html`) exists. A normal Laravel scaffold therefore routes through `public/index.php` without per-app proxy configuration.
 
@@ -17,7 +17,7 @@ MariaDB applications receive an isolated database and user derived from the app 
 - `awk`, `tr`, `od`, and either `sha256sum` or `shasum`
 - `openssl` or `/dev/urandom` for real MariaDB provisioning
 - the Compose definitions under `services-library/`
-- a wildcard proxy and trusted local certificate for `*.test`
+- the trusted local wildcard certificate files used by the repository's Nginx Proxy Manager Compose service
 - `sudo` on Linux/macOS, or Windows PowerShell/UAC under WSL or Git Bash, for automatic hosts-file registration
 - access to Composer package sources from the shared PHP container
 

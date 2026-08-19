@@ -8,6 +8,7 @@ APPS_DIR="$PROJECT_ROOT/apps"
 ENV_FILE="$PROJECT_ROOT/.env"
 PHP_COMPOSE="$PROJECT_ROOT/services-library/backend/php/compose.yml"
 MARIADB_COMPOSE="$PROJECT_ROOT/services-library/database/mariadb/compose.yml"
+PROXY_COMPOSE="$PROJECT_ROOT/services-library/proxy/nginx-proxy-manager/compose.yml"
 REDIS_COMPOSE="$PROJECT_ROOT/services-library/database/redis/compose.yml"
 MAILPIT_COMPOSE="$PROJECT_ROOT/services-library/mail/mailpit/compose.yml"
 PROFILE_DIR="$SCRIPT_DIR/profiles"
@@ -505,6 +506,7 @@ validate_config() {
   [[ "$DATABASE" == mariadb ]] && derive_identifiers
 
   [[ -f "$PHP_COMPOSE" ]] || die "required Compose file not found: $PHP_COMPOSE"
+  [[ -f "$PROXY_COMPOSE" ]] || die "required Compose file not found: $PROXY_COMPOSE"
   [[ "$DATABASE" != mariadb || -f "$MARIADB_COMPOSE" ]] || die "required Compose file not found: $MARIADB_COMPOSE"
   [[ "$WITH_REDIS" != true || -f "$REDIS_COMPOSE" ]] || die "required Compose file not found: $REDIS_COMPOSE"
   [[ "$WITH_MAILPIT" != true || -f "$MAILPIT_COMPOSE" ]] || die "required Compose file not found: $MAILPIT_COMPOSE"
@@ -545,6 +547,7 @@ print_plan() {
   log "profile: $PROFILE"
   log 'ensure external network: microservices-net'
   log 'start and wait: php'
+  log 'start and wait: nginx-proxy-manager'
   [[ "$DATABASE" == mariadb ]] && log "start and wait: mariadb; create isolated database/user: $DB_NAME / $DB_USER"
   [[ "$WITH_MAILPIT" == true ]] && log 'start and wait: mailpit'
   [[ "$WITH_REDIS" == true ]] && log 'start and wait: redis (password redacted)'
@@ -582,6 +585,8 @@ compose_up() {
 start_services() {
   log 'start shared PHP service'
   compose_up "$PHP_COMPOSE"
+  log 'start shared Nginx Proxy Manager service'
+  compose_up "$PROXY_COMPOSE"
   if [[ "$DATABASE" == mariadb ]]; then
     log 'start shared MariaDB service'
     env MARIADB_ROOT_PASSWORD="$DB_ROOT_PASSWORD" "${COMPOSE[@]}" -f "$MARIADB_COMPOSE" up -d
@@ -597,6 +602,7 @@ wait_for_services() {
     ready=true
     "$RUNTIME" exec php php -v >/dev/null 2>&1 || ready=false
     "$RUNTIME" exec php composer --version >/dev/null 2>&1 || ready=false
+    "$RUNTIME" exec nginx-proxy-manager curl -fsS http://localhost:81/api/ >/dev/null 2>&1 || ready=false
     if [[ "$DATABASE" == mariadb ]]; then
       # The password expands in the container shell, not on the host.
       # shellcheck disable=SC2016

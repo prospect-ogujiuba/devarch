@@ -6,6 +6,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 APPS_DIR="$PROJECT_ROOT/apps"
 PHP_COMPOSE="$PROJECT_ROOT/services-library/backend/php/compose.yml"
 MARIADB_COMPOSE="$PROJECT_ROOT/services-library/database/mariadb/compose.yml"
+PROXY_COMPOSE="$PROJECT_ROOT/services-library/proxy/nginx-proxy-manager/compose.yml"
 ENV_FILE="$PROJECT_ROOT/.env"
 PROFILE_DIR="$SCRIPT_DIR/profiles"
 HOSTS_HELPER="$PROJECT_ROOT/scripts/hosts/register-host.sh"
@@ -314,6 +315,10 @@ validate_config() {
     fi
   done
 
+  [[ -f "$PHP_COMPOSE" ]] || die "required Compose file not found: $PHP_COMPOSE"
+  [[ -f "$MARIADB_COMPOSE" ]] || die "required Compose file not found: $MARIADB_COMPOSE"
+  [[ -f "$PROXY_COMPOSE" ]] || die "required Compose file not found: $PROXY_COMPOSE"
+
   if [[ "$DRY_RUN" != true ]]; then
     [[ -n "$ADMIN_PASSWORD_VALUE" ]] || die "set ADMIN_PASSWORD or WP_ADMIN_PASSWORD in .env"
     command -v git >/dev/null 2>&1 || die "git is required"
@@ -360,7 +365,7 @@ ensure_network() {
 }
 
 start_services() {
-  log "start PHP and MariaDB services"
+  log "start PHP, MariaDB, and Nginx Proxy Manager services"
   local php_args=(-f "$PHP_COMPOSE" up -d)
   [[ "$BUILD" == true ]] && php_args+=(--build)
   run "${COMPOSE[@]}" "${php_args[@]}"
@@ -369,20 +374,22 @@ start_services() {
   else
     env MARIADB_ROOT_PASSWORD="$DB_ROOT_PASSWORD" "${COMPOSE[@]}" -f "$MARIADB_COMPOSE" up -d
   fi
+  run "${COMPOSE[@]}" -f "$PROXY_COMPOSE" up -d
 }
 
 wait_for_services() {
-  [[ "$DRY_RUN" == true ]] && { log "wait for PHP/WP-CLI and MariaDB readiness"; return; }
+  [[ "$DRY_RUN" == true ]] && { log "wait for PHP/WP-CLI, MariaDB, and Nginx Proxy Manager readiness"; return; }
 
   local attempt
-  for attempt in {1..60}; do
+  for attempt in {1..90}; do
     if "$RUNTIME" exec "$PHP_CONTAINER" wp --info >/dev/null 2>&1 && \
-       "$RUNTIME" exec "$MARIADB_CONTAINER" sh -c 'mariadb-admin ping -uroot -p"$MARIADB_ROOT_PASSWORD" --silent' >/dev/null 2>&1; then
+       "$RUNTIME" exec "$MARIADB_CONTAINER" sh -c 'mariadb-admin ping -uroot -p"$MARIADB_ROOT_PASSWORD" --silent' >/dev/null 2>&1 && \
+       "$RUNTIME" exec nginx-proxy-manager curl -fsS http://localhost:81/api/ >/dev/null 2>&1; then
       return
     fi
     sleep 1
   done
-  die "PHP or MariaDB did not become ready within 60 seconds"
+  die "PHP, MariaDB, or Nginx Proxy Manager did not become ready within 90 seconds"
 }
 
 prepare_site_dir() {
@@ -714,7 +721,7 @@ main() {
   make_content_writable
   register_site_host
 
-  log "ready through the existing .test reverse proxy: $SITE_URL"
+  log "ready through the Nginx Proxy Manager .test reverse proxy: $SITE_URL"
   log "admin: $SITE_URL/wp-admin (user: $ADMIN_USER_VALUE)"
 }
 

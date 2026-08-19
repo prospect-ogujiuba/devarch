@@ -71,9 +71,11 @@ dry_run_output="$(
 
 grep -q 'query-monitor' <<<"$dry_run_output" || fail "dry-run should plan WordPress.org plugin installation"
 grep -q 'example-plugin' <<<"$dry_run_output" || fail "dry-run should plan Git plugin installation"
-grep -q 'start PHP and MariaDB services' <<<"$dry_run_output" || fail "dry-run should plan service startup"
+grep -q 'start PHP, MariaDB, and Nginx Proxy Manager services' <<<"$dry_run_output" || fail "dry-run should plan service startup"
+grep -q 'services-library/proxy/nginx-proxy-manager/compose.yml up -d' <<<"$dry_run_output" || fail "dry-run should start Nginx Proxy Manager"
+grep -q 'wait for PHP/WP-CLI, MariaDB, and Nginx Proxy Manager readiness' <<<"$dry_run_output" || fail "dry-run should wait for proxy readiness"
 grep -q 'URL: https://demo-site.test' <<<"$dry_run_output" || fail "default URL should use wildcard .test routing"
-grep -q 'existing .test reverse proxy' <<<"$dry_run_output" || fail "completion should identify infrastructure routing"
+grep -q 'Nginx Proxy Manager .test reverse proxy' <<<"$dry_run_output" || fail "completion should identify infrastructure routing"
 grep -q 'register local host: 127.0.0.1 demo-site.test' <<<"$dry_run_output" || fail "dry-run should plan hosts registration"
 no_hosts_output="$(bash "$BOOTSTRAP" no-hosts-site --no-hosts --dry-run)" || fail "hosts opt-out dry-run should succeed"
 grep -q 'hosts registration skipped: no-hosts-site.test' <<<"$no_hosts_output" || fail "hosts opt-out should be visible"
@@ -84,7 +86,7 @@ if grep -Eq 'not-printed-secret|not-printed-db-secret' <<<"$dry_run_output"; the
   fail "dry-run must not print secrets"
 fi
 if grep -Eq 'wp server|WORDPRESS_PORT' <<<"$dry_run_output"; then
-  fail "bootstrap should not bypass the existing reverse proxy"
+  fail "bootstrap should not bypass Nginx Proxy Manager"
 fi
 
 grep -q -- '--user 0:0' <<<"$dry_run_output" || fail "rootless Podman should use the bind-mount owner mapping"
