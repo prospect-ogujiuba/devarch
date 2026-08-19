@@ -9,10 +9,15 @@ Add `scripts/apps/app.sh` to detect application type and safely dispatch common 
 
 ## Scope
 
-- Commands: `list`, `type`, `url`, `open`, `shell`, `composer`, `npm`, `artisan`, `wp`, and `logs`.
+- DevArch-owned discovery modes: `list`, `type`, and `url`; execution modes only resolve the app/container path before calling a native tool.
 - Detect Laravel using `artisan` plus `composer.json`; detect WordPress using `wp-config.php` plus core structure; report ambiguous/unknown trees.
 - Map host app paths to `/var/www/html/<app>` and use the shared PHP container with existing user-mapping conventions.
-- Forward native arguments only after `--` where ambiguity exists.
+- Dispatch with direct commands such as `podman exec -it --workdir /var/www/html/<app> php ...`, then native `composer`, `php artisan`, `wp`, or package-manager arguments after `--`.
+- Use `podman logs` for logs and the operating-system launcher for open; do not proxy those implementations inside app logic.
+
+## Native delegation
+
+Podman owns exec/TTY/user behavior; Composer, Artisan, WP-CLI, npm/pnpm/bun own their command parsing and output. DevArch only validates the app path/type and supplies container/working-directory defaults. Where a direct native command is clear, documentation is preferred over another app subcommand.
 
 ## Outputs
 
@@ -24,7 +29,7 @@ Add `scripts/apps/app.sh` to detect application type and safely dispatch common 
 - App names and resolved paths cannot escape `apps/` through symlinks or traversal.
 - Framework-specific commands fail before execution on the wrong app type.
 - `list` and `type` work with no runtime.
-- Commands preserve exit codes, terminal interactivity, and argument boundaries.
+- Final execution uses `exec podman exec ...` where possible and preserves exit codes, stdin/stdout/stderr, terminal interactivity, signals, and argument boundaries.
 - No application files are modified unless the requested native command does so.
 
 ## Verification
@@ -35,4 +40,4 @@ Add `scripts/apps/app.sh` to detect application type and safely dispatch common 
 
 ## Non-goals
 
-No per-app containers, automatic dependency installation, queue/scheduler management, or framework abstraction beyond dispatch.
+No per-app containers, command reformatting, log proxy, browser implementation, automatic dependency installation, queue/scheduler management, or framework abstraction beyond path-aware native dispatch.

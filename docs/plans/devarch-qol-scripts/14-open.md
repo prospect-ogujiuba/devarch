@@ -10,21 +10,25 @@ Add `scripts/devarch/open.sh` to resolve a service or app to a documented local 
 ## Scope
 
 - Resolve app URLs from validated app configuration/default `<name>.test` conventions.
-- Resolve service URLs from an explicit declarative endpoint registry with scheme, host, published port, path, and optional description.
+- Resolve service URLs from a small declarative endpoint registry with scheme, host, published port, path, and optional description; do not infer URLs from runtime output.
 - Commands/modes: default open, `--print`, `--list`, `--all-endpoints`, and endpoint selection for multi-UI services.
 - Support Linux (`xdg-open`), macOS (`open`), WSL/Windows (`powershell.exe Start-Process`), and `BROWSER` override without shell evaluation.
-- Optionally check runtime state/reachability and offer an actionable message; never auto-start by default.
+- Optionally use `podman ps`/`podman port` for an existence hint, but do not implement HTTP reachability polling and never auto-start.
+
+## Native delegation
+
+After resolving one DevArch URL, final execution is `exec xdg-open URL`, `exec open URL`, or `powershell.exe Start-Process URL`. The operating system owns browser selection, process behavior, and errors; `BROWSER` is executed as one validated command plus one URL, never through `sh -c`.
 
 ## Outputs
 
-- Open script, endpoint registry/schema, platform launcher adapter, tests, and docs.
+- URL resolver, small endpoint registry, direct platform-launcher selection, recording tests, and docs.
 
 ## Acceptance criteria
 
 - Endpoint metadata is explicit and reviewable; ports are not guessed from arbitrary container ports.
 - `--print` and `--list` work headlessly and never launch a browser.
 - URLs and launcher arguments are passed as single array elements and reject controls/unsafe schemes.
-- Unknown, ambiguous, stopped, and unreachable targets produce distinct guidance.
+- Unknown, ambiguous, and stopped targets produce distinct guidance based on catalog/Podman facts; browser/network errors remain native launcher/browser output.
 - Every registry endpoint references an existing canonical service and published port.
 
 ## Verification
@@ -35,4 +39,4 @@ Add `scripts/devarch/open.sh` to resolve a service or app to a documented local 
 
 ## Non-goals
 
-No proxy configuration, automatic hosts edits, automatic service startup, or endpoint scraping from container logs.
+No browser implementation, HTTP client/reachability engine, proxy configuration, automatic hosts edits, automatic service startup, or endpoint scraping from container logs.

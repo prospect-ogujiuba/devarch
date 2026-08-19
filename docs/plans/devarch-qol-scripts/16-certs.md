@@ -5,38 +5,42 @@ Purpose: Make wildcard `.test` certificate state, renewal, and trust understanda
 
 ## Goal
 
-Add `scripts/devarch/certs.sh` for certificate inspection, generation, and explicitly approved platform trust operations.
+Use `mkcert` as the native local-CA/trust workflow and OpenSSL only for inspection; DevArch supplies domain/path defaults.
 
 ## Scope
 
-- Commands: `status`, `generate`, `trust`, `untrust`, and `paths`.
-- Inspect subject, SANs, issuer, validity, key/certificate match, permissions, and renewal threshold without exposing private material.
-- Prefer `mkcert` when available; define an OpenSSL fallback with SANs for the configured domain suffix and wildcard.
-- Atomically replace certificate/key only after validation and preserve a timestamped backup.
-- Implement platform-specific trust adapters with dry-run and visible elevation boundaries.
+- `status` invokes `openssl x509`/`openssl pkey` for subject, SANs, issuer, validity, key match, and permissions.
+- `install-ca` delegates to `mkcert -install`; `uninstall-ca` delegates to `mkcert -uninstall`, preserving mkcert's native prompts/platform behavior.
+- `generate` invokes `mkcert -cert-file PATH -key-file PATH localhost <suffix> '*.<suffix>'` with DevArch paths/domains.
+- Atomically move newly generated files into the proxy config only after native OpenSSL verification; preserve a timestamped backup.
+- If mkcert is absent, stop with installation/manual OpenSSL guidance. Do not maintain custom OS trust-store adapters.
+
+## Native delegation
+
+mkcert owns local CA creation, OS trust-store integration, and certificate generation. OpenSSL owns certificate/key inspection. DevArch only resolves domain names and repository target paths.
 
 ## Outputs
 
-- Certificate script, config templates if needed, trust adapters, tests, and platform documentation.
+- Domain/path resolver around mkcert and OpenSSL, recording tests, and platform documentation.
 
 ## Acceptance criteria
 
 - `status` is read-only and works without a container runtime.
 - Generated private keys use restrictive permissions and are never printed.
 - Generation verifies SAN coverage and key match before replacing active files.
-- Trust/untrust require explicit confirmation, show exact certificate fingerprint, and never hide sudo/UAC interaction.
+- Trust/untrust show the mkcert command and fingerprint/context, then preserve mkcert's own sudo/UAC interaction and exit status.
 - Existing certificates remain intact on generation or trust failure.
 
 ## Verification
 
 - Generate temporary certificates and test SAN, expiry, mismatch, permissions, atomic failure, and backup behavior.
-- Fake platform trust stores assert exact commands without host mutation.
+- Recording mkcert/OpenSSL executables assert exact argv without host trust mutation.
 - Manual trust testing is opt-in and documented separately.
 
 ## Open questions
 
-Confirm whether `.test` wildcard trust should use a local CA (`mkcert`, recommended) or a directly trusted self-signed leaf on each supported platform.
+Confirm the exact SAN set. The trust model is decided: use mkcert's local CA, not a directly trusted self-signed leaf.
 
 ## Non-goals
 
-No public ACME issuance, production certificates, unattended privilege escalation, or automatic proxy restart.
+No custom CA, OpenSSL certificate generator, OS trust-store adapter, public ACME issuance, production certificates, unattended privilege escalation, or automatic proxy restart.

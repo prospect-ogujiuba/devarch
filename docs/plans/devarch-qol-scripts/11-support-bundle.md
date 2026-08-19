@@ -9,19 +9,23 @@ Add `scripts/devarch/support-bundle.sh` that assembles a deterministic, reviewab
 
 ## Scope
 
-- Capture runtime/tool versions, Git revision/status summary, doctor/status/ports/validate results, selected Compose configs, bounded recent logs, disk usage, and certificate metadata.
+- Capture native `podman version`, `podman info --debug`, `podman ps --all`, `podman inspect`, `podman network inspect`, `podman system df`, selected `podman compose ... config`, bounded `podman logs`, Git summaries, and `openssl x509` metadata.
 - Redact environment assignments, credentials, tokens, URL userinfo, authorization headers, and configured custom patterns.
 - Exclude `.env`, private keys, application content, database data, volumes, credentials files, and unbounded logs by construction.
-- Generate a manifest with included files, commands, exit statuses, checksums, and redaction count; support directory output before archive creation.
+- Generate a simple inventory with exact native commands, exit statuses, included files, and checksums; use native `tar` for the archive.
+
+## Native delegation
+
+Each collected fact comes from the owning tool. DevArch only bounds command scope, stores output files, and applies defense-in-depth redaction. It does not consume a custom status schema or reinterpret Podman diagnostics.
 
 ## Outputs
 
-- Support-bundle script, redaction library/tests, manifest schema, and sharing checklist.
+- Support-bundle script, redaction tests, plain command/file inventory, native tar archive, and sharing checklist.
 
 ## Acceptance criteria
 
 - Collection is read-only and works partially when runtime commands fail.
-- Archive paths cannot escape the staging root and are stable across platforms.
+- Native command output is preserved apart from documented redaction; archive paths cannot escape the staging root.
 - Known secret fixtures do not occur in filenames, contents, manifest, or terminal output.
 - Log collection has explicit service, line, byte, and time bounds.
 - User is shown the staging path and instructed to review it before sharing.
@@ -34,4 +38,4 @@ Add `scripts/devarch/support-bundle.sh` that assembles a deterministic, reviewab
 
 ## Non-goals
 
-No automatic upload, remote ticket creation, memory dump, database dump, or collection of application source.
+No runtime diagnostic implementation, custom status parser, automatic upload, remote ticket creation, memory dump, database dump, or collection of application source.

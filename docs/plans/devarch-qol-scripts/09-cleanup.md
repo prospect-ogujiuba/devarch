@@ -5,14 +5,18 @@ Purpose: Reclaim space and remove stale recovery artifacts without turning conve
 
 ## Goal
 
-Add `scripts/devarch/cleanup.sh` with auditable policies and dry-run as the default behavior.
+Prefer direct, documented Podman disk/prune commands; retain a script only for DevArch-owned filesystem artifacts that Podman cannot manage.
 
 ## Scope
 
-- Inventory stopped DevArch containers, dangling images, explicitly labeled unused volumes, old app backups, failed provisions, resolved recovery guards, and incomplete backup staging directories.
-- Add selectors, age thresholds, size summaries, `--apply`, and `--yes`.
-- Attribute runtime resources to DevArch using labels or exact catalog identities; unknown resources remain untouched.
-- Require phase 08 manifests before pruning managed backups.
+- Document and expose native `podman system df`, `podman system check`, `podman container prune`, `podman image prune`, `podman volume prune`, and `podman system prune` with their own filters and confirmation behavior.
+- Do not precompute Podman's prune candidates, sizes, reachability, or ownership. Podman decides what is unused.
+- Keep DevArch filesystem cleanup separate: list old `.devarch-backups`, `.devarch-failed`, resolved recovery guards, and incomplete staging directories using simple path/age rules.
+- A retained helper has two explicit modes: `podman -- ARGS...` (executes the chosen native prune command) and `files` (DevArch-owned paths only). Never combine them implicitly.
+
+## Native delegation
+
+Podman owns container/image/volume/storage accounting and deletion. Native confirmation and filters remain visible. DevArch owns only its repository backup/recovery directories and must not infer Podman resource liveness.
 
 ## Outputs
 
@@ -20,18 +24,18 @@ Add `scripts/devarch/cleanup.sh` with auditable policies and dry-run as the defa
 
 ## Acceptance criteria
 
-- Invocation without `--apply` cannot mutate anything.
-- Volumes, active recovery guards, newest successful backups, running containers, and unowned runtime resources are never removed automatically.
-- Every candidate includes reason, age, size when available, and exact proposed action.
-- Apply mode revalidates candidates immediately before deletion to reduce races.
+- Podman cleanup is never run unless the user explicitly supplies a native prune operation; no hidden `--force` is added.
+- Native Podman prompts/output identify runtime deletions; DevArch does not claim stronger candidate guarantees than Podman.
+- Filesystem cleanup defaults to listing paths and requires explicit apply/confirmation; active recovery guards and newest backups are protected.
+- Filesystem apply mode revalidates paths immediately before deletion.
 - Partial failures are reported per resource and produce nonzero exit status.
 
 ## Verification
 
-- Fake filesystem/runtime tests cover threshold boundaries, active guards, symlinks, changed candidates, protected newest backups, and interrupted deletion.
-- Assert exact delete calls and verify dry-run records none.
-- Optional manual smoke test uses only disposable labeled resources.
+- Recording-Podman tests assert exact passthrough and prove no implicit `--force`, `--all`, or `--volumes` flags are added.
+- Filesystem tests cover threshold boundaries, active guards, symlinks, changed paths, protected newest backups, and interrupted deletion.
+- Optional native prune smoke testing uses disposable resources only.
 
 ## Non-goals
 
-No blanket `system prune`, deletion of arbitrary app repositories, or automatic resolution of recovery guards.
+No custom Podman candidate inventory, disk accounting, ownership inference, prune algorithm, deletion of arbitrary app repositories, or automatic resolution of recovery guards. `podman system prune` remains available only as an explicit user-selected native command.

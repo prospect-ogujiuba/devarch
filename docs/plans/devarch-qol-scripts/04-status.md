@@ -5,33 +5,36 @@ Purpose: Make the health and reachability of DevArch services visible without in
 
 ## Goal
 
-Add `scripts/devarch/status.sh` that combines the static catalog with bounded runtime inspection.
+Prefer documented native `podman ps`/`podman compose ps` views; add a script only if DevArch label selection cannot be made ergonomic with a shell alias or documented format.
 
 ## Scope
 
-- Report canonical service ID, container name, lifecycle state, health, published endpoints, image, and uptime when available.
-- Support all services, category filtering, named services, `--running`, `--unhealthy`, `--json`, and `--watch INTERVAL`.
-- Distinguish not-created, stopped, starting, healthy, unhealthy, and unknown.
-- Degrade cleanly when runtime or health data is unavailable.
+- First add consistent Compose labels/project names if the provider does not already emit sufficient labels.
+- Document native views using `podman ps --all --filter label=... --format ...`, `podman ps --watch`, `podman inspect`, `podman port`, and per-service `podman compose -f FILE ps`.
+- If retained, `status.sh` may only choose a documented native format/filter and invoke one Podman command; it must not join a static catalog to live state or implement a dashboard schema.
+- Use Podman's own states and health fields verbatim. Do not redefine not-created/stopped/starting/healthy semantics.
+
+## Native delegation
+
+Podman owns inventory, filtering, health, ports, formatting, and watch refresh. DevArch may contribute stable labels and a readable default Go template. JSON callers use native JSON output directly.
 
 ## Outputs
 
-- Status script, parsers for supported runtime JSON/text responses, tests, and documentation.
+- Native Podman command recipes and format templates; an optional one-command selector only if labels require it; recording tests and documentation.
 
 ## Acceptance criteria
 
-- One bounded runtime inventory is used per refresh rather than one process per service.
-- Static services absent from the runtime remain visible unless `--running` is selected.
-- Output ordering is deterministic and narrow terminals remain readable.
-- Watch mode handles interruption and never accumulates temporary files or child processes.
-- JSON schema is versioned and suitable for `open`, `support-bundle`, and completions.
+- The final implementation is either documentation/alias guidance or one direct `exec podman ps ...` command.
+- `podman ps --watch` owns refresh and interruption; DevArch has no refresh loop.
+- Native JSON/Go-template fields are preserved; DevArch publishes no status schema.
+- Static services that were never created are obtained with `service.sh list`, not synthesized into runtime status.
 
 ## Verification
 
-- Parser fixtures cover Podman and Docker, duplicate/unrelated containers, missing health, and malformed runtime output.
-- Test filters, ordering, terminal-width behavior, JSON validity, and Ctrl-C cleanup.
-- Compare a manual status row with the active runtime when available.
+- Recording-Podman tests assert exact `ps`/`compose ps` argv, filters, and passthrough.
+- Verify DevArch labels emitted by representative Compose services are filterable.
+- Compare the documented format with direct native output; no parser tests should exist.
 
 ## Non-goals
 
-No historical monitoring, metrics storage, alerts, or service mutations.
+No custom dashboard, status parser, terminal-width renderer, watch loop, JSON schema, historical monitoring, metrics storage, alerts, or service mutations.
