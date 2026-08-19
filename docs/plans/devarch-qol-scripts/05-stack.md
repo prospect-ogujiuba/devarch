@@ -5,14 +5,18 @@ Purpose: Start and stop repeatable groups such as WordPress infrastructure, Lara
 
 ## Goal
 
-Add `scripts/devarch/stack.sh` backed by auditable declarative recipe files.
+Add a Compose-file-set selector that resolves named DevArch recipes and performs one native `podman compose` invocation.
 
 ## Scope
 
-- Commands: `list`, `show`, `up`, `down`, `restart`, `status`, and `logs`.
-- Add recipe files for `wordpress`, `laravel-bare`, `laravel-standard`, `laravel-loaded`, `observability`, and `local-ai` after validating their exact members.
-- Define ordered members and optional members using a non-executable line format.
-- Start in declared order, stop in reverse order, and report partial failures clearly.
+- DevArch-owned modes are `list`, `show`, and `run STACK -- COMPOSE_ARGS...`; lifecycle words remain native Compose arguments.
+- Prefer canonical Compose override files/profiles as recipes. If a text recipe is unavoidable, it contains only ordered canonical Compose file paths.
+- Resolve a stack to repeated `-f FILE` arguments and call `podman compose ...` exactly once.
+- Add `wordpress`, `laravel-bare`, `laravel-standard`, `laravel-loaded`, `observability`, and `local-ai` only after `podman compose ... config` proves each merged project valid.
+
+## Native delegation
+
+Compose owns dependency order, parallelism, health/dependency conditions, lifecycle, partial-failure reporting, logs, and shutdown. The wrapper never loops through members. Example: `stack.sh observability -- up -d` becomes one `podman compose -f ... -f ... up -d` invocation.
 
 ## Outputs
 
@@ -22,20 +26,20 @@ Add `scripts/devarch/stack.sh` backed by auditable declarative recipe files.
 
 - Recipe parsing rejects unknown directives, duplicate IDs, cycles/includes, and unsafe text before mutation.
 - `show` and `--dry-run` reveal exact ordered operations.
-- A failed member stops subsequent startup and identifies already-started members; no implicit destructive rollback.
-- Stack status/logs reuse shared commands rather than reimplementing runtime parsing.
+- Provider output and exit status report startup failures; DevArch adds no rollback or partial-start accounting.
+- Status/logs are native arguments passed to the same Compose project.
 - Users can add a recipe without editing Bash.
 
 ## Verification
 
-- Fixture tests cover valid recipes, missing services, duplicates, partial startup, reverse shutdown, and dry-run.
+- Fixture tests cover valid recipes, missing services, duplicates, exact repeated `-f` argv, passthrough, and provider dry-run.
 - Validate canonical recipes against the real catalog.
 - Syntax, ShellCheck, and fake-runtime regression tests pass.
 
 ## Open questions
 
-Decide during implementation whether recipe inclusion is needed in v1; default recommendation is no inclusion until a real duplication problem appears.
+Confirm that merging today's one-service Compose files preserves volumes, networks, container names, and project behavior. If not, use a canonical generated/handwritten stack Compose file rather than scripting sequential lifecycle calls.
 
 ## Non-goals
 
-No general dependency solver, parallel scheduler, or Kubernetes-style reconciliation.
+No per-service lifecycle loop, reverse-shutdown loop, dependency solver, parallel scheduler, retry/rollback engine, log aggregator, or Kubernetes-style reconciliation.

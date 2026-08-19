@@ -5,33 +5,37 @@ Purpose: Make recent or live logs accessible by service, stack, or app while kee
 
 ## Goal
 
-Add `scripts/devarch/logs.sh` as a focused wrapper over runtime logs.
+Prefer direct `podman logs`; retain only a container-name resolver if DevArch stack/app selection adds real value.
 
 ## Scope
 
-- Select one or more canonical services, a category, a stack, an app's infrastructure, or all running DevArch containers.
-- Support follow, since, until, tail, timestamps, grep/fixed filtering, and no-color.
-- Prefix multiplexed lines with canonical service IDs and preserve single-service raw mode.
-- Reuse runtime inventory and stack/app resolution.
+- Resolve one or more service/stack/app selections to container names using Compose labels or `podman ps --filter`.
+- Invoke one `podman logs` command with all selected containers. Podman's native `--names`, `--follow`, `--since`, `--until`, `--tail`, and `--timestamps` flags remain unchanged after `--`.
+- Filtering is documented as a normal pipeline to `grep`/`rg`; the helper does not absorb text-processing flags.
+- When the user already knows container names, documentation directs them to `podman logs` rather than the wrapper.
+
+## Native delegation
+
+Podman owns multi-container interleaving, name prefixes, follow mode, time/tail selection, stream handling, and interruption. DevArch only resolves repository concepts to container names.
 
 ## Outputs
 
-- Logs script, stream multiplexer/parser, tests, and examples.
+- Optional container-name resolver that `exec`s one `podman logs` command, recording tests, and direct native examples.
 
 ## Acceptance criteria
 
-- Non-follow mode has a safe default tail limit.
-- Follow mode handles Ctrl-C and terminates all child processes.
-- User filters are passed as data, not evaluated shell expressions.
+- DevArch adds no default tail or follow policy; native defaults/flags remain authoritative.
+- Final execution uses `exec podman logs ...`; Podman handles Ctrl-C and streams.
+- No custom filter expression is accepted.
 - Missing/stopped selections are reported without suppressing available logs from other selections.
 - Secret redaction is opt-in and clearly documented as best-effort; support bundles always apply strict redaction separately.
 
 ## Verification
 
-- Simulated interleaved streams test attribution, partial lines, UTF-8, child failure, filters, bounds, and cleanup.
-- Assert no orphaned fake log processes after interruption.
+- Recording tests assert exact multi-container `podman logs` argv, order, and passthrough.
+- Verify no multiplexer, stream parser, prefixer, or child-process pool exists.
 - Manual smoke test against two disposable/running services when available.
 
 ## Non-goals
 
-No log storage, rotation, indexing, alerting, or replacement for Loki/ELK.
+No log multiplexer/parser, prefixer, filtering engine, storage, rotation, indexing, alerting, or replacement for Podman/Loki/ELK.

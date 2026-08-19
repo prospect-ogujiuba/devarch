@@ -5,14 +5,18 @@ Purpose: Make new service definitions consistent with DevArch conventions from t
 
 ## Goal
 
-Add `scripts/devarch/new-service.sh` to generate a minimal, validated service directory from explicit inputs.
+Copy a small reviewed Compose template, substitute only validated DevArch fields, and hand validation to `podman compose config`.
 
 ## Scope
 
-- Inputs: category, service name, image, container port, optional host port, healthcheck type/target, volume, and config directory.
-- Generate `services-library/<category>/<service>/compose.yml` with pinned image guidance, restart policy, loopback publishing, `microservices-net`, deterministic volume naming, and healthcheck.
-- Support safe templates for HTTP, TCP/command, and job-style/no-healthcheck services with required rationale.
-- Use the port helper for advisory conflict checks and validation suite before final publication.
+- Keep inputs minimal: category, service name, image, and one selected reviewed template (`http`, `command-health`, or `job`). More complex services are authored directly in Compose.
+- Copy the selected template and substitute only strictly validated identifiers/ports using a standard text substitution tool; never generate arbitrary YAML structures in Bash.
+- Generated Compose uses restart policy, loopback publishing, `microservices-net`, volume conventions, and a visible placeholder for the native container healthcheck.
+- Run `podman compose -f STAGED_FILE config` and DevArch validation/port checks before moving the staged directory into place.
+
+## Native delegation
+
+Compose is the configuration language and `podman compose config` is the structural authority. DevArch provides starter files and repository conventions only. There is no service model, YAML builder, or lifecycle action.
 - Provide `--dry-run` and refuse existing/nonempty targets.
 
 ## Outputs
@@ -23,7 +27,7 @@ Add `scripts/devarch/new-service.sh` to generate a minimal, validated service di
 
 - Names and paths are strictly validated and cannot traverse directories.
 - Generated YAML parses and passes all applicable validation rules.
-- No secrets or default passwords are embedded; required sensitive settings use documented environment references.
+- No secrets or default passwords are embedded; required sensitive settings use documented Compose environment references or Podman secrets where appropriate.
 - Files are staged in a temporary directory and moved into place only after validation.
 - Existing files are never overwritten, including through symlinks or case collisions.
 - Generated output remains simple enough to edit directly without the scaffolder.
@@ -36,4 +40,4 @@ Add `scripts/devarch/new-service.sh` to generate a minimal, validated service di
 
 ## Non-goals
 
-No image discovery, service-specific configuration generation, automatic startup, remote registry authentication, or schema migration of existing services.
+No YAML builder/schema, image discovery, service-specific configuration generator, automatic startup, remote registry authentication, or migration of existing services.

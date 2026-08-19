@@ -9,10 +9,15 @@ Add `scripts/devarch/validate.sh` as the single host-only entrypoint for static 
 
 ## Scope
 
-- Validate YAML parsing, Compose structure/config, service/container naming, external-network declarations, referenced bind-mount files, healthchecks, image tags, and host-port uniqueness.
-- Run Bash syntax, optional ShellCheck, hosts tests, Laravel tests, WordPress tests, and new DevArch tests.
+- Make `podman compose -f FILE config` the authoritative Compose parse/normalization check; do not build a competing Compose parser or schema.
+- Run repository-specific assertions only where Compose cannot express policy: canonical path/name agreement, required external network, referenced repository files, healthcheck policy, pinning policy, and cross-file host-port uniqueness.
+- Invoke native `bash -n`, `shellcheck`, and the existing hosts/Laravel/WordPress test entrypoints unchanged.
 - Support `--quick`, `--full`, `--section`, `--json`, and explicit handling when optional tools are unavailable.
-- Maintain a reviewed allowlist for intentional exceptions, including job-style services without healthchecks.
+- Maintain a small reviewed allowlist only for DevArch policy exceptions, including job-style services without healthchecks.
+
+## Native delegation
+
+`podman compose config` owns Compose validity and interpolation. Bash and ShellCheck own shell analysis. The script is only a test runner plus cross-file DevArch policy checks; it must not normalize YAML or duplicate provider diagnostics.
 
 ## Outputs
 
@@ -21,7 +26,7 @@ Add `scripts/devarch/validate.sh` as the single host-only entrypoint for static 
 ## Acceptance criteria
 
 - Default validation performs no runtime or host mutation.
-- Every diagnostic names the file, rule, and remediation.
+- Native diagnostic text and exit status are preserved; DevArch prefixes only the file/check context.
 - Duplicate published ports are failures unless explicitly documented in the exception file.
 - Missing optional ShellCheck is a warning in quick mode and a failure only in an explicitly strict/full mode.
 - Existing test exit statuses are aggregated without hiding later independent failures.
@@ -34,4 +39,4 @@ Add `scripts/devarch/validate.sh` as the single host-only entrypoint for static 
 
 ## Non-goals
 
-No automatic rewriting of Compose files or downloading of validation dependencies.
+No Compose/YAML implementation, diagnostic reformatter, automatic rewriting, or downloading of validation dependencies.
