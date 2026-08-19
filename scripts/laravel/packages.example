@@ -1,0 +1,4 @@
+# Composer packages are installed in file order.
+# Use composer-package for production requirements and composer-dev-package for development.
+# composer-package vendor/package ^1.0
+# composer-dev-package vendor/dev-package ~2.0

@@ -10,6 +10,7 @@ PHP_COMPOSE="$PROJECT_ROOT/services-library/backend/php/compose.yml"
 MARIADB_COMPOSE="$PROJECT_ROOT/services-library/database/mariadb/compose.yml"
 REDIS_COMPOSE="$PROJECT_ROOT/services-library/database/redis/compose.yml"
 MAILPIT_COMPOSE="$PROJECT_ROOT/services-library/mail/mailpit/compose.yml"
+PROFILE_DIR="$SCRIPT_DIR/profiles"
 
 readonly REDIS_HOST=redis
 readonly REDIS_PASSWORD=devarch
@@ -21,6 +22,8 @@ APP_NAME=""
 APP_TITLE=""
 APP_URL=""
 VERSION=""
+PROFILE=bare
+PACKAGES_FILE=""
 DATABASE=mariadb
 WITH_MAILPIT=false
 WITH_REDIS=false
@@ -47,6 +50,10 @@ DB_CREATED=false
 DB_USER_CREATED=false
 PROVISIONING_STARTED=false
 SUCCESS=false
+CLI_PACKAGE_KINDS=()
+CLI_PACKAGE_SPECS=()
+PACKAGE_KINDS=()
+PACKAGE_SPECS=()
 
 log() { printf '[laravel] %s\n' "$*"; }
 die() { printf '[laravel] error: %s\n' "$*" >&2; exit 1; }
@@ -60,6 +67,11 @@ PHP container and wildcard https://<app-name>.test proxy.
 
 Options:
   --version CONSTRAINT       Composer create-project version constraint
+  --profile NAME             Load a profile (default: bare)
+  --list-profiles            List available profiles and exit
+  --package PACKAGE          Add a production Composer package; repeatable
+  --dev-package PACKAGE      Add a development Composer package; repeatable
+  --packages-file FILE       Read composer-* directives from FILE
   --database mariadb|sqlite Database backend (default: mariadb)
   --with-mailpit             Configure the shared Mailpit SMTP service
   --with-redis               Configure shared Redis for cache and queue
@@ -69,9 +81,9 @@ Options:
   --force                    Preserve and replace an existing target
   --dry-run                  Validate and print a redacted, mutation-free plan
   --help                     Show this help (must be the sole argument)
-  --list-profiles            Reserved for phase 03 (must be the sole argument)
 
-Profiles and package options are implemented in phase 03.
+PACKAGE is vendor/package or vendor/package:constraint. Profiles and package
+files are declarative; use --list-profiles to inspect available profiles.
 EOF
 }
 
@@ -92,9 +104,7 @@ parse_informational_mode() {
   fi
   case "$1" in
     --help) usage; exit 0 ;;
-    --list-profiles)
-      die '--list-profiles is not implemented until phase 03'
-      ;;
+    --list-profiles) list_profiles; exit 0 ;;
   esac
 }
 
@@ -113,6 +123,26 @@ parse_args() {
         VERSION="$2"
         shift 2
         ;;
+      --profile)
+        require_value "$@"
+        PROFILE="$2"
+        shift 2
+        ;;
+      --package)
+        require_value "$@"
+        parse_cli_package prod "$2"
+        shift 2
+        ;;
+      --dev-package)
+        require_value "$@"
+        parse_cli_package dev "$2"
+        shift 2
+        ;;
+      --packages-file)
+        require_value "$@"
+        PACKAGES_FILE="$2"
+        shift 2
+        ;;
       --database)
         require_value "$@"
         DATABASE="$2"
@@ -125,9 +155,6 @@ parse_args() {
       --seed) SEED=true; shift ;;
       --force) FORCE=true; shift ;;
       --dry-run) DRY_RUN=true; shift ;;
-      --profile|--package|--dev-package|--packages-file)
-        die "$1 is not implemented until phase 03"
-        ;;
       --repository|--branch|--database-import|--npm-install|--build|--npm-build)
         usage_error "unsupported v1 option: $1"
         ;;
@@ -323,6 +350,106 @@ validate_composer_constraint() {
   done <<< "$normalized"
 }
 
+list_profiles() {
+  local file name description
+  for file in "$PROFILE_DIR"/*.profile; do
+    [[ -f "$file" ]] || continue
+    name="$(basename "$file" .profile)"
+    description="$(grep -m1 '^# ' "$file" 2>/dev/null || true)"
+    printf '%-10s %s\n' "$name" "${description#\# }"
+  done
+}
+
+validate_composer_package_name() {
+  local package="$1"
+  validate_no_controls 'Composer package name' "$package"
+  [[ "$package" =~ ^[a-z0-9]+([_.-][a-z0-9]+)*/[a-z0-9]+([_.-][a-z0-9]+)*$ ]] || \
+    die "invalid Composer package name: $package"
+}
+
+add_package() {
+  local kind="$1" package="$2" constraint="${3:-}" spec
+  validate_composer_package_name "$package"
+  if [[ -n "$constraint" ]]; then
+    validate_no_controls 'Composer package constraint' "$constraint"
+    validate_composer_constraint "$constraint"
+    spec="$package:$constraint"
+  else
+    spec="$package"
+  fi
+  PACKAGE_KINDS+=("$kind")
+  PACKAGE_SPECS+=("$spec")
+}
+
+parse_cli_package() {
+  local kind="$1" value="$2" package constraint=""
+  validate_no_controls 'Composer package request' "$value"
+  package="${value%%:*}"
+  [[ "$value" != *:* ]] || constraint="${value#*:}"
+  [[ -n "$package" && ( "$value" != *:* || -n "$constraint" ) ]] || die "invalid Composer package request: $value"
+  validate_composer_package_name "$package"
+  [[ -z "$constraint" ]] || validate_composer_constraint "$constraint"
+  CLI_PACKAGE_KINDS+=("$kind")
+  CLI_PACKAGE_SPECS+=("$value")
+}
+
+parse_directives_file() {
+  local file="$1" allow_features="$2" line directive fields package constraint line_number=0 clean
+  [[ -f "$file" ]] || die "declarative file not found: $file"
+  command -v od >/dev/null 2>&1 || die 'od is required for declarative file validation'
+  if od -An -tx1 "$file" | grep -Eq '(^|[[:space:]])00([[:space:]]|$)'; then
+    die "$file contains NUL"
+  fi
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    ((line_number += 1))
+    clean="$(printf '%s' "$line" | LC_ALL=C tr -d '\001-\010\013-\037\177')"
+    [[ "$line" == "$clean" ]] || die "invalid control byte in $file:$line_number"
+    line="${line%%#*}"
+    line="$(trim "$line")"
+    [[ -n "$line" ]] || continue
+    directive=""; fields=""; package=""; constraint=""
+    read -r directive fields <<< "$line"
+    read -r package constraint <<< "$fields"
+    case "$directive" in
+      composer-package|composer-dev-package)
+        [[ -n "$package" ]] || die "invalid directive fields in $file:$line_number"
+        add_package "$([[ "$directive" == composer-package ]] && printf prod || printf dev)" "$package" "$constraint"
+        ;;
+      feature)
+        [[ "$allow_features" == true ]] || die "unknown package-file directive 'feature' in $file:$line_number"
+        [[ -n "$package" && -z "$constraint" ]] || die "invalid feature fields in $file:$line_number"
+        case "$package" in
+          mailpit) WITH_MAILPIT=true ;;
+          redis) WITH_REDIS=true ;;
+          *) die "unknown profile feature '$package' in $file:$line_number" ;;
+        esac
+        ;;
+      *) die "unknown directive '$directive' in $file:$line_number" ;;
+    esac
+  done < "$file"
+}
+
+load_profile() {
+  [[ "$PROFILE" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || die "invalid profile name: $PROFILE"
+  local file="$PROFILE_DIR/$PROFILE.profile"
+  [[ -f "$file" ]] || die "unknown profile: $PROFILE (use --list-profiles)"
+  parse_directives_file "$file" true
+}
+
+load_packages_file() {
+  [[ -n "$PACKAGES_FILE" ]] || return 0
+  validate_no_controls '--packages-file' "$PACKAGES_FILE"
+  parse_directives_file "$PACKAGES_FILE" false
+}
+
+append_cli_packages() {
+  local i
+  for ((i = 0; i < ${#CLI_PACKAGE_SPECS[@]}; i++)); do
+    PACKAGE_KINDS+=("${CLI_PACKAGE_KINDS[i]}")
+    PACKAGE_SPECS+=("${CLI_PACKAGE_SPECS[i]}")
+  done
+}
+
 validate_config() {
   [[ -n "$APP_NAME" ]] || usage_error 'app-name is required'
   validate_no_controls 'app-name' "$APP_NAME"
@@ -335,6 +462,10 @@ validate_config() {
     validate_no_controls '--version' "$VERSION"
     validate_composer_constraint "$VERSION"
   fi
+
+  load_profile
+  load_packages_file
+  append_cli_packages
 
   APP_TITLE="${LARAVEL_APP_NAME:-$(title_case "$APP_NAME")}"
   [[ -n "$APP_TITLE" ]] || die 'LARAVEL_APP_NAME must be nonempty'
@@ -366,9 +497,12 @@ validate_config() {
   [[ "$DATABASE" == mariadb ]] && derive_identifiers
 
   local file
-  for file in "$PHP_COMPOSE" "$MARIADB_COMPOSE" "$REDIS_COMPOSE" "$MAILPIT_COMPOSE"; do
+  for file in "$PHP_COMPOSE"; do
     [[ -f "$file" ]] || die "required Compose file not found: $file"
   done
+  [[ "$DATABASE" != mariadb || -f "$MARIADB_COMPOSE" ]] || die "required Compose file not found: $MARIADB_COMPOSE"
+  [[ "$WITH_REDIS" != true || -f "$REDIS_COMPOSE" ]] || die "required Compose file not found: $REDIS_COMPOSE"
+  [[ "$WITH_MAILPIT" != true || -f "$MAILPIT_COMPOSE" ]] || die "required Compose file not found: $MAILPIT_COMPOSE"
   command -v awk >/dev/null 2>&1 || die 'awk is required'
   command -v tr >/dev/null 2>&1 || die 'tr is required'
   if [[ "$DRY_RUN" != true ]]; then
@@ -403,12 +537,18 @@ print_plan() {
   log "target: $TARGET"
   if [[ -e "$TARGET" || -L "$TARGET" ]]; then log "backup existing target: $BACKUP_PATH"; else log 'target is new'; fi
   log "runtime: $RUNTIME; container user: $CONTAINER_USER"
+  log "profile: $PROFILE"
   log 'ensure external network: microservices-net'
   log 'start and wait: php'
   [[ "$DATABASE" == mariadb ]] && log "start and wait: mariadb; create isolated database/user: $DB_NAME / $DB_USER"
   [[ "$WITH_MAILPIT" == true ]] && log 'start and wait: mailpit'
   [[ "$WITH_REDIS" == true ]] && log 'start and wait: redis (password redacted)'
   if [[ -n "$VERSION" ]]; then log "scaffold Laravel through Composer (constraint: $VERSION)"; else log 'scaffold Laravel through Composer (current stable)'; fi
+  local i label
+  for ((i = 0; i < ${#PACKAGE_SPECS[@]}; i++)); do
+    [[ "${PACKAGE_KINDS[i]}" == prod ]] && label=production || label=development
+    log "Composer $label package: ${PACKAGE_SPECS[i]}"
+  done
   log "configure APP_URL=$APP_URL and database=$DATABASE; generate APP_KEY"
   [[ "$WITH_MAILPIT" == true ]] && log 'configure Mailpit SMTP at mailpit:1025'
   [[ "$WITH_REDIS" == true ]] && log 'configure phpredis at redis:6379 (credentials redacted), cache DB 1, queue DB 0'
@@ -541,6 +681,19 @@ scaffold_application() {
   log 'scaffold Laravel through the shared PHP container'
   "${command[@]}"
   [[ -f "$TARGET/.env" ]] || die 'Composer scaffold did not create .env'
+}
+
+install_packages() {
+  local i kind
+  local -a command
+  for ((i = 0; i < ${#PACKAGE_SPECS[@]}; i++)); do
+    kind="${PACKAGE_KINDS[i]}"
+    command=("$RUNTIME" exec --user "$CONTAINER_USER" -e HOME=/tmp --workdir "$CONTAINER_APP" php composer require --no-interaction --no-progress)
+    [[ "$kind" == prod ]] || command+=(--dev)
+    command+=("${PACKAGE_SPECS[i]}")
+    log "install Composer $([[ "$kind" == prod ]] && printf production || printf development) package: ${PACKAGE_SPECS[i]}"
+    "${command[@]}"
+  done
 }
 
 make_runtime_writable() {
@@ -735,6 +888,7 @@ main() {
   PROVISIONING_STARTED=true
   create_database
   scaffold_application
+  install_packages
   make_runtime_writable
   configure_application
   clear_recovery_guard || die "provisioning succeeded but durable recovery marker could not be removed: $RECOVERY_MARKER"
