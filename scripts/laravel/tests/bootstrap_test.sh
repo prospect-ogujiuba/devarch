@@ -157,4 +157,100 @@ grep -Eq 'redis-server --requirepass devarch' "$REDIS_COMPOSE" || fail 'Redis Co
 pass
 pass
 
+# Profiles are discoverable, declarative, and enable only allowlisted features.
+profile_list="$("$BOOTSTRAP" --list-profiles)"
+assert_contains "$profile_list" 'bare       Upstream Laravel with the selected database and no optional service.' 'bare profile listing'
+assert_contains "$profile_list" 'standard   Daily local baseline with email capture.' 'standard profile listing'
+assert_contains "$profile_list" 'loaded     Local service-rich baseline.' 'loaded profile listing'
+PROFILE=loaded
+WITH_MAILPIT=false
+WITH_REDIS=false
+PACKAGE_KINDS=()
+PACKAGE_SPECS=()
+load_profile
+assert_eq "$WITH_MAILPIT" true 'loaded profile enables Mailpit'
+assert_eq "$WITH_REDIS" true 'loaded profile enables Redis'
+assert_eq "${#PACKAGE_SPECS[@]}" 0 'canonical loaded profile adds no packages'
+
+# Package/profile parsing strips comments, validates all fields, and preserves source order.
+PROFILE_DIR="$TEST_TMP/profiles"
+mkdir -p "$PROFILE_DIR"
+printf '# Test profile\ncomposer-package acme/first >=1 <2 # trailing\ncomposer-dev-package acme/tool dev-main\nfeature mailpit\n' > "$PROFILE_DIR/test.profile"
+PROFILE=test
+WITH_MAILPIT=false
+WITH_REDIS=false
+PACKAGE_KINDS=()
+PACKAGE_SPECS=()
+load_profile
+assert_eq "${PACKAGE_KINDS[*]}" 'prod dev' 'profile prod/dev separation'
+assert_eq "${PACKAGE_SPECS[*]}" 'acme/first:>=1 <2 acme/tool:dev-main' 'profile whitespace constraint, package order, and comments'
+assert_eq "$WITH_MAILPIT" true 'profile feature parsing'
+printf 'composer-package acme/from-file >=2 <3 # note\n\n# comment\ncomposer-dev-package acme/file-tool\n' > "$TEST_TMP/packages.txt"
+PACKAGES_FILE="$TEST_TMP/packages.txt"
+load_packages_file
+assert_eq "${PACKAGE_KINDS[*]}" 'prod dev prod dev' 'packages-file prod/dev order'
+assert_eq "${PACKAGE_SPECS[*]}" 'acme/first:>=1 <2 acme/tool:dev-main acme/from-file:>=2 <3 acme/file-tool' 'packages-file whitespace constraint, comments, and blank lines'
+for bad_line in 'unknown acme/pkg' 'feature redis' 'composer-package Bad/pkg' 'composer-package acme/pkg ^^1' 'composer-package acme/pkg >=1 <2 trailing'; do
+  printf '%s\n' "$bad_line" > "$TEST_TMP/bad.packages"
+  expect_failure bash -c 'source "$1"; PACKAGES_FILE="$2"; PACKAGE_KINDS=(); PACKAGE_SPECS=(); load_packages_file' _ "$BOOTSTRAP" "$TEST_TMP/bad.packages"
+done
+printf 'composer-package acme/pkg ^1\0trailing\n' > "$TEST_TMP/nul.packages"
+expect_failure parse_directives_file "$TEST_TMP/nul.packages" false
+mkdir -p "$TEST_TMP/no-od-bin"
+saved_path="$PATH"
+PATH="$TEST_TMP/no-od-bin"
+expect_failure parse_directives_file "$TEST_TMP/packages.txt" false
+PATH="$saved_path"
+if ! ( PACKAGE_KINDS=(); PACKAGE_SPECS=(); parse_directives_file "$TEST_DIR/../packages.example" false; [[ ${#PACKAGE_SPECS[@]} -eq 0 ]] ); then
+  fail 'repository packages example must parse without selecting placeholders'
+fi
+pass
+
+# CLI package requests are appended after declarative sources in CLI encounter order.
+CLI_PACKAGE_KINDS=()
+CLI_PACKAGE_SPECS=()
+parse_cli_package dev 'acme/cli-tool:^3.0'
+parse_cli_package prod 'acme/cli-runtime'
+append_cli_packages
+assert_eq "${PACKAGE_KINDS[*]}" 'prod dev prod dev dev prod' 'CLI packages append after files in encounter order'
+assert_eq "${PACKAGE_SPECS[*]}" 'acme/first:>=1 <2 acme/tool:dev-main acme/from-file:>=2 <3 acme/file-tool acme/cli-tool:^3.0 acme/cli-runtime' 'CLI package specs preserved'
+expect_failure parse_cli_package prod 'invalid'
+expect_failure parse_cli_package prod 'Acme/pkg:^1'
+expect_failure parse_cli_package prod 'acme/pkg:^^1'
+
+# Dry-run reports ordered package intent without invoking Composer.
+PROFILE=bare
+TARGET="$TEST_TMP/package-plan"
+BACKUP_PATH="$TEST_TMP/package-backup"
+DATABASE=sqlite
+WITH_MAILPIT=false
+WITH_REDIS=false
+MIGRATE=false
+SEED=false
+VERSION=''
+APP_URL='https://packages.test'
+plan="$(print_plan)"
+assert_contains "$plan" 'profile: bare' 'dry-run profile intent'
+assert_contains "$plan" 'Composer production package: acme/first:>=1 <2' 'dry-run production package intent'
+assert_contains "$plan" 'Composer development package: acme/tool:dev-main' 'dry-run development package intent'
+
+# Real package installation passes each validated requirement as one container argument.
+cat > "$TEST_TMP/bin/composer-runtime" <<'RUNTIME'
+#!/usr/bin/env bash
+printf '%s\n' '---' >> "$PACKAGE_COMMAND_LOG"
+printf '[%s]\n' "$@" >> "$PACKAGE_COMMAND_LOG"
+RUNTIME
+chmod +x "$TEST_TMP/bin/composer-runtime"
+export PACKAGE_COMMAND_LOG="$TEST_TMP/package-commands.log"
+RUNTIME="$TEST_TMP/bin/composer-runtime"
+CONTAINER_USER='1000:1000'
+CONTAINER_APP='/var/www/html/demo'
+PACKAGE_KINDS=(prod dev)
+PACKAGE_SPECS=('acme/runtime:>=1 <2' 'acme/tool:^3.0')
+install_packages >/dev/null
+assert_contains "$(<"$PACKAGE_COMMAND_LOG")" $'[acme/runtime:>=1 <2]' 'production constraint remains one argv element'
+assert_contains "$(<"$PACKAGE_COMMAND_LOG")" $'[--dev]\n[acme/tool:^3.0]' 'development package uses composer require --dev'
+if grep -Eq '(^|[^[:alnum:]_])eval([^[:alnum:]_]|$)' "$BOOTSTRAP"; then fail 'bootstrap must not use eval'; fi
+pass
+
 printf 'PASS: %d assertions\n' "$passed"
