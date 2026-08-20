@@ -5,7 +5,7 @@ github-plugin makerblocks
 github-theme makerstarter
 github-plugin all-in-one-wp-migration inactive
 github-plugin admin-site-enhancements-pro
-github-plugin manual-image-crop
+wp-plugin manual-image-crop
 wp-plugin debug-bar
 wp-plugin debug-bar-actions-and-filters-addon
 wp-plugin classic-editor
