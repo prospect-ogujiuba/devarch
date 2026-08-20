@@ -10,7 +10,6 @@ wp-plugin debug-bar
 wp-plugin debug-bar-actions-and-filters-addon
 wp-plugin classic-editor
 wp-plugin default-featured-image
-wp-plugin plugin-inspector
 wp-plugin log-deprecated-notices
 wp-plugin query-monitor
 wp-plugin theme-check
