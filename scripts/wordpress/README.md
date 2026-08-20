@@ -184,7 +184,18 @@ The sync command refuses dirty repositories, unknown origins, non-semantic refs 
 
 Release maintainers run `release-maker.sh VERSION --dry-run`, then the same command without `--dry-run` only after all gates pass. It creates local tags and updates the manifest but deliberately never pushes.
 
-The three package directories inside `apps/playground/wp-content/` are independent repositories and their **primary Git worktrees**. Keep each on clean `main`; `release-maker.sh` enforces this. They are not consumer deployments, so `sync-maker.sh` refuses `playground` rather than replacing those worktrees with detached release clones. Use linked worktrees only for parallel feature branches, then merge them back to these primary `main` worktrees before the release flow.
+The three package directories inside `apps/playground/wp-content/` are independent repositories and their **primary Git worktrees**. Keep each on clean `main`; `release-maker.sh` enforces this. They are not consumer deployments, so `sync-maker.sh` refuses `playground` rather than replacing those worktrees with detached release clones.
+
+Use linked worktrees only for parallel core feature branches, outside the WordPress tree:
+
+```bash
+# Replace makerblocks with makerstarter or makermaker as needed.
+cd apps/playground/wp-content/plugins/makerblocks
+git worktree add "$HOME/projects/worktrees/makerblocks/my-feature" \
+  -b feat/my-feature
+```
+
+Commit and test in the linked checkout, merge the branch from the playground primary `main`, then remove it with `git worktree remove <path>` and `git branch -d <branch>`. `git worktree list` shows every checkout sharing that package repository. A branch can be active in only one worktree. Site-owned code never belongs in these core feature worktrees; use `<site>-theme`, `<site>-blocks`, or `<site>-app`. Each package README lists its exact merge/test commands.
 
 ### Existing-site ownership audit and migration
 
