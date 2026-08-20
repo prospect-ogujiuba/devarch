@@ -463,6 +463,17 @@ wp_prompt_secret() {
   fi
 }
 
+configure_wordpress_content_settings() {
+  local container_site="/var/www/html/$SITE_NAME"
+  local host_uploads="$APPS_DIR/$SITE_NAME/wp-content/uploads"
+
+  wp_exec "$container_site" option update uploads_use_yearmonth_folders 0
+  log "remove empty upload subdirectories after disabling year/month folders"
+  run mkdir -p "$host_uploads"
+  run find "$host_uploads" -mindepth 1 -depth -type d -empty -delete
+  wp_exec "$container_site" rewrite structure '/%postname%/' --hard
+}
+
 install_wordpress() {
   local container_site="/var/www/html/$SITE_NAME"
   local db_name="wp_${SITE_NAME//-/_}"
@@ -479,7 +490,7 @@ install_wordpress() {
   wp_exec "$container_site" config set FS_METHOD direct
   wp_prompt_secret "$ADMIN_PASSWORD_VALUE" "install WordPress administrator" "$container_site" \
     core install --url="$SITE_URL" --title="$SITE_TITLE" --admin_user="$ADMIN_USER_VALUE" --admin_email="$ADMIN_EMAIL_VALUE" --prompt=admin_password
-  wp_exec "$container_site" option update uploads_use_yearmonth_folders 0
+  configure_wordpress_content_settings
   wp_exec "$container_site" post delete 1 --force
   wp_exec "$container_site" plugin delete akismet hello || true
 }
@@ -565,6 +576,7 @@ restore_aiowm_archive() {
   wp_exec "$container_site" ai1wm restore "$archive_name"
   wp_exec "$container_site" option update home "$SITE_URL"
   wp_exec "$container_site" option update siteurl "$SITE_URL"
+  configure_wordpress_content_settings
   wp_exec "$container_site" cache flush || true
 }
 
