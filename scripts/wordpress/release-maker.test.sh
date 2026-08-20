@@ -27,6 +27,7 @@ for i in "${!packages[@]}"; do
   git init -q "$dir"
   git -C "$dir" config user.email tests@devarch.test
   git -C "$dir" config user.name 'DevArch Tests'
+  git -C "$dir" branch -M main
   printf '# boundary\n\n**FRAMEWORK CORE — DO NOT EDIT; update from playground releases.**\n' > "$dir/CORE-BOUNDARY.md"
   case "${packages[$i]}" in makerstarter) touch "$dir/style.css";; makerblocks) touch "$dir/makerblocks.php";; makermaker) touch "$dir/makermaker.php";; esac
   git -C "$dir" add . && git -C "$dir" commit -qm initial

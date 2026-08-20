@@ -68,6 +68,7 @@ validate_base() {
   [[ "$SITE_NAME" =~ ^[a-z0-9][a-z0-9-]{0,59}$ ]] || die "invalid site name: $SITE_NAME"
   [[ -d "$APPS_DIR/$SITE_NAME/wp-content" ]] || die "WordPress content directory not found: $APPS_DIR/$SITE_NAME/wp-content"
   LOCK_FILE="$APPS_DIR/$SITE_NAME/.devarch-maker.lock"
+  [[ "$SITE_NAME" != playground || -n "$ROLLBACK_ID" ]] || die "playground owns the release repositories on main; synchronize consumer sites, not the integration worktree"
   if [[ -n "$ROLLBACK_ID" ]]; then
     [[ "$ROLLBACK_ID" =~ ^[0-9]{8}T[0-9]{6}Z-[0-9]+$ ]] || die "invalid rollback ID: $ROLLBACK_ID"
     return

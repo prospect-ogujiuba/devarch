@@ -56,6 +56,7 @@ validate_repositories() {
   for i in "${!PACKAGES[@]}"; do
     dir="${DIRS[$i]}"
     [[ -d "$dir/.git" ]] || die "playground repository missing: $dir"
+    [[ "$(git -C "$dir" branch --show-current)" == main ]] || die "playground release repository must be on main: $dir"
     [[ -z "$(git -C "$dir" status --porcelain)" ]] || die "dirty playground repository refused: $dir"
     remote="$(git -C "$dir" remote get-url origin 2>/dev/null || true)"
     [[ -n "$remote" && ! "$remote" =~ [[:space:]] ]] || die "invalid origin for ${PACKAGES[$i]}"
