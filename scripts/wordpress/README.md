@@ -184,6 +184,8 @@ The sync command refuses dirty repositories, unknown origins, non-semantic refs 
 
 Release maintainers run `release-maker.sh VERSION --dry-run`, then the same command without `--dry-run` only after all gates pass. It creates local tags and updates the manifest but deliberately never pushes.
 
+The three package directories inside `apps/playground/wp-content/` are independent repositories and their **primary Git worktrees**. Keep each on clean `main`; `release-maker.sh` enforces this. They are not consumer deployments, so `sync-maker.sh` refuses `playground` rather than replacing those worktrees with detached release clones. Use linked worktrees only for parallel feature branches, then merge them back to these primary `main` worktrees before the release flow.
+
 ### Existing-site ownership audit and migration
 
 Inventory all detected Maker sites without changing them:

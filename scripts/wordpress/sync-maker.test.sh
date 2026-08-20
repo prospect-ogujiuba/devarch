@@ -151,4 +151,7 @@ sed -i 's/"ref":"v1.1.0"/"ref":"main"/g' "$MANIFEST"
 if DEVARCH_APPS_DIR="$APPS" bash "$SYNC" consumer --profile clean --to 1.1.0 --manifest "$MANIFEST" >/dev/null 2>&1; then fail 'main should be refused without explicit local-development opt-in'; fi
 [[ "$(workspace_hash)" == "$before_workspace" ]] || fail 'version/ref refusal changed workspace bytes'
 
+mkdir -p "$APPS/playground/wp-content"
+if DEVARCH_APPS_DIR="$APPS" bash "$SYNC" playground --profile clean --to 1.1.0 --manifest "$MANIFEST" >/dev/null 2>&1; then fail 'consumer synchronization should refuse the playground release worktree'; fi
+
 printf 'sync-maker tests passed\n'
