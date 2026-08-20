@@ -1,0 +1,8 @@
+# Shared Maker framework core and project-owned workspace declarations.
+maker-stack-channel stable
+maker-core plugin makermaker
+maker-core plugin makerblocks
+maker-core theme makerstarter
+maker-workspace child-theme makerstarter
+maker-workspace blocks-plugin makerblocks
+maker-workspace app-plugin makermaker
