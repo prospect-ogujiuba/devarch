@@ -145,17 +145,76 @@ profile_entries() {
 }
 
 [[ "$(profile_entries bare)" == 'github-plugin all-in-one-wp-migration inactive' ]] || fail "bare profile drifted from history"
-expected_custom_repos=$'github-mu-plugin typerocket-pro-v6\ngithub-plugin makermaker\ngithub-plugin makerblocks\ngithub-theme makerstarter\ngithub-plugin all-in-one-wp-migration inactive\ngithub-plugin admin-site-enhancements-pro'
-[[ "$(profile_entries clean)" == "$expected_custom_repos" ]] || fail "clean profile should contain TypeRocket and all three custom plugins/themes"
-[[ "$(profile_entries custom)" == "$expected_custom_repos"$'\ngithub-plugin manual-image-crop' ]] || fail "custom profile should contain TypeRocket and all three custom plugins/themes"
+expected_clean=$'github-mu-plugin typerocket-pro-v6\ninclude maker-stack.fragment\ngithub-plugin all-in-one-wp-migration inactive\ngithub-plugin admin-site-enhancements-pro'
+[[ "$(profile_entries clean)" == "$expected_clean" ]] || fail "clean profile should use the shared Maker stack fragment"
+[[ "$(profile_entries custom)" == "$expected_clean"$'\nwp-plugin manual-image-crop' ]] || fail "custom profile should extend clean without duplicating Maker declarations"
 for profile in clean custom loaded; do
   entries="$(profile_entries "$profile")"
   grep -q '^github-mu-plugin typerocket-pro-v6$' <<<"$entries" || fail "$profile profile should contain TypeRocket Pro v6"
-  grep -q '^github-plugin makermaker$' <<<"$entries" || fail "$profile profile should contain MakerMaker as a regular plugin"
-  grep -q '^github-plugin makerblocks$' <<<"$entries" || fail "$profile profile should contain MakerBlocks"
-  grep -q '^github-theme makerstarter$' <<<"$entries" || fail "$profile profile should contain MakerStarter"
+  [[ "$(grep -c '^include maker-stack.fragment$' <<<"$entries")" -eq 1 ]] || fail "$profile should reference the shared Maker stack exactly once"
 done
+maker_stack="$(grep -Ev '^[[:space:]]*(#|$)' "$SCRIPT_DIR/profiles/maker-stack.fragment")"
+[[ "$maker_stack" == $'maker-stack-channel stable\nmaker-core plugin makermaker\nmaker-core plugin makerblocks\nmaker-core theme makerstarter\nmaker-workspace child-theme makerstarter\nmaker-workspace blocks-plugin makerblocks\nmaker-workspace app-plugin makermaker' ]] || fail "shared Maker stack declarations drifted"
 [[ "$(profile_entries loaded | grep -c '^wp-plugin ')" -eq 12 ]] || fail "loaded profile should retain all 12 development plugins"
+
+for label in 'core install marker: makermaker' 'core install marker: makerblocks' 'core install marker: makerstarter' \
+  'workspace create [child-theme]' 'workspace create [blocks-plugin]' 'workspace create [app-plugin via MakerMaker]' \
+  'write Maker core lock manifest'; do
+  grep -Fq "$label" <<<"$profile_output" || fail "Maker dry-run should label $label"
+done
+grep -q 'theme activate profile-site-theme' <<<"$profile_output" || fail "Maker profile should activate the child theme"
+grep -q 'plugin activate profile-site-blocks' <<<"$profile_output" || fail "Maker profile should activate the project blocks plugin"
+grep -q 'makermaker create profile-site-app.*--activate' <<<"$profile_output" || fail "Maker profile should generate and activate the app plugin through MakerMaker"
+
+if GITHUB_USER=example bash "$BOOTSTRAP" demo-site --profile clean --project-slug Bad_Slug --dry-run >/dev/null 2>&1; then
+  fail "invalid project slugs should be rejected"
+fi
+if GITHUB_USER=example bash "$BOOTSTRAP" demo-site --profile clean --php-namespace Single --dry-run >/dev/null 2>&1; then
+  fail "single-segment PHP namespaces should be rejected"
+fi
+if GITHUB_USER=example bash "$BOOTSTRAP" demo-site --profile clean --js-namespace Bad/Namespace --dry-run >/dev/null 2>&1; then
+  fail "invalid JS namespaces should be rejected"
+fi
+override_output="$(GITHUB_USER=example bash "$BOOTSTRAP" demo-site --profile clean --scaffolds-only --project-slug client-web --php-namespace 'Client\Web' --js-namespace client-blocks --dry-run)" || fail "scaffold-only override dry-run should succeed"
+grep -Fq 'slug=client-web PHP=Client\Web JS=client-blocks' <<<"$override_output" || fail "explicit project identity overrides should be normalized into the plan"
+
+scaffold_root="$(mktemp -d)"
+(
+  source "$BOOTSTRAP"
+  APPS_DIR="$scaffold_root/apps"
+  SITE_NAME=unit-site
+  SITE_TITLE='Unit Site'
+  PROJECT_SLUG=unit-site
+  PHP_NAMESPACE='Maker\UnitSite'
+  JS_NAMESPACE=unit-site
+  DRY_RUN=false
+  MAKER_WORKSPACES=('child-theme:makerstarter' 'blocks-plugin:makerblocks' 'app-plugin:makermaker')
+  mkdir -p "$APPS_DIR/$SITE_NAME/wp-content/themes/makerstarter/scaffolds" "$APPS_DIR/$SITE_NAME/wp-content/plugins/makerblocks/scaffolds"
+  cp -a "$PROJECT_ROOT/apps/playground/wp-content/themes/makerstarter/scaffolds/child-theme" "$APPS_DIR/$SITE_NAME/wp-content/themes/makerstarter/scaffolds/"
+  cp -a "$PROJECT_ROOT/apps/playground/wp-content/plugins/makerblocks/scaffolds/project-plugin" "$APPS_DIR/$SITE_NAME/wp-content/plugins/makerblocks/scaffolds/"
+  wp_exec() {
+    local container_site="$1"; shift
+    if [[ "${1:-}" == makermaker && "${2:-}" == create ]]; then
+      mkdir -p "$APPS_DIR/$SITE_NAME/wp-content/plugins/${3}"
+      printf '# Generated plugin\n' > "$APPS_DIR/$SITE_NAME/wp-content/plugins/${3}/README.md"
+    fi
+  }
+  provision_maker_workspaces
+  grep -q '^# PROJECT OWNED — EDIT HERE' "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme/README.md"
+  grep -q '^Template: makerstarter$' "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme/style.css"
+  grep -q '^# PROJECT OWNED — EDIT HERE' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks/README.md"
+  grep -q 'unit-site namespace' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks/unit-site-blocks.php"
+  grep -q '^# PROJECT OWNED — EDIT HERE' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-app/README.md"
+  before="$(find "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme" "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks" "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-app" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
+  provision_maker_workspaces
+  after="$(find "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme" "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks" "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-app" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
+  [[ "$before" == "$after" ]]
+  PROJECT_SLUG=interrupted
+  if ( DEVARCH_SCAFFOLD_FAIL_AFTER_STAGE=true publish_child_theme_workspace ) >/dev/null 2>&1; then exit 1; fi
+  [[ ! -e "$APPS_DIR/$SITE_NAME/wp-content/themes/interrupted-theme" ]]
+  ! find "$APPS_DIR/$SITE_NAME/wp-content/themes" -maxdepth 1 -name 'interrupted-theme.devarch-stage.*' | grep -q .
+) || fail "Maker workspace publication should be marked, idempotent, and rollback-safe"
+rm -rf "$scaffold_root"
 
 cleanup
 trap - EXIT

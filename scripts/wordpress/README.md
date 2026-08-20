@@ -15,9 +15,10 @@ A successful run performs this sequence:
 7. Creates a dedicated database and database user.
 8. Downloads WordPress and writes `wp-config.php` without logging passwords.
 9. Applies the selected profile and any extra plugins.
-10. Makes `wp-content` writable for local PHP-FPM use.
-11. Optionally restores an All-in-One WP Migration `.wpress` archive.
-12. Idempotently registers `127.0.0.1 <site-name>.test` in the system hosts file.
+10. For Maker-enabled profiles, records core revisions and atomically publishes project-owned theme, blocks, and app workspaces.
+11. Makes `wp-content` writable for local PHP-FPM use.
+12. Optionally restores an All-in-One WP Migration `.wpress` archive.
+13. Idempotently registers `127.0.0.1 <site-name>.test` in the system hosts file.
 
 The resulting site is served by Nginx Proxy Manager at `https://<site-name>.test`. PHP requests are sent to `php:9000` over `microservices-net`, and MariaDB is reached as `mariadb`.
 
@@ -98,7 +99,11 @@ Site names must match `[a-z0-9][a-z0-9-]{0,59}`. URLs must start with `http://` 
 | `--build` | Pass `--build` while starting the PHP Compose service. |
 | `-f, --force` | Move an existing site aside and reset its database. |
 | `--no-hosts` | Skip automatic registration of `127.0.0.1 <site-name>.test`. |
-| `--dry-run` | Validate and print the plan without changing hosts, files, containers, or databases. |
+| `--scaffolds-only` | Provision/refuse Maker workspaces in an existing site without running full bootstrap. Requires a Maker-enabled profile. |
+| `--project-slug SLUG` | Override the lowercase kebab-case workspace prefix derived from the site name. |
+| `--php-namespace NS` | Override the generated PHP namespace (default `Maker\\<SiteName>`). |
+| `--js-namespace NS` | Override the lowercase block namespace (default project slug). |
+| `--dry-run` | Validate and print core installs and workspace creation separately without changing hosts, files, containers, databases, activation, or lock state. |
 | `-h, --help` | Print built-in help. |
 | `--no-server` | Deprecated no-op retained for compatibility; shared proxy routing is always used. |
 
@@ -133,11 +138,71 @@ scripts/wordpress/bootstrap.sh my-site --profile clean
 | Profile | Installed components |
 | --- | --- |
 | `bare` | All-in-One WP Migration, installed but inactive. |
-| `clean` | TypeRocket Pro v6 as an MU plugin; MakerMaker and MakerBlocks as plugins; MakerStarter as the active theme; All-in-One WP Migration inactive; Admin Site Enhancements Pro active. |
+| `clean` | TypeRocket Pro v6 as an MU plugin; MakerMaker, MakerBlocks, and MakerStarter as framework core; three project workspaces; All-in-One WP Migration inactive; Admin Site Enhancements Pro active. |
 | `custom` | Everything in `clean`, plus Manual Image Crop. |
 | `loaded` | Everything in `custom`, plus Debug Bar, Debug Bar Actions and Filters Addon, Classic Editor, Default Featured Image, Plugin Inspector, Log Deprecated Notices, Query Monitor, Theme Check, WordPress Beta Tester, Show Current Template, Theme Inspector, and View Admin As. |
 
-Repositories named by a profile are cloned over SSH from `GITHUB_USER`. All components are active unless a profile marks a Git plugin `inactive`. When a profile installs a custom theme, MakerStarter is activated and all other inactive bundled themes are deleted.
+Repositories named by a profile are cloned over SSH from `GITHUB_USER`. All components are active unless a profile marks a Git plugin `inactive`. `clean`, `custom`, and `loaded` include the same `maker-stack.fragment`, so their Maker core/workspace declarations cannot drift. MakerStarter is installed as core, but the generated `<site>-theme` child theme is the final active theme.
+
+### Maker core and project workspaces
+
+A new Maker-enabled site contains:
+
+```text
+wp-content/themes/makerstarter/          # framework core
+wp-content/themes/<site>-theme/          # PROJECT OWNED — EDIT HERE
+wp-content/plugins/makerblocks/          # framework core
+wp-content/plugins/<site>-blocks/        # PROJECT OWNED — EDIT HERE
+wp-content/plugins/makermaker/           # framework core
+wp-content/plugins/<site>-app/           # PROJECT OWNED — EDIT HERE
+```
+
+Core roots carry `CORE-BOUNDARY.md` with `FRAMEWORK CORE — DO NOT EDIT; update from playground releases`; workspace root READMEs contain `PROJECT OWNED — EDIT HERE`. The app plugin is generated through `wp makermaker create`. DevArch renders MakerStarter's maintained `scaffolds/child-theme/` and MakerBlocks' `scaffolds/project-plugin/` into sibling staging directories, then atomically publishes them; interrupted staging is rolled back before the destination becomes visible.
+
+Existing workspace destinations are never merged, deleted, or overwritten. Provisioning logs a refusal for each existing workspace, then may activate it; all existing bytes remain unchanged. To provision independently in an existing site:
+
+```bash
+scripts/wordpress/bootstrap.sh my-site --profile clean --scaffolds-only
+```
+
+The default project slug is the site name, the PHP namespace is `Maker\\<SiteName>`, and the JS block namespace is the project slug. Use `--project-slug`, `--php-namespace`, and `--js-namespace` for exceptional names. Invalid values fail validation before provisioning.
+
+`.devarch-maker.lock` records each core repository URL, exact tag when available (otherwise commit), commit, package type, and UTC install time. An existing manifest is preserved. Dry-run labels core installs and workspaces but performs no clone, scaffold publication, activation, or manifest write.
+
+### Maker releases and core synchronization
+
+Playground remains the integration site and owns the three nested core repositories. `maker-stack.json` maps a reviewed stack version or channel to exact package tags and commits; `maker-stack.schema.json` defines the contract. See [MAKER-RELEASES.md](MAKER-RELEASES.md) for semantic-version policy, compatibility/changelog conventions, and the gated release checklist.
+
+Preview or apply a core-only consumer update:
+
+```bash
+scripts/wordpress/sync-maker.sh my-site --profile loaded --dry-run  # profile's stable channel
+scripts/wordpress/sync-maker.sh my-site --profile loaded --to 1.0.0
+```
+
+The sync command refuses dirty repositories, unknown origins, non-semantic refs unless `--allow-main` is explicit, ref/commit mismatches, missing health files, and failed declared dependency installation. It stages full replacements, retains rollback metadata, atomically updates `.devarch-maker.lock`, and automatically restores prior core directories and lock state after a publication failure. Project workspaces, uploads, and databases are outside its target set.
+
+Release maintainers run `release-maker.sh VERSION --dry-run`, then the same command without `--dry-run` only after all gates pass. It creates local tags and updates the manifest but deliberately never pushes.
+
+### Existing-site ownership audit and migration
+
+Inventory all detected Maker sites without changing them:
+
+```bash
+scripts/wordpress/audit-maker.sh --all
+scripts/wordpress/audit-maker.sh my-site --sync-ready --runtime-check
+```
+
+`audit-maker.sh` reports dirty/untracked core paths with ownership destinations, unknown remotes, missing or mismatched locks, missing workspace markers, absent independent backup/versioning receipts, and activation failures. `sync-maker.sh` runs the sync-readiness audit and refuses updates when it fails.
+
+Prepare a site with a durable core-diff/untracked backup, refusal-safe workspaces, exact lock, synchronization, and runtime audit:
+
+```bash
+scripts/wordpress/migrate-maker.sh my-site --profile loaded --to stable --dry-run
+scripts/wordpress/migrate-maker.sh my-site --profile loaded --to 0.1.0
+```
+
+Dirty or untrusted core stops after preservation and workspace preparation; it is never reset automatically. See [MIGRATE-MAKER-SITES.md](MIGRATE-MAKER-SITES.md) for ownership decisions, Site Editor handling, evidence requirements, and the disposable-copy → pilot → remaining-sites rollout.
 
 ### TypeRocket and MakerMaker integration
 
@@ -158,6 +223,10 @@ Profiles are line-oriented files in `scripts/wordpress/profiles/<name>.profile`.
 Supported directives are:
 
 ```text
+include fragment-name
+maker-stack-channel channel-name
+maker-core plugin|theme repository-name
+maker-workspace child-theme|blocks-plugin|app-plugin core-repository-name
 github-plugin repository-name [active|inactive]
 github-theme repository-name
 github-mu-plugin repository-name
@@ -255,13 +324,17 @@ Discovery requires `wp-config.php`, and the detected WordPress root must be dire
 
 ## Tests
 
-Run the shell regression suite without provisioning a real site:
+Run the shell regression suites without provisioning a real site:
 
 ```bash
 bash scripts/wordpress/bootstrap.test.sh
+bash scripts/wordpress/audit-maker.test.sh
+bash scripts/wordpress/migrate-maker.test.sh
+bash scripts/wordpress/sync-maker.test.sh
+bash scripts/wordpress/release-maker.test.sh
 ```
 
-It covers help/profile output, validation, site discovery, secret-safe dry runs, Podman/Docker user mapping, plugin sources, profile contents, Galaxy integration, and native AIOWM backup/restore planning.
+They cover help/profile output, validation, site discovery, secret-safe dry runs, Podman/Docker user mapping, plugin sources, shared Maker profile composition, workspace markers and hash-stable refusal, interrupted publication rollback, Galaxy integration, native AIOWM backup/restore planning, ownership audit/classification, migration backup and dirty-core stop behavior, exact core synchronization, dirty/unknown/ref mismatch refusal, workspace hash preservation, automatic failure rollback, explicit retained rollback, and gated local tag/manifest publication.
 
 ## Current Maker site
 
