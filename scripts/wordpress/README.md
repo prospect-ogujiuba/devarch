@@ -113,7 +113,8 @@ scripts/wordpress/bootstrap.sh my-site --profile clean --dry-run
 Every new installation:
 
 - sets `FS_METHOD` to `direct`;
-- disables year/month upload folders;
+- disables year/month upload folders and removes empty upload subdirectories;
+- sets permalinks to the **Post name** structure (`/%postname%/`);
 - deletes the default post;
 - deletes Akismet and Hello Dolly when present;
 - grants local read/write access to `wp-content` so PHP can manage plugins, themes, uploads, and migration state without FTP prompts.

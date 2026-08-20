@@ -80,6 +80,9 @@ grep -q 'register local host: 127.0.0.1 demo-site.test' <<<"$dry_run_output" || 
 no_hosts_output="$(bash "$BOOTSTRAP" no-hosts-site --no-hosts --dry-run)" || fail "hosts opt-out dry-run should succeed"
 grep -q 'hosts registration skipped: no-hosts-site.test' <<<"$no_hosts_output" || fail "hosts opt-out should be visible"
 grep -q 'config set FS_METHOD direct' <<<"$dry_run_output" || fail "bootstrap should enable direct filesystem changes without FTP credentials"
+grep -q 'option update uploads_use_yearmonth_folders 0' <<<"$dry_run_output" || fail "bootstrap should disable year/month upload folders"
+grep -q 'find .*wp-content/uploads .* -empty -delete' <<<"$dry_run_output" || fail "bootstrap should remove empty upload subdirectories"
+grep -q "rewrite structure /%postname%/ --hard" <<<"$dry_run_output" || fail "bootstrap should use post-name permalinks"
 grep -q 'post delete 1 --force' <<<"$dry_run_output" || fail "bootstrap should delete the default WordPress post"
 grep -q 'chmod -R a+rwX.*/wp-content' <<<"$dry_run_output" || fail "bootstrap should keep local wp-content writable by PHP"
 if grep -Eq 'not-printed-secret|not-printed-db-secret' <<<"$dry_run_output"; then
