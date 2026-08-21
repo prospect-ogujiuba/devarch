@@ -157,7 +157,7 @@ wp-content/plugins/makermaker/           # framework core
 wp-content/plugins/<site>-app/           # PROJECT OWNED — EDIT HERE
 ```
 
-Core roots carry `CORE-BOUNDARY.md` with `FRAMEWORK CORE — DO NOT EDIT; update from playground releases`; workspace root READMEs contain `PROJECT OWNED — EDIT HERE`. The app plugin is generated through `wp makermaker create`. DevArch renders MakerStarter's maintained `scaffolds/child-theme/` and MakerBlocks' `scaffolds/project-plugin/` into sibling staging directories, then atomically publishes them; interrupted staging is rolled back before the destination becomes visible.
+Core roots carry `CORE-BOUNDARY.md` with `FRAMEWORK CORE — DO NOT EDIT; update from playground releases`; workspace root READMEs contain `PROJECT OWNED — EDIT HERE`. Each generated project workspace is initialized as an independent Git repository on `main`; no initial commit or remote is created. The app plugin is generated through `wp makermaker create`. DevArch renders MakerStarter's maintained `scaffolds/child-theme/` and MakerBlocks' `scaffolds/project-plugin/` into sibling staging directories, then atomically publishes them; interrupted staging is rolled back before the destination becomes visible.
 
 Existing workspace destinations are never merged, deleted, or overwritten. Provisioning logs a refusal for each existing workspace, then may activate it; all existing bytes remain unchanged. To provision independently in an existing site:
 

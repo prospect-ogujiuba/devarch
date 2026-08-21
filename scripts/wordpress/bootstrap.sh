@@ -798,6 +798,15 @@ render_scaffold_tokens() {
   done < <(find "$root" -type f -print0)
 }
 
+initialize_workspace_git() {
+  local target="$1"
+  if [[ "$DRY_RUN" == true ]]; then
+    print_command git -C "$target" init -q -b main
+  else
+    run git -C "$target" init -q -b main
+  fi
+}
+
 write_maker_lock_manifest() {
   ((${#MAKER_CORE_SLUGS[@]} > 0)) || return 0
   local manifest="$APPS_DIR/$SITE_NAME/.devarch-maker.lock" i root commit resolved installed
@@ -835,6 +844,7 @@ publish_child_theme_workspace() {
   elif [[ "$DRY_RUN" == true ]]; then
     log "workspace create [child-theme]: $target"
     print_command mkdir "$target"
+    initialize_workspace_git "$target"
   else
     (
       local stage="${target}.devarch-stage.$$"
@@ -848,6 +858,7 @@ publish_child_theme_workspace() {
       mkdir -p "$stage"
       cp -a "$scaffold/." "$stage/"
       render_scaffold_tokens "$stage"
+      initialize_workspace_git "$stage"
       [[ "${DEVARCH_SCAFFOLD_FAIL_AFTER_STAGE:-false}" != true ]] || return 70
       mv "$stage" "$target"
       trap - EXIT
@@ -864,6 +875,7 @@ publish_blocks_workspace() {
   elif [[ "$DRY_RUN" == true ]]; then
     log "workspace create [blocks-plugin]: $target (namespace: $JS_NAMESPACE)"
     print_command mkdir "$target"
+    initialize_workspace_git "$target"
   else
     (
       local stage="${target}.devarch-stage.$$"
@@ -878,6 +890,7 @@ publish_blocks_workspace() {
       cp -a "$scaffold/." "$stage/"
       render_scaffold_tokens "$stage"
       mv "$stage/plugin.php" "$stage/$PROJECT_SLUG-blocks.php"
+      initialize_workspace_git "$stage"
       [[ "${DEVARCH_SCAFFOLD_FAIL_AFTER_STAGE:-false}" != true ]] || return 70
       mv "$stage" "$target"
       trap - EXIT
@@ -906,6 +919,7 @@ publish_app_workspace() {
       mv "$target/README.md.tmp" "$target/README.md"
     fi
   fi
+  initialize_workspace_git "$target"
 }
 
 provision_maker_workspaces() {
