@@ -76,14 +76,19 @@ run_package_tests() {
 
 run_playground_matrix() {
   local runtime="${CONTAINER_RUNTIME:-}" user="${WORDPRESS_CONTAINER_USER:-0:0}" wp_path=/var/www/html/playground
+  local typerocket="$PLAYGROUND/wp-content/mu-plugins/typerocket-pro-v6" galaxy_commands
   if [[ -z "$runtime" ]]; then
     if command -v podman >/dev/null 2>&1; then runtime=podman; elif command -v docker >/dev/null 2>&1; then runtime=docker; else die "Podman or Docker is required for the playground integration matrix"; fi
   fi
+  [[ -d "$typerocket/.git" ]] || die "playground TypeRocket repository is missing"
+  [[ -z "$(git -C "$typerocket" status --porcelain)" ]] || die "playground TypeRocket repository is dirty before integration"
   "$runtime" exec --user "$user" -e HOME=/tmp php wp --path="$wp_path" --allow-root core is-installed >/dev/null || die "playground WordPress health check failed"
   "$runtime" exec --user "$user" -e HOME=/tmp php wp --path="$wp_path" --allow-root plugin is-active makerblocks >/dev/null || die "MakerBlocks is not active in playground"
   "$runtime" exec --user "$user" -e HOME=/tmp php wp --path="$wp_path" --allow-root plugin is-active makermaker >/dev/null || die "MakerMaker is not active in playground"
   "$runtime" exec --user "$user" -e HOME=/tmp php wp --path="$wp_path" --allow-root theme is-installed makerstarter >/dev/null || die "MakerStarter is not installed in playground"
-  "$runtime" exec --user "$user" -e HOME=/tmp php wp --path="$wp_path" --allow-root makermaker register-galaxy >/dev/null || die "MakerMaker Galaxy integration failed"
+  galaxy_commands="$("$runtime" exec --user "$user" -e HOME=/tmp php php "$wp_path/galaxy" list --raw)" || die "MakerMaker Galaxy command discovery failed"
+  grep -Eq '^make:maker-resource([[:space:]]|$)' <<<"$galaxy_commands" || die "MakerMaker Galaxy resource command is unavailable"
+  [[ -z "$(git -C "$typerocket" status --porcelain)" ]] || die "Galaxy discovery changed tracked TypeRocket files"
   log "playground integration matrix passed"
 }
 

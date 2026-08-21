@@ -224,10 +224,10 @@ The `clean`, `custom`, and `loaded` profiles additionally:
 - install `typerocket-pro-v6` under `wp-content/mu-plugins/` and copy its root entry file into the MU-plugin directory;
 - install MakerMaker as a normal plugin;
 - generate executable `galaxy` and `galaxy-config.php` files in the site root from MakerMaker's `GalaxyContext`;
-- run the idempotent `wp makermaker register-galaxy` command;
+- load MakerMaker's idempotent `typerocket_galaxy_commands` runtime filter;
 - backfill MakerMaker's plugin-specific Galaxy context with `register-plugin-galaxy`.
 
-This makes MakerMaker's Galaxy commands, including `make:maker-resource`, available without manually editing a dependency.
+This makes MakerMaker's Galaxy commands, including `make:maker-resource`, available without editing TypeRocket configuration. Bootstrap and release integration checks require the TypeRocket repository to remain clean.
 
 ### Extending profiles
 

@@ -111,10 +111,42 @@ grep -q 'clone Git must-use plugin: typerocket-pro-v6' <<<"$profile_output" || f
 grep -q 'write portable MakerMaker-owned site Galaxy launcher and resolver' <<<"$profile_output" || fail "site Galaxy launcher should be MakerMaker-owned"
 grep -q 'GalaxyContext::siteLauncher.*siteConfig' <<<"$profile_output" || fail "site Galaxy launcher/config should use shared portable sources"
 grep -q 'clone Git plugin: makermaker' <<<"$profile_output" || fail "clean profile should install MakerMaker as a plugin"
-grep -q 'register MakerMaker Galaxy command idempotently using runtime TypeRocket path' <<<"$profile_output" || fail "clean profile should register MakerMaker with runtime TypeRocket discovery"
-grep -q 'makermaker register-galaxy' <<<"$profile_output" || fail "Galaxy registration should use MakerMaker's repeatable registrar"
-if grep -q 'register-galaxy.*typerocket-path=' <<<"$profile_output"; then fail "bootstrap should not embed a TypeRocket registration path"; fi
+grep -q 'use MakerMaker runtime filter registration and backfill its plugin-specific Galaxy context' <<<"$profile_output" || fail "clean profile should describe runtime Galaxy filter registration"
+if grep -q 'makermaker register-galaxy' <<<"$profile_output"; then fail "bootstrap should not mutate TypeRocket Galaxy configuration"; fi
 grep -q 'makermaker register-plugin-galaxy.*plugin=makermaker.*namespace=Maker/MakerMaker' <<<"$profile_output" || fail "clean profile should backfill MakerMaker's plugin-specific Galaxy context"
+
+galaxy_root="$(mktemp -d)"
+mkdir -p "$galaxy_root/apps/unit-site/wp-content/plugins/makermaker"
+typerocket_repo="$galaxy_root/apps/unit-site/wp-content/mu-plugins/typerocket-pro-v6"
+git init -q "$typerocket_repo"
+git -C "$typerocket_repo" config user.email tests@devarch.test
+git -C "$typerocket_repo" config user.name 'DevArch Tests'
+mkdir -p "$typerocket_repo/typerocket/config"
+printf "<?php\nreturn ['commands' => []];\n" > "$typerocket_repo/typerocket/config/galaxy.php"
+git -C "$typerocket_repo" add . && git -C "$typerocket_repo" commit -qm initial
+(
+  source "$BOOTSTRAP"
+  APPS_DIR="$galaxy_root/apps"
+  SITE_NAME=unit-site
+  DRY_RUN=false
+  wp_exec() { :; }
+  register_makermaker_galaxy
+  register_makermaker_galaxy
+  [[ -z "$(git -C "$typerocket_repo" status --porcelain)" ]]
+) || fail "repeated MakerMaker Galaxy context registration should leave TypeRocket clean"
+if (
+  source "$BOOTSTRAP"
+  APPS_DIR="$galaxy_root/apps"
+  SITE_NAME=unit-site
+  DRY_RUN=false
+  wp_exec() { printf "\n// mutation\n" >> "$typerocket_repo/typerocket/config/galaxy.php"; }
+  register_makermaker_galaxy
+) >/dev/null 2>&1; then
+  fail "bootstrap should reject Galaxy integration that changes TypeRocket"
+fi
+git -C "$typerocket_repo" checkout -q -- typerocket/config/galaxy.php
+rm -rf "$galaxy_root"
+
 grep -q 'clone Git plugin: makerblocks' <<<"$profile_output" || fail "clean profile should install MakerBlocks as a plugin"
 grep -q 'clone Git theme: makerstarter' <<<"$profile_output" || fail "clean profile should install MakerStarter as a theme"
 grep -q 'theme delete --all' <<<"$profile_output" || fail "custom-theme profiles should delete bundled inactive themes"
