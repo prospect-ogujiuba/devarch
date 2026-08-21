@@ -200,11 +200,15 @@ scaffold_root="$(mktemp -d)"
     fi
   }
   provision_maker_workspaces
-  grep -q '^# PROJECT OWNED — EDIT HERE' "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme/README.md"
-  grep -q '^Template: makerstarter$' "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme/style.css"
-  grep -q '^# PROJECT OWNED — EDIT HERE' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks/README.md"
-  grep -q 'unit-site namespace' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks/unit-site-blocks.php"
-  grep -q '^# PROJECT OWNED — EDIT HERE' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-app/README.md"
+  grep -q '^# PROJECT OWNED — EDIT HERE' "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme/README.md" || exit 1
+  grep -q '^Theme Name: Unit Site$' "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme/style.css" || exit 1
+  grep -q '^Template: makerstarter$' "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme/style.css" || exit 1
+  grep -q '^Author: Maker$' "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme/style.css" || exit 1
+  [[ -s "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme/screenshot.png" ]] || exit 1
+  grep -q '^# PROJECT OWNED — EDIT HERE' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks/README.md" || exit 1
+  grep -q 'Custom blocks and editor components for Unit Site' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks/unit-site-blocks.php" || exit 1
+  grep -q 'Text Domain:       unit-site-blocks' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks/unit-site-blocks.php" || exit 1
+  grep -q '^# PROJECT OWNED — EDIT HERE' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-app/README.md" || exit 1
   before="$(find "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme" "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks" "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-app" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
   provision_maker_workspaces
   after="$(find "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme" "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks" "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-app" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
