@@ -661,12 +661,18 @@ restore_aiowm_archive() {
 
 register_makermaker_galaxy() {
   local host_makermaker="$APPS_DIR/$SITE_NAME/wp-content/plugins/makermaker"
+  local host_typerocket="$APPS_DIR/$SITE_NAME/wp-content/mu-plugins/typerocket-pro-v6"
   [[ "$DRY_RUN" == true || -d "$host_makermaker" ]] || return 0
 
-  log "register MakerMaker Galaxy command idempotently using runtime TypeRocket path"
-  wp_exec "/var/www/html/$SITE_NAME" makermaker register-galaxy
+  log "use MakerMaker runtime filter registration and backfill its plugin-specific Galaxy context"
+  if [[ "$DRY_RUN" != true && -d "$host_typerocket/.git" ]]; then
+    [[ -z "$(git -C "$host_typerocket" status --porcelain)" ]] || die "TypeRocket repository is dirty before MakerMaker Galaxy context registration"
+  fi
   wp_exec "/var/www/html/$SITE_NAME" makermaker register-plugin-galaxy \
     --plugin=makermaker --namespace=Maker/MakerMaker
+  if [[ "$DRY_RUN" != true && -d "$host_typerocket/.git" ]]; then
+    [[ -z "$(git -C "$host_typerocket" status --porcelain)" ]] || die "MakerMaker Galaxy context registration changed tracked TypeRocket files"
+  fi
 }
 
 install_plugins() {
