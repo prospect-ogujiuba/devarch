@@ -197,6 +197,7 @@ done
 grep -q 'theme activate profile-site-theme' <<<"$profile_output" || fail "Maker profile should activate the child theme"
 grep -q 'plugin activate profile-site-blocks' <<<"$profile_output" || fail "Maker profile should activate the project blocks plugin"
 grep -q 'makermaker create profile-site-app.*--activate' <<<"$profile_output" || fail "Maker profile should generate and activate the app plugin through MakerMaker"
+[[ "$(grep -c 'git -C .* init -q -b main' <<<"$profile_output")" -eq 3 ]] || fail "Maker profile should initialize Git for all three project workspaces"
 
 if GITHUB_USER=example bash "$BOOTSTRAP" demo-site --profile clean --project-slug Bad_Slug --dry-run >/dev/null 2>&1; then
   fail "invalid project slugs should be rejected"
@@ -251,6 +252,13 @@ scaffold_root="$(mktemp -d)"
   grep -q -- '--namespace=unit-site' <<<"$block_dry_run" || exit 1
   grep -q -- '--textdomain=unit-site-blocks' <<<"$block_dry_run" || exit 1
   grep -q '^# PROJECT OWNED — EDIT HERE' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-app/README.md" || exit 1
+  for workspace in \
+    "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme" \
+    "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks" \
+    "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-app"; do
+    [[ -d "$workspace/.git" ]] || exit 1
+    [[ "$(git -C "$workspace" branch --show-current)" == main ]] || exit 1
+  done
   before="$(find "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme" "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks" "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-app" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
   provision_maker_workspaces
   after="$(find "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme" "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks" "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-app" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
