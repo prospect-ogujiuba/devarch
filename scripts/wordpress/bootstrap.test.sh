@@ -189,9 +189,10 @@ scaffold_root="$(mktemp -d)"
   JS_NAMESPACE=unit-site
   DRY_RUN=false
   MAKER_WORKSPACES=('child-theme:makerstarter' 'blocks-plugin:makerblocks' 'app-plugin:makermaker')
-  mkdir -p "$APPS_DIR/$SITE_NAME/wp-content/themes/makerstarter/scaffolds" "$APPS_DIR/$SITE_NAME/wp-content/plugins/makerblocks/scaffolds"
+  mkdir -p "$APPS_DIR/$SITE_NAME/wp-content/themes/makerstarter/scaffolds" "$APPS_DIR/$SITE_NAME/wp-content/plugins/makerblocks/scaffolds" "$APPS_DIR/$SITE_NAME/wp-content/plugins/makerblocks/templates"
   cp -a "$PROJECT_ROOT/apps/playground/wp-content/themes/makerstarter/scaffolds/child-theme" "$APPS_DIR/$SITE_NAME/wp-content/themes/makerstarter/scaffolds/"
   cp -a "$PROJECT_ROOT/apps/playground/wp-content/plugins/makerblocks/scaffolds/project-plugin" "$APPS_DIR/$SITE_NAME/wp-content/plugins/makerblocks/scaffolds/"
+  cp -a "$PROJECT_ROOT/apps/playground/wp-content/plugins/makerblocks/templates/create-block" "$APPS_DIR/$SITE_NAME/wp-content/plugins/makerblocks/templates/"
   wp_exec() {
     local container_site="$1"; shift
     if [[ "${1:-}" == makermaker && "${2:-}" == create ]]; then
@@ -208,6 +209,15 @@ scaffold_root="$(mktemp -d)"
   grep -q '^# PROJECT OWNED — EDIT HERE' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks/README.md" || exit 1
   grep -q 'Custom blocks and editor components for Unit Site' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks/unit-site-blocks.php" || exit 1
   grep -q 'Text Domain:       unit-site-blocks' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks/unit-site-blocks.php" || exit 1
+  grep -q '"create:block": "node scripts/create-block.mjs"' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks/package.json" || exit 1
+  grep -q '"templates:sync": "node scripts/sync-project-templates.mjs --write"' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks/package.json" || exit 1
+  [[ -f "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks/templates/create-block/full/render.php.mustache" ]] || exit 1
+  grep -q '"version": "0.1.0"' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks/.makerblocks-template.json" || exit 1
+  (cd "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks" && node scripts/sync-project-templates.mjs --check) | grep -q 'Templates are synchronized' || exit 1
+  block_dry_run="$(cd "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks" && node scripts/create-block.mjs testimonial --server --dry-run)"
+  grep -q -- '--variant=server' <<<"$block_dry_run" || exit 1
+  grep -q -- '--namespace=unit-site' <<<"$block_dry_run" || exit 1
+  grep -q -- '--textdomain=unit-site-blocks' <<<"$block_dry_run" || exit 1
   grep -q '^# PROJECT OWNED — EDIT HERE' "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-app/README.md" || exit 1
   before="$(find "$APPS_DIR/$SITE_NAME/wp-content/themes/unit-site-theme" "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-blocks" "$APPS_DIR/$SITE_NAME/wp-content/plugins/unit-site-app" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
   provision_maker_workspaces
