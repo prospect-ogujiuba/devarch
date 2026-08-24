@@ -10,6 +10,7 @@ The old Go CLI, planning workflow, daemon/API code, and generated workspace surf
 - `services-library/<category>/<service>/config/` — optional service configuration.
 - `apps/<app>/` — application workspaces, typically separate repositories ignored by the top-level DevArch repository.
 - [`docs/makersuite.md`](docs/makersuite.md) — canonical MakerSuite architecture, ownership, and delivery workflow.
+- [`docs/makerdesk.md`](docs/makerdesk.md) — canonical DevArch integration and operations guide for MakerDesk.
 - `docs/plans/` — tracked implementation plans and completion checklists.
 - `.env.example` — example environment values.
 

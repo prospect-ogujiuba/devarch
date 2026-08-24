@@ -38,6 +38,8 @@ apps/playground/wp-content/plugins/makerblocks/
 apps/playground/wp-content/plugins/makermaker/
 ```
 
+Standalone applications such as MakerDesk remain independently owned repositories. Playground may clone them for integration testing, but they do not become Maker core or top-level DevArch-owned source. See the [MakerDesk integration and operations guide](makerdesk.md).
+
 ## Ownership boundaries
 
 Every change must be classified before implementation.
@@ -409,6 +411,7 @@ Before presenting or deploying a client feature:
 - [WordPress bootstrap, profiles, synchronization, and tests](../scripts/wordpress/README.md)
 - [Maker release and compatibility policy](../scripts/wordpress/MAKER-RELEASES.md)
 - [Existing Maker site migration](../scripts/wordpress/MIGRATE-MAKER-SITES.md)
+- [MakerDesk integration and operations](makerdesk.md)
 - [MakerStarter package guide](../apps/playground/wp-content/themes/makerstarter/README.md)
 - [MakerBlocks package guide](../apps/playground/wp-content/plugins/makerblocks/README.md)
 - [MakerMaker package guide](../apps/playground/wp-content/plugins/makermaker/README.md)
