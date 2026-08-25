@@ -1,0 +1,20 @@
+{
+  "$schema": "file:///home/priz/projects/gentic/extensions/pi-gate/pi-gate.schema.json",
+  "version": 3,
+  "enabled": true,
+  "mode": "ask",
+  "defaultAction": "ask",
+  "audit": {
+    "enabled": true,
+    "path": ".pi/pi-gate/pi-gate-audit.jsonl",
+    "maxBytes": 1048576
+  },
+  "permissions": {},
+  "literalPermissions": {
+    "allow": [
+      "find apps/playground/wp-content/plugins -maxdepth 2 -type d -iname '*app*' -o -iname '*maker*' | sort | head -20"
+    ],
+    "ask": [],
+    "deny": []
+  }
+}
