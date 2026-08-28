@@ -1,6 +1,4 @@
-# Clean profile plus the accessible image tooling repository.
-github-mu-plugin typerocket-pro-v6
-include maker-stack.fragment
+# Clean profile plus accessible image tooling.
 github-plugin all-in-one-wp-migration inactive
 github-plugin admin-site-enhancements-pro
 wp-plugin manual-image-crop

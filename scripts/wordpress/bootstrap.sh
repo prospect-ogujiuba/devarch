@@ -29,19 +29,10 @@ PROFILE=""
 PLUGINS_FILE=""
 RESTORE_FILE=""
 REPLACE_EXISTING=false
-SCAFFOLDS_ONLY=false
-PROJECT_SLUG=""
-PHP_NAMESPACE=""
-JS_NAMESPACE=""
 PLUGIN_SOURCES=()
 PLUGIN_ACTIVATIONS=()
 THEME_SOURCES=()
 MU_PLUGIN_SOURCES=()
-MAKER_CORE_SLUGS=()
-MAKER_CORE_TYPES=()
-MAKER_CORE_URLS=()
-MAKER_WORKSPACES=()
-MAKER_STACK_CHANNEL=""
 RUNTIME="${CONTAINER_RUNTIME:-}"
 CONTAINER_USER="${WORDPRESS_CONTAINER_USER:-}"
 PHP_CONTAINER="php"
@@ -89,10 +80,6 @@ Options:
   -f, --force                Replace an existing site and reset its database;
                              the old directory is moved to apps/.devarch-backups
       --no-hosts             Do not register <site-name>.test in the system hosts file
-      --scaffolds-only       Provision Maker workspaces in an existing site only
-      --project-slug SLUG    Override the workspace slug derived from site-name
-      --php-namespace NS     Override the PHP namespace (default: Maker\\<SiteName>)
-      --js-namespace NS      Override the block namespace (default: project slug)
       --dry-run              Validate and print the plan without changing anything
   -h, --help                 Show this help
 
@@ -105,7 +92,7 @@ Authentication:
 Examples:
   scripts/wordpress/bootstrap.sh my-site --profile clean
   scripts/wordpress/bootstrap.sh my-site --plugin wp:query-monitor
-  scripts/wordpress/bootstrap.sh my-site --github-plugin makerblocks
+  scripts/wordpress/bootstrap.sh my-site --github-plugin private-plugin
   scripts/wordpress/bootstrap.sh my-site --plugins-file scripts/wordpress/plugins.example
   scripts/wordpress/bootstrap.sh my-site --restore /backups/site.wpress
 EOF
@@ -154,26 +141,6 @@ load_profile_file() {
         [[ -z "${option:-}" && "$value" =~ ^[a-z0-9][a-z0-9._-]*$ ]] || die "invalid profile include in $file: $value ${option:-}"
         [[ -f "$PROFILE_DIR/$value" ]] || die "profile include not found: $value"
         load_profile_file "$PROFILE_DIR/$value"
-        ;;
-      maker-stack-channel)
-        [[ -z "${option:-}" && "$value" =~ ^[a-z][a-z0-9-]*$ ]] || die "invalid Maker stack channel in $file: $value ${option:-}"
-        [[ -z "$MAKER_STACK_CHANNEL" || "$MAKER_STACK_CHANNEL" == "$value" ]] || die "conflicting Maker stack channels in profile '$PROFILE'"
-        MAKER_STACK_CHANNEL="$value"
-        ;;
-      maker-core)
-        [[ "$value" == plugin || "$value" == theme ]] || die "invalid Maker core package type in $file: $value"
-        [[ "${option:-}" =~ ^[A-Za-z0-9._-]+$ ]] || die "invalid Maker core repository in $file: ${option:-}"
-        [[ -n "${GITHUB_USER:-}" && "${GITHUB_USER:-}" != github-user ]] || die "profile '$PROFILE' requires GITHUB_USER"
-        source="git@github.com:${GITHUB_USER}/${option}.git"
-        MAKER_CORE_TYPES+=("$value")
-        MAKER_CORE_SLUGS+=("$option")
-        MAKER_CORE_URLS+=("$source")
-        if [[ "$value" == plugin ]]; then add_plugin "git:$source" true; else THEME_SOURCES+=("$source"); fi
-        ;;
-      maker-workspace)
-        [[ "$value" == child-theme || "$value" == blocks-plugin || "$value" == app-plugin ]] || die "invalid Maker workspace type in $file: $value"
-        [[ -n "${option:-}" ]] || die "Maker workspace requires a core package in $file: $value"
-        MAKER_WORKSPACES+=("$value:$option")
         ;;
       github-plugin|github-theme|github-mu-plugin)
         [[ -n "${GITHUB_USER:-}" && "${GITHUB_USER:-}" != github-user ]] || die "profile '$PROFILE' requires GITHUB_USER"
@@ -282,25 +249,6 @@ parse_args() {
         REGISTER_HOSTS=false
         shift
         ;;
-      --scaffolds-only)
-        SCAFFOLDS_ONLY=true
-        shift
-        ;;
-      --project-slug)
-        [[ $# -ge 2 ]] || die "$1 requires a value"
-        PROJECT_SLUG="$2"
-        shift 2
-        ;;
-      --php-namespace)
-        [[ $# -ge 2 ]] || die "$1 requires a value"
-        PHP_NAMESPACE="$2"
-        shift 2
-        ;;
-      --js-namespace)
-        [[ $# -ge 2 ]] || die "$1 requires a value"
-        JS_NAMESPACE="$2"
-        shift 2
-        ;;
       --dry-run)
         DRY_RUN=true
         shift
@@ -331,24 +279,10 @@ discover_site_name() {
   done
 }
 
-namespace_class_from_slug() {
-  local slug="$1" part result=""
-  IFS='-' read -ra parts <<< "$slug"
-  for part in "${parts[@]}"; do result+="${part^}"; done
-  printf '%s' "$result"
-}
-
 validate_config() {
   discover_site_name
   [[ -n "$SITE_NAME" ]] || die "site-name is required outside an existing apps/<site-name> WordPress tree"
   [[ "$SITE_NAME" =~ ^[a-z0-9][a-z0-9-]{0,59}$ ]] || die "site-name must match [a-z0-9][a-z0-9-]{0,59} for .test routing"
-
-  PROJECT_SLUG="${PROJECT_SLUG:-$SITE_NAME}"
-  PHP_NAMESPACE="${PHP_NAMESPACE:-Maker\\$(namespace_class_from_slug "$PROJECT_SLUG")}"
-  JS_NAMESPACE="${JS_NAMESPACE:-$PROJECT_SLUG}"
-  [[ "$PROJECT_SLUG" =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ ]] || die "project slug must be lowercase kebab case and start with a letter"
-  [[ "$PHP_NAMESPACE" =~ ^[A-Za-z_][A-Za-z0-9_]*(\\[A-Za-z_][A-Za-z0-9_]*)+$ ]] || die "PHP namespace must contain at least two valid namespace segments"
-  [[ "$JS_NAMESPACE" =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ ]] || die "JS namespace must be lowercase kebab case and start with a letter"
 
   SITE_TITLE="${SITE_TITLE:-$(title_case "$SITE_NAME") }"
   SITE_TITLE="${SITE_TITLE% }"
@@ -366,12 +300,6 @@ validate_config() {
   fi
 
   load_profile
-  if [[ "$SCAFFOLDS_ONLY" == true ]]; then
-    ((${#MAKER_WORKSPACES[@]} > 0)) || die "--scaffolds-only requires a Maker-enabled profile"
-    [[ -z "$RESTORE_FILE" && "$FORCE" == false ]] || die "--scaffolds-only cannot be combined with restore or force"
-    [[ "$DRY_RUN" == true || -f "$APPS_DIR/$SITE_NAME/wp-config.php" ]] || die "existing WordPress site not found: $APPS_DIR/$SITE_NAME"
-  fi
-
   if [[ -n "$PLUGINS_FILE" ]]; then
     [[ -f "$PLUGINS_FILE" ]] || die "plugins file not found: $PLUGINS_FILE"
     while IFS= read -r source || [[ -n "$source" ]]; do
@@ -517,13 +445,6 @@ wp_exec() {
     wp --path="$container_site" --allow-root "$@"
 }
 
-wp_is_successful() {
-  local container_site="$1"
-  shift
-  "$RUNTIME" exec --user "$CONTAINER_USER" -e HOME=/tmp "$PHP_CONTAINER" \
-    wp --path="$container_site" --allow-root "$@" >/dev/null 2>&1
-}
-
 wp_prompt_secret() {
   local secret="$1" description="$2" container_site="$3"
   shift 3
@@ -659,22 +580,6 @@ restore_aiowm_archive() {
   wp_exec "$container_site" cache flush || true
 }
 
-register_makermaker_galaxy() {
-  local host_makermaker="$APPS_DIR/$SITE_NAME/wp-content/plugins/makermaker"
-  local host_typerocket="$APPS_DIR/$SITE_NAME/wp-content/mu-plugins/typerocket-pro-v6"
-  [[ "$DRY_RUN" == true || -d "$host_makermaker" ]] || return 0
-
-  log "use MakerMaker runtime filter registration and backfill its plugin-specific Galaxy context"
-  if [[ "$DRY_RUN" != true && -d "$host_typerocket/.git" ]]; then
-    [[ -z "$(git -C "$host_typerocket" status --porcelain)" ]] || die "TypeRocket repository is dirty before MakerMaker Galaxy context registration"
-  fi
-  wp_exec "/var/www/html/$SITE_NAME" makermaker register-plugin-galaxy \
-    --plugin=makermaker --namespace=Maker/MakerMaker
-  if [[ "$DRY_RUN" != true && -d "$host_typerocket/.git" ]]; then
-    [[ -z "$(git -C "$host_typerocket" status --porcelain)" ]] || die "MakerMaker Galaxy context registration changed tracked TypeRocket files"
-  fi
-}
-
 install_plugins() {
   local i source activate
   local container_site="/var/www/html/$SITE_NAME"
@@ -711,18 +616,6 @@ install_plugins() {
       fi
     fi
   done
-}
-
-configure_site_galaxy_config() {
-  local site_dir="$APPS_DIR/$SITE_NAME"
-  local context="$site_dir/wp-content/plugins/makermaker/app/Generator/GalaxyContext.php"
-  [[ "$DRY_RUN" == true || -f "$context" ]] || return 0
-  log "write portable MakerMaker-owned site Galaxy launcher and resolver"
-  if [[ "$DRY_RUN" == true ]]; then
-    print_command php -r '<MakerMaker GalaxyContext::siteLauncher()/siteConfig()>' "$context" "$site_dir/galaxy" "$site_dir/galaxy-config.php"
-  else
-    php -r 'require $argv[1]; file_put_contents($argv[2], Maker\MakerMaker\Generator\GalaxyContext::siteLauncher()); file_put_contents($argv[3], Maker\MakerMaker\Generator\GalaxyContext::siteConfig()); chmod($argv[2], 0755); chmod($argv[3], 0644);' "$context" "$site_dir/galaxy" "$site_dir/galaxy-config.php"
-  fi
 }
 
 install_mu_plugins() {
@@ -773,171 +666,6 @@ install_themes() {
   fi
 }
 
-mark_maker_core_packages() {
-  local i root marker
-  for i in "${!MAKER_CORE_SLUGS[@]}"; do
-    if [[ "${MAKER_CORE_TYPES[$i]}" == theme ]]; then
-      root="$APPS_DIR/$SITE_NAME/wp-content/themes/${MAKER_CORE_SLUGS[$i]}"
-    else
-      root="$APPS_DIR/$SITE_NAME/wp-content/plugins/${MAKER_CORE_SLUGS[$i]}"
-    fi
-    marker="$root/CORE-BOUNDARY.md"
-    log "core install marker: ${MAKER_CORE_SLUGS[$i]}"
-    if [[ "$DRY_RUN" != true ]]; then
-      [[ -f "$marker" ]] || die "Maker core marker missing: $marker"
-      grep -Fq 'FRAMEWORK CORE — DO NOT EDIT; update from playground releases.' "$marker" || die "Maker core marker is invalid: $marker"
-    fi
-  done
-}
-
-render_scaffold_tokens() {
-  local root="$1" file
-  while IFS= read -r -d '' file; do
-    php -r '$p=$argv[1]; $s=file_get_contents($p); $s=strtr($s, array("{{SITE_TITLE}}"=>$argv[2], "{{PROJECT_SLUG}}"=>$argv[3], "{{JS_NAMESPACE}}"=>$argv[4])); file_put_contents($p, $s);' \
-      "$file" "$SITE_TITLE" "$PROJECT_SLUG" "$JS_NAMESPACE"
-  done < <(find "$root" -type f -print0)
-}
-
-initialize_workspace_git() {
-  local target="$1"
-  if [[ "$DRY_RUN" == true ]]; then
-    print_command git -C "$target" init -q -b main
-  else
-    run git -C "$target" init -q -b main
-  fi
-}
-
-write_maker_lock_manifest() {
-  ((${#MAKER_CORE_SLUGS[@]} > 0)) || return 0
-  local manifest="$APPS_DIR/$SITE_NAME/.devarch-maker.lock" i root commit resolved installed
-  if [[ -e "$manifest" ]]; then
-    log "Maker lock manifest already exists, preserving install record"
-    return 0
-  fi
-  log "write Maker core lock manifest: $manifest"
-  if [[ "$DRY_RUN" == true ]]; then
-    print_command sh -c "write Maker lock manifest to '$manifest'"
-    return 0
-  fi
-  installed="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  {
-    printf 'repository_url\tresolved_ref\tcommit\tpackage_type\tinstalled_at\n'
-    for i in "${!MAKER_CORE_SLUGS[@]}"; do
-      if [[ "${MAKER_CORE_TYPES[$i]}" == theme ]]; then
-        root="$APPS_DIR/$SITE_NAME/wp-content/themes/${MAKER_CORE_SLUGS[$i]}"
-      else
-        root="$APPS_DIR/$SITE_NAME/wp-content/plugins/${MAKER_CORE_SLUGS[$i]}"
-      fi
-      [[ -d "$root/.git" ]] || die "Maker core checkout missing for lock manifest: $root"
-      commit="$(git -C "$root" rev-parse HEAD)"
-      resolved="$(git -C "$root" describe --tags --exact-match 2>/dev/null || printf '%s' "$commit")"
-      printf '%s\t%s\t%s\t%s\t%s\n' "${MAKER_CORE_URLS[$i]}" "$resolved" "$commit" "${MAKER_CORE_TYPES[$i]}" "$installed"
-    done
-  } > "$manifest.tmp"
-  mv "$manifest.tmp" "$manifest"
-}
-
-publish_child_theme_workspace() {
-  local target="$APPS_DIR/$SITE_NAME/wp-content/themes/$PROJECT_SLUG-theme"
-  if [[ -e "$target" ]]; then
-    log "workspace exists; refusing child-theme generation: $target"
-  elif [[ "$DRY_RUN" == true ]]; then
-    log "workspace create [child-theme]: $target"
-    print_command mkdir "$target"
-    initialize_workspace_git "$target"
-  else
-    (
-      local stage="${target}.devarch-stage.$$"
-      local scaffold="$APPS_DIR/$SITE_NAME/wp-content/themes/makerstarter/scaffolds/child-theme"
-      trap 'rm -rf "$stage"' EXIT
-      if [[ ! -d "$scaffold" && -d "$PROJECT_ROOT/apps/playground/wp-content/themes/makerstarter/scaffolds/child-theme" ]]; then
-        scaffold="$PROJECT_ROOT/apps/playground/wp-content/themes/makerstarter/scaffolds/child-theme"
-        log "use released playground MakerStarter scaffold for existing core without a scaffold"
-      fi
-      [[ -d "$scaffold" ]] || die "MakerStarter child scaffold missing: $scaffold"
-      mkdir -p "$stage"
-      cp -a "$scaffold/." "$stage/"
-      render_scaffold_tokens "$stage"
-      initialize_workspace_git "$stage"
-      [[ "${DEVARCH_SCAFFOLD_FAIL_AFTER_STAGE:-false}" != true ]] || return 70
-      mv "$stage" "$target"
-      trap - EXIT
-    ) || die "child-theme scaffold failed; staged files rolled back"
-    log "workspace created [child-theme]: $target"
-  fi
-  wp_exec "/var/www/html/$SITE_NAME" theme activate "$PROJECT_SLUG-theme"
-}
-
-publish_blocks_workspace() {
-  local target="$APPS_DIR/$SITE_NAME/wp-content/plugins/$PROJECT_SLUG-blocks"
-  if [[ -e "$target" ]]; then
-    log "workspace exists; refusing blocks-plugin generation: $target"
-  elif [[ "$DRY_RUN" == true ]]; then
-    log "workspace create [blocks-plugin]: $target (namespace: $JS_NAMESPACE)"
-    print_command mkdir "$target"
-    initialize_workspace_git "$target"
-  else
-    (
-      local stage="${target}.devarch-stage.$$"
-      local scaffold="$APPS_DIR/$SITE_NAME/wp-content/plugins/makerblocks/scaffolds/project-plugin"
-      trap 'rm -rf "$stage"' EXIT
-      if [[ ! -d "$scaffold" && -d "$PROJECT_ROOT/apps/playground/wp-content/plugins/makerblocks/scaffolds/project-plugin" ]]; then
-        scaffold="$PROJECT_ROOT/apps/playground/wp-content/plugins/makerblocks/scaffolds/project-plugin"
-        log "use released playground MakerBlocks scaffold for existing core without a scaffold"
-      fi
-      [[ -d "$scaffold" ]] || die "MakerBlocks project scaffold missing: $scaffold"
-      mkdir -p "$stage"
-      cp -a "$scaffold/." "$stage/"
-      render_scaffold_tokens "$stage"
-      mv "$stage/plugin.php" "$stage/$PROJECT_SLUG-blocks.php"
-      initialize_workspace_git "$stage"
-      [[ "${DEVARCH_SCAFFOLD_FAIL_AFTER_STAGE:-false}" != true ]] || return 70
-      mv "$stage" "$target"
-      trap - EXIT
-    ) || die "blocks-plugin scaffold failed; staged files rolled back"
-    log "workspace created [blocks-plugin]: $target"
-  fi
-  wp_exec "/var/www/html/$SITE_NAME" plugin activate "$PROJECT_SLUG-blocks"
-}
-
-publish_app_workspace() {
-  local target="$APPS_DIR/$SITE_NAME/wp-content/plugins/$PROJECT_SLUG-app"
-  if [[ -e "$target" ]]; then
-    log "workspace exists; refusing app-plugin generation: $target"
-    wp_exec "/var/www/html/$SITE_NAME" plugin activate "$PROJECT_SLUG-app"
-    return
-  fi
-  log "workspace create [app-plugin via MakerMaker]: $target (namespace: $PHP_NAMESPACE)"
-  wp_exec "/var/www/html/$SITE_NAME" makermaker create "$PROJECT_SLUG-app" \
-    --name="$SITE_TITLE App" --namespace="$PHP_NAMESPACE" --vendor=maker --activate
-  if [[ "$DRY_RUN" != true ]]; then
-    [[ -d "$target" ]] || die "MakerMaker did not publish expected app workspace: $target"
-    if [[ ! -e "$target/README.md" ]]; then
-      printf '# PROJECT OWNED — EDIT HERE\n\nApplication workspace generated by MakerMaker.\n' > "$target/README.md"
-    elif ! grep -q 'PROJECT OWNED — EDIT HERE' "$target/README.md"; then
-      { printf '# PROJECT OWNED — EDIT HERE\n\n'; cat "$target/README.md"; } > "$target/README.md.tmp"
-      mv "$target/README.md.tmp" "$target/README.md"
-    fi
-  fi
-  initialize_workspace_git "$target"
-}
-
-provision_maker_workspaces() {
-  ((${#MAKER_WORKSPACES[@]} > 0)) || return 0
-  local declaration kind source
-  log "Maker project: slug=$PROJECT_SLUG PHP=$PHP_NAMESPACE JS=$JS_NAMESPACE"
-  for declaration in "${MAKER_WORKSPACES[@]}"; do
-    kind="${declaration%%:*}"
-    source="${declaration#*:}"
-    log "workspace declaration: $kind from $source"
-    case "$kind" in
-      child-theme) publish_child_theme_workspace ;;
-      blocks-plugin) publish_blocks_workspace ;;
-      app-plugin) publish_app_workspace ;;
-    esac
-  done
-}
-
 register_site_host() {
   local hostname="$SITE_NAME.test"
   [[ "$REGISTER_HOSTS" == true ]] || { log "hosts registration skipped: $hostname"; return 0; }
@@ -966,12 +694,6 @@ main() {
   [[ -z "$RESTORE_FILE" ]] || log "restore: $RESTORE_FILE (native AIOWM)"
   [[ "$DRY_RUN" == true ]] && log "dry run; no changes will be made"
 
-  if [[ "$SCAFFOLDS_ONLY" == true ]]; then
-    provision_maker_workspaces
-    log "Maker workspaces ready: $APPS_DIR/$SITE_NAME"
-    return
-  fi
-
   ensure_network
   start_services
   wait_for_services
@@ -981,12 +703,7 @@ main() {
   install_wordpress
   install_mu_plugins
   install_plugins
-  configure_site_galaxy_config
-  register_makermaker_galaxy
   install_themes
-  mark_maker_core_packages
-  write_maker_lock_manifest
-  provision_maker_workspaces
   make_content_writable
   restore_aiowm_archive
   make_content_writable
