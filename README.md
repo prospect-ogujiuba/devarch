@@ -109,6 +109,12 @@ scripts/node/bootstrap.sh my-next-app
 
 Static Next.js exports under `out/` continue to be served directly by Nginx and need no running Node container. See [`scripts/node/README.md`](scripts/node/README.md) for the package-script contract, framework examples, package-manager selection, routing behavior, and lifecycle commands.
 
+## AI-assisted browser testing
+
+DevArch includes a project-scoped [Playwright MCP](https://github.com/microsoft/playwright-mcp) configuration for visible, interactive browser testing by Pi. After opening this repository in Pi, run `/reload`, start an app, and ask the AI to open its URL and manually test it. The browser runs headed by default, so you can watch, take over, demonstrate a problem, and let the AI continue inspecting the same page.
+
+See [`scripts/browser/README.md`](scripts/browser/README.md) for setup, example prompts, safety notes, browser installation, and verification.
+
 ## Development checks
 
 ```bash
