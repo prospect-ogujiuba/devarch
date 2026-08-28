@@ -96,6 +96,19 @@ scripts/laravel/bootstrap.sh demo
 
 The bootstrap starts Nginx Proxy Manager, whose wildcard proxy automatically detects `apps/<app-name>/public/index.php`, selects `public/` as the document root, and routes PHP to `php:9000`; no per-app proxy entry or standalone server is required. Both bootstraps idempotently register `127.0.0.1 <name>.test` through the shared cross-platform hosts helper; use `--no-hosts` to opt out. Use `--force` only after reviewing its backup/recovery behavior. See [`scripts/laravel/README.md`](scripts/laravel/README.md) for prerequisites, configuration precedence, CLI options, profiles, package syntax, runtime mapping, safety, regression tests, and the optional real-provisioning smoke test.
 
+## Multi-app JavaScript runtime
+
+Existing applications in `apps/<app-name>` can run in isolated Node 22 containers behind the same wildcard proxy. A shared `node` router maps `<app-name>.test` to `node-<app-name>` on `microservices-net`, allowing multiple Next.js, Nuxt, Vite, Remix/React Router, Astro SSR, or generic Node applications to coexist with the shared PHP-FPM service.
+
+Each app supplies a package script that binds to `0.0.0.0:3000`:
+
+```bash
+scripts/node/bootstrap.sh my-next-app --dry-run
+scripts/node/bootstrap.sh my-next-app
+```
+
+Static Next.js exports under `out/` continue to be served directly by Nginx and need no running Node container. See [`scripts/node/README.md`](scripts/node/README.md) for the package-script contract, framework examples, package-manager selection, routing behavior, and lifecycle commands.
+
 ## Development checks
 
 ```bash
