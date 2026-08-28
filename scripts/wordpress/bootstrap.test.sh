@@ -31,10 +31,11 @@ fi
 
 restore_archive="$(mktemp --suffix=.wpress)"
 generic_profile_root="$(mktemp -d)"
+typerocket_install_root="$(mktemp -d)"
 nested_site="$SCRIPT_DIR/../../apps/nested-restore-test"
 cleanup() {
   rm -f "$restore_archive"
-  rm -rf "$generic_profile_root" "$nested_site"
+  rm -rf "$generic_profile_root" "$typerocket_install_root" "$nested_site"
 }
 trap cleanup EXIT
 mkdir -p "$nested_site/wp-content/plugins/example"
@@ -91,6 +92,34 @@ done
 if grep -q 'plugin activate all-in-one-wp-migration' <<<"$profile_output"; then
   fail "the migration plugin should remain inactive in profiles"
 fi
+
+for profile in clean custom loaded; do
+  typerocket_output="$(GITHUB_USER=example bash "$BOOTSTRAP" "typerocket-$profile" --profile "$profile" --dry-run)" || fail "$profile profile should install TypeRocket"
+  grep -q 'clone Git must-use plugin: typerocket-pro-v6' <<<"$typerocket_output" || fail "$profile profile should include TypeRocket Pro v6"
+  grep -q 'typerocket-pro-v6/typerocket/galaxy' <<<"$typerocket_output" || fail "$profile profile should copy the TypeRocket Galaxy launcher"
+  grep -q "apps/typerocket-$profile/galaxy" <<<"$typerocket_output" || fail "$profile profile should copy Galaxy to the WordPress root"
+done
+bare_output="$(GITHUB_USER=example bash "$BOOTSTRAP" typerocket-bare --profile bare --dry-run)" || fail "bare profile should succeed"
+if grep -q 'typerocket-pro-v6' <<<"$bare_output"; then
+  fail "bare profile should not include TypeRocket Pro v6"
+fi
+
+fake_typerocket="$typerocket_install_root/real-site/wp-content/mu-plugins/typerocket-pro-v6"
+mkdir -p "$fake_typerocket/typerocket"
+printf '%s\n' '<?php // TypeRocket MU entry' > "$fake_typerocket/typerocket-pro-v6.php"
+printf '%s\n' '#!/usr/bin/env php' > "$fake_typerocket/typerocket/galaxy"
+chmod +x "$fake_typerocket/typerocket/galaxy"
+(
+  source "$BOOTSTRAP"
+  APPS_DIR="$typerocket_install_root"
+  SITE_NAME=real-site
+  DRY_RUN=false
+  MU_PLUGIN_SOURCES=('git@github.com:example/typerocket-pro-v6.git')
+  install_mu_plugins
+) >/dev/null || fail "TypeRocket MU-plugin files should install"
+cmp -s "$fake_typerocket/typerocket-pro-v6.php" "$typerocket_install_root/real-site/wp-content/mu-plugins/typerocket-pro-v6.php" || fail "TypeRocket MU entry should be copied to mu-plugins"
+cmp -s "$fake_typerocket/typerocket/galaxy" "$typerocket_install_root/real-site/galaxy" || fail "TypeRocket Galaxy launcher should be copied to the WordPress root"
+[[ -x "$typerocket_install_root/real-site/galaxy" ]] || fail "TypeRocket Galaxy launcher should remain executable"
 
 loaded_output="$(GITHUB_USER=example bash "$BOOTSTRAP" loaded-site --profile loaded --dry-run)" || fail "loaded profile should succeed"
 grep -q 'query-monitor' <<<"$loaded_output" || fail "loaded profile should include development plugins"
