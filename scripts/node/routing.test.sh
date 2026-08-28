@@ -61,6 +61,7 @@ create_runtime_app() {
   target="$PROJECT_ROOT/apps/$app"
   mkdir -p "$target"
   printf '{"scripts":{"devarch":"node server.js"}}\n' > "$target/package.json"
+  printf 'runtime-source-index\n' > "$target/index.html"
   cat > "$target/server.js" <<'JS'
 const http = require('node:http');
 const app = '__DEVARCH_TEST_APP__';
@@ -103,15 +104,24 @@ request() {
   pass
 }
 
+request_status() {
+  local app="$1" path="$2" expected_status="$3" status
+  status="$(curl -ksS -o /dev/null -w '%{http_code}' --resolve "$app.test:443:127.0.0.1" "https://$app.test$path")" ||
+    fail "$app.test$path request failed"
+  [[ "$status" == "$expected_status" ]] || fail "$app.test$path returned HTTP $status, expected $expected_status"
+  pass
+}
+
 create_runtime_app "$APP_A"
 create_runtime_app "$APP_B"
-mkdir -p "$PROJECT_ROOT/apps/$STATIC_APP/out/nested" "$PROJECT_ROOT/apps/$STATIC_APP/out/_next/static"
+mkdir -p "$PROJECT_ROOT/apps/$STATIC_APP/out/nested" "$PROJECT_ROOT/apps/$STATIC_APP/out/_next/static" "$PROJECT_ROOT/apps/$STATIC_APP/out/.private"
 printf '{}\n' > "$PROJECT_ROOT/apps/$STATIC_APP/package.json"
 printf 'static-home\n' > "$PROJECT_ROOT/apps/$STATIC_APP/out/index.html"
 printf 'static-about\n' > "$PROJECT_ROOT/apps/$STATIC_APP/out/about.html"
 printf 'static-nested\n' > "$PROJECT_ROOT/apps/$STATIC_APP/out/nested/index.html"
 printf 'static-missing\n' > "$PROJECT_ROOT/apps/$STATIC_APP/out/404.html"
 printf 'static-asset\n' > "$PROJECT_ROOT/apps/$STATIC_APP/out/_next/static/app.js"
+printf 'secret\n' > "$PROJECT_ROOT/apps/$STATIC_APP/out/.private/secret.txt"
 
 "${COMPOSE[@]}" -f "$ROUTER_COMPOSE" up -d --build >/dev/null
 start_runtime_app "$APP_A"
@@ -135,12 +145,15 @@ done
 request "$APP_A" / "$APP_A:/" 200
 request "$APP_B" / "$APP_B:/" 200
 request "$APP_A" /api/check "$APP_A:/api/check" 200
+request "$APP_A" /node_modules/.vite/deps/react.js "$APP_A:/node_modules/.vite/deps/react.js" 200
+request "$APP_A" /@fs/app/.svelte-kit/generated/client/app.js "$APP_A:/@fs/app/.svelte-kit/generated/client/app.js" 200
 request "$APP_A" /favicon.ico "$APP_A:/favicon.ico" 200
 request "$APP_A" /robots.txt "$APP_A:/robots.txt" 200
 request "$STATIC_APP" / static-home 200
 request "$STATIC_APP" /about static-about 200
 request "$STATIC_APP" /nested/ static-nested 200
 request "$STATIC_APP" /_next/static/app.js static-asset 200
+request_status "$STATIC_APP" /.private/secret.txt 403
 request "$STATIC_APP" /missing static-missing 404
 
 DEVARCH_TEST_HOST="$APP_A.test" node <<'JS'
