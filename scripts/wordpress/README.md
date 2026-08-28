@@ -66,7 +66,7 @@ scripts/wordpress/bootstrap.sh my-site --profile clean
 | Profile | Contents |
 | --- | --- |
 | `bare` | All-in-One WP Migration, inactive. |
-| `clean` | Bare plus Admin Site Enhancements Pro. |
+| `clean` | Bare plus TypeRocket Pro v6 as an MU plugin, its Galaxy launcher in the WordPress root, and Admin Site Enhancements Pro. |
 | `custom` | Clean plus Manual Image Crop. |
 | `loaded` | Custom plus common WordPress development and debugging plugins. |
 
@@ -80,7 +80,7 @@ github-mu-plugin repository
 wp-plugin wordpress-org-slug
 ```
 
-GitHub repository names resolve under `GITHUB_USER`. Git components are cloned on the host; Composer runs inside the PHP container when `composer.json` exists.
+GitHub repository names resolve under `GITHUB_USER`. Git components are cloned on the host; Composer runs inside the PHP container when `composer.json` exists. For TypeRocket Pro v6, bootstrap also copies `typerocket/galaxy` from the MU-plugin repository to `<wordpress-root>/galaxy`.
 
 ## WordPress defaults
 

@@ -619,7 +619,7 @@ install_plugins() {
 }
 
 install_mu_plugins() {
-  local url slug target container_dir host_mu="$APPS_DIR/$SITE_NAME/wp-content/mu-plugins"
+  local url slug target container_dir galaxy_source galaxy_target host_mu="$APPS_DIR/$SITE_NAME/wp-content/mu-plugins"
   run mkdir -p "$host_mu"
   for url in "${MU_PLUGIN_SOURCES[@]}"; do
     slug="$(component_slug_from_url "$url")"
@@ -634,6 +634,16 @@ install_mu_plugins() {
       run cp "$target/$slug.php" "$host_mu/$slug.php"
     else
       die "must-use plugin entry file not found: $target/$slug.php"
+    fi
+    if [[ "$slug" == typerocket-pro-v6 ]]; then
+      galaxy_source="$target/typerocket/galaxy"
+      galaxy_target="$APPS_DIR/$SITE_NAME/galaxy"
+      log "copy TypeRocket Galaxy launcher to WordPress root"
+      if [[ "$DRY_RUN" == true || -f "$galaxy_source" ]]; then
+        run cp "$galaxy_source" "$galaxy_target"
+      else
+        die "TypeRocket Galaxy launcher not found: $galaxy_source"
+      fi
     fi
   done
 }
