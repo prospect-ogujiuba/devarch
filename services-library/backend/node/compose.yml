@@ -1,35 +1,25 @@
 services:
   node:
-    image: node:22-alpine
+    build:
+      context: ./config
+      dockerfile: Dockerfile
     ports:
-    - 127.0.0.1:8205:3000
-    - 127.0.0.1:8201:3001
-    - 127.0.0.1:9229:9229
-    - 127.0.0.1:8203:4000
-    - 127.0.0.1:8202:5173
-    volumes:
-    - node_modules:/app/node_modules
-    working_dir: /app
-    command: sh -c "npm install && npm run dev"
+      - "127.0.0.1:8205:3000"
     environment:
-      NODE_ENV: development
-      PORT: '3000'
+      NODE_ENV: production
+      PORT: "3000"
+      DEVARCH_NODE_TARGET_PORT: "3000"
     healthcheck:
-      test:
-      - CMD
-      - sh
-      - -c
-      - wget --spider -q http://localhost:3000/ || exit 0
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000/__devarch/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
     networks:
-    - microservices-net
+      - microservices-net
     container_name: node
-volumes:
-  node_modules: null
+
 networks:
   microservices-net:
     external: true

@@ -1,0 +1,41 @@
+services:
+  node-app:
+    build:
+      context: ./config
+      dockerfile: app.Dockerfile
+    container_name: "node-${DEVARCH_NODE_APP_NAME:?set DEVARCH_NODE_APP_NAME}"
+    working_dir: /app
+    volumes:
+      - "../../../apps/${DEVARCH_NODE_APP_NAME:?set DEVARCH_NODE_APP_NAME}:/app"
+      - node_app_modules:/app/node_modules
+    environment:
+      DEVARCH_NODE_CONTAINER_USER: "${DEVARCH_NODE_CONTAINER_USER:-0:0}"
+      DEVARCH_NODE_PACKAGE_MANAGER: "${DEVARCH_NODE_PACKAGE_MANAGER:-npm}"
+      DEVARCH_NODE_SCRIPT: "${DEVARCH_NODE_SCRIPT:-devarch}"
+      HOST: "0.0.0.0"
+      HOSTNAME: "0.0.0.0"
+      PORT: "3000"
+      NUXT_HOST: "0.0.0.0"
+      NUXT_PORT: "3000"
+      NODE_ENV: development
+      WATCHPACK_POLLING: "${WATCHPACK_POLLING:-true}"
+      __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: "${DEVARCH_NODE_APP_NAME:?set DEVARCH_NODE_APP_NAME}.test"
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    init: true
+    restart: unless-stopped
+    networks:
+      - microservices-net
+
+volumes:
+  node_app_modules:
+
+networks:
+  microservices-net:
+    external: true
