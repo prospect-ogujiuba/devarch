@@ -1,6 +1,6 @@
 FROM node:22-alpine
 
-RUN apk add --no-cache su-exec \
+RUN apk add --no-cache su-exec python3 make g++ \
     && corepack enable
 
 COPY app-entrypoint.sh /usr/local/bin/devarch-node-app

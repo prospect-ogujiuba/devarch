@@ -96,6 +96,20 @@ scripts/laravel/bootstrap.sh demo
 
 The bootstrap starts Nginx Proxy Manager, whose wildcard proxy automatically detects `apps/<app-name>/public/index.php`, selects `public/` as the document root, and routes PHP to `php:9000`; no per-app proxy entry or standalone server is required. Both bootstraps idempotently register `127.0.0.1 <name>.test` through the shared cross-platform hosts helper; use `--no-hosts` to opt out. Use `--force` only after reviewing its backup/recovery behavior. See [`scripts/laravel/README.md`](scripts/laravel/README.md) for prerequisites, configuration precedence, CLI options, profiles, package syntax, runtime mapping, safety, regression tests, and the optional real-provisioning smoke test.
 
+## Rapid JavaScript framework bootstrap
+
+`scripts/javascript/bootstrap.sh` creates current, product-neutral starters for Angular, Astro, Next.js, Nuxt, Qwik, React Router, SvelteKit, and Vite with Lit, Preact, React, Solid, or Vue. It combines a framework with a curated project profile—such as minimal, SSR, content, API, tested, library, or React Compiler—and invokes the official `@latest` scaffolder before adding the shared runtime contract.
+
+```bash
+scripts/javascript/bootstrap.sh --list-frameworks
+scripts/javascript/bootstrap.sh --list-profiles --framework next
+scripts/javascript/bootstrap.sh storefront --framework next --profile fullstack --dry-run
+scripts/javascript/bootstrap.sh storefront --framework next --profile fullstack --start
+# approve the hosts-file elevation prompt, then open https://storefront.test
+```
+
+Existing apps are preserved unless `--force` explicitly backs them up and replaces them. The earlier `--profile next` form remains a compatibility alias for Next.js's default `fullstack` profile. See [`scripts/javascript/README.md`](scripts/javascript/README.md) for the combination matrix, safety behavior, and extension format.
+
 ## Multi-app JavaScript runtime
 
 Existing applications in `apps/<app-name>` can run in isolated Node 22 containers behind the same wildcard proxy. A shared `node` router maps `<app-name>.test` to `node-<app-name>` on `microservices-net`, allowing multiple Next.js, Nuxt, Vite, Remix/React Router, Astro SSR, or generic Node applications to coexist with the shared PHP-FPM service.
