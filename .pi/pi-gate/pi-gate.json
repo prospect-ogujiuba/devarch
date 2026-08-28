@@ -12,7 +12,10 @@
   "permissions": {},
   "literalPermissions": {
     "allow": [
-      "find apps/playground/wp-content/plugins -maxdepth 2 -type d -iname '*app*' -o -iname '*maker*' | sort | head -20"
+      "find apps/playground/wp-content/plugins -maxdepth 2 -type d -iname '*app*' -o -iname '*maker*' | sort | head -20",
+      "git status --short && printf '\\nwordpress tree:\\n' && find scripts/wordpress -maxdepth 3 -type f -print | sort && printf '\\nprofile contents:\\n' && for f in scripts/wordpress/profiles/*; do echo \"--- $f\"; cat \"$f\"; done",
+      "python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/wordpress/bootstrap.sh')\ns = p.read_text()\nstart = s.index('mark_maker_core_packages() {')\nend = s.index('register_site_host() {', start)\np.write_text(s[:start] + s[end:])\nPY\nrm -f \\\n scripts/wordpress/audit-maker.sh scripts/wordpress/audit-maker.test.sh \\\n scripts/wordpress/migrate-maker.sh scripts/wordpress/migrate-maker.test.sh \\\n scripts/wordpress/release-maker.sh scripts/wordpress/release-maker.test.sh \\\n scripts/wordpress/sync-maker.sh scripts/wordpress/sync-maker.test.sh \\\n scripts/wordpress/MAKER-RELEASES.md scripts/wordpress/MIGRATE-MAKER-SITES.md \\\n scripts/wordpress/maker-stack.json scripts/wordpress/maker-stack.schema.json \\\n scripts/wordpress/profiles/maker-stack.fragment",
+      "podman exec nginx-proxy-manager nginx -t"
     ],
     "ask": [],
     "deny": []
