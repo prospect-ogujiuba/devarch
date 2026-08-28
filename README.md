@@ -9,8 +9,6 @@ The old Go CLI, planning workflow, daemon/API code, and generated workspace surf
 - `services-library/<category>/<service>/compose.yml` — service compose definitions.
 - `services-library/<category>/<service>/config/` — optional service configuration.
 - `apps/<app>/` — application workspaces, typically separate repositories ignored by the top-level DevArch repository.
-- [`docs/makersuite.md`](docs/makersuite.md) — canonical MakerSuite architecture, ownership, and delivery workflow.
-- [`docs/makerdesk.md`](docs/makerdesk.md) — canonical DevArch integration and operations guide for MakerDesk.
 - `docs/plans/` — tracked implementation plans and completion checklists.
 - `.env.example` — example environment values.
 
@@ -68,11 +66,11 @@ scripts/wordpress/bootstrap.sh my-site \
 ```
 
 - `bare` — All-in-One WP Migration, inactive.
-- `clean` — TypeRocket Pro v6 as an MU plugin; MakerMaker and MakerBlocks as plugins; MakerStarter as the active theme; All-in-One WP Migration inactive; Admin Site Enhancements Pro active.
+- `clean` — `bare` plus Admin Site Enhancements Pro.
 - `custom` — `clean` plus Manual Image Crop.
 - `loaded` — `custom` plus 12 WordPress.org development and debugging plugins.
 
-Profile repositories are shallow-cloned over SSH from `GITHUB_USER`; `--github-plugin NAME` provides the same shorthand for an extra active plugin. Git components with `composer.json` run Composer inside the PHP container. TypeRocket profiles also generate the site `galaxy` launcher/config, register MakerMaker's Galaxy commands idempotently, activate MakerStarter, and remove inactive bundled themes. `--preset` remains an alias for `--profile`.
+Profile repositories are shallow-cloned over SSH from `GITHUB_USER`; `--github-plugin NAME` provides the same shorthand for an extra active plugin. Git components with `composer.json` run Composer inside the PHP container. `--preset` remains an alias for `--profile`.
 
 ### Restore workflow
 

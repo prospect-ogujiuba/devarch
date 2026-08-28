@@ -1,5 +1,3 @@
-# Core development repositories.
-github-mu-plugin typerocket-pro-v6
-include maker-stack.fragment
+# Private utility plugins for a clean development site.
 github-plugin all-in-one-wp-migration inactive
 github-plugin admin-site-enhancements-pro
