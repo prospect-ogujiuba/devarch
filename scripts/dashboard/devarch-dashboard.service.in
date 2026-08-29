@@ -1,0 +1,17 @@
+[Unit]
+Description=DevArch Home dashboard
+Documentation=file://@REPO_ROOT@/scripts/dashboard/README.md
+Wants=podman.socket
+After=network.target podman.socket
+
+[Service]
+Type=simple
+WorkingDirectory=@REPO_ROOT@
+ExecStart=@PYTHON@ @REPO_ROOT@/scripts/dashboard/server.py --host 0.0.0.0 --port 7411
+Restart=on-failure
+RestartSec=2
+Environment=PYTHONDONTWRITEBYTECODE=1
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

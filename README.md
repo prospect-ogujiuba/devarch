@@ -31,6 +31,17 @@ podman network create microservices-net
 
 For persistent production services, manage the containers with systemd/Quadlet (or reviewed generated units) and enable lingering for the rootless service user.
 
+## DevArch Home dashboard
+
+Install the read-only local dashboard to search projects, running Podman containers, and the service catalog:
+
+```bash
+scripts/dashboard/install-service.sh
+# open https://devarch.test
+```
+
+The user service starts persistently and Nginx Proxy Manager provides the local HTTPS endpoint. Inventory loads on page open and refreshes only when requested—there is no polling. See [`scripts/dashboard/README.md`](scripts/dashboard/README.md) for service commands, Tailwind development, discovery behavior, and tests.
+
 ## Local `.test` domains
 
 Synchronize every service `container_name`, routable `apps/*` workspace, and `devarch.test` into one managed hosts-file block:
