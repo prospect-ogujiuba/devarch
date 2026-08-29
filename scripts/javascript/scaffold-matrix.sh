@@ -10,6 +10,8 @@ NODE_BOOTSTRAP="$PROJECT_ROOT/scripts/node/bootstrap.sh"
 APP_COMPOSE="$PROJECT_ROOT/services-library/backend/node/app.compose.yml"
 APPS_DIR="$PROJECT_ROOT/apps"
 APP_PREFIX="${DEVARCH_MATRIX_APP_PREFIX:-showcase}"
+LOG_DIR="${DEVARCH_MATRIX_LOG_DIR:-$PROJECT_ROOT/.model-artifacts/logs/javascript-scaffold-matrix}"
+SCAFFOLD_ATTEMPTS="${DEVARCH_MATRIX_ATTEMPTS:-2}"
 SCAFFOLD_RESULT=''
 
 log() { printf '[javascript-matrix] %s\n' "$*"; }
@@ -26,9 +28,12 @@ Usage: scripts/javascript/scaffold-matrix.sh list
 Discover the curated JavaScript profile matrix and manage deterministic
 apps/showcase-<framework>-<profile> applications. scaffold-all runs
 sequentially and skips applications that already contain package.json.
+Upstream output is captured to a run log so terminal progress stays concise.
 
 Environment:
   DEVARCH_MATRIX_APP_PREFIX  Application prefix (default: showcase)
+  DEVARCH_MATRIX_ATTEMPTS    Attempts per profile in scaffold-all (default: 2)
+  DEVARCH_MATRIX_LOG_DIR     Run log directory (default: .model-artifacts/logs/...)
   CONTAINER_RUNTIME          podman or docker (auto-detected for stop)
 EOF
 }
@@ -47,6 +52,7 @@ validate_setup() {
   [[ -d "$PROFILES_DIR" ]] || die "profiles directory does not exist: $PROFILES_DIR"
   [[ -x "$SCAFFOLD_BOOTSTRAP" ]] || die "scaffold bootstrap is not executable: $SCAFFOLD_BOOTSTRAP"
   valid_slug "$APP_PREFIX" || die 'DEVARCH_MATRIX_APP_PREFIX must be lowercase DNS-safe text'
+  [[ "$SCAFFOLD_ATTEMPTS" =~ ^[1-9][0-9]*$ ]] || die 'DEVARCH_MATRIX_ATTEMPTS must be a positive integer'
 }
 
 validate_combination() {
@@ -78,6 +84,22 @@ list_matrix() {
   printf '\nTotal: %d profiles\n' "$total"
 }
 
+scaffold_attempt() {
+  local framework=$1 profile=$2 name target status
+  name=$(app_name "$framework" "$profile")
+  target="$APPS_DIR/$name"
+
+  set +e
+  "$SCAFFOLD_BOOTSTRAP" "$name" --framework "$framework" --profile "$profile"
+  status=$?
+  set -e
+  ((status == 0)) || return "$status"
+  [[ -f "$target/package.json" ]] || {
+    printf '[javascript-matrix] error: scaffold completed without package.json: %s\n' "$target" >&2
+    return 1
+  }
+}
+
 scaffold_one() {
   local framework=$1 profile=$2 name target
   validate_combination "$framework" "$profile"
@@ -92,24 +114,83 @@ scaffold_one() {
   [[ ! -e "$target" ]] || die "existing target is incomplete: $target"
 
   log "scaffold $framework/$profile as apps/$name"
-  "$SCAFFOLD_BOOTSTRAP" "$name" --framework "$framework" --profile "$profile"
-  [[ -f "$target/package.json" ]] || die "scaffold completed without package.json: $target"
+  scaffold_attempt "$framework" "$profile" || die "scaffolder failed: $framework/$profile"
   SCAFFOLD_RESULT=created
 }
 
+new_run_log() {
+  local base candidate suffix=1
+  mkdir -p "$LOG_DIR"
+  base="$LOG_DIR/$(date +%Y-%m-%d_%H%M)-scaffold-all"
+  candidate="$base.log"
+  while [[ -e "$candidate" ]]; do
+    ((suffix += 1))
+    candidate="$base-$suffix.log"
+  done
+  printf '%s\n' "$candidate"
+}
+
 scaffold_all() {
-  local path framework profile created=0 skipped=0 total=0
-  while IFS= read -r -d '' path; do
+  local -a paths=() failures=()
+  local path framework profile name target run_log attempt status
+  local created=0 skipped=0 failed=0 current total
+  mapfile -d '' paths < <(profile_paths)
+  total=${#paths[@]}
+  run_log=$(new_run_log)
+  log "scaffold-all: total=$total attempts=$SCAFFOLD_ATTEMPTS log=$run_log"
+
+  for current in "${!paths[@]}"; do
+    path=${paths[$current]}
     framework=$(basename "$(dirname "$path")")
     profile=$(basename "$path" .profile)
-    scaffold_one "$framework" "$profile"
-    case "$SCAFFOLD_RESULT" in
-      created) ((created += 1)) ;;
-      skipped) ((skipped += 1)) ;;
-    esac
-    ((total += 1))
-  done < <(profile_paths)
-  log "complete: total=$total created=$created skipped=$skipped"
+    name=$(app_name "$framework" "$profile")
+    target="$APPS_DIR/$name"
+    current=$((current + 1))
+
+    if [[ -f "$target/package.json" ]]; then
+      printf '[javascript-matrix] [%d/%d] %s/%s — skipped\n' "$current" "$total" "$framework" "$profile"
+      ((skipped += 1))
+      continue
+    fi
+    if [[ -e "$target" ]]; then
+      printf '[javascript-matrix] [%d/%d] %s/%s — failed (incomplete target)\n' "$current" "$total" "$framework" "$profile" >&2
+      printf '\n===== %s/%s =====\nexisting target is incomplete: %s\n' "$framework" "$profile" "$target" >> "$run_log"
+      failures+=("$framework/$profile")
+      ((failed += 1))
+      continue
+    fi
+
+    status=1
+    for ((attempt = 1; attempt <= SCAFFOLD_ATTEMPTS; attempt++)); do
+      printf '[javascript-matrix] [%d/%d] %s/%s — attempt %d/%d\n' \
+        "$current" "$total" "$framework" "$profile" "$attempt" "$SCAFFOLD_ATTEMPTS"
+      printf '\n===== %s/%s attempt %d/%d =====\n' \
+        "$framework" "$profile" "$attempt" "$SCAFFOLD_ATTEMPTS" >> "$run_log"
+      if scaffold_attempt "$framework" "$profile" >> "$run_log" 2>&1; then
+        status=0
+        break
+      fi
+      printf '[javascript-matrix] [%d/%d] %s/%s — attempt %d failed%s\n' \
+        "$current" "$total" "$framework" "$profile" "$attempt" \
+        "$([[ $attempt -lt $SCAFFOLD_ATTEMPTS ]] && printf ', retrying' || true)" >&2
+    done
+
+    if ((status == 0)); then
+      printf '[javascript-matrix] [%d/%d] %s/%s — created\n' "$current" "$total" "$framework" "$profile"
+      ((created += 1))
+    else
+      printf '[javascript-matrix] [%d/%d] %s/%s — failed; log tail follows\n' "$current" "$total" "$framework" "$profile" >&2
+      tail -n 12 "$run_log" >&2
+      failures+=("$framework/$profile")
+      ((failed += 1))
+    fi
+  done
+
+  log "complete: total=$total created=$created skipped=$skipped failed=$failed log=$run_log"
+  if ((failed > 0)); then
+    log "failed profiles: ${failures[*]}"
+    return 1
+  fi
 }
 
 start_one() {

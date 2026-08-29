@@ -34,6 +34,22 @@ cat > "$PROJECT_ROOT/scripts/javascript/bootstrap.sh" <<'FAKE'
 set -euo pipefail
 printf 'scaffold %s\n' "$*" >> "${MATRIX_CALL_LOG:?}"
 app=$1
+attempt_dir="${MATRIX_ATTEMPT_DIR:?}"
+mkdir -p "$attempt_dir"
+attempt_file="$attempt_dir/$app"
+attempt=0
+[[ ! -f "$attempt_file" ]] || attempt=$(<"$attempt_file")
+((attempt += 1))
+printf '%d\n' "$attempt" > "$attempt_file"
+printf 'upstream output for %s attempt %d\n' "$app" "$attempt"
+if [[ ${MATRIX_ALWAYS_FAIL_APP:-} == "$app" ]]; then
+  printf 'persistent fake failure for %s\n' "$app" >&2
+  exit 9
+fi
+if [[ ${MATRIX_FAIL_ONCE_APP:-} == "$app" && $attempt -eq 1 ]]; then
+  printf 'transient fake failure for %s\n' "$app" >&2
+  exit 8
+fi
 mkdir -p "${MATRIX_PROJECT_ROOT:?}/apps/$app"
 printf '{"name":"%s","scripts":{"devarch":"true"}}\n' "$app" > "${MATRIX_PROJECT_ROOT:?}/apps/$app/package.json"
 FAKE
@@ -52,6 +68,8 @@ run_matrix() {
   PATH="$TEST_TMP/bin:$PATH" \
   MATRIX_CALL_LOG="$CALL_LOG" \
   MATRIX_PROJECT_ROOT="$PROJECT_ROOT" \
+  MATRIX_ATTEMPT_DIR="$TEST_TMP/attempts" \
+  DEVARCH_MATRIX_LOG_DIR="$TEST_TMP/logs" \
   "$MATRIX" "$@"
 }
 
@@ -73,12 +91,32 @@ after=$(grep -c '^scaffold ' "$CALL_LOG")
 pass
 assert_contains "$skip_output" 'skip alpha/one' 'resuming should report skipped applications'
 
-all_output=$(run_matrix scaffold-all)
-[[ -f "$PROJECT_ROOT/apps/showcase-alpha-two/package.json" ]] || fail 'scaffold-all should create alpha/two'
+all_output=$(MATRIX_FAIL_ONCE_APP=showcase-alpha-two run_matrix scaffold-all 2>&1)
+[[ -f "$PROJECT_ROOT/apps/showcase-alpha-two/package.json" ]] || fail 'scaffold-all should create alpha/two after a transient failure'
 pass
-[[ -f "$PROJECT_ROOT/apps/showcase-beta-basic/package.json" ]] || fail 'scaffold-all should create beta/basic'
+[[ -f "$PROJECT_ROOT/apps/showcase-beta-basic/package.json" ]] || fail 'scaffold-all should continue to beta/basic'
 pass
-assert_contains "$all_output" 'total=3 created=2 skipped=1' 'scaffold-all should summarize sequential results'
+assert_contains "$all_output" '[2/3] alpha/two — attempt 1/2' 'scaffold-all should show numbered progress'
+assert_contains "$all_output" 'attempt 1 failed, retrying' 'scaffold-all should report automatic retries'
+assert_contains "$all_output" 'total=3 created=2 skipped=1 failed=0' 'scaffold-all should summarize sequential results'
+[[ "$(<"$TEST_TMP/attempts/showcase-alpha-two")" == 2 ]] || fail 'transient failure should be attempted twice'
+pass
+run_log=$(find "$TEST_TMP/logs" -type f -name '*-scaffold-all*.log' | head -n1)
+[[ -n "$run_log" ]] || fail 'scaffold-all should create a run log'
+pass
+assert_contains "$(<"$run_log")" 'upstream output for showcase-alpha-two attempt 1' 'run log should capture upstream output'
+
+rm -rf "$PROJECT_ROOT/apps/showcase-alpha-two" "$PROJECT_ROOT/apps/showcase-beta-basic" "$TEST_TMP/attempts"
+: > "$CALL_LOG"
+if MATRIX_ALWAYS_FAIL_APP=showcase-alpha-two run_matrix scaffold-all >"$TEST_TMP/failure-output" 2>&1; then
+  fail 'persistent profile failure should produce a nonzero final status'
+fi
+failure_output=$(<"$TEST_TMP/failure-output")
+[[ -f "$PROJECT_ROOT/apps/showcase-beta-basic/package.json" ]] || fail 'persistent failure should not prevent later profiles from being attempted'
+pass
+assert_contains "$failure_output" '[2/3] alpha/two — failed; log tail follows' 'persistent failure should be explicit'
+assert_contains "$failure_output" 'total=3 created=1 skipped=1 failed=1' 'failure summary should include every outcome'
+assert_contains "$failure_output" 'failed profiles: alpha/two' 'failure summary should identify retry targets'
 
 run_matrix start beta basic --no-hosts >/dev/null
 grep -Fqx 'start showcase-beta-basic --no-hosts' "$CALL_LOG" || fail 'start should delegate to the Node bootstrap and preserve options'

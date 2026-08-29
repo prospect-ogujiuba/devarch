@@ -89,7 +89,9 @@ scripts/javascript/scaffold-matrix.sh start angular spa
 scripts/javascript/scaffold-matrix.sh stop angular spa
 ```
 
-`scaffold-all` is resumable: applications that already contain `package.json` are skipped. It stops at the first failed scaffolder, so rerunning the command retries that combination after skipping earlier successes. Pass Node bootstrap options such as `--no-hosts` after `start <framework> <profile>`. Set `DEVARCH_MATRIX_APP_PREFIX` to use a prefix other than `showcase`.
+`scaffold-all` is resumable: applications that already contain `package.json` are skipped. It shows numbered progress while capturing verbose scaffolder output under `.model-artifacts/logs/javascript-scaffold-matrix/`. Each missing profile is attempted twice by default, and a persistent failure is reported without preventing later profiles from being attempted. The final summary identifies every failed profile and returns a nonzero status when follow-up is required. Set `DEVARCH_MATRIX_ATTEMPTS` to change the attempt count.
+
+Pass Node bootstrap options such as `--no-hosts` after `start <framework> <profile>`. Set `DEVARCH_MATRIX_APP_PREFIX` to use a prefix other than `showcase`.
 
 ## Adding a framework or profile
 
