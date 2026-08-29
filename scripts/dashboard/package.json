@@ -1,0 +1,12 @@
+{
+  "name": "devarch-dashboard",
+  "private": true,
+  "scripts": {
+    "build": "tailwindcss -i ./src/input.css -o ./static/dashboard.css --minify",
+    "watch": "tailwindcss -i ./src/input.css -o ./static/dashboard.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.0",
+    "tailwindcss": "^4.1.0"
+  }
+}
