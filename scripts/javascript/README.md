@@ -77,6 +77,20 @@ An existing target is never changed unless `--force` is supplied. Forced replace
 
 The command removes a scaffolded `.git` directory because `apps/` workspaces are managed separately. Initialize a repository in the generated app when desired.
 
+## Scaffold matrix
+
+`scripts/javascript/scaffold-matrix.sh` discovers every framework/profile file and manages deterministic `apps/showcase-<framework>-<profile>` applications. Scaffold all combinations sequentially, then start only the application currently being inspected:
+
+```bash
+scripts/javascript/scaffold-matrix.sh list
+scripts/javascript/scaffold-matrix.sh scaffold angular spa
+scripts/javascript/scaffold-matrix.sh scaffold-all
+scripts/javascript/scaffold-matrix.sh start angular spa
+scripts/javascript/scaffold-matrix.sh stop angular spa
+```
+
+`scaffold-all` is resumable: applications that already contain `package.json` are skipped. It stops at the first failed scaffolder, so rerunning the command retries that combination after skipping earlier successes. Pass Node bootstrap options such as `--no-hosts` after `start <framework> <profile>`. Set `DEVARCH_MATRIX_APP_PREFIX` to use a prefix other than `showcase`.
+
 ## Adding a framework or profile
 
 Each framework has a directory under `scripts/javascript/profiles/`. Its `framework.conf` declares listing metadata and the default compatibility profile:
@@ -108,5 +122,6 @@ Adding a valid profile file automatically exposes it through `--list-profiles`; 
 
 ```bash
 bash scripts/javascript/bootstrap.test.sh
+bash scripts/javascript/scaffold-matrix.test.sh
 bash scripts/node/bootstrap.test.sh
 ```
