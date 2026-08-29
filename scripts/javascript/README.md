@@ -79,19 +79,22 @@ The command removes a scaffolded `.git` directory because `apps/` workspaces are
 
 ## Scaffold matrix
 
-`scripts/javascript/scaffold-matrix.sh` discovers every framework/profile file and manages deterministic `apps/showcase-<framework>-<profile>` applications. Scaffold all combinations sequentially, then start only the application currently being inspected:
+`scripts/javascript/scaffold-matrix.sh` discovers every framework/profile file and manages deterministic `apps/showcase-<framework>-<profile>` applications. Scaffold all combinations sequentially, start one application for focused inspection, or start every application that currently exists:
 
 ```bash
 scripts/javascript/scaffold-matrix.sh list
 scripts/javascript/scaffold-matrix.sh scaffold angular spa
 scripts/javascript/scaffold-matrix.sh scaffold-all
 scripts/javascript/scaffold-matrix.sh start angular spa
+scripts/javascript/scaffold-matrix.sh start-all
 scripts/javascript/scaffold-matrix.sh stop angular spa
 ```
 
 `scaffold-all` is resumable: applications that already contain `package.json` are skipped. It shows numbered progress while capturing verbose scaffolder output under `.model-artifacts/logs/javascript-scaffold-matrix/`. Each missing profile is attempted twice by default, and a persistent failure is reported without preventing later profiles from being attempted. The final summary identifies every failed profile and returns a nonzero status when follow-up is required. Set `DEVARCH_MATRIX_ATTEMPTS` to change the attempt count.
 
-Pass Node bootstrap options such as `--no-hosts` after `start <framework> <profile>`. Set `DEVARCH_MATRIX_APP_PREFIX` to use a prefix other than `showcase`.
+`start-all` runs sequentially and starts only matrix applications that already contain `package.json`; missing profiles are counted as skipped and do not fail the command. A failed application does not prevent later applications from starting, but the final summary identifies failures and the command returns nonzero.
+
+Pass Node bootstrap options such as `--no-hosts` after either `start <framework> <profile>` or `start-all`. Set `DEVARCH_MATRIX_APP_PREFIX` to use a prefix other than `showcase`.
 
 ## Adding a framework or profile
 

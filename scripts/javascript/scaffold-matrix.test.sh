@@ -56,6 +56,7 @@ FAKE
 cat > "$PROJECT_ROOT/scripts/node/bootstrap.sh" <<'FAKE'
 #!/usr/bin/env bash
 printf 'start %s\n' "$*" >> "${MATRIX_CALL_LOG:?}"
+[[ ${MATRIX_START_FAIL_APP:-} != "${1:-}" ]] || exit 7
 FAKE
 cat > "$TEST_TMP/bin/podman" <<'FAKE'
 #!/usr/bin/env bash
@@ -121,6 +122,26 @@ assert_contains "$failure_output" 'failed profiles: alpha/two' 'failure summary 
 run_matrix start beta basic --no-hosts >/dev/null
 grep -Fqx 'start showcase-beta-basic --no-hosts' "$CALL_LOG" || fail 'start should delegate to the Node bootstrap and preserve options'
 pass
+
+: > "$CALL_LOG"
+start_all_output=$(run_matrix start-all --no-hosts 2>&1)
+grep -Fqx 'start showcase-alpha-one --no-hosts' "$CALL_LOG" || fail 'start-all should start an existing matrix application'
+pass
+grep -Fqx 'start showcase-beta-basic --no-hosts' "$CALL_LOG" || fail 'start-all should start every existing matrix application'
+pass
+[[ $(grep -c '^start ' "$CALL_LOG") == 2 ]] || fail 'start-all should not invoke bootstrap for missing matrix applications'
+pass
+assert_contains "$start_all_output" 'total=3 started=2 skipped=1 failed=0' 'start-all should summarize existing and missing applications'
+
+: > "$CALL_LOG"
+if MATRIX_START_FAIL_APP=showcase-alpha-one run_matrix start-all >"$TEST_TMP/start-all-failure" 2>&1; then
+  fail 'start-all should return nonzero when an application fails to start'
+fi
+grep -Fqx 'start showcase-beta-basic' "$CALL_LOG" || fail 'start-all should continue after an application fails'
+pass
+start_all_failure=$(<"$TEST_TMP/start-all-failure")
+assert_contains "$start_all_failure" 'total=3 started=1 skipped=1 failed=1' 'start-all failure summary should include every outcome'
+assert_contains "$start_all_failure" 'failed applications: alpha/one' 'start-all should identify applications that failed'
 
 run_matrix stop beta basic >/dev/null
 grep -Fq 'stop app=showcase-beta-basic compose -p devarch-node-showcase-beta-basic' "$CALL_LOG" || fail 'stop should target the isolated Compose project'
