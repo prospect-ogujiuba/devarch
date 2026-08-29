@@ -23,12 +23,14 @@ Usage: scripts/javascript/scaffold-matrix.sh list
        scripts/javascript/scaffold-matrix.sh scaffold <framework> <profile>
        scripts/javascript/scaffold-matrix.sh scaffold-all
        scripts/javascript/scaffold-matrix.sh start <framework> <profile> [node-bootstrap-options]
+       scripts/javascript/scaffold-matrix.sh start-all [node-bootstrap-options]
        scripts/javascript/scaffold-matrix.sh stop <framework> <profile>
 
 Discover the curated JavaScript profile matrix and manage deterministic
-apps/showcase-<framework>-<profile> applications. scaffold-all runs
-sequentially and skips applications that already contain package.json.
-Upstream output is captured to a run log so terminal progress stays concise.
+apps/showcase-<framework>-<profile> applications. Bulk commands run
+sequentially: scaffold-all skips existing applications, while start-all
+starts only applications that already contain package.json. Upstream scaffold
+output is captured to a run log so terminal progress stays concise.
 
 Environment:
   DEVARCH_MATRIX_APP_PREFIX  Application prefix (default: showcase)
@@ -206,6 +208,44 @@ start_one() {
   "$NODE_BOOTSTRAP" "$name" "$@"
 }
 
+start_all() {
+  local -a paths=() failures=()
+  local path framework profile name current total
+  local started=0 skipped=0 failed=0
+  [[ -x "$NODE_BOOTSTRAP" ]] || die "Node bootstrap is not executable: $NODE_BOOTSTRAP"
+  mapfile -d '' paths < <(profile_paths)
+  total=${#paths[@]}
+  log "start-all: total=$total"
+
+  for current in "${!paths[@]}"; do
+    path=${paths[$current]}
+    framework=$(basename "$(dirname "$path")")
+    profile=$(basename "$path" .profile)
+    name=$(app_name "$framework" "$profile")
+    current=$((current + 1))
+
+    if [[ ! -f "$APPS_DIR/$name/package.json" ]]; then
+      ((skipped += 1))
+      continue
+    fi
+
+    printf '[javascript-matrix] [%d/%d] %s/%s — starting\n' "$current" "$total" "$framework" "$profile"
+    if "$NODE_BOOTSTRAP" "$name" "$@"; then
+      ((started += 1))
+    else
+      printf '[javascript-matrix] [%d/%d] %s/%s — failed\n' "$current" "$total" "$framework" "$profile" >&2
+      failures+=("$framework/$profile")
+      ((failed += 1))
+    fi
+  done
+
+  log "complete: total=$total started=$started skipped=$skipped failed=$failed"
+  if ((failed > 0)); then
+    log "failed applications: ${failures[*]}"
+    return 1
+  fi
+}
+
 detect_runtime() {
   if [[ -n ${CONTAINER_RUNTIME:-} ]]; then
     case "$CONTAINER_RUNTIME" in
@@ -259,6 +299,9 @@ main() {
     start)
       (($# >= 2)) || die 'start requires <framework> <profile>'
       start_one "$@"
+      ;;
+    start-all)
+      start_all "$@"
       ;;
     stop)
       (($# == 2)) || die 'stop requires <framework> <profile>'
