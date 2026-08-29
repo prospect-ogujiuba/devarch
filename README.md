@@ -31,6 +31,17 @@ podman network create microservices-net
 
 For persistent production services, manage the containers with systemd/Quadlet (or reviewed generated units) and enable lingering for the rootless service user.
 
+## Local `.test` domains
+
+Synchronize every service `container_name`, routable `apps/*` workspace, and `devarch.test` into one managed hosts-file block:
+
+```bash
+scripts/hosts/sync-hosts.sh --dry-run
+scripts/hosts/sync-hosts.sh
+```
+
+The command requests elevation once and only replaces content between its DevArch markers. See [`scripts/hosts/README.md`](scripts/hosts/README.md) for discovery rules, cross-platform behavior, and tests.
+
 ## Rapid WordPress bootstrap
 
 `scripts/wordpress/bootstrap.sh` creates local sites in `apps/<site-name>` using the shared PHP-FPM, MariaDB, and Nginx Proxy Manager infrastructure. It creates `microservices-net` when needed, starts the PHP, MariaDB, and Nginx Proxy Manager Compose services, waits for their readiness, creates an isolated database and user, installs WordPress, and applies profiles or additional plugins. It never starts a separate `wp server` process.
