@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "mappings": {
+    ".model-artifacts/todo/makerdesk-it-ticket-system/phases/00-phase-index.md": {
+      "kind": "todo",
+      "topic": "makerdesk-it-ticket-system",
+      "timestamp": "2026-08-23_2049",
+      "shortName": "00-phase-index"
+    },
+    ".model-artifacts/todo/makerdesk-it-ticket-system/phases/01-verify-galaxy-and-runtime.md": {
+      "kind": "todo",
+      "topic": "makerdesk-it-ticket-system",
+      "timestamp": "2026-08-23_2049",
+      "shortName": "01-verify-galaxy-and-runtime"
+    },
+    ".model-artifacts/todo/makerdesk-it-ticket-system/phases/02-scaffold-core-ticket-domain.md": {
+      "kind": "todo",
+      "topic": "makerdesk-it-ticket-system",
+      "timestamp": "2026-08-23_2049",
+      "shortName": "02-scaffold-core-ticket-domain"
+    },
+    ".model-artifacts/todo/makerdesk-it-ticket-system/phases/03-ticket-workflow-and-authorization.md": {
+      "kind": "todo",
+      "topic": "makerdesk-it-ticket-system",
+      "timestamp": "2026-08-23_2049",
+      "shortName": "03-ticket-workflow-and-authorization"
+    },
+    ".model-artifacts/todo/makerdesk-it-ticket-system/phases/04-requester-and-agent-experience.md": {
+      "kind": "todo",
+      "topic": "makerdesk-it-ticket-system",
+      "timestamp": "2026-08-23_2049",
+      "shortName": "04-requester-and-agent-experience"
+    },
+    ".model-artifacts/todo/makerdesk-it-ticket-system/phases/05-sla-notifications-and-reporting.md": {
+      "kind": "todo",
+      "topic": "makerdesk-it-ticket-system",
+      "timestamp": "2026-08-23_2049",
+      "shortName": "05-sla-notifications-and-reporting"
+    },
+    ".model-artifacts/todo/makerdesk-it-ticket-system/phases/06-system-verification-and-operations.md": {
+      "kind": "todo",
+      "topic": "makerdesk-it-ticket-system",
+      "timestamp": "2026-08-23_2049",
+      "shortName": "06-system-verification-and-operations"
+    }
+  }
+}
