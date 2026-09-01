@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "projectRoot": "/home/priz/projects/devarch",
+  "configPath": ".pi/model-artifacts-migration.json",
+  "configFingerprint": "sha256:6c8cd4838537f6798850f19460e45f8124d644b525340a4ddd01de48867df9d0",
+  "moves": [
+    {
+      "source": ".model-artifacts/todo/cartesian-data-scaffolding/phases/00-phase-index.md",
+      "destination": ".model-artifacts/todo/cartesian-data-scaffolding/phases/2026-08-31_0437-00-phase-index.md",
+      "sourceHash": "sha256:27c922f1cd0fb153e2ebef2c3b133daa21a0c59f7726c942a8467b903aa692a2",
+      "bytes": 2688,
+      "reason": "deterministic-inference"
+    },
+    {
+      "source": ".model-artifacts/todo/cartesian-data-scaffolding/phases/01-registry-and-resolver.md",
+      "destination": ".model-artifacts/todo/cartesian-data-scaffolding/phases/2026-08-31_0437-01-registry-and-resolver.md",
+      "sourceHash": "sha256:56d667241e49050e8ad50dff23d65eef3d9bc27910fa754bf69abac45c572d95",
+      "bytes": 2578,
+      "reason": "deterministic-inference"
+    },
+    {
+      "source": ".model-artifacts/todo/cartesian-data-scaffolding/phases/02-postgres-redis-vertical-slice.md",
+      "destination": ".model-artifacts/todo/cartesian-data-scaffolding/phases/2026-08-31_0437-02-postgres-redis-vertical-slice.md",
+      "sourceHash": "sha256:444c8b1c516558eec4f176c82fd1b06ed465afd43ea81f7b3afe1818d801963b",
+      "bytes": 2754,
+      "reason": "deterministic-inference"
+    },
+    {
+      "source": ".model-artifacts/todo/cartesian-data-scaffolding/phases/03-runtime-orchestration.md",
+      "destination": ".model-artifacts/todo/cartesian-data-scaffolding/phases/2026-08-31_0437-03-runtime-orchestration.md",
+      "sourceHash": "sha256:3c76016aeba619645834eeec0e9e0b7ee97717be4ce0b47d3a53c53c8ddb2018",
+      "bytes": 2482,
+      "reason": "deterministic-inference"
+    },
+    {
+      "source": ".model-artifacts/todo/cartesian-data-scaffolding/phases/04-catalog-expansion-and-hardening.md",
+      "destination": ".model-artifacts/todo/cartesian-data-scaffolding/phases/2026-08-31_0437-04-catalog-expansion-and-hardening.md",
+      "sourceHash": "sha256:45e1105ad6e697b9a724fc8b9924dd65aa971e194787ad0d3bb1237a1b66bde8",
+      "bytes": 2810,
+      "reason": "deterministic-inference"
+    },
+    {
+      "source": ".model-artifacts/todo/makerdesk-it-ticket-system/phases/00-phase-index.md",
+      "destination": ".model-artifacts/todo/makerdesk-it-ticket-system/2026-08-23_2049-00-phase-index.md",
+      "sourceHash": "sha256:cf29b55d7330330d0acb6d5097fe0b8c9b19cba6cce972535fb193ed154a8ec5",
+      "bytes": 1857,
+      "reason": "explicit-mapping"
+    },
+    {
+      "source": ".model-artifacts/todo/makerdesk-it-ticket-system/phases/01-verify-galaxy-and-runtime.md",
+      "destination": ".model-artifacts/todo/makerdesk-it-ticket-system/2026-08-23_2049-01-verify-galaxy-and-runtime.md",
+      "sourceHash": "sha256:b293f6a8e60142076da9ac4fd2cd8bf037caf6a24b012c0623e08ac866f820c9",
+      "bytes": 1270,
+      "reason": "explicit-mapping"
+    },
+    {
+      "source": ".model-artifacts/todo/makerdesk-it-ticket-system/phases/02-scaffold-core-ticket-domain.md",
+      "destination": ".model-artifacts/todo/makerdesk-it-ticket-system/2026-08-23_2049-02-scaffold-core-ticket-domain.md",
+      "sourceHash": "sha256:268f1d1978a2ab7129dcd5c6dd99889dd15e613e11d58f98613551bf894b94f8",
+      "bytes": 1547,
+      "reason": "explicit-mapping"
+    },
+    {
+      "source": ".model-artifacts/todo/makerdesk-it-ticket-system/phases/03-ticket-workflow-and-authorization.md",
+      "destination": ".model-artifacts/todo/makerdesk-it-ticket-system/2026-08-23_2049-03-ticket-workflow-and-authorization.md",
+      "sourceHash": "sha256:5faa63d1b3f655a91bce00c9ed7a94a5427231f9b7875f7af5349d022f589df4",
+      "bytes": 1600,
+      "reason": "explicit-mapping"
+    },
+    {
+      "source": ".model-artifacts/todo/makerdesk-it-ticket-system/phases/04-requester-and-agent-experience.md",
+      "destination": ".model-artifacts/todo/makerdesk-it-ticket-system/2026-08-23_2049-04-requester-and-agent-experience.md",
+      "sourceHash": "sha256:779cd9c98e5d508891241e1e97d37f20999cee6caa8ae7d8f9795c4f557c07d5",
+      "bytes": 1167,
+      "reason": "explicit-mapping"
+    },
+    {
+      "source": ".model-artifacts/todo/makerdesk-it-ticket-system/phases/05-sla-notifications-and-reporting.md",
+      "destination": ".model-artifacts/todo/makerdesk-it-ticket-system/2026-08-23_2049-05-sla-notifications-and-reporting.md",
+      "sourceHash": "sha256:b11cdea016e469ee6c487af883e21a54b7c720524d80a9a5212a814b12f202fd",
+      "bytes": 1153,
+      "reason": "explicit-mapping"
+    },
+    {
+      "source": ".model-artifacts/todo/makerdesk-it-ticket-system/phases/06-system-verification-and-operations.md",
+      "destination": ".model-artifacts/todo/makerdesk-it-ticket-system/2026-08-23_2049-06-system-verification-and-operations.md",
+      "sourceHash": "sha256:dfd2e1b7d0b2b4ab0839a847b546dd5e1136cc8cc2b2c562396ba0c9f0144dde",
+      "bytes": 1298,
+      "reason": "explicit-mapping"
+    },
+    {
+      "source": ".model-artifacts/todo/pi-swe/pi-swe-phases/2026-08-29_1053-00-phase-index [COMPLETE].md",
+      "destination": ".model-artifacts/todo/pi-swe/pi-swe-phases/2026-08-29_1053-00-phase-index.md",
+      "sourceHash": "sha256:ed949d8f89ff9b47a9d08bc1d15dd29cc10742776c74270f790257c3df44518e",
+      "bytes": 583,
+      "reason": "deterministic-inference"
+    },
+    {
+      "source": ".model-artifacts/todo/pi-swe/pi-swe-phases/2026-08-29_1053-01-inventory-api [COMPLETE].md",
+      "destination": ".model-artifacts/todo/pi-swe/pi-swe-phases/2026-08-29_1053-01-inventory-api.md",
+      "sourceHash": "sha256:4e7e065789befd4e841085abd7cab55840108812ae547c6b2b1eda556102d1ca",
+      "bytes": 1131,
+      "reason": "deterministic-inference"
+    },
+    {
+      "source": ".model-artifacts/todo/pi-swe/pi-swe-phases/2026-08-29_1053-02-tailwind-interface [COMPLETE].md",
+      "destination": ".model-artifacts/todo/pi-swe/pi-swe-phases/2026-08-29_1053-02-tailwind-interface.md",
+      "sourceHash": "sha256:91f4273b49746be74f4dcf09ab828714e826740d6d35770847a00e15f539ac04",
+      "bytes": 1371,
+      "reason": "deterministic-inference"
+    },
+    {
+      "source": ".model-artifacts/todo/pi-swe/pi-swe-phases/2026-08-29_1106-devarch-test-availability [COMPLETE].md",
+      "destination": ".model-artifacts/todo/pi-swe/pi-swe-phases/2026-08-29_1106-devarch-test-availability.md",
+      "sourceHash": "sha256:323b09e1555a7cc6c8f5c64607aeedbc86f51c3e7b3bd46733a6026fdd2c7107",
+      "bytes": 1367,
+      "reason": "deterministic-inference"
+    },
+    {
+      "source": ".model-artifacts/todo/pi-swe/pi-swe-phases/2026-08-29_1719-dashboard-pages-responsive-nav [COMPLETE].md",
+      "destination": ".model-artifacts/todo/pi-swe/pi-swe-phases/2026-08-29_1719-dashboard-pages-responsive-nav.md",
+      "sourceHash": "sha256:5c7da61b60d7e3d9cabb04a0d65bd4ff8adf9901437cc460bd0e568fe947c135",
+      "bytes": 1659,
+      "reason": "deterministic-inference"
+    }
+  ],
+  "blockers": [],
+  "generatedAt": "2026-09-01T03:20:34.896Z",
+  "eligible": true,
+  "fingerprint": "sha256:3a3013d383d961e8e9a91b443a0a4d6be7aeb4fb068d5ae8454550c11fac2e35"
+}
