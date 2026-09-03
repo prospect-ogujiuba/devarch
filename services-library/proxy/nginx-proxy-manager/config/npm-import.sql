@@ -485,7 +485,7 @@ INSERT INTO proxy_host (
 -- ============================================================================
 -- SECTION 6: PROJECT MANAGEMENT
 -- ============================================================================
--- Services: Gitea, OpenProject, Taiga
+-- Services: Gitea, OpenProject, Taiga, Plane
 -- ============================================================================
 
 -- Gitea (gitea.test -> gitea:3000)
@@ -534,6 +534,22 @@ INSERT INTO proxy_host (
     0, 1, 1, 0, 1, 1, 1, 1, 0,
     'error_page 502 503 504 = @fallback;\nlocation @fallback {\n    return 503 "Taiga service is temporarily unavailable";\n    add_header Content-Type text/plain always;\n}',
     '{"devarch_import":true,"category":"project","service":"taiga","source_file":"http.conf","log_prefix":"taiga"}'
+);
+
+-- Plane (plane.test -> plane:80)
+INSERT INTO proxy_host (
+    created_on, modified_on, owner_user_id, is_deleted,
+    domain_names, forward_scheme, forward_host, forward_port,
+    access_list_id, certificate_id, ssl_forced, caching_enabled,
+    block_exploits, allow_websocket_upgrade, http2_support,
+    hsts_enabled, hsts_subdomains, advanced_config, meta
+) VALUES (
+    NOW(), NOW(), 1, 0,
+    '["plane.test"]',
+    'http', 'plane', 80,
+    0, 1, 1, 0, 1, 1, 1, 1, 0,
+    'proxy_buffering off;\nerror_page 502 503 504 = @fallback;\nlocation @fallback {\n    return 503 "Plane service is temporarily unavailable";\n    add_header Content-Type text/plain always;\n}',
+    '{"devarch_import":true,"category":"project","service":"plane","source_file":"http.conf","log_prefix":"plane"}'
 );
 
 -- ============================================================================

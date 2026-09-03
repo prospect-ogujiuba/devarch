@@ -1,0 +1,261 @@
+x-db-env: &db-environment
+  PGHOST: plane-db
+  PGDATABASE: plane
+  POSTGRES_USER: plane
+  POSTGRES_PASSWORD: devarch-plane-db
+  POSTGRES_DB: plane
+  POSTGRES_PORT: "5432"
+  PGDATA: /var/lib/postgresql/data
+
+x-redis-env: &redis-environment
+  REDIS_HOST: plane-redis
+  REDIS_PORT: "6379"
+  REDIS_URL: redis://plane-redis:6379/
+
+x-minio-env: &minio-environment
+  MINIO_ROOT_USER: plane
+  MINIO_ROOT_PASSWORD: devarch-plane-minio-secret
+
+x-storage-env: &storage-environment
+  AWS_REGION: ""
+  AWS_ACCESS_KEY_ID: plane
+  AWS_SECRET_ACCESS_KEY: devarch-plane-minio-secret
+  AWS_S3_ENDPOINT_URL: http://plane-minio:9000
+  AWS_S3_BUCKET_NAME: uploads
+
+x-proxy-env: &proxy-environment
+  APP_DOMAIN: plane.test
+  FILE_SIZE_LIMIT: "5242880"
+  CERT_EMAIL: ""
+  CERT_ACME_CA: https://acme-v02.api.letsencrypt.org/directory
+  CERT_ACME_DNS: ""
+  LISTEN_HTTP_PORT: "80"
+  LISTEN_HTTPS_PORT: "443"
+  BUCKET_NAME: uploads
+  SITE_ADDRESS: :80
+
+x-mq-env: &mq-environment
+  RABBITMQ_HOST: plane-mq
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_DEFAULT_USER: plane
+  RABBITMQ_DEFAULT_PASS: devarch-plane-rabbit
+  RABBITMQ_DEFAULT_VHOST: plane
+  RABBITMQ_VHOST: plane
+
+x-app-env: &app-environment
+  WEB_URL: https://plane.test
+  DEBUG: "0"
+  CORS_ALLOWED_ORIGINS: https://plane.test
+  GUNICORN_WORKERS: "1"
+  USE_MINIO: "1"
+  DATABASE_URL: postgresql://plane:devarch-plane-db@plane-db/plane
+  SECRET_KEY: local-devarch-plane-secret-key-change-for-production
+  AMQP_URL: amqp://plane:devarch-plane-rabbit@plane-mq:5672/plane
+  API_KEY_RATE_LIMIT: 60/minute
+  AUTHENTICATION_RATE_LIMIT: 10/minute
+  MINIO_ENDPOINT_SSL: "0"
+  LIVE_SERVER_SECRET_KEY: local-devarch-plane-live-secret-key-change-for-production
+  WEBHOOK_ALLOWED_IPS: ""
+  WEBHOOK_ALLOWED_HOSTS: ""
+
+services:
+  web:
+    image: makeplane/plane-frontend:v1.4.2
+    restart: unless-stopped
+    depends_on:
+      - api
+      - worker
+    networks:
+      - plane-internal
+    container_name: plane-web
+
+  space:
+    image: makeplane/plane-space:v1.4.2
+    restart: unless-stopped
+    depends_on:
+      - api
+      - worker
+      - web
+    networks:
+      - plane-internal
+    container_name: plane-space
+
+  admin:
+    image: makeplane/plane-admin:v1.4.2
+    restart: unless-stopped
+    depends_on:
+      - api
+      - web
+    networks:
+      - plane-internal
+    container_name: plane-admin
+
+  live:
+    image: makeplane/plane-live:v1.4.2
+    restart: unless-stopped
+    environment:
+      <<: *redis-environment
+      API_BASE_URL: http://api:8000
+      LIVE_SERVER_SECRET_KEY: local-devarch-plane-live-secret-key-change-for-production
+    depends_on:
+      - api
+      - web
+    networks:
+      - plane-internal
+    container_name: plane-live
+
+  api:
+    image: makeplane/plane-backend:v1.4.2
+    restart: unless-stopped
+    command: ./bin/docker-entrypoint-api.sh
+    environment:
+      <<: [*app-environment, *db-environment, *redis-environment, *minio-environment, *storage-environment, *proxy-environment]
+    volumes:
+      - plane-api-logs:/code/plane/logs
+    depends_on:
+      plane-db:
+        condition: service_started
+      plane-redis:
+        condition: service_started
+      plane-mq:
+        condition: service_started
+      plane-minio:
+        condition: service_healthy
+    networks:
+      - plane-internal
+    container_name: plane-api
+
+  worker:
+    image: makeplane/plane-backend:v1.4.2
+    restart: unless-stopped
+    command: ./bin/docker-entrypoint-worker.sh
+    environment:
+      <<: [*app-environment, *db-environment, *redis-environment, *minio-environment, *storage-environment, *proxy-environment]
+    volumes:
+      - plane-worker-logs:/code/plane/logs
+    depends_on:
+      - api
+      - plane-db
+      - plane-redis
+      - plane-mq
+    networks:
+      - plane-internal
+    container_name: plane-worker
+
+  beat-worker:
+    image: makeplane/plane-backend:v1.4.2
+    restart: unless-stopped
+    command: ./bin/docker-entrypoint-beat.sh
+    environment:
+      <<: [*app-environment, *db-environment, *redis-environment, *minio-environment, *storage-environment, *proxy-environment]
+    volumes:
+      - plane-beat-worker-logs:/code/plane/logs
+    depends_on:
+      - api
+      - plane-db
+      - plane-redis
+      - plane-mq
+    networks:
+      - plane-internal
+    container_name: plane-beat-worker
+
+  migrator:
+    image: makeplane/plane-backend:v1.4.2
+    restart: on-failure
+    command: ./bin/docker-entrypoint-migrator.sh
+    environment:
+      <<: [*app-environment, *db-environment, *redis-environment, *minio-environment, *storage-environment, *proxy-environment]
+    volumes:
+      - plane-migrator-logs:/code/plane/logs
+    depends_on:
+      - plane-db
+      - plane-redis
+    networks:
+      - plane-internal
+    container_name: plane-migrator
+
+  plane-db:
+    image: postgres:15.7-alpine
+    restart: unless-stopped
+    command: postgres -c 'max_connections=1000'
+    environment: *db-environment
+    volumes:
+      - plane-db-data:/var/lib/postgresql/data
+    networks:
+      - plane-internal
+    container_name: plane-db
+
+  plane-redis:
+    image: valkey/valkey:7.2.11-alpine
+    restart: unless-stopped
+    volumes:
+      - plane-redis-data:/data
+    networks:
+      - plane-internal
+    container_name: plane-redis
+
+  plane-mq:
+    image: rabbitmq:3.13.6-management-alpine
+    restart: unless-stopped
+    environment: *mq-environment
+    volumes:
+      - plane-rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - plane-internal
+    container_name: plane-mq
+
+  plane-minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /export --console-address ":9090"
+    environment: *minio-environment
+    volumes:
+      - plane-uploads:/export
+    healthcheck:
+      test: [CMD-SHELL, curl -fsS http://localhost:9000/minio/health/live || exit 1]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    networks:
+      - plane-internal
+    container_name: plane-minio
+
+  proxy:
+    image: makeplane/plane-proxy:v1.4.2
+    restart: unless-stopped
+    environment: *proxy-environment
+    ports:
+      - 127.0.0.1:9213:80
+    volumes:
+      - plane-proxy-config:/config
+      - plane-proxy-data:/data
+    depends_on:
+      - web
+      - api
+      - space
+      - admin
+      - live
+    networks:
+      plane-internal: null
+      microservices-net:
+        aliases:
+          - plane
+    container_name: plane
+
+volumes:
+  plane-db-data: null
+  plane-redis-data: null
+  plane-uploads: null
+  plane-api-logs: null
+  plane-worker-logs: null
+  plane-beat-worker-logs: null
+  plane-migrator-logs: null
+  plane-rabbitmq-data: null
+  plane-proxy-config: null
+  plane-proxy-data: null
+
+networks:
+  plane-internal: null
+  microservices-net:
+    external: true
