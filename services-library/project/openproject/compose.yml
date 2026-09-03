@@ -1,0 +1,34 @@
+services:
+  openproject:
+    image: openproject/openproject:17
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:8090:80
+    environment:
+      OPENPROJECT_HOST__NAME: openproject.test
+      OPENPROJECT_HTTPS: "true"
+      OPENPROJECT_HSTS: "false"
+      SECRET_KEY_BASE: 843fc1142743d0c407396ae736003700071fe39c2893276981316d858e85e552545b8bb792680b7362141e3ea93273348f2c688a409473c1cd36866439f5e62e
+      OPENPROJECT_SEED__ADMIN__USER__LOGIN: admin
+      OPENPROJECT_SEED__ADMIN__USER__PASSWORD: admin1234567
+      OPENPROJECT_SEED__ADMIN__USER__MAIL: admin@devarch.test
+    volumes:
+      - openproject_pgdata:/var/openproject/pgdata
+      - openproject_assets:/var/openproject/assets
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fsS http://localhost/health_checks/default || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+    networks:
+      - microservices-net
+    container_name: openproject
+volumes:
+  openproject_pgdata: null
+  openproject_assets: null
+networks:
+  microservices-net:
+    external: true
