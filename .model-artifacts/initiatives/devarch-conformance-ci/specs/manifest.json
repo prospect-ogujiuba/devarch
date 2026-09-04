@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 2,
+  "initiativeId": "devarch-conformance-ci",
+  "topic": "devarch-conformance-ci",
+  "initiativeState": "approved",
+  "activeSpec": {
+    "revision": 2,
+    "path": ".model-artifacts/initiatives/devarch-conformance-ci/specs/2026-09-04_2057-initiative-spec-r2.md",
+    "contentHash": "sha256:69ae9cbef6eb6dfbb702dba9b46af138e65e98aeeb1724d2abe9c2e495c66146"
+  },
+  "activePlan": {
+    "revision": 3,
+    "path": ".model-artifacts/initiatives/devarch-conformance-ci/plans/2026-09-04_2057-plan-index-r3.md",
+    "contentHash": "sha256:0f5286fef686e67359f77fb42e33427ed3b5c1e6bb6e107968c592f8b24380e5",
+    "contractRoot": ".model-artifacts/initiatives/devarch-conformance-ci/plans/revisions/r3"
+  },
+  "approval": {
+    "decision": "approved",
+    "planRevision": 3,
+    "planPath": ".model-artifacts/initiatives/devarch-conformance-ci/plans/2026-09-04_2057-plan-index-r3.md",
+    "planContentHash": "sha256:0f5286fef686e67359f77fb42e33427ed3b5c1e6bb6e107968c592f8b24380e5",
+    "reviewPath": ".model-artifacts/initiatives/devarch-conformance-ci/reports/2026-09-04_2057-plan-review-r3.md",
+    "approvedAt": "2026-09-04T21:12:00Z",
+    "blockingFindings": 0
+  },
+  "specialists": {
+    "diagnosis": {
+      "status": "not-required",
+      "rationale": "New capability; current checks are characterized and green, with no unresolved defect diagnosis."
+    },
+    "dsa": {
+      "status": "not-required",
+      "rationale": "Bounded registries, metadata documents, and sequential result records require no consequential representation decision."
+    },
+    "tdd": {
+      "status": "complete",
+      "rationale": "Observable behaviors, test levels, characterization, and Red ordering assessed and incorporated into plan r2. Complete Compose discovery was rechecked against spec r2/plan r3.",
+      "findingPath": ".model-artifacts/initiatives/devarch-conformance-ci/findings/2026-09-04_2057-tdd-plan.md"
+    },
+    "security": {
+      "status": "complete",
+      "rationale": "Secrets, runtime privilege, CI permissions, artifact redaction, and supply-chain pins assessed and incorporated.",
+      "findingPath": ".model-artifacts/initiatives/devarch-conformance-ci/findings/2026-09-04_2057-security-operations-compatibility.md"
+    },
+    "migration": {
+      "status": "complete",
+      "rationale": "Versioned additive metadata rollout, manual review, expiring exceptions, and rollback assessed and incorporated. Complete Compose discovery was rechecked against spec r2/plan r3.",
+      "findingPath": ".model-artifacts/initiatives/devarch-conformance-ci/findings/2026-09-04_2057-security-operations-compatibility.md"
+    },
+    "performance": {
+      "status": "complete",
+      "rationale": "Time/byte bounds, caching, safe concurrency, and reliability sampling assessed and incorporated.",
+      "findingPath": ".model-artifacts/initiatives/devarch-conformance-ci/findings/2026-09-04_2057-security-operations-compatibility.md"
+    },
+    "accessibility-ux": {
+      "status": "not-required",
+      "rationale": "No visual UI; deterministic CLI readability and actionable diagnostics are acceptance requirements."
+    },
+    "operations": {
+      "status": "complete",
+      "rationale": "Rootless capabilities, unique ownership, readiness, cleanup, leak detection, CI activation, and rollback assessed and incorporated. Complete Compose discovery was rechecked against spec r2/plan r3.",
+      "findingPath": ".model-artifacts/initiatives/devarch-conformance-ci/findings/2026-09-04_2057-security-operations-compatibility.md"
+    },
+    "compatibility": {
+      "status": "complete",
+      "rationale": "Additive interface, direct commands, Podman provider behavior, service semantics, and admin boundary assessed and incorporated. Complete Compose discovery was rechecked against spec r2/plan r3.",
+      "findingPath": ".model-artifacts/initiatives/devarch-conformance-ci/findings/2026-09-04_2057-security-operations-compatibility.md"
+    }
+  },
+  "updatedAt": "2026-09-04T21:12:00Z"
+}

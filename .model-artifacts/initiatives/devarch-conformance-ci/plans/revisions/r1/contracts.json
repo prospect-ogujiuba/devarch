@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 2,
+  "contracts": [
+    {
+      "kind": "phase",
+      "id": "P01",
+      "dependsOn": [],
+      "planRevision": 1,
+      "path": ".model-artifacts/initiatives/devarch-conformance-ci/plans/revisions/r1/phases/01-unified-verification/00-phase-index.md",
+      "status": "pending",
+      "contentHash": "sha256:3c1f080d7849ad8cb44e609eb4c71c52cbb44798dd717b1d5e71fe0e7220a6fc"
+    },
+    {
+      "kind": "subphase",
+      "parentId": "P01",
+      "id": "P01-C01",
+      "dependsOn": [],
+      "planRevision": 1,
+      "path": ".model-artifacts/initiatives/devarch-conformance-ci/plans/revisions/r1/phases/01-unified-verification/01.01-verification-runner.md",
+      "status": "pending",
+      "contentHash": "sha256:a83f5d4b6ba15e3952177353fdc503075dbcce671512c1dc9226753527c8ef8d"
+    },
+    {
+      "kind": "phase",
+      "id": "P02",
+      "dependsOn": [
+        "P01-C01"
+      ],
+      "planRevision": 1,
+      "path": ".model-artifacts/initiatives/devarch-conformance-ci/plans/revisions/r1/phases/02-catalog-conformance/00-phase-index.md",
+      "status": "pending",
+      "contentHash": "sha256:cd1b6d7810e83b640b8bf060214f0793735e3f98341e850dae298f4844adef72"
+    },
+    {
+      "kind": "subphase",
+      "parentId": "P02",
+      "id": "P02-C01",
+      "dependsOn": [
+        "P01-C01"
+      ],
+      "planRevision": 1,
+      "path": ".model-artifacts/initiatives/devarch-conformance-ci/plans/revisions/r1/phases/02-catalog-conformance/02.01-conformance-schema-validator.md",
+      "status": "pending",
+      "contentHash": "sha256:848d5ac7339e6352788ad1819e73f1faa9446ed60c6969f50e739d6e8dba33ba"
+    },
+    {
+      "kind": "subphase",
+      "parentId": "P02",
+      "id": "P02-C02",
+      "dependsOn": [
+        "P02-C01"
+      ],
+      "planRevision": 1,
+      "path": ".model-artifacts/initiatives/devarch-conformance-ci/plans/revisions/r1/phases/02-catalog-conformance/02.02-catalog-metadata-migration.md",
+      "status": "pending",
+      "contentHash": "sha256:3c112384b0c1a3e5c6e58d0f99784cd43ddb61655caff16bf485b4b5d9a30403"
+    },
+    {
+      "kind": "phase",
+      "id": "P03",
+      "dependsOn": [
+        "P02-C01"
+      ],
+      "planRevision": 1,
+      "path": ".model-artifacts/initiatives/devarch-conformance-ci/plans/revisions/r1/phases/03-golden-paths/00-phase-index.md",
+      "status": "pending",
+      "contentHash": "sha256:77dfb17b9066abe638190903564c750a5480c7fa006d0e3f2cd3bb5866f3e972"
+    },
+    {
+      "kind": "subphase",
+      "parentId": "P03",
+      "id": "P03-C01",
+      "dependsOn": [
+        "P01-C01",
+        "P02-C01"
+      ],
+      "planRevision": 1,
+      "path": ".model-artifacts/initiatives/devarch-conformance-ci/plans/revisions/r1/phases/03-golden-paths/03.01-runtime-harness.md",
+      "status": "pending",
+      "contentHash": "sha256:1c1fd441710a83de044dacc7138c75ada5e2c2fb4fcca743e0732d30c0d99981"
+    },
+    {
+      "kind": "subphase",
+      "parentId": "P03",
+      "id": "P03-C02",
+      "dependsOn": [
+        "P02-C02",
+        "P03-C01"
+      ],
+      "planRevision": 1,
+      "path": ".model-artifacts/initiatives/devarch-conformance-ci/plans/revisions/r1/phases/03-golden-paths/03.02-representative-golden-paths.md",
+      "status": "pending",
+      "contentHash": "sha256:e4a3996f56cd2bb635f98dbf336ce07cfa26e3ca430dc81a91fc711a3cefc819"
+    },
+    {
+      "kind": "phase",
+      "id": "P04",
+      "dependsOn": [
+        "P01-C01",
+        "P02-C02",
+        "P03-C02"
+      ],
+      "planRevision": 1,
+      "path": ".model-artifacts/initiatives/devarch-conformance-ci/plans/revisions/r1/phases/04-ci-rollout/00-phase-index.md",
+      "status": "pending",
+      "contentHash": "sha256:c8eb54ad48011cfc99d70bd49779b681904dcc46e4d98ff372e71843b36407f4"
+    },
+    {
+      "kind": "subphase",
+      "parentId": "P04",
+      "id": "P04-C01",
+      "dependsOn": [
+        "P01-C01",
+        "P02-C02",
+        "P03-C02"
+      ],
+      "planRevision": 1,
+      "path": ".model-artifacts/initiatives/devarch-conformance-ci/plans/revisions/r1/phases/04-ci-rollout/04.01-ci-enforcement-metrics.md",
+      "status": "pending",
+      "contentHash": "sha256:99ad8b4a36dcd19b67330008311d86a5fd564186d4ab3ea0272a2fe0b8006ad7"
+    }
+  ],
+  "contractFacts": {
+    "P01": {
+      "entryInputsAvailable": true,
+      "capabilitiesAvailable": true,
+      "applicability": "applicable",
+      "acceptanceDefined": true,
+      "verificationDefined": true
+    },
+    "P01-C01": {
+      "entryInputsAvailable": true,
+      "capabilitiesAvailable": true,
+      "applicability": "applicable",
+      "acceptanceDefined": true,
+      "verificationDefined": true
+    },
+    "P02": {
+      "entryInputsAvailable": true,
+      "capabilitiesAvailable": true,
+      "applicability": "applicable",
+      "acceptanceDefined": true,
+      "verificationDefined": true
+    },
+    "P02-C01": {
+      "entryInputsAvailable": true,
+      "capabilitiesAvailable": true,
+      "applicability": "applicable",
+      "acceptanceDefined": true,
+      "verificationDefined": true
+    },
+    "P02-C02": {
+      "entryInputsAvailable": true,
+      "capabilitiesAvailable": true,
+      "applicability": "applicable",
+      "acceptanceDefined": true,
+      "verificationDefined": true
+    },
+    "P03": {
+      "entryInputsAvailable": true,
+      "capabilitiesAvailable": true,
+      "applicability": "applicable",
+      "acceptanceDefined": true,
+      "verificationDefined": true
+    },
+    "P03-C01": {
+      "entryInputsAvailable": true,
+      "capabilitiesAvailable": true,
+      "applicability": "applicable",
+      "acceptanceDefined": true,
+      "verificationDefined": true
+    },
+    "P03-C02": {
+      "entryInputsAvailable": true,
+      "capabilitiesAvailable": true,
+      "applicability": "applicable",
+      "acceptanceDefined": true,
+      "verificationDefined": true
+    },
+    "P04": {
+      "entryInputsAvailable": true,
+      "capabilitiesAvailable": true,
+      "applicability": "applicable",
+      "acceptanceDefined": true,
+      "verificationDefined": true
+    },
+    "P04-C01": {
+      "entryInputsAvailable": true,
+      "capabilitiesAvailable": true,
+      "applicability": "applicable",
+      "acceptanceDefined": true,
+      "verificationDefined": true
+    }
+  },
+  "consequentialSpecialists": [
+    "compatibility",
+    "migration",
+    "operations",
+    "performance",
+    "security",
+    "tdd"
+  ],
+  "completionRecords": {}
+}
