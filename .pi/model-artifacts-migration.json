@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "mappings": {
+    ".model-artifacts/reports/it-management-import/2026-09-03_1651-verification.md": {
+      "kind": "reports",
+      "topic": "it-management-import",
+      "timestamp": "2026-09-03_1651",
+      "shortName": "verification"
+    }
+  }
+}
