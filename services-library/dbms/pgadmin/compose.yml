@@ -1,13 +1,13 @@
 services:
   pgadmin:
-    image: dpage/pgadmin4:8.14
+    image: dpage/pgadmin4:9.17
     restart: unless-stopped
     ports:
     - 127.0.0.1:8087:80
     volumes:
     - pgadmin_data:/var/lib/pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@devarch.test
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: devarch
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     healthcheck:
