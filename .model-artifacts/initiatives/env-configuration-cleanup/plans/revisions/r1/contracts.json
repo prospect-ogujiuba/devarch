@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 2,
+  "topic": "env-configuration-cleanup",
+  "planRevision": 1,
+  "planPath": ".model-artifacts/initiatives/env-configuration-cleanup/plans/2026-09-11_1614-plan-index-r1.md",
+  "contracts": [
+    {
+      "id": "PHASE-01",
+      "kind": "phase",
+      "parentId": null,
+      "dependsOn": [],
+      "path": ".model-artifacts/initiatives/env-configuration-cleanup/plans/revisions/r1/phases/phase-01/phase-01-secure-loading.md",
+      "status": "planned",
+      "contentHash": "sha256:6846145c3ee7de8cd6441581d6f5ce5f494b634d777f52e9178cac477b8f0924"
+    },
+    {
+      "id": "ENV-001",
+      "kind": "implementation",
+      "parentId": "PHASE-01",
+      "dependsOn": [],
+      "path": ".model-artifacts/initiatives/env-configuration-cleanup/plans/revisions/r1/phases/phase-01/env-001-secure-wordpress-dotenv.md",
+      "status": "planned",
+      "contentHash": "sha256:6aa7b3c8928dce1a74ac5b291e66913f71065ba53829e43ca3f00aa014264f0e"
+    },
+    {
+      "id": "ENV-002",
+      "kind": "implementation",
+      "parentId": "PHASE-01",
+      "dependsOn": ["ENV-001"],
+      "path": ".model-artifacts/initiatives/env-configuration-cleanup/plans/revisions/r1/phases/phase-01/env-002-migrate-laravel-dotenv.md",
+      "status": "planned",
+      "contentHash": "sha256:4c990686b09533e96a11bba4d4ab36dd88a1af9ed424079e7604d381afa601ae"
+    },
+    {
+      "id": "PHASE-02",
+      "kind": "phase",
+      "parentId": null,
+      "dependsOn": ["PHASE-01"],
+      "path": ".model-artifacts/initiatives/env-configuration-cleanup/plans/revisions/r1/phases/phase-02/phase-02-template-documentation.md",
+      "status": "planned",
+      "contentHash": "sha256:5a98ce3c9bbdcfaf385379889f1ad09bd83c9584e34096c84f95cf82ab0c3cfe"
+    },
+    {
+      "id": "ENV-003",
+      "kind": "implementation",
+      "parentId": "PHASE-02",
+      "dependsOn": ["ENV-002"],
+      "path": ".model-artifacts/initiatives/env-configuration-cleanup/plans/revisions/r1/phases/phase-02/env-003-clean-template-docs.md",
+      "status": "planned",
+      "contentHash": "sha256:9120bb486e369971e6bc5f951eaa62980ce6396700ca8975d7c07566128ddc45"
+    }
+  ],
+  "contractFacts": {
+    "ENV-001": {
+      "externalEntryInputs": ["current WordPress tests", "current Laravel parser semantics"],
+      "capabilities": ["bash", "security-aware parsing", "host-only testing"],
+      "applicability": ["tdd", "security", "compatibility", "operations"],
+      "acceptance": ["AC1", "AC2", "AC3", "AC4", "AC7"],
+      "verification": ["dotenv unit/security tests", "WordPress regression", "bash syntax"],
+      "approvedDeferrals": []
+    },
+    "ENV-002": {
+      "externalEntryInputs": ["green ENV-001 shared loader", "Laravel parser characterization tests"],
+      "capabilities": ["bash", "refactoring", "host-only testing"],
+      "applicability": ["tdd", "security", "compatibility", "migration"],
+      "acceptance": ["AC1", "AC2", "AC3", "AC4", "AC7"],
+      "verification": ["dotenv tests", "both Laravel regression suites", "bash syntax"],
+      "approvedDeferrals": []
+    },
+    "ENV-003": {
+      "externalEntryInputs": ["final green bootstrap allowlists"],
+      "capabilities": ["documentation", "configuration contract testing"],
+      "applicability": ["security", "migration", "compatibility", "operations"],
+      "acceptance": ["AC5", "AC6", "AC7"],
+      "verification": ["template allowlist test", "all focused regressions", "git diff check"],
+      "approvedDeferrals": []
+    }
+  },
+  "consequentialSpecialists": ["tdd", "security", "migration", "operations", "compatibility"],
+  "completionRecords": {},
+  "migrationProvenance": null
+}

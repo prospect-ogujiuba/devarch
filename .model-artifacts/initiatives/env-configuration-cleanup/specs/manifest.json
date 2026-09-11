@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "initiativeId": "env-configuration-cleanup",
+  "topic": "env-configuration-cleanup",
+  "initiativeState": "approved",
+  "activeSpec": {
+    "revision": 2,
+    "path": ".model-artifacts/initiatives/env-configuration-cleanup/specs/2026-09-11_1625-initiative-spec-r2.md",
+    "contentHash": "sha256:37dd041be58f1df8f075fc4d72694437de745ac40a20c286016152df0330ca49"
+  },
+  "activePlan": {
+    "revision": 2,
+    "path": ".model-artifacts/initiatives/env-configuration-cleanup/plans/2026-09-11_1625-plan-index-r2.md",
+    "contentHash": "sha256:006c3d68ee6d00c1cb58657549acffbd2412f5571ec80a8a3fad09c9bc010939",
+    "contractRoot": ".model-artifacts/initiatives/env-configuration-cleanup/plans/revisions/r2"
+  },
+  "specialists": {
+    "diagnosis": {"status": "not-required", "rationale": "Known configuration debt; no unexplained failure."},
+    "dsa": {"status": "not-required", "rationale": "No consequential data structure or algorithm choice."},
+    "tdd": {"status": "complete", "rationale": "Behavior-first parser and boundary verification required.", "findingPath": ".model-artifacts/initiatives/env-configuration-cleanup/findings/2026-09-11_1620-tdd-finding.md"},
+    "security": {"status": "complete", "rationale": "Non-evaluation, allowlist, non-export, and secret-safe errors are required.", "findingPath": ".model-artifacts/initiatives/env-configuration-cleanup/findings/2026-09-11_1620-security-finding.md"},
+    "migration": {"status": "complete", "rationale": "Local files and initialized MariaDB volumes require manual reversible guidance.", "findingPath": ".model-artifacts/initiatives/env-configuration-cleanup/findings/2026-09-11_1620-migration-operations-compatibility-finding.md"},
+    "performance": {"status": "not-required", "rationale": "No meaningful performance outcome or risk."},
+    "accessibility-ux": {"status": "not-required", "rationale": "No interactive or visual interface change."},
+    "operations": {"status": "complete", "rationale": "Explicit env-file selection and deterministic host-only testing are required.", "findingPath": ".model-artifacts/initiatives/env-configuration-cleanup/findings/2026-09-11_1620-migration-operations-compatibility-finding.md"},
+    "compatibility": {"status": "complete", "rationale": "Supported aliases, parsing, path, and precedence remain stable.", "findingPath": ".model-artifacts/initiatives/env-configuration-cleanup/findings/2026-09-11_1620-migration-operations-compatibility-finding.md"}
+  },
+  "approval": {
+    "decision": "approve",
+    "specRevision": 2,
+    "specPath": ".model-artifacts/initiatives/env-configuration-cleanup/specs/2026-09-11_1625-initiative-spec-r2.md",
+    "specContentHash": "sha256:37dd041be58f1df8f075fc4d72694437de745ac40a20c286016152df0330ca49",
+    "planRevision": 2,
+    "planPath": ".model-artifacts/initiatives/env-configuration-cleanup/plans/2026-09-11_1625-plan-index-r2.md",
+    "planContentHash": "sha256:006c3d68ee6d00c1cb58657549acffbd2412f5571ec80a8a3fad09c9bc010939",
+    "reviewPath": ".model-artifacts/initiatives/env-configuration-cleanup/reports/2026-09-11_1632-plan-review.md",
+    "timestamp": "2026-09-11T16:32:00Z",
+    "blockingFindings": 0
+  },
+  "updatedAt": "2026-09-11T16:32:00Z"
+}
