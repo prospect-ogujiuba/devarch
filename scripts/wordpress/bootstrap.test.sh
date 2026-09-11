@@ -9,6 +9,48 @@ fail() {
   exit 1
 }
 
+restore_archive="$(mktemp --suffix=.wpress)"
+generic_profile_root="$(mktemp -d)"
+typerocket_install_root="$(mktemp -d)"
+boundary_repo="$(mktemp -d)"
+empty_env="$(mktemp)"
+explicit_env="$(mktemp)"
+nested_site="$SCRIPT_DIR/../../apps/nested-restore-test"
+sentinel="$boundary_repo/payload-ran"
+cleanup() {
+  rm -f "$restore_archive" "$empty_env" "$explicit_env"
+  rm -rf "$generic_profile_root" "$typerocket_install_root" "$boundary_repo" "$nested_site"
+}
+trap cleanup EXIT
+
+mkdir -p "$boundary_repo/scripts/wordpress" "$boundary_repo/scripts/devarch/lib"
+cp "$BOOTSTRAP" "$boundary_repo/scripts/wordpress/bootstrap.sh"
+if [[ -f "$SCRIPT_DIR/../devarch/lib/dotenv.sh" ]]; then
+  cp "$SCRIPT_DIR/../devarch/lib/dotenv.sh" "$boundary_repo/scripts/devarch/lib/dotenv.sh"
+fi
+cat >"$boundary_repo/.env" <<'EOF'
+WP_ADMIN_USER=fixture-admin
+UNRELATED_BOUNDARY=$(touch "$SENTINEL_PATH")
+EOF
+boundary_output="$(
+  env -u DEVARCH_ENV_FILE -u WP_ADMIN_USER -u UNRELATED_BOUNDARY SENTINEL_PATH="$sentinel" \
+    bash -c 'source "$1"; printf "ADMIN_USER_VALUE=%s\n" "$ADMIN_USER_VALUE"; env' _ \
+    "$boundary_repo/scripts/wordpress/bootstrap.sh"
+)" || fail "isolated WordPress dotenv boundary should load safely"
+[[ ! -e "$sentinel" ]] || fail "WordPress dotenv executed command substitution"
+grep -q '^ADMIN_USER_VALUE=fixture-admin$' <<<"$boundary_output" || fail "WordPress should load an allowlisted dotenv key"
+if grep -q '^UNRELATED_BOUNDARY=' <<<"$boundary_output"; then
+  fail "WordPress exported an unrelated dotenv key to a child"
+fi
+
+printf 'ADMIN_USER=legacy-admin\nWP_ADMIN_USER=explicit-admin\n' >"$explicit_env"
+explicit_output="$(DEVARCH_ENV_FILE="$explicit_env" bash "$BOOTSTRAP" explicit-env-site --dry-run)" || fail "explicit env file should load"
+grep -q 'admin: .* (user: explicit-admin)' <<<"$explicit_output" || fail "explicit env file should override supported values"
+if DEVARCH_ENV_FILE="$boundary_repo/missing.env" bash "$BOOTSTRAP" invalid-env-site --dry-run >/dev/null 2>&1; then
+  fail "missing explicit env file should fail"
+fi
+
+export DEVARCH_ENV_FILE="$empty_env"
 help_output="$(bash "$BOOTSTRAP" --help)" || fail "--help should succeed"
 for option in --plugin --dry-run --no-hosts --profile --restore; do
   grep -q -- "$option" <<<"$help_output" || fail "help should document $option"
@@ -29,21 +71,12 @@ if bash "$BOOTSTRAP" restore-site --restore bootstrap.test.sh --dry-run >/dev/nu
   fail "restore archives must use the .wpress extension"
 fi
 
-restore_archive="$(mktemp --suffix=.wpress)"
-generic_profile_root="$(mktemp -d)"
-typerocket_install_root="$(mktemp -d)"
-nested_site="$SCRIPT_DIR/../../apps/nested-restore-test"
-cleanup() {
-  rm -f "$restore_archive"
-  rm -rf "$generic_profile_root" "$typerocket_install_root" "$nested_site"
-}
-trap cleanup EXIT
 mkdir -p "$nested_site/wp-content/plugins/example"
 touch "$nested_site/wp-config.php"
 
 restore_output="$(
   cd "$nested_site/wp-content/plugins/example"
-  bash "$BOOTSTRAP" --restore "$restore_archive" --dry-run
+  GITHUB_USER=example bash "$BOOTSTRAP" --restore "$restore_archive" --dry-run
 )" || fail "nested WordPress restore dry-run should succeed"
 grep -q 'site: nested-restore-test' <<<"$restore_output" || fail "site name should be discovered from a nested WordPress directory"
 grep -q 'create native AIOWM safety backup' <<<"$restore_output" || fail "existing restore targets should receive a safety backup"

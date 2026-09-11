@@ -7,15 +7,26 @@ APPS_DIR="${DEVARCH_APPS_DIR:-$PROJECT_ROOT/apps}"
 PHP_COMPOSE="$PROJECT_ROOT/services-library/backend/php/compose.yml"
 MARIADB_COMPOSE="$PROJECT_ROOT/services-library/database/mariadb/compose.yml"
 PROXY_COMPOSE="$PROJECT_ROOT/services-library/proxy/nginx-proxy-manager/compose.yml"
-ENV_FILE="$PROJECT_ROOT/.env"
 PROFILE_DIR="$SCRIPT_DIR/profiles"
 HOSTS_HELPER="$PROJECT_ROOT/scripts/hosts/register-host.sh"
+DOTENV_LIBRARY="$PROJECT_ROOT/scripts/devarch/lib/dotenv.sh"
+WORDPRESS_DOTENV_KEYS=(
+  WP_ADMIN_USER ADMIN_USER
+  WP_ADMIN_PASSWORD ADMIN_PASSWORD
+  WP_ADMIN_EMAIL ADMIN_EMAIL
+  MARIADB_ROOT_PASSWORD GITHUB_USER AIOWM_GIT_URL
+  CONTAINER_RUNTIME WORDPRESS_CONTAINER_USER
+)
 
+# shellcheck source=../devarch/lib/dotenv.sh
+source "$DOTENV_LIBRARY"
+ENV_FILE="${DEVARCH_ENV_FILE:-$PROJECT_ROOT/.env}"
+if [[ -n "${DEVARCH_ENV_FILE:-}" && ! -f "$ENV_FILE" ]]; then
+  printf '[wordpress] error: env file is not a regular file: %s\n' "$ENV_FILE" >&2
+  exit 1
+fi
 if [[ -f "$ENV_FILE" ]]; then
-  set -a
-  # shellcheck disable=SC1090
-  . "$ENV_FILE"
-  set +a
+  devarch_load_dotenv "$ENV_FILE" "${WORDPRESS_DOTENV_KEYS[@]}"
 fi
 
 DRY_RUN=false
