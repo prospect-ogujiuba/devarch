@@ -13,6 +13,19 @@ REDIS_COMPOSE="$PROJECT_ROOT/services-library/database/redis/compose.yml"
 MAILPIT_COMPOSE="$PROJECT_ROOT/services-library/mail/mailpit/compose.yml"
 PROFILE_DIR="$SCRIPT_DIR/profiles"
 HOSTS_HELPER="$PROJECT_ROOT/scripts/hosts/register-host.sh"
+DOTENV_LIBRARY="$PROJECT_ROOT/scripts/devarch/lib/dotenv.sh"
+LARAVEL_DOTENV_KEYS=(
+  LARAVEL_APP_NAME LARAVEL_APP_URL LARAVEL_DB_ROOT_PASSWORD
+  MARIADB_ROOT_PASSWORD LARAVEL_CONTAINER_USER CONTAINER_RUNTIME
+)
+
+# shellcheck source=../devarch/lib/dotenv.sh
+source "$DOTENV_LIBRARY"
+ENV_FILE="${DEVARCH_ENV_FILE:-$PROJECT_ROOT/.env}"
+if [[ -n "${DEVARCH_ENV_FILE:-}" && ! -f "$ENV_FILE" ]]; then
+  printf '[laravel] error: env file is not a regular file: %s\n' "$ENV_FILE" >&2
+  exit 1
+fi
 
 readonly REDIS_HOST=redis
 readonly REDIS_PASSWORD=devarch
@@ -186,68 +199,9 @@ validate_no_controls() {
   [[ "$value" == "$clean" ]] || die "$label contains an ASCII control byte"
 }
 
-parse_repository_env_value() {
-  local key="$1" raw quote char remainder value="" escaped=false closed=false i
-  raw="$(trim "$2")"
-  if [[ "$raw" == \"* || "$raw" == \'* ]]; then
-    quote="${raw:0:1}"
-    for ((i = 1; i < ${#raw}; i++)); do
-      char="${raw:i:1}"
-      if [[ "$escaped" == true ]]; then
-        if [[ "$char" == "\\" || "$char" == "$quote" || ( "$quote" == '"' && "$char" == '$' ) ]]; then
-          value+="$char"
-        else
-          die "$key contains an unsupported quoted escape: \\$char"
-        fi
-        escaped=false
-      elif [[ "$char" == "\\" ]]; then
-        escaped=true
-      elif [[ "$char" == "$quote" ]]; then
-        closed=true
-        ((i += 1))
-        break
-      else
-        value+="$char"
-      fi
-    done
-    [[ "$closed" == true ]] || die "$key has an unterminated quoted value"
-    remainder="$(trim "${raw:i}")"
-    [[ -z "$remainder" || "$remainder" == \#* ]] || die "$key has unexpected text after its quoted value"
-  else
-    for ((i = 1; i < ${#raw}; i++)); do
-      if [[ "${raw:i:1}" == '#' && "${raw:i-1:1}" == [[:space:]] ]]; then
-        raw="${raw:0:i}"
-        break
-      fi
-    done
-    value="$(trim "$raw")"
-  fi
-  validate_no_controls "$key" "$value"
-  PARSED_ENV_VALUE="$value"
-}
-
 load_repository_env() {
   [[ -f "$ENV_FILE" ]] || return 0
-  if od -An -tx1 "$ENV_FILE" | grep -Eq '(^|[[:space:]])00([[:space:]]|$)'; then
-    die "$ENV_FILE contains NUL"
-  fi
-
-  local line original_line key
-  while IFS= read -r line || [[ -n "$line" ]]; do
-    original_line="$line"
-    line="$(trim "$line")"
-    [[ -z "$line" || "$line" == \#* ]] && continue
-    [[ "$line" == export\ * ]] && line="$(trim "${line#export }")"
-    [[ "$line" == *=* ]] || continue
-    key="$(trim "${line%%=*}")"
-    case "$key" in
-      LARAVEL_APP_NAME|LARAVEL_APP_URL|LARAVEL_DB_ROOT_PASSWORD|MARIADB_ROOT_PASSWORD|LARAVEL_CONTAINER_USER|CONTAINER_RUNTIME)
-        validate_no_controls "$key" "$original_line"
-        parse_repository_env_value "$key" "${line#*=}"
-        printf -v "$key" '%s' "$PARSED_ENV_VALUE"
-        ;;
-    esac
-  done < "$ENV_FILE"
+  devarch_load_dotenv "$ENV_FILE" "${LARAVEL_DOTENV_KEYS[@]}"
 }
 
 title_case() {

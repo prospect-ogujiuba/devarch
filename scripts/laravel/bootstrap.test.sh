@@ -17,8 +17,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "$SCRIPT_DIR"
+mkdir -p "$SCRIPT_DIR" "$PROJECT_ROOT/scripts/devarch/lib"
 cp "$SOURCE_SCRIPT_DIR/bootstrap.sh" "$SCRIPT_DIR/bootstrap.sh"
+cp "$SOURCE_PROJECT_ROOT/scripts/devarch/lib/dotenv.sh" "$PROJECT_ROOT/scripts/devarch/lib/dotenv.sh"
 cp -R "$SOURCE_SCRIPT_DIR/profiles" "$SCRIPT_DIR/profiles"
 for compose_file in \
   services-library/backend/php/compose.yml \
@@ -62,6 +63,32 @@ expect_failure() {
   fi
   pass
 }
+
+# Explicit env-file selection uses the shared loader inside the isolated fixture.
+sentinel="$TEST_TMP/dotenv-payload-ran"
+explicit_env="$TEST_TMP/explicit.env"
+cat >"$explicit_env" <<'EOF'
+LARAVEL_APP_URL=https://selected-by-file.test
+UNRELATED=$(touch "$SENTINEL_PATH")
+DEVARCH_ENV_FILE=/must/not/be/loaded
+EOF
+explicit_output="$(
+  SENTINEL_PATH="$sentinel" DEVARCH_ENV_FILE="$explicit_env" \
+    LARAVEL_APP_URL=https://inherited.test run_bootstrap podman explicit-env --dry-run
+)" || fail 'explicit env file should load through the shared loader'
+assert_contains "$explicit_output" 'configure APP_URL=https://selected-by-file.test' 'explicit env file should override supported values'
+assert_absent "$explicit_output" 'configure APP_URL=https://inherited.test' 'explicit env file should override the inherited value'
+assert_absent "$explicit_output" 'configure APP_URL=https://explicit-env.test' 'explicit env file should override the app-derived default'
+boundary_state="$(
+  env -u UNRELATED SENTINEL_PATH="$sentinel" DEVARCH_ENV_FILE="$explicit_env" \
+    bash -c 'source "$1"; load_repository_env; [[ ! -v UNRELATED ]] || printf "UNRELATED_STATE=present\n"; env' _ "$BOOTSTRAP"
+)" || fail 'explicit env boundary state should be inspectable'
+assert_absent "$boundary_state" 'UNRELATED_STATE=present' 'unrelated dotenv key should remain absent from shell state'
+assert_absent "$boundary_state" 'UNRELATED=' 'unrelated dotenv key should not reach a child environment'
+[[ ! -e "$sentinel" ]] || fail 'Laravel dotenv executed an unrelated command substitution'
+pass
+DEVARCH_ENV_FILE="$TEST_TMP/missing.env" expect_failure 'missing explicit env file should fail before mutation' explicit-env --dry-run
+: > "$RUNTIME_LOG"
 
 # Informational modes are standalone and do not inspect a container runtime.
 help_output="$(PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" bash "$BOOTSTRAP" --help)" || fail '--help should succeed'

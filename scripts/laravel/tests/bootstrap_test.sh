@@ -46,13 +46,18 @@ for constraint in banana '^^12' '12 |||| 13'; do
   pass
 done
 
-# Repository dotenv parsing and generated dotenv encoding round-trip.
-parse_repository_env_value TEST '"quoted \"value\" \\ path \$cash" # trailing comment'
-assert_eq "$PARSED_ENV_VALUE" 'quoted "value" \ path $cash' 'double-quoted repository dotenv decoding'
-original="$PARSED_ENV_VALUE"
+# Shared repository dotenv parsing and generated application dotenv encoding round-trip.
+repository_env="$TEST_TMP/repository.env"
+printf '%s\n' 'LARAVEL_APP_NAME="quoted \"value\" \\ path \$cash" # trailing comment' > "$repository_env"
+unset LARAVEL_APP_NAME
+devarch_load_dotenv "$repository_env" LARAVEL_APP_NAME
+assert_eq "$LARAVEL_APP_NAME" 'quoted "value" \ path $cash' 'double-quoted repository dotenv decoding'
+original="$LARAVEL_APP_NAME"
 encode_dotenv "$original"
-parse_repository_env_value TEST "$DOTENV_ENCODED"
-assert_eq "$PARSED_ENV_VALUE" "$original" 'repository-to-Laravel dotenv round-trip'
+printf 'LARAVEL_APP_NAME=%s\n' "$DOTENV_ENCODED" > "$repository_env"
+unset LARAVEL_APP_NAME
+devarch_load_dotenv "$repository_env" LARAVEL_APP_NAME
+assert_eq "$LARAVEL_APP_NAME" "$original" 'repository-to-Laravel dotenv round-trip'
 printf 'APP_NAME=old\nAPP_ENV=local\n' > "$TEST_TMP/application.env"
 dotenv_set APP_NAME "$original" "$TEST_TMP/application.env"
 assert_contains "$(<"$TEST_TMP/application.env")" "APP_NAME=$DOTENV_ENCODED" 'dotenv_set writes encoded value under set -u'
@@ -67,22 +72,22 @@ assert_eq "$(stat -c '%a' "$TARGET/storage/framework/views")" 777 'Laravel stora
 assert_eq "$(stat -c '%a' "$TARGET/bootstrap/cache")" 777 'Laravel bootstrap cache is writable by PHP-FPM'
 assert_eq "$(stat -c '%a' "$TARGET/database")" 777 'Laravel SQLite directory is writable by PHP-FPM'
 assert_eq "$(stat -c '%a' "$TARGET/database/database.sqlite")" 666 'Laravel SQLite database is writable by PHP-FPM'
-parse_repository_env_value TEST "'single \\'quote\\' and \\\\ path' # comment"
-assert_eq "$PARSED_ENV_VALUE" "single 'quote' and \\ path" 'single-quoted repository dotenv decoding'
-parse_repository_env_value TEST 'plain # trailing comment'
-assert_eq "$PARSED_ENV_VALUE" plain 'unquoted repository dotenv comment stripping'
-parse_repository_env_value TEST 'plain#literal'
-assert_eq "$PARSED_ENV_VALUE" 'plain#literal' 'unquoted literal hash preservation'
-expect_failure parse_repository_env_value TEST $'bad\rvalue'
-expect_failure parse_repository_env_value TEST $'bad\nvalue'
-expect_failure parse_repository_env_value TEST $'bad\tvalue'
-expect_failure parse_repository_env_value TEST $'bad\177value'
+printf '%s\n' "LARAVEL_APP_NAME='single \\'quote\\' and \\\\ path' # comment" > "$repository_env"
+unset LARAVEL_APP_NAME
+devarch_load_dotenv "$repository_env" LARAVEL_APP_NAME
+assert_eq "$LARAVEL_APP_NAME" "single 'quote' and \\ path" 'single-quoted repository dotenv decoding'
+printf '%s\n' 'LARAVEL_APP_NAME=plain # trailing comment' > "$repository_env"
+devarch_load_dotenv "$repository_env" LARAVEL_APP_NAME
+assert_eq "$LARAVEL_APP_NAME" plain 'unquoted repository dotenv comment stripping'
+printf '%s\n' 'LARAVEL_APP_NAME=plain#literal' > "$repository_env"
+devarch_load_dotenv "$repository_env" LARAVEL_APP_NAME
+assert_eq "$LARAVEL_APP_NAME" 'plain#literal' 'unquoted literal hash preservation'
 printf 'LARAVEL_APP_NAME=ok\0bad\n' > "$TEST_TMP/nul.env"
 expect_failure bash -c 'source "$1"; ENV_FILE="$2"; load_repository_env' _ "$BOOTSTRAP" "$TEST_TMP/nul.env"
 printf 'LARAVEL_APP_NAME=bad\t\n' > "$TEST_TMP/control.env"
 expect_failure bash -c 'source "$1"; ENV_FILE="$2"; load_repository_env' _ "$BOOTSTRAP" "$TEST_TMP/control.env"
-printf '# unrelated\tcomment\nUNRELATED="ignored\177value"\nLARAVEL_APP_NAME="Accepted" # note\n' > "$TEST_TMP/repository.env"
-ENV_FILE="$TEST_TMP/repository.env"
+printf '# unrelated\tcomment\nUNRELATED="ignored\177value"\nLARAVEL_APP_NAME="Accepted" # note\n' > "$repository_env"
+ENV_FILE="$repository_env"
 unset LARAVEL_APP_NAME
 load_repository_env
 assert_eq "$LARAVEL_APP_NAME" Accepted 'only supported repository dotenv values are validated'

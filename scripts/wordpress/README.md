@@ -20,20 +20,24 @@ Requirements:
 
 ## Configuration
 
-The script sources the repository `.env`.
+The script optionally parses the repository `.env` as data and accepts only the keys below. Recognized file assignments replace inherited values; newly loaded values are not automatically exported. Unrecognized and obsolete entries are ignored. Set `DEVARCH_ENV_FILE` in the host shell to select another regular file; it is not read from dotenv and is not a template key. An explicitly selected missing or non-regular file fails before mutation.
 
 | Variable | Purpose | Default / requirement |
 | --- | --- | --- |
 | `WP_ADMIN_USER` / `ADMIN_USER` | Administrator login | `admin` |
 | `WP_ADMIN_PASSWORD` / `ADMIN_PASSWORD` | Administrator password | Required outside dry runs |
 | `WP_ADMIN_EMAIL` / `ADMIN_EMAIL` | Administrator email | `admin@devarch.test` |
-| `MARIADB_ROOT_PASSWORD` | MariaDB root password | `devarch` |
+| `MARIADB_ROOT_PASSWORD` | MariaDB root password explicitly forwarded to MariaDB Compose | `devarch`; must match an initialized volume |
 | `GITHUB_USER` | Owner used by profiles and `--github-plugin` | Required for private GitHub plugins |
 | `AIOWM_GIT_URL` | All-in-One WP Migration repository used by `--restore` | `git@github.com:$GITHUB_USER/all-in-one-wp-migration.git` |
 | `CONTAINER_RUNTIME` | Force `podman` or `docker` | Auto-detected |
 | `WORDPRESS_CONTAINER_USER` | User for WP-CLI and Composer | `0:0` for Podman; host UID/GID for Docker |
 
-Passwords are supplied to WP-CLI through standard input and are redacted in dry runs.
+`WP_ADMIN_*` is preferred in new files; the `ADMIN_*` aliases remain supported for existing local files. After loading, each `WP_ADMIN_*` value takes precedence over its alias. Passwords are supplied to WP-CLI through standard input and are redacted in dry runs.
+
+The root dotenv configures this host bootstrap, not every Compose service. Compose interpolation does not place a value in a container unless the service declares it through `environment:` or `env_file:`. This bootstrap explicitly forwards only `MARIADB_ROOT_PASSWORD` to the MariaDB Compose command; admin, GitHub, runtime, and container-user values remain host-only.
+
+The script never creates or rewrites `.env`. To migrate, keep a backup, compare it manually with `.env.example`, carry forward supported values, and optionally remove obsolete entries after a dry run; unsupported leftovers are harmlessly ignored. Do not change `MARIADB_ROOT_PASSWORD` for an existing MariaDB volume unless the database password is separately rotated or the volume is intentionally recreated/migrated. Arbitrary `.env` values are no longer exported to child processes; that unsafe behavior is intentionally not preserved.
 
 ## Options
 
