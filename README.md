@@ -31,6 +31,23 @@ podman network create microservices-net
 
 For persistent production services, manage the containers with systemd/Quadlet (or reviewed generated units) and enable lingering for the rootless service user.
 
+## Environment configuration
+
+The root `.env` is optional host configuration for `scripts/wordpress/bootstrap.sh` and `scripts/laravel/bootstrap.sh`; it is not a central configuration file for the service catalog. Copy `.env.example`, set only the overrides you need, and replace blank required password values before a mutating run. The bootstraps parse recognized keys as data, ignore other entries, and do not automatically export newly loaded values to child processes. The former behavior that exported arbitrary `.env` entries has intentionally been removed as a security tightening.
+
+Compose substitution and container environment are separate. Compose can substitute a value only when the selected Compose file references `${NAME}`; a value reaches a container only through that service's `environment:` or `env_file:` configuration. Running Compose from a service directory therefore does not make the root `.env` configure every service. The WordPress and Laravel bootstraps explicitly forward only `MARIADB_ROOT_PASSWORD` to the MariaDB Compose invocation; host-only admin, GitHub, runtime, and container-user values are not forwarded.
+
+Set `DEVARCH_ENV_FILE=/absolute/or/relative/path` in the host shell to select a different regular dotenv file. It is a host control, is not read from dotenv, and is intentionally absent from `.env.example`. When unset, each bootstrap optionally reads the repository `.env`; neither bootstrap creates, migrates, or rewrites it.
+
+### Migrating an existing `.env`
+
+1. Back up the local file, copy the reduced `.env.example` separately, and compare them manually.
+2. Carry forward supported overrides. Prefer `WP_ADMIN_USER`, `WP_ADMIN_PASSWORD`, and `WP_ADMIN_EMAIL`; the legacy `ADMIN_USER`, `ADMIN_PASSWORD`, and `ADMIN_EMAIL` aliases remain accepted for compatibility.
+3. Preserve the `MARIADB_ROOT_PASSWORD` used when the persistent MariaDB volume was initialized. Changing the file does not rotate the stored database password; intentionally recreate or migrate the volume separately if rotation is required.
+4. After a dry run, optionally remove obsolete entries. Leaving them in the local file is harmless because bootstraps ignore them.
+
+Omitted legacy entries are obsolete here by category: API/CORS/domain (`DEVARCH_API_KEY`, `ALLOWED_ORIGINS`, `DOMAIN_SUFFIX`); unused GitHub credential (`GITHUB_TOKEN`); MariaDB/MySQL connection and application credentials (`MARIADB_HOST`, `MARIADB_PORT`, `MYSQL_ROOT_PASSWORD`, `MYSQL_USER`, `MYSQL_PASSWORD`); and Nginx Proxy Manager initialization/database values (`DB_MYSQL_HOST`, `DB_MYSQL_PORT`, `DB_MYSQL_USER`, `DB_MYSQL_PASSWORD`, `DB_MYSQL_NAME`, `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD`). Configure a service-specific value in that service's reviewed Compose/configuration boundary instead.
+
 ## DevArch Home dashboard
 
 Install the read-only local dashboard to search projects, running Podman containers, and the service catalog:
@@ -58,7 +75,7 @@ The command requests elevation once and only replaces content between its DevArc
 `scripts/wordpress/bootstrap.sh` creates local sites in `apps/<site-name>` using the shared PHP-FPM, MariaDB, and Nginx Proxy Manager infrastructure. It creates `microservices-net` when needed, starts the PHP, MariaDB, and Nginx Proxy Manager Compose services, waits for their readiness, creates an isolated database and user, installs WordPress, and applies profiles or additional plugins. It never starts a separate `wp server` process.
 
 ```bash
-cp .env.example .env                    # first run; replace example credentials
+cp .env.example .env                    # optional overrides; fill required secrets
 scripts/wordpress/bootstrap.sh my-site
 # approve the hosts-file elevation prompt, then open https://my-site.test
 ```

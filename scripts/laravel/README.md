@@ -26,7 +26,7 @@ The runtime user must be able to create `microservices-net`, start the selected 
 ## Quick start
 
 ```bash
-cp .env.example .env                    # first run; replace example credentials
+cp .env.example .env                    # optional overrides; fill required secrets
 scripts/laravel/bootstrap.sh demo --dry-run
 scripts/laravel/bootstrap.sh demo
 # Approve the hosts-file elevation prompt, then open https://demo.test
@@ -69,7 +69,7 @@ Application names are 1–63 lowercase ASCII letters, digits, or interior hyphen
 
 ## Configuration and precedence
 
-The script reads only these keys from the repository `.env`:
+The script optionally parses the repository `.env` as data and reads only these keys:
 
 | Key | Purpose | Default |
 | --- | --- | --- |
@@ -82,7 +82,13 @@ The script reads only these keys from the repository `.env`:
 
 Repository `.env` assignments are loaded after CLI parsing and replace inherited values for the same supported key. Command-line options control only their documented settings; there are no CLI forms for `APP_NAME`, `APP_URL`, the root password, runtime, or container user. For the root password, `LARAVEL_DB_ROOT_PASSWORD` takes precedence over `MARIADB_ROOT_PASSWORD` after `.env` loading.
 
-Values may be unquoted, single-quoted, or double-quoted. Quoted values may have trailing comments. Escaped matching quotes and backslashes are decoded, and a dollar sign may be escaped in a double-quoted value. The parser does not evaluate shell syntax. Supported assignments containing ASCII control bytes or DEL are rejected; unrelated `.env` keys are ignored.
+Set `DEVARCH_ENV_FILE` in the host shell to select another regular dotenv file. This host control is not read from dotenv and is intentionally absent from `.env.example`; an explicitly selected missing or non-regular file fails before mutation. When it is unset, the repository `.env` remains optional. The script never creates, migrates, or rewrites that file.
+
+Values may be unquoted, single-quoted, or double-quoted. Quoted values may have trailing comments. Escaped matching quotes and backslashes are decoded, and a dollar sign may be escaped in a double-quoted value. The parser does not evaluate shell syntax. Supported assignments containing ASCII control bytes or DEL are rejected; unrelated `.env` keys are ignored and newly loaded values are not automatically exported to child processes. Arbitrary child export from the old loading behavior is intentionally removed.
+
+The root dotenv configures this host bootstrap, not every Compose service. Compose substitution alone does not inject a value into a container; the service must declare it through `environment:` or `env_file:`. For MariaDB provisioning, the bootstrap explicitly forwards only `MARIADB_ROOT_PASSWORD` to MariaDB Compose. Laravel, runtime, and container-user inputs remain host-only.
+
+For an existing local file, keep a backup, compare it manually with the reduced `.env.example`, carry forward supported overrides, and optionally remove obsolete entries after a dry run. Unsupported leftovers are harmlessly ignored. Preserve the password used to initialize an existing MariaDB volume: changing `LARAVEL_DB_ROOT_PASSWORD` or `MARIADB_ROOT_PASSWORD` does not rotate the stored password, so rotate the database separately or intentionally recreate/migrate the volume.
 
 ## Profiles
 
