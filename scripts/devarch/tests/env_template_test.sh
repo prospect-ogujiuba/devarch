@@ -42,11 +42,14 @@ while IFS= read -r key; do
     grep -Fxq -- "$key" "$allowed_keys" || fail "template key is not accepted by a bootstrap: $key"
 done <"$template_keys"
 
-for forbidden in DEVARCH_ENV_FILE ADMIN_USER ADMIN_PASSWORD ADMIN_EMAIL; do
-    if grep -Fxq -- "$forbidden" "$template_keys"; then
-        fail "host control or legacy alias remains active in template: $forbidden"
-    fi
-done
+if grep -Fxq -- DEVARCH_ENV_FILE "$template_keys"; then
+    fail "host control remains active in template: DEVARCH_ENV_FILE"
+fi
+
+unexpected_allowed_key=$(comm -23 "$allowed_keys" "$template_keys" | head -n 1)
+if [[ -n $unexpected_allowed_key ]]; then
+    fail "bootstrap accepts a key missing from the canonical template: $unexpected_allowed_key"
+fi
 
 while IFS='=' read -r key value; do
     [[ $key =~ (PASSWORD|TOKEN|API_KEY)$ ]] || continue

@@ -34,18 +34,25 @@ UNRELATED_BOUNDARY=$(touch "$SENTINEL_PATH")
 EOF
 boundary_output="$(
   env -u DEVARCH_ENV_FILE -u WP_ADMIN_USER -u UNRELATED_BOUNDARY SENTINEL_PATH="$sentinel" \
-    bash -c 'source "$1"; printf "ADMIN_USER_VALUE=%s\n" "$ADMIN_USER_VALUE"; env' _ \
+    bash -c 'source "$1"; printf "WP_ADMIN_USER=%s\n" "$WP_ADMIN_USER"; env' _ \
     "$boundary_repo/scripts/wordpress/bootstrap.sh"
 )" || fail "isolated WordPress dotenv boundary should load safely"
 [[ ! -e "$sentinel" ]] || fail "WordPress dotenv executed command substitution"
-grep -q '^ADMIN_USER_VALUE=fixture-admin$' <<<"$boundary_output" || fail "WordPress should load an allowlisted dotenv key"
+grep -q '^WP_ADMIN_USER=fixture-admin$' <<<"$boundary_output" || fail "WordPress should load an allowlisted dotenv key"
 if grep -q '^UNRELATED_BOUNDARY=' <<<"$boundary_output"; then
   fail "WordPress exported an unrelated dotenv key to a child"
 fi
 
-printf 'ADMIN_USER=legacy-admin\nWP_ADMIN_USER=explicit-admin\n' >"$explicit_env"
+printf 'OBSOLETE_WORDPRESS_USER=obsolete-admin\n' >"$explicit_env"
+unsupported_output="$(DEVARCH_ENV_FILE="$explicit_env" bash "$BOOTSTRAP" unsupported-env-site --dry-run)" || fail "env file containing an unsupported key should remain safe"
+grep -q 'admin: .* (user: admin)' <<<"$unsupported_output" || fail "unsupported keys should be ignored"
+if grep -q 'obsolete-admin' <<<"$unsupported_output"; then
+  fail "unsupported key should not configure WordPress"
+fi
+
+printf 'WP_ADMIN_USER=explicit-admin\n' >"$explicit_env"
 explicit_output="$(DEVARCH_ENV_FILE="$explicit_env" bash "$BOOTSTRAP" explicit-env-site --dry-run)" || fail "explicit env file should load"
-grep -q 'admin: .* (user: explicit-admin)' <<<"$explicit_output" || fail "explicit env file should override supported values"
+grep -q 'admin: .* (user: explicit-admin)' <<<"$explicit_output" || fail "explicit env file should load canonical values"
 if DEVARCH_ENV_FILE="$boundary_repo/missing.env" bash "$BOOTSTRAP" invalid-env-site --dry-run >/dev/null 2>&1; then
   fail "missing explicit env file should fail"
 fi
@@ -85,7 +92,7 @@ grep -q 'ai1wm restore' <<<"$restore_output" || fail "restore should use native 
 grep -q 'wp-content/ai1wm-backups' <<<"$restore_output" || fail "restore should prepare the backup directory"
 
 dry_run_output="$(
-  ADMIN_PASSWORD='not-printed-secret' \
+  WP_ADMIN_PASSWORD='not-printed-secret' \
   MARIADB_ROOT_PASSWORD='not-printed-db-secret' \
   bash "$BOOTSTRAP" demo-site \
     --title 'Demo Site' \

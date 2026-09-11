@@ -11,9 +11,7 @@ PROFILE_DIR="$SCRIPT_DIR/profiles"
 HOSTS_HELPER="$PROJECT_ROOT/scripts/hosts/register-host.sh"
 DOTENV_LIBRARY="$PROJECT_ROOT/scripts/devarch/lib/dotenv.sh"
 WORDPRESS_DOTENV_KEYS=(
-  WP_ADMIN_USER ADMIN_USER
-  WP_ADMIN_PASSWORD ADMIN_PASSWORD
-  WP_ADMIN_EMAIL ADMIN_EMAIL
+  WP_ADMIN_USER WP_ADMIN_PASSWORD WP_ADMIN_EMAIL
   MARIADB_ROOT_PASSWORD GITHUB_USER AIOWM_GIT_URL
   CONTAINER_RUNTIME WORDPRESS_CONTAINER_USER
 )
@@ -48,9 +46,9 @@ RUNTIME="${CONTAINER_RUNTIME:-}"
 CONTAINER_USER="${WORDPRESS_CONTAINER_USER:-}"
 PHP_CONTAINER="php"
 MARIADB_CONTAINER="mariadb"
-ADMIN_USER_VALUE="${WP_ADMIN_USER:-${ADMIN_USER:-admin}}"
-ADMIN_PASSWORD_VALUE="${WP_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}"
-ADMIN_EMAIL_VALUE="${WP_ADMIN_EMAIL:-${ADMIN_EMAIL:-admin@devarch.test}}"
+WP_ADMIN_USER="${WP_ADMIN_USER:-admin}"
+WP_ADMIN_PASSWORD="${WP_ADMIN_PASSWORD:-}"
+WP_ADMIN_EMAIL="${WP_ADMIN_EMAIL:-admin@devarch.test}"
 DB_ROOT_PASSWORD="${MARIADB_ROOT_PASSWORD:-devarch}"
 AIOWM_GIT_URL="${AIOWM_GIT_URL:-${GITHUB_USER:+git@github.com:${GITHUB_USER}/all-in-one-wp-migration.git}}"
 COMPOSE=()
@@ -97,8 +95,8 @@ Options:
 Authentication:
   Private Git plugins use your host Git/SSH credentials because repositories are
   cloned on the host. Credential-bearing HTTPS URLs are rejected. WordPress and
-  database credentials come from .env (ADMIN_*, MARIADB_ROOT_PASSWORD) or exported
-  WP_ADMIN_* variables.
+  administrator and database credentials come from WP_ADMIN_* and
+  MARIADB_ROOT_PASSWORD in .env or the host environment.
 
 Examples:
   scripts/wordpress/bootstrap.sh my-site --profile clean
@@ -338,7 +336,7 @@ validate_config() {
   [[ -f "$PROXY_COMPOSE" ]] || die "required Compose file not found: $PROXY_COMPOSE"
 
   if [[ "$DRY_RUN" != true ]]; then
-    [[ -n "$ADMIN_PASSWORD_VALUE" ]] || die "set ADMIN_PASSWORD or WP_ADMIN_PASSWORD in .env"
+    [[ -n "$WP_ADMIN_PASSWORD" ]] || die "set WP_ADMIN_PASSWORD in .env"
     command -v git >/dev/null 2>&1 || die "git is required"
   fi
 }
@@ -499,8 +497,8 @@ install_wordpress() {
     config create --dbname="$db_name" --dbuser="$db_user" --dbhost="$MARIADB_CONTAINER" --skip-check --prompt=dbpass
   # Local sites use bind-mounted, writable content; avoid WordPress requesting FTP credentials.
   wp_exec "$container_site" config set FS_METHOD direct
-  wp_prompt_secret "$ADMIN_PASSWORD_VALUE" "install WordPress administrator" "$container_site" \
-    core install --url="$SITE_URL" --title="$SITE_TITLE" --admin_user="$ADMIN_USER_VALUE" --admin_email="$ADMIN_EMAIL_VALUE" --prompt=admin_password
+  wp_prompt_secret "$WP_ADMIN_PASSWORD" "install WordPress administrator" "$container_site" \
+    core install --url="$SITE_URL" --title="$SITE_TITLE" --admin_user="$WP_ADMIN_USER" --admin_email="$WP_ADMIN_EMAIL" --prompt=admin_password
   configure_wordpress_content_settings
   wp_exec "$container_site" post delete 1 --force
   wp_exec "$container_site" plugin delete akismet hello || true
@@ -731,7 +729,7 @@ main() {
   register_site_host
 
   log "ready through the Nginx Proxy Manager .test reverse proxy: $SITE_URL"
-  log "admin: $SITE_URL/wp-admin (user: $ADMIN_USER_VALUE)"
+  log "admin: $SITE_URL/wp-admin (user: $WP_ADMIN_USER)"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
