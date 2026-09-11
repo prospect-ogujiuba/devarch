@@ -42,11 +42,9 @@ Set `DEVARCH_ENV_FILE=/absolute/or/relative/path` in the host shell to select a 
 ### Migrating an existing `.env`
 
 1. Back up the local file, copy the reduced `.env.example` separately, and compare them manually.
-2. Carry forward supported overrides. Prefer `WP_ADMIN_USER`, `WP_ADMIN_PASSWORD`, and `WP_ADMIN_EMAIL`; the legacy `ADMIN_USER`, `ADMIN_PASSWORD`, and `ADMIN_EMAIL` aliases remain accepted for compatibility.
+2. Carry forward only overrides listed in the current `.env.example`. WordPress administrator settings must use `WP_ADMIN_USER`, `WP_ADMIN_PASSWORD`, and `WP_ADMIN_EMAIL`.
 3. Preserve the `MARIADB_ROOT_PASSWORD` used when the persistent MariaDB volume was initialized. Changing the file does not rotate the stored database password; intentionally recreate or migrate the volume separately if rotation is required.
-4. After a dry run, optionally remove obsolete entries. Leaving them in the local file is harmless because bootstraps ignore them.
-
-Omitted legacy entries are obsolete here by category: API/CORS/domain (`DEVARCH_API_KEY`, `ALLOWED_ORIGINS`, `DOMAIN_SUFFIX`); unused GitHub credential (`GITHUB_TOKEN`); MariaDB/MySQL connection and application credentials (`MARIADB_HOST`, `MARIADB_PORT`, `MYSQL_ROOT_PASSWORD`, `MYSQL_USER`, `MYSQL_PASSWORD`); and Nginx Proxy Manager initialization/database values (`DB_MYSQL_HOST`, `DB_MYSQL_PORT`, `DB_MYSQL_USER`, `DB_MYSQL_PASSWORD`, `DB_MYSQL_NAME`, `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD`). Configure a service-specific value in that service's reviewed Compose/configuration boundary instead.
+4. After a dry run, remove obsolete entries. Bootstraps ignore unsupported root dotenv keys; configure service-specific values at that service's reviewed Compose/configuration boundary instead.
 
 ## DevArch Home dashboard
 

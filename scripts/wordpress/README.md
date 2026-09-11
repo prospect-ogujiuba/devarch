@@ -24,16 +24,16 @@ The script optionally parses the repository `.env` as data and accepts only the 
 
 | Variable | Purpose | Default / requirement |
 | --- | --- | --- |
-| `WP_ADMIN_USER` / `ADMIN_USER` | Administrator login | `admin` |
-| `WP_ADMIN_PASSWORD` / `ADMIN_PASSWORD` | Administrator password | Required outside dry runs |
-| `WP_ADMIN_EMAIL` / `ADMIN_EMAIL` | Administrator email | `admin@devarch.test` |
+| `WP_ADMIN_USER` | Administrator login | `admin` |
+| `WP_ADMIN_PASSWORD` | Administrator password | Required outside dry runs |
+| `WP_ADMIN_EMAIL` | Administrator email | `admin@devarch.test` |
 | `MARIADB_ROOT_PASSWORD` | MariaDB root password explicitly forwarded to MariaDB Compose | `devarch`; must match an initialized volume |
 | `GITHUB_USER` | Owner used by profiles and `--github-plugin` | Required for private GitHub plugins |
 | `AIOWM_GIT_URL` | All-in-One WP Migration repository used by `--restore` | `git@github.com:$GITHUB_USER/all-in-one-wp-migration.git` |
 | `CONTAINER_RUNTIME` | Force `podman` or `docker` | Auto-detected |
 | `WORDPRESS_CONTAINER_USER` | User for WP-CLI and Composer | `0:0` for Podman; host UID/GID for Docker |
 
-`WP_ADMIN_*` is preferred in new files; the `ADMIN_*` aliases remain supported for existing local files. After loading, each `WP_ADMIN_*` value takes precedence over its alias. Passwords are supplied to WP-CLI through standard input and are redacted in dry runs.
+Use the `WP_ADMIN_*` variables for WordPress administrator settings. Passwords are supplied to WP-CLI through standard input and are redacted in dry runs.
 
 The root dotenv configures this host bootstrap, not every Compose service. Compose interpolation does not place a value in a container unless the service declares it through `environment:` or `env_file:`. This bootstrap explicitly forwards only `MARIADB_ROOT_PASSWORD` to the MariaDB Compose command; admin, GitHub, runtime, and container-user values remain host-only.
 
