@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 2,
+  "initiativeId": "cross-ecosystem-showcase-library",
+  "topic": "cross-ecosystem-showcase-library",
+  "initiativeState": "approved",
+  "activeSpec": {
+    "revision": 2,
+    "path": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/specs/2026-09-12_1637-initiative-spec-r2.md",
+    "contentHash": "sha256:0460b38808694ee9ccb7c95b45ad7a824b42be63be82375f53e45e23a5ec3cb7"
+  },
+  "activePlan": {
+    "revision": 3,
+    "path": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/2026-09-12_1637-plan-index-r3.md",
+    "contentHash": "sha256:7393e413295038f73cd4d3c496e0f228c1378da60612fd1ed4621227f404940a",
+    "contractRoot": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/revisions/r3",
+    "contractsHash": "sha256:d9142cd12e0c956d84ac58408857ee5d551a2b96c06e54b9ef08241558d64333"
+  },
+  "approval": {
+    "decision": "approved",
+    "specRevision": 2,
+    "specPath": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/specs/2026-09-12_1637-initiative-spec-r2.md",
+    "specContentHash": "sha256:0460b38808694ee9ccb7c95b45ad7a824b42be63be82375f53e45e23a5ec3cb7",
+    "planRevision": 3,
+    "planPath": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/2026-09-12_1637-plan-index-r3.md",
+    "planContentHash": "sha256:7393e413295038f73cd4d3c496e0f228c1378da60612fd1ed4621227f404940a",
+    "reviewPath": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/reports/2026-09-12_1637-plan-review-r3.md",
+    "reviewContentHash": "sha256:44b29a7f08f5ceb97dd7ddc0422a20ea0cbd14853d632fc5520f58f0015f215b",
+    "blockingFindings": 0,
+    "approvedAt": "2026-09-12T16:54:26-04:00"
+  },
+  "specialists": {
+    "diagnosis": {"status": "not-required", "rationale": "No unexplained defect is in scope."},
+    "dsa": {"status": "complete", "rationale": "Representation, deterministic order, graph traversal, and atomic recovery decisions are incorporated in r2.", "findingPath": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/findings/2026-09-12_1637-dsa-decision.md"},
+    "tdd": {"status": "complete", "rationale": "Characterization, Red ordering, test seams, and risk-scaled verification are incorporated in r2.", "findingPath": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/findings/2026-09-12_1637-tdd-plan.md"},
+    "security": {"status": "complete", "rationale": "Data-only parsing, fixed trust roots, argv boundaries, secret handling, and malicious fixtures are incorporated in r2.", "findingPath": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/findings/2026-09-12_1637-security-finding.md"},
+    "migration": {"status": "complete", "rationale": "Canonical legacy profiles and unmanaged local apps are preserved in r2.", "findingPath": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/findings/2026-09-12_1637-migration-operations-compatibility-finding.md"},
+    "performance": {"status": "not-required", "rationale": "Scaffolding remains sequential and network/disk bound; measure before optimization."},
+    "accessibility-ux": {"status": "not-required", "rationale": "No graphical UI changes; CLI clarity is acceptance-tested."},
+    "operations": {"status": "complete", "rationale": "Prerequisites, timeouts, run IDs, logs, atomic recovery, status/resume, and cleanup are incorporated in r2.", "findingPath": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/findings/2026-09-12_1637-migration-operations-compatibility-finding.md"},
+    "compatibility": {"status": "complete", "rationale": "Action negotiation, upstream probes/evidence, and existing command compatibility are incorporated in r2.", "findingPath": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/findings/2026-09-12_1637-migration-operations-compatibility-finding.md"}
+  },
+  "updatedAt": "2026-09-12T16:54:26-04:00"
+}
