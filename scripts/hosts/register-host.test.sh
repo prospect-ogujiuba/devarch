@@ -66,19 +66,23 @@ fi
 pass
 
 if command -v powershell.exe >/dev/null 2>&1 && command -v wslpath >/dev/null 2>&1; then
+  powershell_command=("$(command -v powershell.exe)")
+  if grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null && [[ -x /init ]]; then
+    powershell_command=(/init "${powershell_command[0]}")
+  fi
   POWERSHELL_REGISTER="$SCRIPT_DIR/register-host.ps1"
   WINDOWS_FIXTURE="$TEST_TMP/windows-hosts"
   WINDOWS_EXPECTED="$TEST_TMP/windows-expected"
   printf '# comment\r\n127.0.0.1    first.test    second.test\r\n' > "$WINDOWS_FIXTURE"
   cp "$WINDOWS_FIXTURE" "$WINDOWS_EXPECTED"
   printf '127.0.0.1\tmoneytrees.test\r\n' >> "$WINDOWS_EXPECTED"
-  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w "$POWERSHELL_REGISTER")" \
+  "${powershell_command[@]}" -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w "$POWERSHELL_REGISTER")" \
     -HostName moneytrees.test -HostsPath "$(wslpath -w "$WINDOWS_FIXTURE")" >/dev/null
   cmp -s "$WINDOWS_FIXTURE" "$WINDOWS_EXPECTED" || fail 'adding a new hostname reformatted existing Windows hosts lines or line endings'
   pass
 
   before="$(cksum "$WINDOWS_FIXTURE")"
-  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w "$POWERSHELL_REGISTER")" \
+  "${powershell_command[@]}" -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w "$POWERSHELL_REGISTER")" \
     -HostName moneytrees.test -HostsPath "$(wslpath -w "$WINDOWS_FIXTURE")" >/dev/null
   after="$(cksum "$WINDOWS_FIXTURE")"
   [[ "$before" == "$after" ]] || fail 're-registering a canonical Windows mapping changed the hosts file'
