@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 2,
+  "topic": "cross-ecosystem-showcase-library",
+  "planRevision": 1,
+  "specRevision": 1,
+  "contracts": [
+    {
+      "kind": "phase",
+      "id": "phase-01-contract-and-adapters",
+      "parentId": null,
+      "dependsOn": [],
+      "path": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/revisions/r1/phases/phase-01-contract-and-adapters/phase-01-contract-and-adapters.md",
+      "status": "planned",
+      "contentHash": "sha256:ba3f9e17d791b545d07754e8ee595171e54719e0a5ccf99081af636118070acc",
+      "children": ["SHOW-001", "SHOW-002", "SHOW-003"]
+    },
+    {
+      "kind": "implementation",
+      "id": "SHOW-001",
+      "parentId": "phase-01-contract-and-adapters",
+      "dependsOn": [],
+      "path": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/revisions/r1/phases/phase-01-contract-and-adapters/show-001-top-level-showcase-contract.md",
+      "status": "planned",
+      "contentHash": "sha256:b9ac6df61ea8caa62b44f8ccf6009c93040b25bdb5b3dfd9f5f3bcbd06159437",
+      "contractFacts": {"externalEntryInputs": ["approved-plan"], "capabilities": ["bash", "filesystem-fixtures"], "applicability": ["dsa", "tdd", "security", "operations", "compatibility"], "acceptance": ["AC-01", "AC-02"], "verification": ["showcase-cli-fixtures", "bash-n", "shellcheck-if-installed"], "approvedDeferrals": []},
+      "consequentialSpecialists": ["dsa", "tdd", "security", "operations", "compatibility"],
+      "completion": null
+    },
+    {
+      "kind": "implementation",
+      "id": "SHOW-002",
+      "parentId": "phase-01-contract-and-adapters",
+      "dependsOn": ["SHOW-001"],
+      "path": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/revisions/r1/phases/phase-01-contract-and-adapters/show-002-javascript-compatibility-adapter.md",
+      "status": "planned",
+      "contentHash": "sha256:07e2d4ca5da3a151519082655ee9007446929fda90809c4fa224b38cbd7bc689",
+      "contractFacts": {"externalEntryInputs": ["adapter-protocol-v1"], "capabilities": ["javascript-bootstrap", "javascript-matrix"], "applicability": ["tdd", "migration", "compatibility"], "acceptance": ["AC-02", "AC-03"], "verification": ["direct-adapter-characterization", "javascript-suites"], "approvedDeferrals": []},
+      "consequentialSpecialists": ["tdd", "migration", "compatibility"],
+      "completion": null
+    },
+    {
+      "kind": "implementation",
+      "id": "SHOW-003",
+      "parentId": "phase-01-contract-and-adapters",
+      "dependsOn": ["SHOW-001"],
+      "path": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/revisions/r1/phases/phase-01-contract-and-adapters/show-003-wordpress-existing-profile-adapter.md",
+      "status": "planned",
+      "contentHash": "sha256:495af4f35c5133449a8a0b8b1a8925d2733dcae2041ad6f5d09dc8f3daeb8d88",
+      "contractFacts": {"externalEntryInputs": ["adapter-protocol-v1"], "capabilities": ["wordpress-bootstrap"], "applicability": ["tdd", "security", "compatibility"], "acceptance": ["AC-11"], "verification": ["wordpress-adapter-fixtures", "wordpress-bootstrap-suite"], "approvedDeferrals": ["new-wordpress-profiles"]},
+      "consequentialSpecialists": ["tdd", "security", "compatibility"],
+      "completion": null
+    },
+    {
+      "kind": "phase",
+      "id": "phase-02-laravel-profile-system",
+      "parentId": null,
+      "dependsOn": ["SHOW-001"],
+      "path": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/revisions/r1/phases/phase-02-laravel-profile-system/phase-02-laravel-profile-system.md",
+      "status": "planned",
+      "contentHash": "sha256:37a5cb6bb6c09844d55a68087c0fe009351aa5a7a039dbe93ff1af932cdfbfa5",
+      "children": ["LAR-001", "LAR-002", "LAR-003"]
+    },
+    {
+      "kind": "implementation",
+      "id": "LAR-001",
+      "parentId": "phase-02-laravel-profile-system",
+      "dependsOn": ["SHOW-001"],
+      "path": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/revisions/r1/phases/phase-02-laravel-profile-system/lar-001-safe-starter-capability-model.md",
+      "status": "planned",
+      "contentHash": "sha256:9d287b8127dce0638432b61be72018e25a673aa1dfd606accf0d11a7eb80a934",
+      "contractFacts": {"externalEntryInputs": ["adapter-protocol-v1", "legacy-laravel-characterization"], "capabilities": ["laravel-starters", "capability-registry", "recovery"], "applicability": ["dsa", "tdd", "security", "migration", "operations", "compatibility"], "acceptance": ["AC-04", "AC-05", "AC-08", "AC-09"], "verification": ["parser-fixtures", "legacy-characterization", "minimal-runtime-smoke"], "approvedDeferrals": ["external-saas-capabilities"]},
+      "consequentialSpecialists": ["dsa", "tdd", "security", "migration", "operations", "compatibility"],
+      "completion": null
+    },
+    {
+      "kind": "implementation",
+      "id": "LAR-002",
+      "parentId": "phase-02-laravel-profile-system",
+      "dependsOn": ["LAR-001"],
+      "path": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/revisions/r1/phases/phase-02-laravel-profile-system/lar-002-curated-profile-catalog.md",
+      "status": "planned",
+      "contentHash": "sha256:9aa0e7e7533ab1d3a8c48c840e627c1471ed4d00c814fd3ffb1a23c4b9843b28",
+      "contractFacts": {"externalEntryInputs": ["safe-capability-model"], "capabilities": ["13-curated-profiles"], "applicability": ["tdd", "security", "operations", "compatibility"], "acceptance": ["AC-06", "AC-08", "AC-09"], "verification": ["profile-plan-table", "five-runtime-smokes"], "approvedDeferrals": ["billing", "social-auth", "multi-tenancy", "octane"]},
+      "consequentialSpecialists": ["tdd", "security", "operations", "compatibility"],
+      "completion": null
+    },
+    {
+      "kind": "implementation",
+      "id": "LAR-003",
+      "parentId": "phase-02-laravel-profile-system",
+      "dependsOn": ["LAR-002"],
+      "path": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/revisions/r1/phases/phase-02-laravel-profile-system/lar-003-laravel-matrix-adapter.md",
+      "status": "planned",
+      "contentHash": "sha256:5c0dd3a4b17b56d5d4f632ab2d612b546ab44b136788bd4482b7a6a8af7e90f3",
+      "contractFacts": {"externalEntryInputs": ["curated-laravel-profiles"], "capabilities": ["laravel-matrix", "laravel-adapter"], "applicability": ["dsa", "tdd", "operations", "compatibility"], "acceptance": ["AC-01", "AC-02", "AC-07"], "verification": ["matrix-fixtures", "adapter-parity", "runtime-create-verify"], "approvedDeferrals": ["bulk-start", "concurrency"]},
+      "consequentialSpecialists": ["dsa", "tdd", "operations", "compatibility"],
+      "completion": null
+    },
+    {
+      "kind": "phase",
+      "id": "phase-03-recipes",
+      "parentId": null,
+      "dependsOn": ["SHOW-002", "LAR-003"],
+      "path": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/revisions/r1/phases/phase-03-recipes/phase-03-recipes.md",
+      "status": "planned",
+      "contentHash": "sha256:f4b6681468651f92b2b09c6a489b30c8d85ca7233b4692e5f4ac84122aec15d4",
+      "children": ["REC-001", "REC-002"]
+    },
+    {
+      "kind": "implementation",
+      "id": "REC-001",
+      "parentId": "phase-03-recipes",
+      "dependsOn": ["SHOW-002", "LAR-003"],
+      "path": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/revisions/r1/phases/phase-03-recipes/rec-001-recoverable-recipe-engine.md",
+      "status": "planned",
+      "contentHash": "sha256:cf487e49f6af2499e973d2c5bc87344cee13ac286307956e8e81ddc7bd2662c3",
+      "contractFacts": {"externalEntryInputs": ["javascript-adapter", "laravel-adapter"], "capabilities": ["recipe-parser", "dag-order", "recovery-manifest"], "applicability": ["dsa", "tdd", "security", "migration", "operations", "compatibility"], "acceptance": ["AC-09", "AC-10"], "verification": ["graph-fixtures", "transition-failure-injection", "resume-tests"], "approvedDeferrals": ["concurrency", "automatic-delete-rollback"]},
+      "consequentialSpecialists": ["dsa", "tdd", "security", "migration", "operations", "compatibility"],
+      "completion": null
+    },
+    {
+      "kind": "implementation",
+      "id": "REC-002",
+      "parentId": "phase-03-recipes",
+      "dependsOn": ["REC-001"],
+      "path": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/revisions/r1/phases/phase-03-recipes/rec-002-laravel-tanstack-recipe.md",
+      "status": "planned",
+      "contentHash": "sha256:c17080cc896d9d0f31251942d938a6ad9d411e191d79d3f06fba9cdaffdd67ab",
+      "contractFacts": {"externalEntryInputs": ["recipe-protocol-v1"], "capabilities": ["laravel-api", "tanstack-start", "cors-sanctum-link"], "applicability": ["tdd", "security", "operations", "compatibility"], "acceptance": ["AC-10"], "verification": ["two-app-runtime-smoke", "cors-api-check", "recovery-injection"], "approvedDeferrals": ["external-auth", "deployment"]},
+      "consequentialSpecialists": ["tdd", "security", "operations", "compatibility"],
+      "completion": null
+    },
+    {
+      "kind": "phase",
+      "id": "phase-04-verification-and-docs",
+      "parentId": null,
+      "dependsOn": ["SHOW-003", "REC-002"],
+      "path": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/revisions/r1/phases/phase-04-verification-and-docs/phase-04-verification-and-docs.md",
+      "status": "planned",
+      "contentHash": "sha256:2e1385aecb7b4372b7e42dc75a1228730d7901fbeccb6b5c9d649d53c8be96d2",
+      "children": ["VER-001"]
+    },
+    {
+      "kind": "implementation",
+      "id": "VER-001",
+      "parentId": "phase-04-verification-and-docs",
+      "dependsOn": ["SHOW-003", "REC-002"],
+      "path": ".model-artifacts/initiatives/cross-ecosystem-showcase-library/plans/revisions/r1/phases/phase-04-verification-and-docs/ver-001-golden-paths-documentation.md",
+      "status": "planned",
+      "contentHash": "sha256:18908f2a04558fd0353f899e1096aec3a450e1f81e3b780a9fa4245faa718700",
+      "contractFacts": {"externalEntryInputs": ["all-prior-contracts-complete"], "capabilities": ["verification", "documentation"], "applicability": ["tdd", "security", "operations", "compatibility"], "acceptance": ["AC-12", "AC-13"], "verification": ["complete-acceptance-map", "runtime-golden-paths", "secret-scan"], "approvedDeferrals": ["external-saas-runtime-validation"]},
+      "consequentialSpecialists": ["tdd", "security", "operations", "compatibility"],
+      "completion": null
+    }
+  ]
+}
