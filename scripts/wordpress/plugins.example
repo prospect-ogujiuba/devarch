@@ -1,8 +1,10 @@
-# One plugin source per line.
+# One plugin source per line. This file is directly usable with --plugins-file.
 # Bare slugs and wp: slugs install from WordPress.org.
 wp:query-monitor
+wp:debug-bar
 
-# Git repositories clone with your host Git credentials, then activate by folder name.
-# Prefer SSH for private repositories.
-# git:git@github.com:your-user/your-private-plugin.git
-# git:https://github.com/your-user/your-public-plugin.git
+# Git repositories clone with host Git credentials, then activate by folder name.
+# Prefer SSH for private repositories; uncomment and replace the repository when needed.
+# git:git@github.com:github-user/private-plugin.git
+# Public HTTPS example:
+# git:https://github.com/WordPress/wordpress-importer.git
