@@ -1,4 +1,8 @@
-# Composer packages are installed in file order.
-# Use composer-package for production requirements and composer-dev-package for development.
+# Composer packages are installed in file order. This file is directly usable with
+# --packages-file and adds common local-development tooling.
+composer-package laravel/sanctum ^4.0
+composer-dev-package barryvdh/laravel-debugbar ^4.4
+
+# Syntax examples (replace before uncommenting):
 # composer-package vendor/package ^1.0
 # composer-dev-package vendor/dev-package ~2.0
