@@ -11,7 +11,7 @@ scripts/hosts/sync-hosts.sh
 
 Only content between `# BEGIN DEVARCH HOSTS` and `# END DEVARCH HOSTS` is replaced. Unrelated hosts-file content is preserved, and rerunning an already-current synchronization performs no write. App directories are included when they contain `index.php`, `public/index.php`, `public/index.html`, or `package.json`. Catalog services are included whether or not their containers are currently running.
 
-On Linux and macOS the script updates `/etc/hosts`, requesting `sudo` once when needed. Under WSL and Git Bash/MSYS it delegates to `sync-hosts.ps1`, which requests Windows UAC elevation and updates `%SystemRoot%\System32\drivers\etc\hosts` while preserving the file's encoding and line endings.
+On Linux and macOS the script updates `/etc/hosts`, requesting `sudo` once when needed. Under WSL and Git Bash/MSYS it delegates to `sync-hosts.ps1`, which requests Windows UAC elevation and updates `%SystemRoot%\System32\drivers\etc\hosts` while preserving the file's encoding and line endings. Run the shell script as your normal WSL user rather than with `sudo`; it invokes Windows PowerShell through WSL's `/init` interop host so Wine or another `.exe` binfmt handler cannot intercept it.
 
 ## Register one domain
 

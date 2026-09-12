@@ -72,7 +72,17 @@ if [[ -z "$platform" ]]; then
 fi
 
 if [[ "$platform" == windows ]]; then
-  command -v powershell.exe >/dev/null 2>&1 || die 'powershell.exe is required to update the Windows hosts file'
+  powershell_executable="$(command -v powershell.exe 2>/dev/null || true)"
+  if [[ -z "$powershell_executable" && -x /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe ]]; then
+    powershell_executable=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
+  fi
+  [[ -n "$powershell_executable" ]] || die 'powershell.exe is required to update the Windows hosts file'
+  powershell_command=("$powershell_executable")
+  if grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null && [[ -x /init ]]; then
+    # Invoke through WSL's interop host. This bypasses third-party binfmt handlers
+    # (notably Wine) that may otherwise intercept Windows .exe files.
+    powershell_command=(/init "$powershell_executable")
+  fi
   if command -v wslpath >/dev/null 2>&1; then
     powershell_script="$(wslpath -w "$SCRIPT_DIR/register-host.ps1")"
   elif command -v cygpath >/dev/null 2>&1; then
@@ -80,9 +90,10 @@ if [[ "$platform" == windows ]]; then
   else
     powershell_script="$SCRIPT_DIR/register-host.ps1"
   fi
-  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$powershell_script" \
+  "${powershell_command[@]}" -NoProfile -ExecutionPolicy Bypass -File "$powershell_script" \
     -HostName "$HOSTNAME_VALUE" -Address "$ADDRESS"
-  exit $?
+  printf '[hosts] Windows hosts registration completed: %s %s\n' "$ADDRESS" "$HOSTNAME_VALUE"
+  exit 0
 fi
 
 [[ "$platform" == unix ]] || die "unsupported hosts platform override: $platform"
