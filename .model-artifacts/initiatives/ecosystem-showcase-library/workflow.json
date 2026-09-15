@@ -1,0 +1,349 @@
+{
+  "version": 1,
+  "topic": "ecosystem-showcase-library",
+  "revision": 5,
+  "status": "draft",
+  "goal": "Deliver a safe, deterministic ecosystem showcase library with a versioned top-level CLI, compatibility-preserving JavaScript and WordPress adapters, a capability-based Laravel profile and matrix system, recoverable multi-app recipes, and documented offline and opt-in golden-path verification.",
+  "plan": ".model-artifacts/initiatives/ecosystem-showcase-library/plans/2026-09-15_1444-implementation-plan.md",
+  "tasks": [
+    {
+      "id": "SHOW-001",
+      "title": "Top-level showcase contract and orchestrator",
+      "status": "pending",
+      "dependsOn": [],
+      "acceptance": [
+        "Create scripts/showcase/showcase.sh with adapter protocol v1 and deterministic list, create, start, stop, verify, status, and resume dispatch.",
+        "Listing reports ecosystem, definition, deterministic app name, support tier, prerequisites, supported actions, and adapter-declared local state.",
+        "Registry data is never evaluated; adapters resolve to unique, protocol-compatible, repository-contained, non-symlink regular files beneath a fixed root.",
+        "Invalid IDs, actions, duplicate adapters, controls, traversal, arbitrary adapter paths, and unsupported actions fail before mutation; -- separates top-level from adapter arguments while argv and exit codes propagate exactly.",
+        "Use adapter completion markers rather than generated-app definition data, and preserve native ecosystem commands as the rollback path."
+      ],
+      "approaches": ["tdd", "dsa", "security", "migration", "operations"],
+      "approachReasons": {
+        "tdd": "The protocol, sorting, validation, argv boundaries, and exit propagation require fixture-first regression coverage.",
+        "dsa": "Registry representation and deterministic ordering are core observable behavior.",
+        "security": "The dispatcher crosses a command-execution trust boundary and must reject hostile registry data and paths.",
+        "migration": "The new orchestrator must remain additive and preserve all native ecosystem entry points.",
+        "operations": "State, prerequisites, action support, and failure propagation are operator-facing lifecycle behavior."
+      },
+      "assessmentStatus": "assessed",
+      "verification": [
+        {"command": "bash", "args": ["-n", "scripts/showcase/showcase.sh"]},
+        {"command": "./scripts/showcase/showcase.test.sh", "args": []}
+      ],
+      "evidence": [],
+      "evidenceLinks": []
+    },
+    {
+      "id": "SHOW-002",
+      "title": "JavaScript compatibility adapter",
+      "status": "pending",
+      "dependsOn": ["SHOW-001"],
+      "acceptance": [
+        "Expose every existing JavaScript framework/profile through adapter protocol v1 without changing profile definitions.",
+        "Map list, create, start, stop, status, and verify to existing scripts with deterministic names, skip/retry behavior, logs, and exit codes.",
+        "Representative direct and adapted plans and argv remain behavior-equivalent, including app-prefix and passthrough support.",
+        "The adapter does not parse or source JavaScript profile contents."
+      ],
+      "approaches": ["tdd", "migration"],
+      "approachReasons": {
+        "tdd": "Direct-versus-adapter characterization protects existing JavaScript behavior.",
+        "migration": "This is a compatibility adapter over established bootstrap and matrix commands."
+      },
+      "assessmentStatus": "assessed",
+      "verification": [
+        {"command": "./scripts/showcase/showcase.test.sh", "args": []},
+        {"command": "./scripts/javascript/bootstrap.test.sh", "args": []},
+        {"command": "./scripts/javascript/scaffold-matrix.test.sh", "args": []}
+      ],
+      "evidence": [],
+      "evidenceLinks": []
+    },
+    {
+      "id": "SHOW-003",
+      "title": "WordPress existing-profile adapter",
+      "status": "pending",
+      "dependsOn": ["SHOW-001"],
+      "acceptance": [
+        "List and individually provision existing bare, clean, custom, and loaded WordPress profiles through adapter protocol v1 without changing profiles or native bootstrap behavior.",
+        "List is mutation-free and create delegates exactly one selected profile with deterministic naming and state/verify behavior.",
+        "Reject restore and credential-bearing options at the showcase boundary; keep them available only through native bootstrap.",
+        "Never source or evaluate registry/profile text, and never adopt or alter existing apps/showcase-wp."
+      ],
+      "approaches": ["tdd", "security", "migration"],
+      "approachReasons": {
+        "tdd": "List, dispatch, unsupported restore, and dry-run behavior need exact fixtures.",
+        "security": "Credential-bearing and restore options must not cross the showcase boundary.",
+        "migration": "Existing WordPress profiles and bootstrap behavior must remain canonical and unchanged."
+      },
+      "assessmentStatus": "assessed",
+      "verification": [
+        {"command": "./scripts/showcase/showcase.test.sh", "args": []},
+        {"command": "./scripts/wordpress/bootstrap.test.sh", "args": []}
+      ],
+      "evidence": [],
+      "evidenceLinks": []
+    },
+    {
+      "id": "LAR-001",
+      "title": "Laravel profile parser and legacy model",
+      "status": "pending",
+      "dependsOn": ["SHOW-001"],
+      "acceptance": [
+        "Characterize bare, standard, and loaded, then add data-only starter, repeatable capability, support-tier, compatibility-probe, service, and health metadata.",
+        "Use indexed arrays for declaration order and maps for membership/conflicts; exact repeatables coalesce at first occurrence.",
+        "Reject duplicate singletons, controls, arbitrary commands, traversal, unknown metadata IDs, unknown capabilities, conflicts, cycles, implicit inheritance, and unavailable handlers before mutation.",
+        "Preserve existing profile files, names, package/database/migrate/seed/force/no-hosts plans, and CLI output; legacy plans remain byte-stable except approved additive metadata.",
+        "New metadata resolves to deterministic secret-safe plans while unknown handlers fail preflight."
+      ],
+      "approaches": ["tdd", "dsa", "security", "migration"],
+      "approachReasons": {
+        "tdd": "Legacy characterization must precede parser/model changes and hostile-input fixtures.",
+        "dsa": "Ordered de-duplication and conflict lookup depend on the selected array/map representation.",
+        "security": "Profile data must remain non-executable and reject controls, traversal, arbitrary commands, and secret leakage.",
+        "migration": "Canonical legacy profiles and exact existing behavior must survive the internal model transition."
+      },
+      "assessmentStatus": "assessed",
+      "verification": [
+        {"command": "bash", "args": ["-n", "scripts/laravel/bootstrap.sh"]},
+        {"command": "./scripts/laravel/bootstrap.test.sh", "args": []},
+        {"command": "./scripts/laravel/tests/bootstrap_test.sh", "args": []}
+      ],
+      "evidence": [],
+      "evidenceLinks": []
+    },
+    {
+      "id": "LAR-002",
+      "title": "Official Laravel starter engine",
+      "status": "pending",
+      "dependsOn": ["LAR-001"],
+      "acceptance": [
+        "Implement fixed non-interactive handlers for current-major none, livewire, react, vue, and svelte starters.",
+        "Run frontend dependency/build steps only when selected and record resolved Laravel, starter, and frontend versions in local evidence.",
+        "Probe compatibility before later mutation where feasible, expose trusted-upstream execution in plans, and provide diagnostic no-scripts behavior where feasible.",
+        "Every starter has an exact redacted dry-run plan and valid completion markers; timeout or failure leaves preserved actionable logs and unambiguous quarantine/recovery state.",
+        "Legacy starter-none behavior remains equivalent.",
+        "Research and validate current installer flags and constraints during implementation; after offline fixtures, perform one explicitly opt-in, uniquely named, bounded starter-none/minimal smoke with prerequisites, preserved logs, and cleanup, or report the unavailable prerequisite without claiming success."
+      ],
+      "approaches": ["tdd", "security", "migration", "operations"],
+      "approachReasons": {
+        "tdd": "Fake-installer fixtures must cover every starter, incompatibility, timeout, scripts mode, build selection, and failure stage.",
+        "security": "Only fixed handlers and argv arrays may execute trusted upstream installers, with secrets excluded from output.",
+        "migration": "The established no-starter Laravel path must remain behavior-equivalent.",
+        "operations": "Timeouts, logs, completion markers, quarantine, and recovery define safe scaffold lifecycle behavior."
+      },
+      "assessmentStatus": "assessed",
+      "verification": [
+        {"command": "./scripts/laravel/bootstrap.test.sh", "args": []},
+        {"command": "./scripts/laravel/tests/bootstrap_test.sh", "args": []}
+      ],
+      "evidence": [],
+      "evidenceLinks": []
+    },
+    {
+      "id": "LAR-003",
+      "title": "Reviewed Laravel capability handlers",
+      "status": "pending",
+      "dependsOn": ["LAR-001"],
+      "acceptance": [
+        "Implement fixed plan/install/configure/verify handlers for sanctum, horizon, reverb, telescope, pulse, pennant, scout-meilisearch, filament, and pest.",
+        "A code-owned registry maps fixed IDs to functions, conflicts, service/health requirements, compatibility checks, deterministic order, and recovery behavior.",
+        "Resolve handlers, conflicts, services, and health before mutation; exact duplicates coalesce and incompatible or unavailable requirements fail closed.",
+        "Use argv arrays, validated constraints, stdin/files for secrets, bounded timeouts, local version evidence, and explicit post-install checks; reject credential-bearing Git/HTTPS URLs and definition-supplied commands.",
+        "Start only selected services, and keep synthetic secrets out of argv, output, logs, recovery, and definitions."
+      ],
+      "approaches": ["tdd", "dsa", "security", "migration", "operations"],
+      "approachReasons": {
+        "tdd": "Table-driven fixtures and fake Composer/Artisan execution are required for each handler and failure mode.",
+        "dsa": "Stable ordered de-duplication, conflict detection, and service aggregation rely on explicit registry structures.",
+        "security": "Package execution, constraints, service inputs, and secrets cross multiple trust boundaries.",
+        "migration": "Capabilities are additive and legacy profile behavior must remain usable.",
+        "operations": "Service health, timeouts, postconditions, evidence, and recovery are part of every handler."
+      },
+      "assessmentStatus": "assessed",
+      "verification": [
+        {"command": "./scripts/laravel/bootstrap.test.sh", "args": []},
+        {"command": "./scripts/laravel/tests/bootstrap_test.sh", "args": []}
+      ],
+      "evidence": [],
+      "evidenceLinks": []
+    },
+    {
+      "id": "LAR-004",
+      "title": "Curated Laravel profile catalog",
+      "status": "pending",
+      "dependsOn": ["LAR-002", "LAR-003"],
+      "acceptance": [
+        "Add explicit non-inheriting minimal, web, api, livewire, react, vue, svelte, queues, realtime, admin, search, observability, and testing profiles.",
+        "Exact combinations: minimal = SQLite + starter none; web = MariaDB + Mailpit + starter none; api = MariaDB + Sanctum; livewire/react/vue/svelte = matching official starter + MariaDB + Mailpit; queues = MariaDB + Redis + Mailpit + Horizon; realtime = MariaDB + Redis + Reverb; admin = MariaDB + Mailpit + Filament; search = MariaDB + Meilisearch + Scout; observability = MariaDB + Redis + Telescope + Pulse; testing = SQLite + Pest + deterministic test execution.",
+        "After exact offline plan/support/compatibility fixtures for every profile, opt-in smokes specifically cover minimal, api, react, queues, and observability with unique names, bounded execution, prerequisites, preserved failure logs, HTTPS/Artisan/service postconditions, and cleanup; unavailable prerequisites are explicit gaps, not passes.",
+        "Each profile declares support tier, compatibility probe, required services/health probes, and exact description.",
+        "Retain canonical bare, standard, and loaded files/names; list all profiles lexically with exact secret-safe conflict-free plans.",
+        "Do not add external-account, billing/social, tenancy, Octane, inheritance, matrix, or recipe behavior, and leave apps/showcase-laravel untouched."
+      ],
+      "approaches": ["tdd", "security", "migration", "operations"],
+      "approachReasons": {
+        "tdd": "Every legacy and new profile needs an exact offline plan/support/compatibility table before representative smokes.",
+        "security": "Profile composition must remain data-only and secret-safe across packages and services.",
+        "migration": "Legacy canonical profile names and behavior must remain intact while the catalog grows additively.",
+        "operations": "Profiles declare concrete prerequisites, services, health checks, failure logs, and cleanup."
+      },
+      "assessmentStatus": "assessed",
+      "verification": [
+        {"command": "./scripts/laravel/bootstrap.test.sh", "args": []},
+        {"command": "./scripts/laravel/tests/bootstrap_test.sh", "args": []}
+      ],
+      "evidence": [],
+      "evidenceLinks": []
+    },
+    {
+      "id": "LAR-005",
+      "title": "Laravel scaffold matrix",
+      "status": "pending",
+      "dependsOn": ["LAR-004"],
+      "acceptance": [
+        "Add lexical list, create, create-all, start, stop, status, and verify commands over apps/showcase-laravel-<profile> targets.",
+        "Support a DNS-safe prefix override and require artisan plus composer.json completion markers.",
+        "Bulk creation is sequential and resumable with bounded retry/timeouts only for fresh acquisition, unique run IDs, prerequisite checks, per-profile logs, independent continuation, and nonzero failure summary.",
+        "Skip complete matrix targets; refuse incomplete/pre-existing matrix targets without explicit recovery/replacement and back up before authorized replacement. Never automatically adopt, rename, overwrite, or delete unmanaged apps/showcase-laravel. Reject symlink writes, target escape, and dangerous cleanup paths; keep generated apps ignored and preserve direct bootstrap semantics.",
+        "Run the full Laravel suites and an opt-in one-profile create/status/verify/stop smoke with prerequisites and cleanup. Do not add a top-level adapter, concurrency, default start-all, pruning, recipes, or profile internals in this task."
+      ],
+      "approaches": ["tdd", "migration", "operations"],
+      "approachReasons": {
+        "tdd": "Matrix state, skip, unmanaged targets, retry, timeout, continuation, and summaries require offline failure-injection fixtures.",
+        "migration": "Native bootstrap behavior and unmanaged applications must remain untouched.",
+        "operations": "Bulk lifecycle, prerequisite checks, run IDs, logs, recovery, and cleanup are the task's primary behavior."
+      },
+      "assessmentStatus": "assessed",
+      "verification": [
+        {"command": "bash", "args": ["-n", "scripts/laravel/scaffold-matrix.sh"]},
+        {"command": "./scripts/laravel/scaffold-matrix.test.sh", "args": []},
+        {"command": "./scripts/laravel/bootstrap.test.sh", "args": []}
+      ],
+      "evidence": [],
+      "evidenceLinks": []
+    },
+    {
+      "id": "LAR-006",
+      "title": "Laravel showcase adapter",
+      "status": "pending",
+      "dependsOn": ["LAR-005"],
+      "acceptance": [
+        "Expose native Laravel matrix list, create, start, stop, status, and verify through adapter protocol v1.",
+        "Report exact action support, state, prerequisites, support tier, and exit propagation.",
+        "Declare resume unsupported for single matrix entries rather than emulating it; recipe resume remains recipe-owned.",
+        "Direct and adapted argv, output, and exit behavior remain equivalent, with no matrix/profile/bootstrap changes."
+      ],
+      "approaches": ["tdd", "migration"],
+      "approachReasons": {
+        "tdd": "Protocol, action, argv, exit, and list-state parity require exact fixtures.",
+        "migration": "The adapter must preserve native Laravel matrix and bootstrap behavior without emulation."
+      },
+      "assessmentStatus": "assessed",
+      "verification": [
+        {"command": "./scripts/showcase/showcase.test.sh", "args": []},
+        {"command": "./scripts/laravel/scaffold-matrix.test.sh", "args": []},
+        {"command": "./scripts/laravel/bootstrap.test.sh", "args": []}
+      ],
+      "evidence": [],
+      "evidenceLinks": []
+    },
+    {
+      "id": "REC-001",
+      "title": "Recoverable multi-app recipe engine",
+      "status": "pending",
+      "dependsOn": ["SHOW-002", "LAR-006"],
+      "acceptance": [
+        "Coordinate tracked data-only recipes containing app nodes, dependency edges, and named non-secret configuration links.",
+        "Validate unique IDs, acyclic graph, adapters/profiles/actions, paths, outputs, target collisions, and all inputs before mutation.",
+        "Execute Kahn topological order with lexical node-ID tie-breaking and no arbitrary commands, templates, concurrency, or secret recipe values.",
+        "Persist versioned secret-free line records with whitespace-free ID/status/path fields for pre-existing, creating, created, failed, and pending nodes, bound to recipe hash and prefix; write a sibling temporary file, fsync where available, then atomically rename.",
+        "Failures preserve independent and pre-existing nodes, reject symlink writes, target escape, and dangerous cleanup paths, move partial adapter targets to .devarch-failed quarantine, block dependents, and leave actionable secret-free state.",
+        "Status/resume validate schema, recipe hash, prefix, paths, and definition identity; stale or corrupt records fail closed and generated trees are never auto-deleted."
+      ],
+      "approaches": ["tdd", "dsa", "security", "migration", "operations"],
+      "approachReasons": {
+        "tdd": "Graph, parser, atomic transition, interruption, stale-state, collision, and resume behavior need failure-injection tests.",
+        "dsa": "DAG representation and lexical Kahn traversal determine correctness and deterministic execution.",
+        "security": "Recipe parsing, adapter dispatch, paths, outputs, and recovery records cross command and data trust boundaries.",
+        "migration": "Pre-existing applications must be preserved and never adopted or deleted.",
+        "operations": "Atomic durable state, interruption recovery, status, resume, quarantine, and manual cleanup are central."
+      },
+      "assessmentStatus": "assessed",
+      "verification": [
+        {"command": "./scripts/showcase/recipe.test.sh", "args": []},
+        {"command": "./scripts/showcase/showcase.test.sh", "args": []}
+      ],
+      "evidence": [],
+      "evidenceLinks": []
+    },
+    {
+      "id": "REC-002",
+      "title": "Laravel API plus TanStack Start recipe",
+      "status": "pending",
+      "dependsOn": ["REC-001"],
+      "acceptance": [
+        "Ship separately routable showcase-laravel-tanstack-api and showcase-laravel-tanstack-web apps as one recipe using Laravel API/Sanctum and TanStack Start/Router/Query.",
+        "Add a current TanStack Start JavaScript definition with support tier, compatibility probe, and resolved-version evidence.",
+        "Configure frontend API URL and Laravel CORS/Sanctum stateful domains only through allowlisted adapter-owned non-secret outputs.",
+        "Provide start, stop, status, resume, and verify; prove HTTPS, API health/JSON, allowed local CORS origin, and recovery after second-node failure.",
+        "Apps remain ignored, independently routable and recoverable; do not promise monorepo, deployment topology, external identity, generic templates, or SSR auth beyond the documented flow."
+      ],
+      "approaches": ["tdd", "security", "migration", "operations"],
+      "approachReasons": {
+        "tdd": "Definition, edge, configuration, hostile output, scaffold, failure, atomic recovery, and resume need offline fixtures before real smoke.",
+        "security": "CORS, Sanctum domains, adapter-owned outputs, and hostile configuration values require explicit trust boundaries.",
+        "migration": "The JavaScript definition is additive and generated apps must remain separable and recoverable.",
+        "operations": "Two-app start/stop/status/resume, logs, health checks, failure preservation, and cleanup are required."
+      },
+      "assessmentStatus": "assessed",
+      "verification": [
+        {"command": "./scripts/showcase/recipe.test.sh", "args": []},
+        {"command": "./scripts/javascript/bootstrap.test.sh", "args": []},
+        {"command": "./scripts/showcase/showcase.test.sh", "args": []}
+      ],
+      "evidence": [],
+      "evidenceLinks": []
+    },
+    {
+      "id": "VER-001",
+      "title": "Integrated golden paths and documentation",
+      "status": "pending",
+      "dependsOn": ["SHOW-003", "REC-002"],
+      "acceptance": [
+        "Document and verify top-level discovery, JavaScript compatibility, Laravel profiles/matrix, WordPress adaptation, and the Laravel-TanStack recipe.",
+        "Default verification covers focused and adjacent offline suites, characterization, shell syntax, deterministic snapshots, WordPress dry-run, secret canaries, and failure/recovery exercises using temporary repository roots, fake executables, deterministic clock/hash seams, and no real apps, hosts files, external credentials, or network.",
+        "Opt-in golden paths are uniquely named, prerequisite-checked, bounded, preserve failure logs, and include cleanup for Laravel minimal, api, react, queues, and observability, the existing JavaScript runtime, and the two-app recipe.",
+        "Documentation distinguishes tracked reproducible definitions from ignored disposable generated apps, unmanaged apps, and matrix apps; explains support tiers, actions, prerequisites, non-sandboxed trusted-upstream execution, recovery, and cleanup; and catalogs billing, WorkOS/social, multi-tenancy, and Octane only as non-executable future candidates.",
+        "Every documented command is exercised by tests or a durable runtime report, and the acceptance-to-evidence report records any genuine blocking gap.",
+        "No new features, profile expansion, premature performance optimization, concurrent all-profile startup, external SaaS validation, or unrelated worktree mutation."
+      ],
+      "approaches": ["tdd", "security", "migration", "operations"],
+      "approachReasons": {
+        "tdd": "The final contract must execute all focused, adjacent, characterization, static, and golden-path checks against documented behavior.",
+        "security": "Integrated verification must scan argv, logs, definitions, and recovery state for secret canaries.",
+        "migration": "Compatibility suites must prove existing native commands and unmanaged applications remain intact.",
+        "operations": "Golden paths require bounded prerequisites, timeouts, logs, health evidence, recovery, and cleanup documentation."
+      },
+      "assessmentStatus": "assessed",
+      "verification": [
+        {"command": "./scripts/showcase/showcase.test.sh", "args": []},
+        {"command": "./scripts/showcase/recipe.test.sh", "args": []},
+        {"command": "./scripts/javascript/bootstrap.test.sh", "args": []},
+        {"command": "./scripts/javascript/scaffold-matrix.test.sh", "args": []},
+        {"command": "./scripts/laravel/bootstrap.test.sh", "args": []},
+        {"command": "./scripts/laravel/tests/bootstrap_test.sh", "args": []},
+        {"command": "./scripts/laravel/scaffold-matrix.test.sh", "args": []},
+        {"command": "./scripts/wordpress/bootstrap.test.sh", "args": []},
+        {"command": "./scripts/devarch/tests/run-tests.sh", "args": []},
+        {"command": "./scripts/hosts/register-host.test.sh", "args": []},
+        {"command": "./scripts/hosts/sync-hosts.test.sh", "args": []},
+        {"command": "./scripts/node/bootstrap.test.sh", "args": []},
+        {"command": "./scripts/node/routing.test.sh", "args": []}
+      ],
+      "evidence": [],
+      "evidenceLinks": []
+    }
+  ],
+  "updatedAt": "2026-09-15T14:47:35-04:00"
+}
