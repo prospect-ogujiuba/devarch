@@ -1,0 +1,59 @@
+services:
+  openmaint-db:
+    image: docker.io/postgis/postgis:17-3.5-alpine
+    container_name: openmaint-db
+    restart: unless-stopped
+    env_file:
+      - runtime.env
+    environment:
+      POSTGRES_INITDB_ARGS: --encoding=UTF-8
+    volumes:
+      - openmaint_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 80s
+    networks:
+      - openmaint-internal
+
+  openmaint:
+    image: docker.io/itmicus/cmdbuild:om-2.4.2-4.2.0
+    container_name: openmaint
+    restart: unless-stopped
+    depends_on:
+      openmaint-db:
+        condition: service_healthy
+    ports:
+      - 127.0.0.1:9219:8080
+    env_file:
+      - runtime.env
+    environment:
+      POSTGRES_PORT: "5432"
+      POSTGRES_HOST: openmaint-db
+      POSTGRES_DB: openmaint
+      OPENMAINT_DB_USER: openmaint
+      CMDBUILD_DUMP: demo.dump.xz
+    volumes:
+      - openmaint_tomcat:/usr/local/tomcat
+      - ./config/context.xml:/usr/local/tomcat/webapps/cmdbuild/META-INF/context.xml:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-L", "http://localhost:8080/cmdbuild/ui/"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 180s
+    networks:
+      - openmaint-internal
+      - microservices-net
+
+volumes:
+  openmaint_db:
+  openmaint_tomcat:
+
+networks:
+  openmaint-internal:
+    internal: true
+  microservices-net:
+    external: true

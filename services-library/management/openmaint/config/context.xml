@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context displayName="CMDBuild" path="/cmdbuild">
+    <Valve className="org.apache.catalina.valves.RemoteIpValve"
+           remoteIpHeader="x-forwarded-for"
+           protocolHeader="x-forwarded-proto"
+           protocolHeaderHttpsValue="https"
+           hostHeader="x-forwarded-host"
+           portHeader="x-forwarded-port" />
+
+    <JarScanner scanClassPath="false">
+        <JarScanFilter defaultPluggabilityScan="false" defaultTldScan="false" />
+    </JarScanner>
+
+    <Resources className="org.apache.catalina.webresources.StandardRoot">
+        <PreResources className="org.apache.catalina.webresources.DirResourceSet"
+                      base="/usr/local/tomcat/conf/cmdbuild/plugins"
+                      webAppMount="/WEB-INF/lib" />
+    </Resources>
+</Context>
