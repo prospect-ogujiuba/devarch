@@ -10,7 +10,7 @@
 --    CANNOT be fully represented in NPM's proxy_host table. It requires
 --    custom nginx config and should remain as a static configuration file.
 --
--- 2. This script creates proxy hosts for 39 explicit server blocks only.
+-- 2. This script creates proxy hosts for 44 explicit server blocks only.
 --    The dynamic .test domain routing remains in custom http.conf.
 --
 -- 3. SSL Certificate: All entries reference certificate_id=1 (local.crt).
@@ -485,7 +485,7 @@ INSERT INTO proxy_host (
 -- ============================================================================
 -- SECTION 6: PROJECT MANAGEMENT
 -- ============================================================================
--- Services: Gitea, OpenProject, Taiga, Plane
+-- Services: Gitea, OpenProject, Taiga, Plane, Redmine, GLPI, Leantime, Vikunja
 -- ============================================================================
 
 -- Gitea (gitea.test -> gitea:3000)
@@ -550,6 +550,70 @@ INSERT INTO proxy_host (
     0, 1, 1, 0, 1, 1, 1, 1, 0,
     'proxy_buffering off;\nerror_page 502 503 504 = @fallback;\nlocation @fallback {\n    return 503 "Plane service is temporarily unavailable";\n    add_header Content-Type text/plain always;\n}',
     '{"devarch_import":true,"category":"project","service":"plane","source_file":"http.conf","log_prefix":"plane"}'
+);
+
+-- Redmine (redmine.test -> redmine:3000)
+INSERT INTO proxy_host (
+    created_on, modified_on, owner_user_id, is_deleted,
+    domain_names, forward_scheme, forward_host, forward_port,
+    access_list_id, certificate_id, ssl_forced, caching_enabled,
+    block_exploits, allow_websocket_upgrade, http2_support,
+    hsts_enabled, hsts_subdomains, advanced_config, meta
+) VALUES (
+    NOW(), NOW(), 1, 0,
+    '["redmine.test"]',
+    'http', 'redmine', 3000,
+    0, 1, 1, 0, 1, 1, 1, 1, 0,
+    'error_page 502 503 504 = @fallback;\nlocation @fallback {\n    return 503 "Redmine service is temporarily unavailable";\n    add_header Content-Type text/plain always;\n}',
+    '{"devarch_import":true,"category":"project","service":"redmine","source_file":"http.conf","log_prefix":"redmine"}'
+);
+
+-- GLPI (glpi.test -> glpi:80)
+INSERT INTO proxy_host (
+    created_on, modified_on, owner_user_id, is_deleted,
+    domain_names, forward_scheme, forward_host, forward_port,
+    access_list_id, certificate_id, ssl_forced, caching_enabled,
+    block_exploits, allow_websocket_upgrade, http2_support,
+    hsts_enabled, hsts_subdomains, advanced_config, meta
+) VALUES (
+    NOW(), NOW(), 1, 0,
+    '["glpi.test"]',
+    'http', 'glpi', 80,
+    0, 1, 1, 0, 1, 1, 1, 1, 0,
+    'error_page 502 503 504 = @fallback;\nlocation @fallback {\n    return 503 "GLPI service is temporarily unavailable";\n    add_header Content-Type text/plain always;\n}',
+    '{"devarch_import":true,"category":"project","service":"glpi","source_file":"http.conf","log_prefix":"glpi"}'
+);
+
+-- Leantime (leantime.test -> leantime:8080)
+INSERT INTO proxy_host (
+    created_on, modified_on, owner_user_id, is_deleted,
+    domain_names, forward_scheme, forward_host, forward_port,
+    access_list_id, certificate_id, ssl_forced, caching_enabled,
+    block_exploits, allow_websocket_upgrade, http2_support,
+    hsts_enabled, hsts_subdomains, advanced_config, meta
+) VALUES (
+    NOW(), NOW(), 1, 0,
+    '["leantime.test"]',
+    'http', 'leantime', 8080,
+    0, 1, 1, 0, 1, 1, 1, 1, 0,
+    'error_page 502 503 504 = @fallback;\nlocation @fallback {\n    return 503 "Leantime service is temporarily unavailable";\n    add_header Content-Type text/plain always;\n}',
+    '{"devarch_import":true,"category":"project","service":"leantime","source_file":"http.conf","log_prefix":"leantime"}'
+);
+
+-- Vikunja (vikunja.test -> vikunja:3456)
+INSERT INTO proxy_host (
+    created_on, modified_on, owner_user_id, is_deleted,
+    domain_names, forward_scheme, forward_host, forward_port,
+    access_list_id, certificate_id, ssl_forced, caching_enabled,
+    block_exploits, allow_websocket_upgrade, http2_support,
+    hsts_enabled, hsts_subdomains, advanced_config, meta
+) VALUES (
+    NOW(), NOW(), 1, 0,
+    '["vikunja.test"]',
+    'http', 'vikunja', 3456,
+    0, 1, 1, 0, 1, 1, 1, 1, 0,
+    'proxy_buffering off;\nerror_page 502 503 504 = @fallback;\nlocation @fallback {\n    return 503 "Vikunja service is temporarily unavailable";\n    add_header Content-Type text/plain always;\n}',
+    '{"devarch_import":true,"category":"project","service":"vikunja","source_file":"http.conf","log_prefix":"vikunja"}'
 );
 
 -- ============================================================================
@@ -826,9 +890,9 @@ GROUP BY ssl_forced, http2_support, hsts_enabled;
 -- POST-IMPORT NOTES
 -- ============================================================================
 --
--- TOTAL SERVER BLOCKS: 40 in http.conf
--- IMPORTED: 39 explicit proxy hosts
--- NOT IMPORTED: 1 wildcard server block (lines 1142-1464)
+-- TOTAL SERVER BLOCKS: 47 in http.conf
+-- IMPORTED: 44 explicit proxy hosts
+-- NOT IMPORTED: DevArch dashboard, FlowState, and the wildcard server block
 --
 -- The wildcard server block (~^(?<appname>[^.]+)\.test$) handles:
 -- - Dynamic .test domain routing
