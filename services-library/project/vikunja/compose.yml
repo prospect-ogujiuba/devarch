@@ -1,0 +1,53 @@
+services:
+  vikunja-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vikunja
+      POSTGRES_USER: vikunja
+      POSTGRES_PASSWORD: devarch-vikunja-db
+    volumes:
+      - vikunja-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U vikunja -d vikunja]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - vikunja-internal
+    container_name: vikunja-db
+
+  vikunja:
+    image: vikunja/vikunja:latest
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:9218:3456
+    environment:
+      VIKUNJA_DATABASE_TYPE: postgres
+      VIKUNJA_DATABASE_HOST: vikunja-db
+      VIKUNJA_DATABASE_DATABASE: vikunja
+      VIKUNJA_DATABASE_USER: vikunja
+      VIKUNJA_DATABASE_PASSWORD: devarch-vikunja-db
+      VIKUNJA_SERVICE_PUBLICURL: https://vikunja.test/
+      VIKUNJA_SERVICE_JWTSECRET: local-devarch-vikunja-jwt-secret-change-for-production
+      VIKUNJA_SERVICE_ENABLEREGISTRATION: "true"
+    volumes:
+      - vikunja-files:/app/vikunja/files
+    depends_on:
+      vikunja-db:
+        condition: service_healthy
+    networks:
+      vikunja-internal: null
+      microservices-net:
+        aliases:
+          - vikunja
+    container_name: vikunja
+
+volumes:
+  vikunja-db-data: null
+  vikunja-files: null
+
+networks:
+  vikunja-internal: null
+  microservices-net:
+    external: true

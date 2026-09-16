@@ -1,0 +1,51 @@
+services:
+  redmine-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: redmine
+      POSTGRES_USER: redmine
+      POSTGRES_PASSWORD: devarch-redmine-db
+    volumes:
+      - redmine-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U redmine -d redmine]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - redmine-internal
+    container_name: redmine-db
+
+  redmine:
+    image: redmine:6.0
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:9215:3000
+    environment:
+      REDMINE_DB_POSTGRES: redmine-db
+      REDMINE_DB_PORT: "5432"
+      REDMINE_DB_DATABASE: redmine
+      REDMINE_DB_USERNAME: redmine
+      REDMINE_DB_PASSWORD: devarch-redmine-db
+      REDMINE_SECRET_KEY_BASE: local-devarch-redmine-secret-key-change-for-production
+    volumes:
+      - redmine-files:/usr/src/redmine/files
+    depends_on:
+      redmine-db:
+        condition: service_healthy
+    networks:
+      redmine-internal: null
+      microservices-net:
+        aliases:
+          - redmine
+    container_name: redmine
+
+volumes:
+  redmine-db-data: null
+  redmine-files: null
+
+networks:
+  redmine-internal: null
+  microservices-net:
+    external: true

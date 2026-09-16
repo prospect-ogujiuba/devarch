@@ -1,0 +1,59 @@
+services:
+  leantime-db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: leantime
+      MARIADB_USER: leantime
+      MARIADB_PASSWORD: devarch-leantime-db
+      MARIADB_ROOT_PASSWORD: devarch-leantime-root
+    volumes:
+      - leantime-db-data:/var/lib/mysql
+    healthcheck:
+      test: [CMD, healthcheck.sh, --connect, --innodb_initialized]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - leantime-internal
+    container_name: leantime-db
+
+  leantime:
+    image: leantime/leantime:latest
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:9217:8080
+    environment:
+      LEAN_DB_HOST: leantime-db
+      LEAN_DB_PORT: "3306"
+      LEAN_DB_USER: leantime
+      LEAN_DB_PASSWORD: devarch-leantime-db
+      LEAN_DB_DATABASE: leantime
+      LEAN_APP_URL: https://leantime.test
+      LEAN_SESSION_PASSWORD: local-devarch-leantime-session-secret-change-for-production
+      LEAN_SESSION_SECURE: "true"
+      LEAN_EMAIL_USE_SMTP: "false"
+    volumes:
+      - leantime-userfiles:/var/www/html/public/userfiles
+      - leantime-plugins:/var/www/html/app/Plugins
+      - leantime-logs:/var/www/html/storage/logs
+    depends_on:
+      leantime-db:
+        condition: service_healthy
+    networks:
+      leantime-internal: null
+      microservices-net:
+        aliases:
+          - leantime
+    container_name: leantime
+
+volumes:
+  leantime-db-data: null
+  leantime-userfiles: null
+  leantime-plugins: null
+  leantime-logs: null
+
+networks:
+  leantime-internal: null
+  microservices-net:
+    external: true
