@@ -1,0 +1,277 @@
+{
+  "kind": "gentic.swe.initiative",
+  "schemaVersion": 1,
+  "id": "glpi-openproject-pilot",
+  "revision": 7,
+  "status": "active",
+  "objective": "Import the existing IT Management workbook into clean GLPI and OpenProject instances using repeatable, validated, backup-first tooling.",
+  "scope": {
+    "in": [
+      "Locate and normalize IT_Management_System.xlsm",
+      "Implement an idempotent GLPI importer",
+      "Use the existing OpenProject importer",
+      "Back up both applications before import",
+      "Verify record counts and application health"
+    ],
+    "out": [
+      "Production DNS/TLS migration",
+      "SMTP/SSO configuration",
+      "Import into unrelated project-management systems"
+    ]
+  },
+  "constraints": [
+    "Do not modify the source workbook",
+    "Do not expose personal data or credentials in logs",
+    "Preserve unrelated repository changes",
+    "Back up application databases and data before mutation",
+    "Imports must be rerunnable without duplicating records"
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-001",
+      "text": "The workbook is normalized successfully and source record counts are documented without exposing sensitive values."
+    },
+    {
+      "id": "AC-002",
+      "text": "OpenProject contains workbook-derived users, groups, tickets, printers, and equipment records in the IT Management System project without demo data."
+    },
+    {
+      "id": "AC-003",
+      "text": "GLPI contains mapped workbook employees, tickets, printers, and equipment records without sample data or duplicates."
+    },
+    {
+      "id": "AC-004",
+      "text": "Both services remain healthy after import and destination counts reconcile with normalized source counts or documented mapping exceptions."
+    },
+    {
+      "id": "AC-005",
+      "text": "Current database and application backups exist with checksums before import."
+    }
+  ],
+  "assessment": {
+    "depth": "deep",
+    "reason": "This changes persistent data in two applications and requires cross-schema mapping, idempotency, backups, and reconciliation.",
+    "surfaces": [
+      "Workbook parsing",
+      "OpenProject Rails models",
+      "GLPI application models and MariaDB",
+      "Persistent volumes and databases"
+    ],
+    "unknowns": [
+      "Workbook field quality and duplicate keys",
+      "GLPI 11 model requirements for each asset type",
+      "Archived ticket status mapping"
+    ]
+  },
+  "practices": [
+    {
+      "id": "P-BACKUP",
+      "practice": "Create verified pre-import backups before persistent mutations.",
+      "appliesTo": [
+        "GOP-003"
+      ],
+      "reason": "Allows rollback from import failures."
+    },
+    {
+      "id": "P-IDEMPOTENT",
+      "practice": "Use deterministic source keys and update-or-create semantics.",
+      "appliesTo": [
+        "GOP-002",
+        "GOP-003"
+      ],
+      "reason": "Prevents duplicates on reruns."
+    },
+    {
+      "id": "P-RECONCILE",
+      "practice": "Compare normalized source and destination counts and sample mapped fields.",
+      "appliesTo": [
+        "GOP-001",
+        "GOP-003"
+      ],
+      "reason": "Detects silent loss or mapping errors."
+    }
+  ],
+  "obligations": [
+    {
+      "id": "O-BACKUP",
+      "practiceId": "P-BACKUP",
+      "criterionIds": [
+        "AC-005"
+      ],
+      "text": "Create database and application-data backups for GLPI and OpenProject with SHA-256 checksums before import.",
+      "verification": {
+        "kind": "filesystem and checksum verification",
+        "requiredEvidence": [
+          "machine-command"
+        ]
+      }
+    },
+    {
+      "id": "O-IDEMPOTENT",
+      "practiceId": "P-IDEMPOTENT",
+      "criterionIds": [
+        "AC-002",
+        "AC-003"
+      ],
+      "text": "Verify deterministic keys and confirm a second import does not increase destination counts.",
+      "verification": {
+        "kind": "repeat import count comparison",
+        "requiredEvidence": [
+          "machine-command"
+        ]
+      }
+    },
+    {
+      "id": "O-RECONCILE",
+      "practiceId": "P-RECONCILE",
+      "criterionIds": [
+        "AC-001",
+        "AC-004"
+      ],
+      "text": "Record source counts, destination counts, mapping exceptions, and endpoint/container health.",
+      "verification": {
+        "kind": "count reconciliation and health checks",
+        "requiredEvidence": [
+          "machine-command"
+        ]
+      }
+    }
+  ],
+  "work": [
+    {
+      "id": "GOP-001",
+      "kind": "task",
+      "title": "Normalize and inspect the IT Management workbook",
+      "status": "complete",
+      "dependsOn": [],
+      "criterionIds": [
+        "AC-001"
+      ],
+      "obligationIds": [
+        "O-RECONCILE"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Normalization is verified through schema and count validation."
+      }
+    },
+    {
+      "id": "GOP-002",
+      "kind": "task",
+      "title": "Implement and validate idempotent GLPI import",
+      "status": "implemented",
+      "dependsOn": [
+        "GOP-001"
+      ],
+      "criterionIds": [
+        "AC-003"
+      ],
+      "obligationIds": [
+        "O-IDEMPOTENT"
+      ],
+      "testing": {
+        "approach": "test-first",
+        "reason": "Mapping and deterministic-key behavior should be exercised before live import."
+      }
+    },
+    {
+      "id": "GOP-003",
+      "kind": "task",
+      "title": "Back up, import into both systems, and reconcile",
+      "status": "pending",
+      "dependsOn": [
+        "GOP-002"
+      ],
+      "criterionIds": [
+        "AC-002",
+        "AC-003",
+        "AC-004",
+        "AC-005"
+      ],
+      "obligationIds": [
+        "O-BACKUP",
+        "O-IDEMPOTENT",
+        "O-RECONCILE"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Runtime verification requires backed-up live instances and post-import reconciliation."
+      }
+    }
+  ],
+  "artifacts": [],
+  "evidence": [
+    {
+      "id": "E-bfff2470-64f3-47b0-b7ec-aa9ca4bc7c32",
+      "kind": "machine-command",
+      "workId": "GOP-001",
+      "obligationIds": [
+        "O-RECONCILE"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "python3 scripts/it-management/normalize_workbook.py '/mnt/c/Users/prospect/OneDrive - Fluid Hose & Coupling Inc/Desktop/IT_Management_System.xlsm' /tmp/it-management-normalized.verify.json && python3 -c \"import json; x=json.load(open('/tmp/it-management-normalized.verify.json')); expected={'Tickets':70,'Archive':98,'Employees':74,'Printers':25,'Provisions':9,'DataTables':35}; assert {k:len(v) for k,v in x.items()}==expected; print(expected)\""
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-22T19:44:15.159Z",
+      "completedAt": "2026-09-22T19:44:16.237Z",
+      "durationMs": 1078,
+      "contractFingerprint": "sha256:2460ac70b5296a2e3bbbec9640042153e025c954e24227dc5d31f741850fcf73",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/normalize_workbook.py"
+          ],
+          "hash": "sha256:0694a8fe53d1c65c62334df27915ef410c045b853ff24122cf9126492fb26231"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/normalize_workbook.py"
+          ],
+          "hash": "sha256:0694a8fe53d1c65c62334df27915ef410c045b853ff24122cf9126492fb26231"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_AB6TMSlBCACD5K8Dx7WLlQOB|fc_047e6916ccfbe73f016ab2da8bf80887d0b719fcf875e44b62",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:a35b18a545c67754d8e0a2faae6591894c6fe3077ce9b44efe39040a1cf8c159"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D-001",
+      "text": "Use /mnt/c/Users/prospect/OneDrive - Fluid Hose & Coupling Inc/Desktop/IT_Management_System.xlsm as source of truth.",
+      "basis": "System-wide search found the requested workbook."
+    },
+    {
+      "id": "D-002",
+      "text": "Use the IT Management System OpenProject project and deterministic GLPI source identifiers.",
+      "basis": "Isolation supports safe reruns and rollback."
+    }
+  ],
+  "risks": [
+    {
+      "id": "R-001",
+      "text": "Direct database writes could bypass GLPI business rules.",
+      "mitigation": "Use GLPI PHP application models and verify integrity/counts."
+    },
+    {
+      "id": "R-002",
+      "text": "Workbook may contain inconsistent placeholder identity data.",
+      "mitigation": "Reuse deterministic normalization and preserve original values."
+    },
+    {
+      "id": "R-003",
+      "text": "Import could partially mutate persistent data.",
+      "mitigation": "Use transactions where supported and complete backups first."
+    }
+  ]
+}
