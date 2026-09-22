@@ -29,13 +29,13 @@ compose() {
 
 print_urls() {
   cat <<'EOF'
-Local evaluation services (credentials are not production-safe):
-  Redmine:     https://redmine.test      admin / admin
-  OpenProject: https://openproject.test  admin / admin1234567
-  Plane:       https://plane.test        admin@devarch.test / admin1234567
-  GLPI:        https://glpi.test         glpi / glpi
-  Leantime:    https://leantime.test     admin@devarch.test / Admin1234567!
-  Vikunja:     https://vikunja.test      admin / admin1234567
+Local evaluation services:
+  Redmine:     https://redmine.test
+  OpenProject: https://openproject.test  (login and password in services-library/project/openproject/.env)
+  Plane:       https://plane.test
+  GLPI:        https://glpi.test         (login glpi; password in services-library/project/glpi/.env)
+  Leantime:    https://leantime.test
+  Vikunja:     https://vikunja.test
 EOF
 }
 

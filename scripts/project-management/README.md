@@ -9,8 +9,15 @@ scripts/project-management/manage.sh urls
 scripts/project-management/manage.sh down
 ```
 
-`down` removes the containers and private networks but retains database and application volumes. To reset one product completely, run `podman compose down -v` from that product's service-library directory.
+`down` removes the containers and private networks but retains database and application volumes. To reset one product completely, run `podman compose down -v` from that product's service-library directory. This permanently deletes its local database and attachments.
 
 The preferred endpoints are `https://redmine.test`, `https://openproject.test`, `https://plane.test`, `https://glpi.test`, `https://leantime.test`, and `https://vikunja.test`. They are routed through the shared Nginx Proxy Manager container. Refresh local name resolution after catalog changes with `scripts/hosts/sync-hosts.sh`.
 
-These credentials and secrets are for local evaluation only. Change them before exposing any service beyond loopback.
+OpenProject and GLPI read generated credentials from their gitignored, mode-`0600` `.env` files. Tracked `.env.example` files document the required variables. Retrieve a login locally with:
+
+```bash
+grep -E '^(OPENPROJECT_ADMIN_LOGIN|OPENPROJECT_ADMIN_PASSWORD)=' services-library/project/openproject/.env
+grep '^GLPI_ADMIN_PASSWORD=' services-library/project/glpi/.env
+```
+
+Keep these files in a password manager and an encrypted off-host backup. Never commit or copy their values into documentation. GLPI's unused default `tech`, `normal`, and `post-only` accounts should remain disabled.
