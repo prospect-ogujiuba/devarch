@@ -1,0 +1,475 @@
+{
+  "kind": "gentic.swe.initiative",
+  "schemaVersion": 1,
+  "id": "service-library-reliability",
+  "revision": 2,
+  "status": "active",
+  "objective": "Bring every DevArch service-library Compose definition to a verified current stable image policy and a documented production-ready operational baseline, while providing safe repeatable tooling to discover, review, apply, validate, and roll back future container image updates.",
+  "scope": {
+    "in": [
+      "All 175 services-library/**/compose.yml definitions and their service-owned configuration files",
+      "Container image inventory, upstream release/version policy, lifecycle/EOL assessment, immutable digest strategy, and update evidence",
+      "Production-readiness controls appropriate to each image: secret injection, loopback exposure, persistent storage, health/readiness, restart/dependency behavior, least privilege, bounded logging/resources, graceful shutdown, and documented exceptions",
+      "A tested script under scripts/services/ that discovers candidates and safely applies explicitly approved image/tag/digest updates",
+      "Catalog validation, regression tests, CI checks, operator documentation, migration notes, and completion reporting"
+    ],
+    "out": [
+      "Application workspaces under apps/ and generated backups",
+      "Automatic unattended production deployment or restart of running containers",
+      "Secret generation, secret rotation, or committing real credentials",
+      "Blind adoption of prerelease/nightly tags or unreviewed major-version migrations",
+      "Guaranteeing production suitability of upstream application code beyond the Compose deployment boundary",
+      "Kubernetes, Helm, Swarm, or cloud-provider deployment definitions"
+    ]
+  },
+  "constraints": [
+    "Preserve Podman Compose compatibility and the existing canonical category/service/compose.yml layout.",
+    "Treat latest stable as an upstream-specific policy decision; do not infer correctness from lexical tag ordering or blindly select the numerically largest registry tag.",
+    "Replace floating latest or untagged references; record explicit exceptions when an upstream publishes no stable versioned image.",
+    "Use immutable manifest digests where registry support permits while retaining a human-readable version tag.",
+    "Never place real or reusable secrets in tracked files; required secret values must use explicit environment or file indirection and fail closed when absent.",
+    "Stateful major upgrades require upstream migration/backup notes and must not be represented as safe in-place changes without evidence.",
+    "Hardening controls must be capability-aware: read-only filesystems, non-root users, dropped capabilities, and resource controls require compatibility validation or a documented exception.",
+    "Updater mutations must be targeted, reviewable, atomic, dry-run capable, and followed by Compose plus repository validation; the tool must not start or restart services.",
+    "Preserve unrelated user changes and avoid broad YAML reserialization that destroys anchors, comments, ordering, or formatting.",
+    "Use authoritative upstream releases and registry metadata; record unavailable, rate-limited, archived, or ambiguous sources as explicit blockers rather than guessing.",
+    "The full catalog is too large for one undifferentiated change: update in risk-based batches with current evidence and review at each boundary."
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-001",
+      "text": "A deterministic inventory covers every Compose definition and every image reference, recording canonical service ID, Compose service name, current reference, authoritative upstream/release source, version policy, candidate stable version, digest availability, support/EOL status, confidence, and required migration review."
+    },
+    {
+      "id": "AC-002",
+      "text": "Every image reference is either an explicit reviewed stable version with immutable digest where supported or a documented, machine-checkable exception; no accidental latest, untagged, prerelease, or registry-ambiguous reference remains."
+    },
+    {
+      "id": "AC-003",
+      "text": "A tested updater supports catalog-wide check/report and explicitly targeted apply workflows, dry-run, exact old-reference preconditions, registry digest resolution, atomic writes, concise diffs, validation, failure rollback, and nonzero exit on ambiguity or partial failure without starting containers."
+    },
+    {
+      "id": "AC-004",
+      "text": "A versioned production-readiness policy and validator assess each Compose service for required-secret handling, network exposure, durable storage, health checks, restart/dependency behavior, logging bounds, resource guidance, graceful shutdown, privilege/capability posture, and justified per-image exceptions."
+    },
+    {
+      "id": "AC-005",
+      "text": "All low-risk stateless and infrastructure definitions are updated to reviewed current stable versions and brought into compliance with the production-readiness policy without breaking catalog conventions."
+    },
+    {
+      "id": "AC-006",
+      "text": "All stateful database, storage, messaging, search, and registry definitions are updated with explicit compatibility, backup, migration, persistence, and rollback notes plus production-readiness controls."
+    },
+    {
+      "id": "AC-007",
+      "text": "All complex multi-container, project, ERP, workflow, collaboration, security, and CI stacks are reconciled with authoritative upstream deployment guidance, coherent component versions, dependency health ordering, required secret inputs, and documented upgrade/rollback procedures."
+    },
+    {
+      "id": "AC-008",
+      "text": "Every changed definition passes YAML parsing, Podman Compose configuration validation where prerequisites are available, catalog validation, policy validation, and focused regression tests; unavailable runtime checks are reported as gaps and not counted as passes."
+    },
+    {
+      "id": "AC-009",
+      "text": "Operator documentation explains version semantics, production-ready versus local defaults, update/check/apply/review/rollback commands, stateful upgrade cautions, exceptions, and the recurring maintenance workflow."
+    },
+    {
+      "id": "AC-010",
+      "text": "A final machine-generated coverage report proves that all 175 definitions and all image references were dispositioned, identifies residual exceptions/blockers, and maps each risk batch to current verification and explicit model self-review evidence."
+    }
+  ],
+  "assessment": {
+    "depth": "deep",
+    "reason": "This is a critical, catalog-wide migration spanning 175 Compose definitions, 201 Compose services, 199 image references, stateful data migrations, upstream compatibility research, security boundaries, and durable update automation. A missed definition or unsafe major upgrade could cause data loss or unreliable deployments.",
+    "surfaces": [
+      "175 Compose definitions across 24 categories",
+      "201 Compose service entries and 199 image references",
+      "173 currently unique image references with mixed tag schemes",
+      "Stateful volumes and major-version migration boundaries",
+      "Multi-image application stacks requiring coherent release sets",
+      "Registry APIs, authoritative upstream release metadata, and rate limits",
+      "Podman Compose behavior and external microservices-net contract",
+      "Tracked configuration files, default credentials, privileges, ports, and secrets",
+      "Catalog discovery/tests and new scripts/services tooling",
+      "Operator workflow, CI, audit evidence, and rollback documentation"
+    ],
+    "unknowns": [
+      "Which host architectures and Podman/Compose provider versions must be supported beyond the current repository guidance",
+      "Whether production-ready resource limits should be enforced defaults or documented sizing recommendations for all service classes",
+      "Which services are actively relied upon versus showcase-only, affecting smoke-test depth and deprecation choices",
+      "Registry authentication/rate-limit availability during full candidate and digest resolution",
+      "Upstream projects whose newest releases require irreversible schema or storage migrations",
+      "Images with non-semantic, calendar, component-specific, or moving tag schemes",
+      "Archived, renamed, split, or commercially gated upstream projects",
+      "Whether all upstream images support rootless, non-root, read-only, or dropped-capability operation"
+    ]
+  },
+  "practices": [
+    {
+      "id": "P-INVENTORY",
+      "practice": "Traceable inventory and policy-first assessment",
+      "appliesTo": [
+        "SLR-001"
+      ],
+      "reason": "Complete catalog coverage and authoritative version semantics must be established before bulk mutation so no image or migration boundary is missed."
+    },
+    {
+      "id": "P-TOOLING",
+      "practice": "Test-driven deterministic tooling and validation",
+      "appliesTo": [
+        "SLR-002",
+        "SLR-003"
+      ],
+      "reason": "The updater and policy validator mutate or gate 175 definitions, so failure, ambiguity, formatting preservation, atomicity, and rollback behavior require fixture-first automated tests."
+    },
+    {
+      "id": "P-MIGRATION",
+      "practice": "Risk-batched migration with security and operations review",
+      "appliesTo": [
+        "SLR-004",
+        "SLR-005",
+        "SLR-006"
+      ],
+      "reason": "Stateless, stateful, and complex stacks have materially different upgrade, secret, health, privilege, and rollback risks and must not be handled as one mechanical version bump."
+    },
+    {
+      "id": "P-INTEGRATION",
+      "practice": "Integrated qualification and acceptance-to-evidence review",
+      "appliesTo": [
+        "SLR-007"
+      ],
+      "reason": "Final qualification must prove total catalog coverage, policy compliance, documentation accuracy, and explicit residual gaps after all batches land."
+    }
+  ],
+  "obligations": [
+    {
+      "id": "O-INVENTORY",
+      "practiceId": "P-INVENTORY",
+      "criterionIds": [
+        "AC-001",
+        "AC-002"
+      ],
+      "text": "Run deterministic inventory/policy checks over the complete catalog and perform an explicit source-bound self-review for omissions, unsupported assumptions, and unsafe version selection.",
+      "verification": {
+        "kind": "catalog inventory plus source-bound review",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-UPDATER",
+      "practiceId": "P-TOOLING",
+      "criterionIds": [
+        "AC-003"
+      ],
+      "text": "Demonstrate updater behavior with fixture-based red/green tests covering dry-run, targeted apply, digest resolution seams, ambiguity, stale old references, atomic failure, rollback, validation failure, and formatting preservation.",
+      "verification": {
+        "kind": "fixture-driven updater verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ],
+        "sequence": "red-green"
+      }
+    },
+    {
+      "id": "O-POLICY",
+      "practiceId": "P-TOOLING",
+      "criterionIds": [
+        "AC-004"
+      ],
+      "text": "Run production-readiness policy tests and a full-catalog baseline, with source-bound review of rule safety, false positives, exception schema, and Podman Compose compatibility.",
+      "verification": {
+        "kind": "policy validator tests and baseline review",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ],
+        "sequence": "red-green"
+      }
+    },
+    {
+      "id": "O-STATELESS",
+      "practiceId": "P-MIGRATION",
+      "criterionIds": [
+        "AC-002",
+        "AC-004",
+        "AC-005",
+        "AC-008"
+      ],
+      "text": "Validate every low-risk/stateless batch and review image provenance, breaking changes, hardening compatibility, Compose output, and rollback notes before completion.",
+      "verification": {
+        "kind": "stateless batch validation and review",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-STATEFUL",
+      "practiceId": "P-MIGRATION",
+      "criterionIds": [
+        "AC-002",
+        "AC-004",
+        "AC-006",
+        "AC-008"
+      ],
+      "text": "Validate every stateful batch and review upstream migration paths, data layout, backup/restore instructions, health behavior, version/digest provenance, and rollback limits before completion.",
+      "verification": {
+        "kind": "stateful batch validation and migration review",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-COMPLEX",
+      "practiceId": "P-MIGRATION",
+      "criterionIds": [
+        "AC-002",
+        "AC-004",
+        "AC-007",
+        "AC-008"
+      ],
+      "text": "Validate every complex stack and review coherent component versions, upstream deployment parity, secret inputs, dependency ordering, health, persistent state, and rollback procedures before completion.",
+      "verification": {
+        "kind": "complex stack validation and review",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-FINAL",
+      "practiceId": "P-INTEGRATION",
+      "criterionIds": [
+        "AC-008",
+        "AC-009",
+        "AC-010"
+      ],
+      "text": "Run integrated repository and catalog qualification, regenerate the complete coverage report, verify documented commands, and perform an explicit source-bound self-review of all acceptance criteria and residual exceptions.",
+      "verification": {
+        "kind": "integrated qualification and acceptance review",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    }
+  ],
+  "work": [
+    {
+      "id": "SLR-001",
+      "kind": "task",
+      "title": "Inventory every image and define version/update policy",
+      "status": "active",
+      "dependsOn": [],
+      "criterionIds": [
+        "AC-001",
+        "AC-002"
+      ],
+      "obligationIds": [
+        "O-INVENTORY"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "This task establishes a data inventory and policy; deterministic full-catalog coverage and schema checks are the useful qualification boundary."
+      }
+    },
+    {
+      "id": "SLR-002",
+      "kind": "task",
+      "title": "Build safe image check and update tooling",
+      "status": "pending",
+      "dependsOn": [
+        "SLR-001"
+      ],
+      "criterionIds": [
+        "AC-003"
+      ],
+      "obligationIds": [
+        "O-UPDATER"
+      ],
+      "testing": {
+        "approach": "red-green",
+        "reason": "Mutation safety, ambiguity rejection, exact preconditions, formatting preservation, atomic rollback, and registry failure behavior should be driven by failing fixtures before implementation."
+      }
+    },
+    {
+      "id": "SLR-003",
+      "kind": "task",
+      "title": "Implement production-readiness policy, validator, and exception model",
+      "status": "pending",
+      "dependsOn": [
+        "SLR-001"
+      ],
+      "criterionIds": [
+        "AC-004"
+      ],
+      "obligationIds": [
+        "O-POLICY"
+      ],
+      "testing": {
+        "approach": "red-green",
+        "reason": "Policy rules will gate the entire catalog and need fixtures for compatible controls, justified exceptions, invalid secrets, exposure, persistence, health, privilege, and false-positive boundaries."
+      }
+    },
+    {
+      "id": "SLR-004",
+      "kind": "task",
+      "title": "Update and harden low-risk stateless and infrastructure services",
+      "status": "pending",
+      "dependsOn": [
+        "SLR-002",
+        "SLR-003"
+      ],
+      "criterionIds": [
+        "AC-002",
+        "AC-004",
+        "AC-005",
+        "AC-008"
+      ],
+      "obligationIds": [
+        "O-STATELESS"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Apply the established tooling and policy in reviewable category batches, then run focused plus full-catalog validation after each batch."
+      }
+    },
+    {
+      "id": "SLR-005",
+      "kind": "task",
+      "title": "Update and harden stateful data services",
+      "status": "pending",
+      "dependsOn": [
+        "SLR-002",
+        "SLR-003"
+      ],
+      "criterionIds": [
+        "AC-002",
+        "AC-004",
+        "AC-006",
+        "AC-008"
+      ],
+      "obligationIds": [
+        "O-STATEFUL"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Stateful changes require upstream migration research and batch qualification of persistence, backup, restore, health, and rollback behavior rather than synthetic unit tests alone."
+      }
+    },
+    {
+      "id": "SLR-006",
+      "kind": "task",
+      "title": "Reconcile and harden complex multi-container stacks",
+      "status": "pending",
+      "dependsOn": [
+        "SLR-002",
+        "SLR-003"
+      ],
+      "criterionIds": [
+        "AC-002",
+        "AC-004",
+        "AC-007",
+        "AC-008"
+      ],
+      "obligationIds": [
+        "O-COMPLEX"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Complex stacks must be checked as coherent upstream-defined systems, with rendered Compose and targeted smoke validation where prerequisites permit."
+      }
+    },
+    {
+      "id": "SLR-007",
+      "kind": "task",
+      "title": "Integrate qualification, recurring maintenance, and operator documentation",
+      "status": "pending",
+      "dependsOn": [
+        "SLR-004",
+        "SLR-005",
+        "SLR-006"
+      ],
+      "criterionIds": [
+        "AC-008",
+        "AC-009",
+        "AC-010"
+      ],
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Final qualification should combine all incremental evidence with one current full-catalog audit, repository test run, documentation command checks, and acceptance-to-evidence review."
+      }
+    }
+  ],
+  "artifacts": [],
+  "evidence": [],
+  "decisions": [
+    {
+      "id": "D-001",
+      "text": "Separate candidate discovery from mutation: catalog-wide checks may propose updates, but applying a change requires an explicit reviewed target and exact old-reference precondition.",
+      "basis": "Registry tag ordering and latest labels are not reliable enough for unattended major upgrades, especially for stateful and multi-image services."
+    },
+    {
+      "id": "D-002",
+      "text": "Use human-readable explicit stable tags plus immutable manifest digests where supported, with machine-checkable exceptions for registries or upstreams that cannot provide them.",
+      "basis": "Tags communicate intended versions while digests make deployment inputs reproducible."
+    },
+    {
+      "id": "D-003",
+      "text": "Define production readiness as a validated operational baseline with capability-aware exceptions, not as blindly applying every hardening knob to every upstream image.",
+      "basis": "Many vendor images require writable paths, fixed users, capabilities, or specific startup behavior; unsupported blanket controls can reduce reliability."
+    },
+    {
+      "id": "D-004",
+      "text": "Partition implementation into stateless, stateful, and complex-stack risk batches.",
+      "basis": "The catalog size and migration risk make a single bulk commit/review unsafe and difficult to roll back."
+    }
+  ],
+  "risks": [
+    {
+      "id": "R-001",
+      "text": "Newest major versions can require destructive or one-way data migrations.",
+      "mitigation": "Require authoritative migration and backup/restore notes, explicit stateful review, and rollback limitations before updating each affected service."
+    },
+    {
+      "id": "R-002",
+      "text": "Registry tags may be moving, incomparable, rate-limited, architecture-specific, or inconsistent with upstream releases.",
+      "mitigation": "Use upstream-specific policies, manifest digests, confidence/status fields, caching, and fail-closed blockers rather than lexical guessing."
+    },
+    {
+      "id": "R-003",
+      "text": "Blanket non-root/read-only/capability/resource settings can break vendor images or make health checks unreliable.",
+      "mitigation": "Test controls per image class and require narrow documented exceptions with reasons and review dates."
+    },
+    {
+      "id": "R-004",
+      "text": "The repository currently contains convenience credentials and local defaults that may be mistaken for production-safe configuration.",
+      "mitigation": "Move required secrets to explicit environment/file inputs, fail closed, provide non-secret examples, and clearly distinguish local convenience from production operation."
+    },
+    {
+      "id": "R-005",
+      "text": "Broad YAML rewrites can silently alter anchors, scalar types, ordering, or multi-container relationships.",
+      "mitigation": "Use exact scalar replacement with parse-before/parse-after validation, atomic writes, concise diffs, and formatting-preservation fixtures."
+    },
+    {
+      "id": "R-006",
+      "text": "Full runtime smoke testing of 175 definitions is expensive and may require unavailable memory, architectures, credentials, or external services.",
+      "mitigation": "Use layered validation, risk-based representative smokes, prerequisite reporting, and explicit gaps; never convert unavailable checks into passes."
+    },
+    {
+      "id": "R-007",
+      "text": "Upstream projects may be archived, renamed, commercially gated, or no longer publish maintained images.",
+      "mitigation": "Record lifecycle status and choose an explicit hold, replacement proposal, or deprecation decision rather than silently retaining an unsafe version."
+    }
+  ]
+}
