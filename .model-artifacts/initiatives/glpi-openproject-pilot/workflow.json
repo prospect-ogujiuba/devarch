@@ -2,7 +2,7 @@
   "kind": "gentic.swe.initiative",
   "schemaVersion": 1,
   "id": "glpi-openproject-pilot",
-  "revision": 7,
+  "revision": 17,
   "status": "active",
   "objective": "Import the existing IT Management workbook into clean GLPI and OpenProject instances using repeatable, validated, backup-first tooling.",
   "scope": {
@@ -159,7 +159,7 @@
       "id": "GOP-002",
       "kind": "task",
       "title": "Implement and validate idempotent GLPI import",
-      "status": "implemented",
+      "status": "complete",
       "dependsOn": [
         "GOP-001"
       ],
@@ -178,7 +178,7 @@
       "id": "GOP-003",
       "kind": "task",
       "title": "Back up, import into both systems, and reconcile",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": [
         "GOP-002"
       ],
@@ -243,6 +243,202 @@
         "permissionBoundary": "ordinary-bash-tool-call"
       },
       "outputHash": "sha256:a35b18a545c67754d8e0a2faae6591894c6fe3077ce9b44efe39040a1cf8c159"
+    },
+    {
+      "id": "E-31b6c4a2-b5f2-4db7-84ae-bd69fe552ffd",
+      "kind": "machine-command",
+      "workId": "GOP-002",
+      "obligationIds": [
+        "O-IDEMPOTENT"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -Eeuo pipefail; podman cp scripts/it-management/import_glpi.php glpi:/tmp/import_glpi.php; password=$(podman exec glpi cat /tmp/glpi-import-admin-password); out=$(podman exec -e GLPI_IMPORT_ADMIN_LOGIN=glpi -e GLPI_IMPORT_ADMIN_PASSWORD=\"$password\" glpi php /tmp/import_glpi.php /tmp/it-management-normalized.json); python3 -c 'import json,sys; x=json.loads(sys.argv[1]); assert x[\"users_created\"]==x[\"printers_created\"]==x[\"provisions_created\"]==x[\"tickets_created\"]==0; assert x[\"users_updated\"]==74 and x[\"printers_updated\"]==25 and x[\"provisions_updated\"]==9 and x[\"tickets_updated\"]==168 and x[\"unresolved_people\"]==0; print(x)' \"$out\""
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-22T22:09:57.719Z",
+      "completedAt": "2026-09-22T22:10:07.287Z",
+      "durationMs": 9568,
+      "contractFingerprint": "sha256:2460ac70b5296a2e3bbbec9640042153e025c954e24227dc5d31f741850fcf73",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/import_glpi.php"
+          ],
+          "hash": "sha256:977a22909fe08d303f50bf851362c77390ca67d64e2eb45caf380c0a2d1d6d7e"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/import_glpi.php"
+          ],
+          "hash": "sha256:977a22909fe08d303f50bf851362c77390ca67d64e2eb45caf380c0a2d1d6d7e"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_qEZrVJZns8D9GG6nEY76ayOu|fc_047e6916ccfbe73f016ab2fcb0148487d08e01725ef0544d72",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:68a61128db562ec4a33955b222f8d434156ec43443c9f87ad008820a2a38f296"
+    },
+    {
+      "id": "E-93019a7c-c3bf-48a2-aaea-4ff177a0eb3e",
+      "kind": "machine-command",
+      "workId": "GOP-003",
+      "obligationIds": [
+        "O-BACKUP",
+        "O-IDEMPOTENT",
+        "O-RECONCILE"
+      ],
+      "outcome": "failed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -Eeuo pipefail; backup=\"$HOME/.local/share/devarch/backups/it-management-pre-import-20260922-171938\"; test -d \"$backup\"; sha256sum -c \"$backup/SHA256SUMS\" >/dev/null; python3 scripts/it-management/normalize_workbook.py '/mnt/c/Users/prospect/OneDrive - Fluid Hose & Coupling Inc/Desktop/IT_Management_System.xlsm' /tmp/it-management-normalized.json >/tmp/normalize-summary.json; python3 -c 'import json; x=json.load(open(\"/tmp/it-management-normalized.json\")); assert {k:len(v) for k,v in x.items()}=={\"Tickets\":70,\"Archive\":98,\"Employees\":74,\"Printers\":25,\"Provisions\":9,\"DataTables\":35}' ; podman cp scripts/it-management/import_glpi.php glpi:/tmp/import_glpi.php; podman cp /tmp/it-management-normalized.json glpi:/tmp/it-management-normalized.json; password=$(podman exec glpi cat /tmp/glpi-import-admin-password); glpi_out=$(podman exec -e GLPI_IMPORT_ADMIN_LOGIN=glpi -e GLPI_IMPORT_ADMIN_PASSWORD=\"$password\" glpi php /tmp/import_glpi.php /tmp/it-management-normalized.json); python3 -c 'import json,sys; x=json.loads(sys.argv[1]); assert all(x[k]==0 for k in (\"users_created\",\"printers_created\",\"provisions_created\",\"tickets_created\")); assert (x[\"users_updated\"],x[\"printers_updated\"],x[\"provisions_updated\"],x[\"tickets_updated\"],x[\"unresolved_people\"])==(74,25,9,168,0)' \"$glpi_out\"; podman cp scripts/it-management/import_openproject.rb openproject:/tmp/import_openproject.rb; podman cp /tmp/it-management-normalized.json openproject:/tmp/it-management-normalized.json; op_out=$(podman exec openproject bundle exec rails runner /tmp/import_openproject.rb /tmp/it-management-normalized.json 2>&1 | awk '/^\\{.*\\}$/{line=$0} END{print line}'); python3 -c 'import json,sys; x=json.loads(sys.argv[1]); assert x.get(\"users_created\",0)==0 and x.get(\"work_packages_created\",0)==0; assert x[\"users_updated\"]==74 and x[\"work_packages_updated\"]==202 and x[\"work_packages_total\"]==202 and x[\"unresolved_people\"]==0; assert x[\"unresolved_parents\"]==10' \"$op_out\"; op_counts=$(podman exec openproject bundle exec rails runner 'p=Project.find_by!(identifier:\"it-management-system\"); cf=WorkPackageCustomField.find_by!(name:\"Source Record Key\"); vals=CustomValue.where(custom_field:cf,customized_type:\"WorkPackage\").group(:value).count; puts({users:User.where.not(id:[1,2,3,4]).count,groups:Group.count,members:p.members.count,work_packages:p.work_packages.count,tickets:p.work_packages.joins(:type).where(types:{name:\"IT Ticket\"}).count,printers:p.work_packages.joins(:type).where(types:{name:\"Printer Asset\"}).count,provisions:p.work_packages.joins(:type).where(types:{name:\"Equipment Provision\"}).count,demo_projects:Project.where(identifier:[\"demo-project\",\"your-scrum-project\"]).count,source_keys:vals.length,duplicate_keys:vals.count{|_,n| n>1}}.to_json)' 2>&1 | awk '/^\\{.*\\}$/{line=$0} END{print line}'); python3 -c 'import json,sys; x=json.loads(sys.argv[1]); assert x=={\"users\":74,\"groups\":16,\"members\":73,\"work_packages\":202,\"tickets\":168,\"printers\":25,\"provisions\":9,\"demo_projects\":0,\"source_keys\":202,\"duplicate_keys\":0}' \"$op_counts\"; glpi_counts=$(podman exec -i glpi-db sh -lc 'mariadb -N -uglpi -p\"$MARIADB_PASSWORD\" glpi' <<'SQL'\nSELECT CONCAT((SELECT COUNT(*) FROM glpi_users WHERE registration_number LIKE 'ITMS-%'),',',(SELECT COUNT(*) FROM glpi_groups WHERE name LIKE 'ITMS: %'),',',(SELECT COUNT(*) FROM glpi_printers WHERE otherserial LIKE 'ITMS-%'),',',(SELECT COUNT(*) FROM glpi_peripherals WHERE otherserial LIKE 'ITMS-%'),',',(SELECT COUNT(*) FROM glpi_tickets WHERE externalid LIKE 'ITMS-%'),',',(SELECT COUNT(*) FROM (SELECT externalid FROM glpi_tickets WHERE externalid LIKE 'ITMS-%' GROUP BY externalid HAVING COUNT(*)>1) d),',',(SELECT COUNT(*) FROM glpi_users WHERE name IN ('tech','normal','post-only') AND is_active=1));\nSQL\n); test \"$glpi_counts\" = '74,16,25,9,168,0,0'; test \"$(podman inspect --format '{{.State.Status}}' glpi)\" = running; test \"$(podman inspect --format '{{.State.Health.Status}}' glpi-db)\" = healthy; test \"$(podman inspect --format '{{.State.Health.Status}}' openproject)\" = healthy; test \"$(podman inspect --format '{{.State.Health.Status}}' openproject-db)\" = healthy; test \"$(curl -kLsS -o /dev/null -w '%{http_code}' --max-time 20 https://glpi.test)\" = 200; test \"$(curl -kLsS -o /dev/null -w '%{http_code}' --max-time 20 https://openproject.test)\" = 200; php -l scripts/it-management/import_glpi.php >/dev/null; ruby -c scripts/it-management/import_openproject.rb >/dev/null; python3 -m py_compile scripts/it-management/normalize_workbook.py; git diff --check -- scripts/it-management; echo \"verified: source=74/168/25/9 glpi=$glpi_counts openproject=$op_counts backup=ok health=ok\""
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-23T12:57:38.715Z",
+      "completedAt": "2026-09-23T12:59:18.356Z",
+      "durationMs": 99641,
+      "contractFingerprint": "sha256:2460ac70b5296a2e3bbbec9640042153e025c954e24227dc5d31f741850fcf73",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/import_glpi.php",
+            "scripts/it-management/import_openproject.rb",
+            "scripts/it-management/normalize_workbook.py"
+          ],
+          "hash": "sha256:626b78bd0b353436c5fa6140461632fe70ad81856701d80bade6eb96b30c29ae"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/import_glpi.php",
+            "scripts/it-management/import_openproject.rb",
+            "scripts/it-management/normalize_workbook.py"
+          ],
+          "hash": "sha256:626b78bd0b353436c5fa6140461632fe70ad81856701d80bade6eb96b30c29ae"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_qs4pUHr5betMFXQ4SmdquFG1|fc_047e6916ccfbe73f016ab3cc9819f887d08e118fee21784ed7",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:82afc40752d87fe6f0d504d0057542db14d329639c765b524539a7105d76147b"
+    },
+    {
+      "id": "E-5dbd8517-7230-4950-aa01-58fdfb34367e",
+      "kind": "machine-command",
+      "workId": "GOP-003",
+      "obligationIds": [
+        "O-BACKUP",
+        "O-IDEMPOTENT",
+        "O-RECONCILE"
+      ],
+      "outcome": "failed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -Eeuo pipefail; backup=\"$HOME/.local/share/devarch/backups/it-management-pre-import-20260922-171938\"; sha256sum -c \"$backup/SHA256SUMS\" >/dev/null; python3 scripts/it-management/normalize_workbook.py '/mnt/c/Users/prospect/OneDrive - Fluid Hose & Coupling Inc/Desktop/IT_Management_System.xlsm' /tmp/it-management-normalized.json >/dev/null; python3 -c 'import json; x=json.load(open(\"/tmp/it-management-normalized.json\")); assert {k:len(v) for k,v in x.items()}=={\"Tickets\":70,\"Archive\":98,\"Employees\":74,\"Printers\":25,\"Provisions\":9,\"DataTables\":35}'; podman cp scripts/it-management/import_glpi.php glpi:/tmp/import_glpi.php; podman cp /tmp/it-management-normalized.json glpi:/tmp/it-management-normalized.json; password=$(podman exec glpi cat /tmp/glpi-import-admin-password); glpi_out=$(podman exec -e GLPI_IMPORT_ADMIN_LOGIN=glpi -e GLPI_IMPORT_ADMIN_PASSWORD=\"$password\" glpi php /tmp/import_glpi.php /tmp/it-management-normalized.json); python3 -c 'import json,sys; x=json.loads(sys.argv[1]); assert all(x[k]==0 for k in (\"users_created\",\"printers_created\",\"provisions_created\",\"tickets_created\")); assert (x[\"users_updated\"],x[\"printers_updated\"],x[\"provisions_updated\"],x[\"tickets_updated\"],x[\"unresolved_people\"])==(74,25,9,168,0)' \"$glpi_out\"; podman cp scripts/it-management/import_openproject.rb openproject:/tmp/import_openproject.rb; podman cp /tmp/it-management-normalized.json openproject:/tmp/it-management-normalized.json; op_out=$(podman exec openproject bundle exec rails runner /tmp/import_openproject.rb /tmp/it-management-normalized.json 2>&1 | awk '/^\\{.*\\}$/{line=$0} END{print line}'); python3 -c 'import json,sys; x=json.loads(sys.argv[1]); assert x.get(\"users_created\",0)==0 and x.get(\"work_packages_created\",0)==0; assert x[\"users_updated\"]==74 and x[\"work_packages_updated\"]==202 and x[\"work_packages_total\"]==202 and x[\"unresolved_people\"]==0 and x[\"unresolved_parents\"]==10' \"$op_out\"; op_counts=$(podman exec openproject bundle exec rails runner 'p=Project.find_by!(identifier:\"it-management-system\"); cf=WorkPackageCustomField.find_by!(name:\"Source Record Key\"); vals=CustomValue.where(custom_field:cf,customized_type:\"WorkPackage\").group(:value).count; puts({users:User.where.not(id:[1,2,3,4]).count,groups:Group.count,members:p.members.count,work_packages:p.work_packages.count,tickets:p.work_packages.joins(:type).where(types:{name:\"IT Ticket\"}).count,printers:p.work_packages.joins(:type).where(types:{name:\"Printer Asset\"}).count,provisions:p.work_packages.joins(:type).where(types:{name:\"Equipment Provision\"}).count,demo_projects:Project.where(identifier:[\"demo-project\",\"your-scrum-project\"]).count,source_keys:vals.length,duplicate_keys:vals.count{|_,n| n>1}}.to_json)' 2>&1 | awk '/^\\{.*\\}$/{line=$0} END{print line}'); python3 -c 'import json,sys; x=json.loads(sys.argv[1]); assert x=={\"users\":74,\"groups\":16,\"members\":73,\"work_packages\":202,\"tickets\":168,\"printers\":25,\"provisions\":9,\"demo_projects\":0,\"source_keys\":202,\"duplicate_keys\":0}' \"$op_counts\"; glpi_counts=$(podman exec -i glpi-db sh -lc 'mariadb -N -uglpi -p\"$MARIADB_PASSWORD\" glpi' <<'SQL'\nSELECT CONCAT((SELECT COUNT(*) FROM glpi_users WHERE registration_number LIKE 'ITMS-%'),',',(SELECT COUNT(*) FROM glpi_groups WHERE name LIKE 'ITMS: %'),',',(SELECT COUNT(*) FROM glpi_printers WHERE otherserial LIKE 'ITMS-%'),',',(SELECT COUNT(*) FROM glpi_peripherals WHERE otherserial LIKE 'ITMS-%'),',',(SELECT COUNT(*) FROM glpi_tickets WHERE externalid LIKE 'ITMS-%'),',',(SELECT COUNT(*) FROM (SELECT externalid FROM glpi_tickets WHERE externalid LIKE 'ITMS-%' GROUP BY externalid HAVING COUNT(*)>1) d),',',(SELECT COUNT(*) FROM glpi_users WHERE name IN ('tech','normal','post-only') AND is_active=1));\nSQL\n); test \"$glpi_counts\" = '74,16,25,9,168,0,0'; test \"$(podman inspect --format '{{.State.Status}}' glpi)\" = running; test \"$(podman inspect --format '{{.State.Health.Status}}' glpi-db)\" = healthy; test \"$(podman inspect --format '{{.State.Health.Status}}' openproject)\" = healthy; test \"$(podman inspect --format '{{.State.Health.Status}}' openproject-db)\" = healthy; test \"$(curl -kLsS -o /dev/null -w '%{http_code}' --max-time 20 https://glpi.test)\" = 200; test \"$(curl -kLsS -o /dev/null -w '%{http_code}' --max-time 20 https://openproject.test)\" = 200; podman exec glpi php -l /tmp/import_glpi.php >/dev/null; podman exec openproject ruby -c /tmp/import_openproject.rb >/dev/null; python3 -m py_compile scripts/it-management/normalize_workbook.py; git diff --check -- scripts/it-management; echo \"verified: source=74/168/25/9 glpi=$glpi_counts openproject=$op_counts backup=ok health=ok\""
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-23T13:01:39.398Z",
+      "completedAt": "2026-09-23T13:03:51.480Z",
+      "durationMs": 132082,
+      "contractFingerprint": "sha256:2460ac70b5296a2e3bbbec9640042153e025c954e24227dc5d31f741850fcf73",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/import_glpi.php",
+            "scripts/it-management/import_openproject.rb",
+            "scripts/it-management/normalize_workbook.py"
+          ],
+          "hash": "sha256:626b78bd0b353436c5fa6140461632fe70ad81856701d80bade6eb96b30c29ae"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/import_glpi.php",
+            "scripts/it-management/import_openproject.rb",
+            "scripts/it-management/normalize_workbook.py"
+          ],
+          "hash": "sha256:626b78bd0b353436c5fa6140461632fe70ad81856701d80bade6eb96b30c29ae"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_wXZZLaRf7KzSDgM5zstiaDgN|fc_047e6916ccfbe73f016ab3cd87c56c87d091194fe1db0ffd72",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:586251da67113ef48e3b8f66a43250abd9a5bd96e6f367426bb6e09750b7d63a"
+    },
+    {
+      "id": "E-bc0968f5-e816-41d1-980c-27b52970d166",
+      "kind": "machine-command",
+      "workId": "GOP-003",
+      "obligationIds": [
+        "O-BACKUP",
+        "O-IDEMPOTENT",
+        "O-RECONCILE"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -Eeuo pipefail; backup=\"$HOME/.local/share/devarch/backups/it-management-pre-import-20260922-171938\"; sha256sum -c \"$backup/SHA256SUMS\" >/dev/null; python3 scripts/it-management/normalize_workbook.py '/mnt/c/Users/prospect/OneDrive - Fluid Hose & Coupling Inc/Desktop/IT_Management_System.xlsm' /tmp/it-management-normalized.json >/dev/null; python3 -c 'import json; x=json.load(open(\"/tmp/it-management-normalized.json\")); assert {k:len(v) for k,v in x.items()}=={\"Tickets\":70,\"Archive\":98,\"Employees\":74,\"Printers\":25,\"Provisions\":9,\"DataTables\":35}'; podman cp scripts/it-management/import_glpi.php glpi:/tmp/import_glpi.php; podman cp /tmp/it-management-normalized.json glpi:/tmp/it-management-normalized.json; password=$(podman exec glpi cat /tmp/glpi-import-admin-password); glpi_out=$(podman exec -e GLPI_IMPORT_ADMIN_LOGIN=glpi -e GLPI_IMPORT_ADMIN_PASSWORD=\"$password\" glpi php /tmp/import_glpi.php /tmp/it-management-normalized.json); python3 -c 'import json,sys; x=json.loads(sys.argv[1]); assert all(x[k]==0 for k in (\"users_created\",\"printers_created\",\"provisions_created\",\"tickets_created\")); assert (x[\"users_updated\"],x[\"printers_updated\"],x[\"provisions_updated\"],x[\"tickets_updated\"],x[\"unresolved_people\"])==(74,25,9,168,0)' \"$glpi_out\"; podman cp scripts/it-management/import_openproject.rb openproject:/tmp/import_openproject.rb; podman cp /tmp/it-management-normalized.json openproject:/tmp/it-management-normalized.json; op_out=$(podman exec openproject bundle exec rails runner /tmp/import_openproject.rb /tmp/it-management-normalized.json 2>&1 | awk '/^\\{.*\\}$/{line=$0} END{print line}'); python3 -c 'import json,sys; x=json.loads(sys.argv[1]); assert x.get(\"users_created\",0)==0 and x.get(\"work_packages_created\",0)==0; assert x[\"users_updated\"]==74 and x[\"work_packages_updated\"]==202 and x[\"work_packages_total\"]==202 and x[\"unresolved_people\"]==0 and x[\"unresolved_parents\"]==10' \"$op_out\"; op_counts=$(podman exec openproject bundle exec rails runner 'p=Project.find_by!(identifier:\"it-management-system\"); cf=WorkPackageCustomField.find_by!(name:\"Source Record Key\"); vals=CustomValue.where(custom_field:cf,customized_type:\"WorkPackage\").group(:value).count; puts({users:User.where.not(id:[1,2,3,4]).count,groups:Group.count,members:p.members.count,work_packages:p.work_packages.count,tickets:p.work_packages.joins(:type).where(types:{name:\"IT Ticket\"}).count,printers:p.work_packages.joins(:type).where(types:{name:\"Printer Asset\"}).count,provisions:p.work_packages.joins(:type).where(types:{name:\"Equipment Provision\"}).count,demo_projects:Project.where(identifier:[\"demo-project\",\"your-scrum-project\"]).count,source_keys:vals.length,duplicate_keys:vals.count{|_,n| n>1}}.to_json)' 2>&1 | awk '/^\\{.*\\}$/{line=$0} END{print line}'); python3 -c 'import json,sys; x=json.loads(sys.argv[1]); assert x=={\"users\":74,\"groups\":16,\"members\":73,\"work_packages\":202,\"tickets\":168,\"printers\":25,\"provisions\":9,\"demo_projects\":0,\"source_keys\":202,\"duplicate_keys\":0}' \"$op_counts\"; glpi_counts=$(podman exec -i glpi-db sh -lc 'mariadb -N -uglpi -p\"$MARIADB_PASSWORD\" glpi' <<'SQL'\nSELECT CONCAT((SELECT COUNT(*) FROM glpi_users WHERE registration_number LIKE 'ITMS-%'),',',(SELECT COUNT(*) FROM glpi_groups WHERE name LIKE 'ITMS: %'),',',(SELECT COUNT(*) FROM glpi_printers WHERE otherserial LIKE 'ITMS-%'),',',(SELECT COUNT(*) FROM glpi_peripherals WHERE otherserial LIKE 'ITMS-%'),',',(SELECT COUNT(*) FROM glpi_tickets WHERE externalid LIKE 'ITMS-%'),',',(SELECT COUNT(*) FROM (SELECT externalid FROM glpi_tickets WHERE externalid LIKE 'ITMS-%' GROUP BY externalid HAVING COUNT(*)>1) d),',',(SELECT COUNT(*) FROM glpi_users WHERE name IN ('tech','normal','post-only') AND is_active=1));\nSQL\n); test \"$glpi_counts\" = '74,16,25,9,168,0,0'; test \"$(podman inspect --format '{{.State.Status}}' glpi)\" = running; test \"$(podman inspect --format '{{.State.Health.Status}}' glpi-db)\" = healthy; test \"$(podman inspect --format '{{.State.Health.Status}}' openproject)\" = healthy; test \"$(podman inspect --format '{{.State.Health.Status}}' openproject-db)\" = healthy; test \"$(curl -LsS -o /dev/null -w '%{http_code}' --max-time 20 http://127.0.0.1:9216)\" = 200; podman exec openproject curl -fsS http://localhost/health_checks/default >/dev/null; podman exec glpi php -l /tmp/import_glpi.php >/dev/null; podman exec openproject ruby -c /tmp/import_openproject.rb >/dev/null; python3 -m py_compile scripts/it-management/normalize_workbook.py; git diff --check -- scripts/it-management; echo \"verified: source=74/168/25/9 glpi=$glpi_counts openproject=$op_counts backup=ok health=ok\""
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-23T13:06:46.324Z",
+      "completedAt": "2026-09-23T13:08:29.910Z",
+      "durationMs": 103586,
+      "contractFingerprint": "sha256:2460ac70b5296a2e3bbbec9640042153e025c954e24227dc5d31f741850fcf73",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/import_glpi.php",
+            "scripts/it-management/import_openproject.rb",
+            "scripts/it-management/normalize_workbook.py"
+          ],
+          "hash": "sha256:626b78bd0b353436c5fa6140461632fe70ad81856701d80bade6eb96b30c29ae"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/import_glpi.php",
+            "scripts/it-management/import_openproject.rb",
+            "scripts/it-management/normalize_workbook.py"
+          ],
+          "hash": "sha256:626b78bd0b353436c5fa6140461632fe70ad81856701d80bade6eb96b30c29ae"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_NJIdcPnASef0YV3uHyD4qGOx|fc_047e6916ccfbe73f016ab3cebadc7487d093de47fe8af48acd",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:9dd67cff8e730864f2999f354ce4ee193eb7c17b47daca553dfd0e627c17aad1"
     }
   ],
   "decisions": [
