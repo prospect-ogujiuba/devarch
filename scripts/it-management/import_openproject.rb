@@ -239,8 +239,10 @@ ActiveRecord::Base.transaction do
                     end
     requester = users_by_name[as_text.call(requester_name).downcase]
     assignee = users_by_name[as_text.call(assignee_name).downcase]
-    unresolved_people << "#{key}:requester" if !as_text.call(requester_name).empty? && requester.nil?
-    unresolved_people << "#{key}:assignee" if !as_text.call(assignee_name).empty? && assignee.nil?
+    requester_label = as_text.call(requester_name)
+    assignee_label = as_text.call(assignee_name)
+    unresolved_people << "#{key}:requester" if !requester_label.empty? && requester_label != "-" && requester.nil?
+    unresolved_people << "#{key}:assignee" if !assignee_label.empty? && assignee_label != "-" && assignee.nil?
 
     description_parts = []
     description_parts << as_text.call(record["Description"]) unless as_text.call(record["Description"]).empty?
