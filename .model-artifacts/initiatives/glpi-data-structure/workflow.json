@@ -1,0 +1,947 @@
+{
+  "kind": "gentic.swe.initiative",
+  "schemaVersion": 1,
+  "id": "glpi-data-structure",
+  "revision": 37,
+  "status": "complete",
+  "objective": "Audit and normalize all GLPI business data imported from IT_Management_System.xlsm so every supported entity uses clean GLPI-native display fields, structured references, stable source keys, valid relationships, and idempotent importer behavior.",
+  "policies": {
+    "commitOnWorkCompletion": false,
+    "independentReviewOnCompletion": true
+  },
+  "scope": {
+    "in": [
+      "Imported GLPI business records and supporting references in the running glpi database",
+      "scripts/it-management/import_glpi.php",
+      "Users, groups, memberships, printers, peripherals/provisions, tickets, actors, locations, manufacturers, models, states, and categories",
+      "Transactional cleanup and deterministic integrity verification"
+    ],
+    "out": [
+      "GLPI framework, migration, session, log, plugin-internal, and authentication-secret data",
+      "Unrelated manually created business records",
+      "Fabricating source details absent from both the database and repository",
+      "Deleting historical tickets or inactive users solely because of status"
+    ]
+  },
+  "constraints": [
+    "Preserve source keys in registration_number, externalid, and otherserial.",
+    "Use transactions and preserve record IDs and relationships.",
+    "Do not guess missing provision details.",
+    "Remove prefixes and placeholders only from user-facing fields when structured/source fields retain the information.",
+    "Keep asset names meaningful and unique while storing manufacturer, model, location, state, owner, and contact separately.",
+    "Make importer reruns preserve normalized structure and friendly names.",
+    "Do not expose credentials in tracked files or reports."
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-001",
+      "text": "A deterministic audit covers every imported business-record family, counts, display anomalies, placeholders, duplicates, missing relationships, and source-key coverage."
+    },
+    {
+      "id": "AC-002",
+      "text": "Imported users, groups, memberships, and reference entities have clean display values, valid relationships, stable source IDs, and no redundant import prefixes."
+    },
+    {
+      "id": "AC-003",
+      "text": "Printers and peripherals use the best available friendly names and structured manufacturer, model, location, state, owner, and contact fields without invented details."
+    },
+    {
+      "id": "AC-004",
+      "text": "Imported tickets retain history and source IDs while actors, categories, statuses, priorities, dates, and titles are structurally valid and free of redundant import labels."
+    },
+    {
+      "id": "AC-005",
+      "text": "The importer is idempotent and does not recreate removed prefixes, placeholders, duplicate references, or overwritten friendly names."
+    },
+    {
+      "id": "AC-006",
+      "text": "Final verification shows referential integrity, unique source keys, no targeted display anomalies, valid PHP syntax, and explicit review evidence."
+    }
+  ],
+  "assessment": {
+    "depth": "deep",
+    "reason": "This changes live relational business data and the importer that can overwrite it; incorrect mappings could silently corrupt ownership, history, or reference relationships.",
+    "surfaces": [
+      "Running MariaDB glpi database",
+      "Imported users, profiles, groups, and memberships",
+      "Printers, peripherals, references, ownership, and location",
+      "Tickets, actors, categories, statuses, and dates",
+      "PHP importer idempotency"
+    ],
+    "unknowns": [
+      "The original workbook is unavailable, so missing provision details cannot be reconstructed.",
+      "Some source terminology and future dates may be intentional.",
+      "Contextual duplicate labels may be valid in GLPI."
+    ]
+  },
+  "practices": [
+    {
+      "id": "P-AUDIT",
+      "practice": "Inventory before mutation and classify safe versus ambiguous normalization.",
+      "appliesTo": [
+        "GDS-001"
+      ],
+      "reason": "A complete baseline is required before broad cleanup."
+    },
+    {
+      "id": "P-TRANSACTION",
+      "practice": "Apply deterministic SQL mappings transactionally with post-change invariants.",
+      "appliesTo": [
+        "GDS-002",
+        "GDS-003"
+      ],
+      "reason": "Relational changes must preserve IDs and relationships."
+    },
+    {
+      "id": "P-IDEMPOTENCY",
+      "practice": "Align importer behavior with normalized structure and validate repeatability.",
+      "appliesTo": [
+        "GDS-004"
+      ],
+      "reason": "Future imports must not undo cleanup."
+    },
+    {
+      "id": "P-VERIFY",
+      "practice": "Run full integrity checks and source-bound reviews.",
+      "appliesTo": [
+        "GDS-005"
+      ],
+      "reason": "Broad cleanup needs current machine and review evidence."
+    }
+  ],
+  "obligations": [
+    {
+      "id": "O-AUDIT",
+      "practiceId": "P-AUDIT",
+      "criterionIds": [
+        "AC-001"
+      ],
+      "text": "Inventory imported families, source keys, anomalies, placeholders, duplicates, and missing relationships.",
+      "verification": {
+        "kind": "database audit",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-ORG",
+      "practiceId": "P-TRANSACTION",
+      "criterionIds": [
+        "AC-002"
+      ],
+      "text": "Normalize users, groups, memberships, and reference displays transactionally and verify relationship invariants.",
+      "verification": {
+        "kind": "organizational data verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-BUSINESS",
+      "practiceId": "P-TRANSACTION",
+      "criterionIds": [
+        "AC-003",
+        "AC-004"
+      ],
+      "text": "Normalize assets, provisions, tickets, and actors transactionally and verify relationship and history invariants.",
+      "verification": {
+        "kind": "business data verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-IMPORTER",
+      "practiceId": "P-IDEMPOTENCY",
+      "criterionIds": [
+        "AC-005"
+      ],
+      "text": "Validate importer syntax and normalized lookup/write behavior without destructive re-import.",
+      "verification": {
+        "kind": "importer verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-FINAL",
+      "practiceId": "P-VERIFY",
+      "criterionIds": [
+        "AC-006"
+      ],
+      "text": "Run final cross-entity invariants and complete explicit source-bound and independent reviews.",
+      "verification": {
+        "kind": "final integrity verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review",
+          "independent-review"
+        ]
+      }
+    }
+  ],
+  "work": [
+    {
+      "id": "GDS-001",
+      "kind": "task",
+      "title": "Audit all imported GLPI entities",
+      "status": "complete",
+      "dependsOn": [],
+      "criterionIds": [
+        "AC-001"
+      ],
+      "obligationIds": [
+        "O-AUDIT"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Read-only inventory establishes the cleanup contract."
+      }
+    },
+    {
+      "id": "GDS-002",
+      "kind": "task",
+      "title": "Normalize users, groups, and references",
+      "status": "complete",
+      "dependsOn": [
+        "GDS-001"
+      ],
+      "criterionIds": [
+        "AC-002"
+      ],
+      "obligationIds": [
+        "O-ORG"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Transactional mappings are checked with before-and-after invariants."
+      }
+    },
+    {
+      "id": "GDS-003",
+      "kind": "task",
+      "title": "Normalize assets, provisions, tickets, and actors",
+      "status": "complete",
+      "dependsOn": [
+        "GDS-001"
+      ],
+      "criterionIds": [
+        "AC-003",
+        "AC-004"
+      ],
+      "obligationIds": [
+        "O-BUSINESS"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Live-data cleanup is checked through deterministic SQL invariants."
+      }
+    },
+    {
+      "id": "GDS-004",
+      "kind": "task",
+      "title": "Make the GLPI importer preserve normalized structure",
+      "status": "complete",
+      "dependsOn": [
+        "GDS-002",
+        "GDS-003"
+      ],
+      "criterionIds": [
+        "AC-005"
+      ],
+      "obligationIds": [
+        "O-IMPORTER"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Static and mapping checks validate repeatability without destructive re-import."
+      }
+    },
+    {
+      "id": "GDS-005",
+      "kind": "task",
+      "title": "Verify and review complete cleanup",
+      "status": "complete",
+      "dependsOn": [
+        "GDS-004"
+      ],
+      "criterionIds": [
+        "AC-006"
+      ],
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Final invariants and reviews qualify the complete change."
+      }
+    }
+  ],
+  "artifacts": [],
+  "evidence": [
+    {
+      "id": "E-2f23d0fd-71d0-485d-b1dd-26d7b131fb65",
+      "kind": "machine-command",
+      "workId": "GDS-001",
+      "obligationIds": [
+        "O-AUDIT"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "PW=$(podman inspect glpi-db --format '{{range .Config.Env}}{{println .}}{{end}}' | awk -F= '$1==\"MARIADB_PASSWORD\"{print substr($0,index($0,\"=\")+1)}') && podman exec -i -e MYSQL_PWD=\"$PW\" glpi-db mariadb -uglpi glpi --batch --raw < scripts/it-management/audit_glpi.sql"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T14:25:14.077Z",
+      "completedAt": "2026-09-25T14:25:20.858Z",
+      "durationMs": 6781,
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_glpi.sql"
+          ],
+          "hash": "sha256:c001a7a2ee1f67a8aa979a3e05b7426ae975b5d7ca6a6230bb0d316734960b2c"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_glpi.sql"
+          ],
+          "hash": "sha256:c001a7a2ee1f67a8aa979a3e05b7426ae975b5d7ca6a6230bb0d316734960b2c"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_5EQTYEFhkeXBmzn2VBwElGc3|fc_0d30f7c0a08571bd016ab68448d7a887d28096109513656fa0",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:7472e0fecabf751ebc4d262019538bc8cd5bbb7a95e3556c8ea389bd0ba5b237"
+    },
+    {
+      "id": "E-5b252b0e-1053-4602-b763-ae417af94793",
+      "kind": "machine-command",
+      "workId": "GDS-001",
+      "obligationIds": [
+        "O-AUDIT"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "PW=$(podman inspect glpi-db --format '{{range .Config.Env}}{{println .}}{{end}}' | awk -F= '$1==\"MARIADB_PASSWORD\"{print substr($0,index($0,\"=\")+1)}') && podman exec -i -e MYSQL_PWD=\"$PW\" glpi-db mariadb -uglpi glpi --batch --raw < scripts/it-management/audit_glpi.sql"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T14:25:54.276Z",
+      "completedAt": "2026-09-25T14:25:56.487Z",
+      "durationMs": 2211,
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_glpi.sql"
+          ],
+          "hash": "sha256:0747250299782179706386f40e04c779ae62c2492f2efa26b855f2f14945235e"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_glpi.sql"
+          ],
+          "hash": "sha256:0747250299782179706386f40e04c779ae62c2492f2efa26b855f2f14945235e"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_DySbOPrhRWUZQxM7YH1Jjdnb|fc_0d30f7c0a08571bd016ab68470faa887d2b06391e5b8c9dcba",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:f122e6d83fba7c0a4b9d790317cf30a5ae9d05d85b3b1c1d6e2bdcad0fc34367"
+    },
+    {
+      "id": "E-ba6345e7-245f-4d8c-8840-c1124f067aa3",
+      "kind": "model-review",
+      "workId": "GDS-001",
+      "obligationIds": [
+        "O-AUDIT"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T14:26:04.607Z",
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/audit_glpi.sql"
+        ],
+        "hash": "sha256:0747250299782179706386f40e04c779ae62c2492f2efa26b855f2f14945235e"
+      },
+      "dimensions": [
+        "scope coverage",
+        "query safety",
+        "source-key classification",
+        "relationship coverage",
+        "anomaly specificity"
+      ],
+      "summary": "Model self-review of scripts/it-management/audit_glpi.sql confirmed it is read-only, covers all imported entity families handled by import_glpi.php, distinguishes explicit and hash employee keys, checks dedicated source-key coverage and uniqueness, and reports the actionable display/relationship anomalies without treating GLPI internal tables as business data.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0d89e-2e90-7244-90af-33d28abee1df"
+      }
+    },
+    {
+      "id": "E-9552ab0d-5be2-4866-80fa-1469c46b3b1f",
+      "kind": "machine-command",
+      "workId": "GDS-002",
+      "obligationIds": [
+        "O-ORG"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "PW=$(podman inspect glpi-db --format '{{range .Config.Env}}{{println .}}{{end}}' | awk -F= '$1==\"MARIADB_PASSWORD\"{print substr($0,index($0,\"=\")+1)}') && podman exec -i -e MYSQL_PWD=\"$PW\" glpi-db mariadb -uglpi glpi --batch --raw --skip-column-names -e \"SELECT CONCAT('IMPORTED_USERS=',COUNT(*),', DUP_KEYS=',COUNT(*)-COUNT(DISTINCT registration_number),', SOURCE_PREFIX_LOGINS=',SUM(name LIKE 'itms-%'),', RECORD_SURNAMES=',SUM(realname='Record')) FROM glpi_users WHERE registration_number LIKE 'ITMS-EMP:%' OR registration_number LIKE 'ITMS-EMP-HASH:%'; SELECT CONCAT('SYNTHETIC_EMAILS=',COUNT(*)) FROM glpi_useremails ue JOIN glpi_users u ON u.id=ue.users_id WHERE (u.registration_number LIKE 'ITMS-EMP:%' OR u.registration_number LIKE 'ITMS-EMP-HASH:%') AND ue.email LIKE '%@employees.invalid'; SELECT CONCAT('GROUP_PREFIXES=',COUNT(*),', GROUP_COUNT=',(SELECT COUNT(*) FROM glpi_groups WHERE comment='Imported department from IT_Management_System.xlsm')) FROM glpi_groups WHERE name LIKE 'ITMS:%'; SELECT CONCAT('CATEGORY_PREFIXES=',COUNT(*)) FROM glpi_itilcategories WHERE name LIKE 'ITMS:%'; SELECT CONCAT('USERS_WITHOUT_PROFILE=',COUNT(*)) FROM glpi_users u WHERE (u.registration_number LIKE 'ITMS-EMP:%' OR u.registration_number LIKE 'ITMS-EMP-HASH:%') AND NOT EXISTS (SELECT 1 FROM glpi_profiles_users pu WHERE pu.users_id=u.id); SELECT CONCAT('USERS_WITHOUT_GROUP=',COUNT(*)) FROM glpi_users u WHERE (u.registration_number LIKE 'ITMS-EMP:%' OR u.registration_number LIKE 'ITMS-EMP-HASH:%') AND NOT EXISTS (SELECT 1 FROM glpi_groups_users gu JOIN glpi_groups g ON g.id=gu.groups_id AND g.comment='Imported department from IT_Management_System.xlsm' WHERE gu.users_id=u.id); SELECT CONCAT('NORMALIZED_COLLISIONS=',COUNT(*)) FROM (SELECT LOWER(TRIM(name)) n FROM glpi_groups GROUP BY n HAVING COUNT(*)>1 UNION ALL SELECT LOWER(TRIM(name)) n FROM glpi_itilcategories GROUP BY n HAVING COUNT(*)>1) d;\""
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T14:27:20.398Z",
+      "completedAt": "2026-09-25T14:27:24.361Z",
+      "durationMs": 3963,
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_glpi.sql"
+          ],
+          "hash": "sha256:0747250299782179706386f40e04c779ae62c2492f2efa26b855f2f14945235e"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_glpi.sql"
+          ],
+          "hash": "sha256:0747250299782179706386f40e04c779ae62c2492f2efa26b855f2f14945235e"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_UsbUqUBbma4QYScCcvuN16SY|fc_0d30f7c0a08571bd016ab684bdf5a487d2867edddf153c2309",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:9f0ed16763d2c0692bd1ecdf4a84349c383e7986c96b4ba6b083f2884a1a76d2"
+    },
+    {
+      "id": "E-35fe4fda-9597-4054-a728-077856c237e6",
+      "kind": "model-review",
+      "workId": "GDS-002",
+      "obligationIds": [
+        "O-ORG"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T14:27:31.327Z",
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/audit_glpi.sql"
+        ],
+        "hash": "sha256:0747250299782179706386f40e04c779ae62c2492f2efa26b855f2f14945235e"
+      },
+      "dimensions": [
+        "source identifier preservation",
+        "relationship integrity",
+        "display normalization",
+        "collision safety",
+        "data minimization"
+      ],
+      "summary": "Model self-review of the transactional organizational cleanup and current audit evidence found all 74 imported users retain unique dedicated source keys, profiles, and imported-group memberships; five fabricated Record surnames and 29 synthetic invalid emails were removed; 16 group and 9 category display prefixes were normalized without collisions; no unrelated records were targeted.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0d89e-2e90-7244-90af-33d28abee1df"
+      }
+    },
+    {
+      "id": "E-b9e85d88-c31c-4eaa-b5d5-8ba6e4dfde2d",
+      "kind": "machine-command",
+      "workId": "GDS-003",
+      "obligationIds": [
+        "O-BUSINESS"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "PW=$(podman inspect glpi-db --format '{{range .Config.Env}}{{println .}}{{end}}' | awk -F= '$1==\"MARIADB_PASSWORD\"{print substr($0,index($0,\"=\")+1)}') && result=$(podman exec -e MYSQL_PWD=\"$PW\" glpi-db mariadb -uglpi glpi --batch --raw --skip-column-names -e \"SELECT CONCAT_WS('|',(SELECT COUNT(*) FROM glpi_printers WHERE otherserial LIKE 'ITMS-PRINTER:%'),(SELECT COUNT(DISTINCT name) FROM glpi_printers WHERE otherserial LIKE 'ITMS-PRINTER:%'),(SELECT COUNT(DISTINCT otherserial) FROM glpi_printers WHERE otherserial LIKE 'ITMS-PRINTER:%'),(SELECT COUNT(*) FROM glpi_printers WHERE otherserial LIKE 'ITMS-PRINTER:%' AND (manufacturers_id=0 OR printermodels_id=0 OR contact='-')),(SELECT COUNT(*) FROM glpi_peripherals WHERE otherserial LIKE 'ITMS-PROVISION:%'),(SELECT COUNT(DISTINCT name) FROM glpi_peripherals WHERE otherserial LIKE 'ITMS-PROVISION:%'),(SELECT COUNT(DISTINCT otherserial) FROM glpi_peripherals WHERE otherserial LIKE 'ITMS-PROVISION:%'),(SELECT COUNT(*) FROM glpi_peripherals WHERE otherserial LIKE 'ITMS-PROVISION:%' AND (peripheraltypes_id=0 OR states_id=0 OR users_id=0)),(SELECT COUNT(*) FROM glpi_tickets WHERE externalid LIKE 'ITMS-%'),(SELECT COUNT(DISTINCT externalid) FROM glpi_tickets WHERE externalid LIKE 'ITMS-%'),(SELECT COUNT(*) FROM glpi_tickets t WHERE t.externalid LIKE 'ITMS-%' AND (itilcategories_id=0 OR name=externalid OR NOT EXISTS (SELECT 1 FROM glpi_tickets_users tu WHERE tu.tickets_id=t.id AND tu.type=1) OR NOT EXISTS (SELECT 1 FROM glpi_tickets_users tu WHERE tu.tickets_id=t.id AND tu.type=2) OR (date IS NOT NULL AND time_to_resolve IS NOT NULL AND time_to_resolve<date))),(SELECT COUNT(*) FROM glpi_printers p JOIN glpi_users u ON u.id=p.users_id JOIN glpi_locations l ON l.id=p.locations_id WHERE p.otherserial='ITMS-PRINTER:PRN-025' AND p.name=\\\"Rob's Printer\\\" AND u.name='rob-paul' AND l.name=\\\"Rob's Office\\\"),(SELECT COUNT(*) FROM glpi_tickets t JOIN glpi_tickets_users tu ON tu.tickets_id=t.id AND tu.type=1 JOIN glpi_users u ON u.id=tu.users_id WHERE t.externalid='ITMS-ARCHIVE:TKT-048' AND u.registration_number='ITMS-EMP:100369' AND t.users_id_recipient=u.id));\") && printf '%s\\n' \"$result\" && test \"$result\" = '25|25|25|0|9|9|9|0|168|168|0|1|1'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T14:29:56.369Z",
+      "completedAt": "2026-09-25T14:29:58.333Z",
+      "durationMs": 1964,
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_glpi.sql",
+            "scripts/it-management/import_glpi.php"
+          ],
+          "hash": "sha256:f81efe40d50569748c3456b830cf056366a0a98e82df44fddaac31e32f8eebab"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_glpi.sql",
+            "scripts/it-management/import_glpi.php"
+          ],
+          "hash": "sha256:f81efe40d50569748c3456b830cf056366a0a98e82df44fddaac31e32f8eebab"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_aiB3yRLJwVyyCkXIdFqG29Zg|fc_0d30f7c0a08571bd016ab68558cea087d2a2aea064ca7f1652",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:d5acd7c1f1072a38208d04c576f0fb732dc294ba1f8d3ca4153751428e9e4a7d"
+    },
+    {
+      "id": "E-05046c4f-d6f3-4882-b72e-7b9de8983a71",
+      "kind": "model-review",
+      "workId": "GDS-003",
+      "obligationIds": [
+        "O-BUSINESS"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T14:30:14.622Z",
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/audit_glpi.sql",
+          "scripts/it-management/import_glpi.php"
+        ],
+        "hash": "sha256:f81efe40d50569748c3456b830cf056366a0a98e82df44fddaac31e32f8eebab"
+      },
+      "dimensions": [
+        "asset identity separation",
+        "missing-data handling",
+        "ownership mapping",
+        "ticket history preservation",
+        "source-key integrity",
+        "relationship invariants"
+      ],
+      "summary": "Model self-review of the live transactional mappings, audit SQL, and importer source found printer display identities are separated from manufacturer/model/location/owner fields; all 9 sparse provisions use explicit Unspecified/Unknown references while leaving absent serial, tag, and location values uninvented; Rob's ownership matches the existing Rob Paul user and Rob's Office location; Mitch Sheldrake's requester restoration matches the ticket's Original requester source text; 168 ticket records, titles, dates, categories, assignees, and unique external IDs are preserved.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0d89e-2e90-7244-90af-33d28abee1df"
+      }
+    },
+    {
+      "id": "E-4b89d882-423e-4915-8948-b766efb5ca64",
+      "kind": "machine-command",
+      "workId": "GDS-004",
+      "obligationIds": [
+        "O-IMPORTER"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "php -l scripts/it-management/import_glpi.php && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/import_glpi.php').read_text()\nrequired = [\n    \"count($parts) > 1 ? implode(' ', array_slice($parts, 1)) : ''\",\n    \"if ($validEmail($suppliedEmail))\",\n    \"$groupName = $department;\",\n    \"$ticketCategory($text($ticketRow['Type'] ?? ''))\",\n    \"'Unspecified Provisioned Item'\",\n    \"'Unknown'\",\n    \"$printerExists\",\n    \"$peripheralExists\",\n    \"$effectiveUserId\",\n    \"'Original assignee: ' . $assigneeName\",\n    \"'name' => substr(($title === '' ? 'Untitled ticket' : $title)\",\n]\nfor item in required:\n    assert item in p, item\nfor item in [\"'itms-' . $loginBase\", \"'ITMS: ' . $department\", \"'@employees.invalid'\", \": 'Record'\", \"'ITMS: ' . ($text($ticketRow['Type']\"]:\n    assert item not in p, item\nreadme = Path('scripts/it-management/README.md').read_text()\nassert 'left unset rather than replaced with synthetic addresses' in readme\nprint('import normalization assertions passed')\nPY\nPW=$(podman inspect glpi-db --format '{{range .Config.Env}}{{println .}}{{end}}' | awk -F= '$1==\"MARIADB_PASSWORD\"{print substr($0,index($0,\"=\")+1)}') && test \"$(podman exec -i -e MYSQL_PWD=\"$PW\" glpi-db mariadb -uglpi glpi --batch --raw --skip-column-names < scripts/it-management/audit_glpi.sql | awk 'BEGIN{s=0} /^anomaly/{s=1;next} /^detail/{s=0} s && $2!=0{bad++} END{print bad+0}')\" = 0"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T14:33:24.255Z",
+      "completedAt": "2026-09-25T14:33:26.249Z",
+      "durationMs": 1994,
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_glpi.sql",
+            "scripts/it-management/import_glpi.php"
+          ],
+          "hash": "sha256:f5318a26e4abed0e03f6ec825a7d11098d5271c055a679db0e309d8bd8f2c246"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_glpi.sql",
+            "scripts/it-management/import_glpi.php"
+          ],
+          "hash": "sha256:f5318a26e4abed0e03f6ec825a7d11098d5271c055a679db0e309d8bd8f2c246"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_9dVsA8cytoOAqOLfxugn3LvV|fc_0d30f7c0a08571bd016ab6862caa9087d294c9024d9779c5fe",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:61620351cfd6a7402c6b6efe1e628dd0b38489b26118205cead6863137ea02c3"
+    },
+    {
+      "id": "E-45237f00-23dc-4f8a-9751-8ab6550972a4",
+      "kind": "model-review",
+      "workId": "GDS-004",
+      "obligationIds": [
+        "O-IMPORTER"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T14:33:45.926Z",
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/README.md",
+          "scripts/it-management/audit_glpi.sql",
+          "scripts/it-management/import_glpi.php"
+        ],
+        "hash": "sha256:f5318a26e4abed0e03f6ec825a7d11098d5271c055a679db0e309d8bd8f2c246"
+      },
+      "dimensions": [
+        "idempotent lookup keys",
+        "display-field normalization",
+        "manual correction preservation",
+        "missing-value behavior",
+        "reference reuse",
+        "documentation consistency",
+        "syntax and static regression coverage"
+      ],
+      "summary": "Model self-review of scripts/it-management/import_glpi.php, README.md, and audit_glpi.sql confirmed all upserts still key on dedicated source identifiers; existing friendly printer/peripheral names and established printer ownership survive updates; new users/groups/categories/references use normalized display values; invalid emails are omitted; missing provision type/state use documented explicit values without inventing device details; manufacturer/model and known location corrections are deterministic; PHP syntax, static regression assertions, and the zero-anomaly live audit pass.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0d89e-2e90-7244-90af-33d28abee1df"
+      }
+    },
+    {
+      "id": "E-e1b44231-88cc-4c61-9d52-74d8179ef3d1",
+      "kind": "machine-command",
+      "workId": "GDS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "php -l scripts/it-management/import_glpi.php && PW=$(podman inspect glpi-db --format '{{range .Config.Env}}{{println .}}{{end}}' | awk -F= '$1==\"MARIADB_PASSWORD\"{print substr($0,index($0,\"=\")+1)}') && out=$(podman exec -i -e MYSQL_PWD=\"$PW\" glpi-db mariadb -uglpi glpi --batch --raw --skip-column-names < scripts/it-management/audit_glpi.sql) && printf '%s\\n' \"$out\" && test \"$(printf '%s\\n' \"$out\" | awk 'NR<=5{s+=$2} END{print s}')\" = 292 && test \"$(printf '%s\\n' \"$out\" | awk 'BEGIN{s=0} /^anomaly/{s=1;next} /^detail/{s=0} s && $2!=0{bad++} END{print bad+0}')\" = 0 && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/import_glpi.php').read_text()\nassert \"'itms-' . $loginBase\" not in p\nassert \"'@employees.invalid'\" not in p\nassert \"$groupName = $department;\" in p\nassert \"$ticketCategory($text($ticketRow['Type'] ?? ''))\" in p\nassert \"$effectiveUserId\" in p and \"$peripheralExists\" in p\nassert \"'Unspecified Provisioned Item'\" in p and \"'Unknown'\" in p\nprint('final importer assertions passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T14:35:15.054Z",
+      "completedAt": "2026-09-25T14:35:17.416Z",
+      "durationMs": 2362,
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_glpi.sql",
+            "scripts/it-management/import_glpi.php"
+          ],
+          "hash": "sha256:cad8b8f273ce6a8608178bc82aade1dae25a26f4992d4323a5e97920be7fb0fe"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_glpi.sql",
+            "scripts/it-management/import_glpi.php"
+          ],
+          "hash": "sha256:cad8b8f273ce6a8608178bc82aade1dae25a26f4992d4323a5e97920be7fb0fe"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_mNeOmeUCBBPkFgESlV0mptyg|fc_0d30f7c0a08571bd016ab6869d14c487d2aa96737cac7970cd",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:03e9f4d617a4ce384bb7adc6b2770af235a7399697fc1ccaf2c0329326c4d4db"
+    },
+    {
+      "id": "E-4ae616dd-0ede-42f7-9b33-1704d8d36614",
+      "kind": "model-review",
+      "workId": "GDS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T14:35:25.082Z",
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/README.md",
+          "scripts/it-management/audit_glpi.sql",
+          "scripts/it-management/import_glpi.php"
+        ],
+        "hash": "sha256:cad8b8f273ce6a8608178bc82aade1dae25a26f4992d4323a5e97920be7fb0fe"
+      },
+      "dimensions": [
+        "referential integrity",
+        "source-key uniqueness",
+        "display normalization",
+        "relationship completeness",
+        "importer idempotency",
+        "missing-data discipline",
+        "verification coverage"
+      ],
+      "summary": "Final model self-review of audit_glpi.sql, import_glpi.php, README.md, live verification output, and the approved scope found all 292 imported business records covered; every targeted anomaly, duplicate, orphan, missing relationship, source-prefix display, placeholder, and manufacturer/model repetition check is zero; PHP syntax and importer regression assertions pass; source identifiers remain in dedicated fields and absent peripheral facts are represented only as explicit Unspecified/Unknown values.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0d89e-2e90-7244-90af-33d28abee1df"
+      }
+    },
+    {
+      "id": "E-f140cc33-f270-4d82-a04b-3812b7a0b096",
+      "kind": "machine-command",
+      "workId": "GDS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "php -l scripts/it-management/import_glpi.php && PW=$(podman inspect glpi-db --format '{{range .Config.Env}}{{println .}}{{end}}' | awk -F= '$1==\"MARIADB_PASSWORD\"{print substr($0,index($0,\"=\")+1)}') && out=$(podman exec -i -e MYSQL_PWD=\"$PW\" glpi-db mariadb -uglpi glpi --batch --raw --skip-column-names < scripts/it-management/audit_glpi.sql) && printf '%s\\n' \"$out\" && test \"$(printf '%s\\n' \"$out\" | awk 'NR<=5{s+=$2} END{print s}')\" = 292 && test \"$(printf '%s\\n' \"$out\" | awk 'NR>5 && NF==2 && $2!=0{bad++} END{print bad+0}')\" = 0 && python3 - <<'PY'\nfrom pathlib import Path\np=Path('scripts/it-management/import_glpi.php').read_text()\nassert 'json_encode($row' not in p\nassert 'ITMS-{$prefix}-NAME:' in p\nassert \"$groupName = $department;\" in p\nassert \"if ($model->getFromDBByCrit(['name' => $name]))\" in p\nassert \"'@employees.invalid'\" not in p\nprint('final assertions passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T14:41:19.516Z",
+      "completedAt": "2026-09-25T14:41:21.753Z",
+      "durationMs": 2237,
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_glpi.sql",
+            "scripts/it-management/import_glpi.php"
+          ],
+          "hash": "sha256:c29844532bfacfcaedf7def0097cff331ebcf97eb68b5d51ac39eb4a4bebd13f"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_glpi.sql",
+            "scripts/it-management/import_glpi.php"
+          ],
+          "hash": "sha256:c29844532bfacfcaedf7def0097cff331ebcf97eb68b5d51ac39eb4a4bebd13f"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_QYGNdZSnFb2VyE8Z5FavFkdK|fc_0d30f7c0a08571bd016ab6880abcf887d285f5e67eac669fc9",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:980e893bb18f1d17f2b466fd74827ed2293a3e324c2a774c8cc461f0ab265dc3"
+    },
+    {
+      "id": "E-5561fe25-8eb0-4575-a5e8-c272b07f58ad",
+      "kind": "model-review",
+      "workId": "GDS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T14:41:36.176Z",
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/README.md",
+          "scripts/it-management/audit_glpi.sql",
+          "scripts/it-management/import_glpi.php"
+        ],
+        "hash": "sha256:c29844532bfacfcaedf7def0097cff331ebcf97eb68b5d51ac39eb4a4bebd13f"
+      },
+      "dimensions": [
+        "referential integrity",
+        "source-key stability",
+        "hash-key coverage",
+        "scope isolation",
+        "verification gate correctness",
+        "importer idempotency"
+      ],
+      "summary": "Final corrective self-review confirms the audit covers explicit and fallback keys for every imported family; the anomaly gate evaluates every two-column anomaly row independent of headers; 18 mutable-row employee hashes were migrated to deterministic name-based keys with zero collisions; non-user families now reject missing stable IDs; dropdown lookup reuses but does not mutate existing references; imported groups require the provenance marker; current PHP syntax, 292-record counts, and all anomaly/orphan/duplicate checks pass.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0d89e-2e90-7244-90af-33d28abee1df"
+      }
+    },
+    {
+      "id": "E-63029bb0-1aa6-4715-80f4-ef707e5180cd",
+      "kind": "machine-command",
+      "workId": "GDS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "php -l scripts/it-management/import_glpi.php && PW=$(podman inspect glpi-db --format '{{range .Config.Env}}{{println .}}{{end}}' | awk -F= '$1==\"MARIADB_PASSWORD\"{print substr($0,index($0,\"=\")+1)}') && out=$(podman exec -i -e MYSQL_PWD=\"$PW\" glpi-db mariadb -uglpi glpi --batch --raw --skip-column-names < scripts/it-management/audit_glpi.sql) && printf '%s\\n' \"$out\" && test \"$(printf '%s\\n' \"$out\" | awk 'NR<=5{s+=$2} END{print s}')\" = 292 && test \"$(printf '%s\\n' \"$out\" | awk 'NR>5 && NF==2 && $2!=0{bad++} END{print bad+0}')\" = 0 && grep -q \"str_starts_with(\\$legacyKey, 'ITMS-EMP-HASH:')\" scripts/it-management/import_glpi.php"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T14:46:42.136Z",
+      "completedAt": "2026-09-25T14:46:44.910Z",
+      "durationMs": 2774,
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_glpi.sql",
+            "scripts/it-management/import_glpi.php"
+          ],
+          "hash": "sha256:cce34bebab3c64efffef4dbf1d42f3da864e4c02a5a9a18aa4e4040d46a5ec3c"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_glpi.sql",
+            "scripts/it-management/import_glpi.php"
+          ],
+          "hash": "sha256:cce34bebab3c64efffef4dbf1d42f3da864e4c02a5a9a18aa4e4040d46a5ec3c"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_2muLTsUUKKIcDazwXJdgF3Nz|fc_0d30f7c0a08571bd016ab6894e7c0087d2a2ee0a46b160b5d5",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:0c35a2a645db524958a9c28964370d94e9df04a47db9592da225f2b5d63315dd"
+    },
+    {
+      "id": "E-9c80ba60-b847-4f62-8495-e3a6167149d9",
+      "kind": "model-review",
+      "workId": "GDS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T14:46:52.865Z",
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/README.md",
+          "scripts/it-management/audit_glpi.sql",
+          "scripts/it-management/import_glpi.php"
+        ],
+        "hash": "sha256:cce34bebab3c64efffef4dbf1d42f3da864e4c02a5a9a18aa4e4040d46a5ec3c"
+      },
+      "dimensions": [
+        "legacy-key migration",
+        "zero-tolerance legacy audit",
+        "source-key coverage",
+        "scope isolation",
+        "verification gate correctness",
+        "referential integrity"
+      ],
+      "summary": "Corrective model self-review confirms legacy ITMS-EMP-HASH records are both explicitly forbidden by the audit and migrated in-place by the importer before upsert; live data has zero legacy hashes and zero collisions. All families include explicit/fallback audit coverage, the headerless gate checks every anomaly row by shape, manual references are reused without mutation, imported groups require provenance, PHP syntax passes, and all 292 records pass duplicate/orphan/relationship checks.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0d89e-2e90-7244-90af-33d28abee1df"
+      }
+    },
+    {
+      "id": "E-df677b9f-3327-42a7-b1f7-9d228cb0e94e",
+      "kind": "independent-review",
+      "workId": "GDS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T14:51:48.765Z",
+      "contractFingerprint": "sha256:11be68b937261dd5836e892a5b4900ad31676855deaa83e4e287670650234864",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/README.md",
+          "scripts/it-management/audit_glpi.sql",
+          "scripts/it-management/import_glpi.php"
+        ],
+        "hash": "sha256:cce34bebab3c64efffef4dbf1d42f3da864e4c02a5a9a18aa4e4040d46a5ec3c"
+      },
+      "dimensions": [
+        "legacy-key migration",
+        "source-key coverage",
+        "scope isolation",
+        "verification gate correctness",
+        "referential integrity"
+      ],
+      "summary": "Final corrective review after two prior review rounds. Confirm legacy mutable hashes are now a zero-tolerance anomaly and importer-migrated in place, all source-key families are covered, the headerless gate is effective, and manual groups/dropdowns remain unmodified.",
+      "provenance": {
+        "kind": "pi-interactive-session-review",
+        "transport": "interactive-shell",
+        "reviewerSessionId": "quiet-cloud",
+        "recorderSessionId": "01a0d89e-2e90-7244-90af-33d28abee1df"
+      }
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D-001",
+      "text": "Interpret all data as all imported GLPI business data and supporting references, not GLPI internal tables.",
+      "basis": "This satisfies the cleanup request without corrupting application internals."
+    },
+    {
+      "id": "D-002",
+      "text": "Preserve dedicated source identifiers while removing redundant prefixes from display fields.",
+      "basis": "Source keys are required for traceability and idempotency."
+    },
+    {
+      "id": "D-003",
+      "text": "Do not fabricate missing peripheral details.",
+      "basis": "The workbook is unavailable and current records lack recoverable values."
+    }
+  ],
+  "risks": [
+    {
+      "id": "R-001",
+      "text": "Incorrect ownership or actor remapping could alter accountability.",
+      "mitigation": "Use source keys, existing names, and IDs; leave ambiguous mappings unchanged."
+    },
+    {
+      "id": "R-002",
+      "text": "Importer reruns could revert cleanup or duplicate references.",
+      "mitigation": "Normalize importer behavior and preserve friendly names."
+    },
+    {
+      "id": "R-003",
+      "text": "Direct SQL bypasses GLPI hooks.",
+      "mitigation": "Limit changes to stable fields, update timestamps, use transactions, and verify invariants."
+    }
+  ]
+}

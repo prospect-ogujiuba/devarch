@@ -1,0 +1,1203 @@
+{
+  "kind": "gentic.swe.initiative",
+  "schemaVersion": 1,
+  "id": "openproject-data-structure",
+  "revision": 39,
+  "status": "complete",
+  "objective": "Audit and normalize all OpenProject business data imported from IT_Management_System.xlsm so every supported entity uses clean OpenProject-native display fields, dedicated stable source keys, valid memberships and relationships, and idempotent importer behavior that preserves normalized and manual corrections.",
+  "policies": {
+    "commitOnWorkCompletion": false,
+    "independentReviewOnCompletion": true
+  },
+  "scope": {
+    "in": [
+      "Imported OpenProject users, groups, group memberships, project memberships, project, types, statuses, priorities, custom fields, work packages, and relationships in the running OpenProject database",
+      "scripts/it-management/import_openproject.rb",
+      "scripts/it-management/audit_openproject.sql",
+      "scripts/it-management/README.md",
+      "Transactional normalization and deterministic read-only integrity verification"
+    ],
+    "out": [
+      "OpenProject framework, migration, session, log, attachment, authentication-secret, and plugin-internal data",
+      "Unrelated manually created users, groups, projects, memberships, reference values, custom fields, and work packages",
+      "Fabricating facts absent from the live database and repository",
+      "Deleting imported historical or inactive records solely because of status"
+    ]
+  },
+  "constraints": [
+    "Preserve source identifiers in dedicated custom fields and use them as idempotent lookup keys.",
+    "Use transactions and application models for mutations where appropriate, preserving record IDs and relationships.",
+    "Remove source prefixes and placeholders from user-facing display fields only when traceability remains in dedicated fields.",
+    "Do not overwrite existing normalized display names or unrelated manual corrections on rerun.",
+    "Do not expose credentials or sensitive values in tracked files or reports.",
+    "Preserve unrelated working-tree changes and do not commit."
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-001",
+      "text": "A deterministic read-only audit covers every imported OpenProject business-record family, counts, display anomalies, placeholders, duplicates, missing relationships, custom-value integrity, and source-key coverage."
+    },
+    {
+      "id": "AC-002",
+      "text": "Imported users, groups, group memberships, project membership, and the imported project have clean display values, stable source identities, and valid relationships without modifying unrelated records."
+    },
+    {
+      "id": "AC-003",
+      "text": "Imported work packages, types, statuses, priorities, custom fields, source identifiers, actors, dates, and relationships are structurally valid and free of redundant source labels or fabricated placeholder facts."
+    },
+    {
+      "id": "AC-004",
+      "text": "The importer is idempotent, uses stable source identities, and preserves normalized display values and manual corrections rather than recreating prefixes/placeholders or overwriting friendly values."
+    },
+    {
+      "id": "AC-005",
+      "text": "Current-machine verification shows referential integrity, unique source keys, zero targeted anomalies, Ruby syntax validity, and explicit self-review and independent-review evidence."
+    }
+  ],
+  "assessment": {
+    "depth": "deep",
+    "reason": "This changes live relational business data and an importer that can silently overwrite names, memberships, actors, or relationships on rerun.",
+    "surfaces": [
+      "Running PostgreSQL OpenProject database",
+      "Imported users, groups, memberships, and project",
+      "Types, statuses, priorities, and custom-field definitions/values",
+      "Imported work packages, actors, dates, and parent relationships",
+      "Ruby importer idempotency and correction preservation"
+    ],
+    "unknowns": [
+      "Some source Parent Task values may be categorical labels rather than work-package identifiers.",
+      "OpenProject internal constraints may require a mail value for imported users with no valid source email.",
+      "Existing manual corrections must be distinguished from importer-created display values using source markers and conservative comparisons.",
+      "Custom fields with matching names may predate the import and require provenance-aware handling."
+    ]
+  },
+  "practices": [
+    {
+      "id": "P-AUDIT",
+      "practice": "Inventory imported OpenProject entities and classify safe versus ambiguous normalization before mutation.",
+      "appliesTo": [
+        "ODS-001"
+      ],
+      "reason": "A complete source-bound baseline is required before cleanup."
+    },
+    {
+      "id": "P-TRANSACTION",
+      "practice": "Apply deterministic normalization through OpenProject models inside transactions and preserve IDs and relationships.",
+      "appliesTo": [
+        "ODS-002",
+        "ODS-003"
+      ],
+      "reason": "Relational changes must remain application-valid."
+    },
+    {
+      "id": "P-IDEMPOTENCY",
+      "practice": "Align importer lookup/write behavior with dedicated source keys and conservative preservation rules.",
+      "appliesTo": [
+        "ODS-004"
+      ],
+      "reason": "Future imports must not undo normalized or manual corrections."
+    },
+    {
+      "id": "P-VERIFY",
+      "practice": "Run deterministic audit, syntax/static checks, explicit self-review, and independent review.",
+      "appliesTo": [
+        "ODS-005"
+      ],
+      "reason": "Broad live-data cleanup requires current evidence and a separate reviewer."
+    }
+  ],
+  "obligations": [
+    {
+      "id": "O-AUDIT",
+      "practiceId": "P-AUDIT",
+      "criterionIds": [
+        "AC-001"
+      ],
+      "text": "Inventory imported families, counts, source keys, display anomalies, placeholders, duplicates, custom-value coverage, and missing relationships.",
+      "verification": {
+        "kind": "database audit",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-ORG",
+      "practiceId": "P-TRANSACTION",
+      "criterionIds": [
+        "AC-002"
+      ],
+      "text": "Normalize imported users, groups, group memberships, project, and project memberships while preserving unrelated data.",
+      "verification": {
+        "kind": "organizational data verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-WORK",
+      "practiceId": "P-TRANSACTION",
+      "criterionIds": [
+        "AC-003"
+      ],
+      "text": "Normalize imported work packages, reference entities, custom fields and values, actors, dates, and relationships without inventing missing facts.",
+      "verification": {
+        "kind": "work-package data verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-IMPORTER",
+      "practiceId": "P-IDEMPOTENCY",
+      "criterionIds": [
+        "AC-004"
+      ],
+      "text": "Validate importer syntax and idempotent normalized lookup/write behavior, including preservation of existing display corrections.",
+      "verification": {
+        "kind": "importer verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-FINAL",
+      "practiceId": "P-VERIFY",
+      "criterionIds": [
+        "AC-005"
+      ],
+      "text": "Run final cross-entity invariants and complete explicit source-bound self-review and independent review.",
+      "verification": {
+        "kind": "final integrity verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review",
+          "independent-review"
+        ]
+      }
+    }
+  ],
+  "work": [
+    {
+      "id": "ODS-001",
+      "kind": "task",
+      "title": "Audit all imported OpenProject entities",
+      "status": "complete",
+      "dependsOn": [],
+      "criterionIds": [
+        "AC-001"
+      ],
+      "obligationIds": [
+        "O-AUDIT"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Read-only inventory establishes the normalization contract."
+      }
+    },
+    {
+      "id": "ODS-002",
+      "kind": "task",
+      "title": "Normalize users, groups, memberships, and project",
+      "status": "complete",
+      "dependsOn": [
+        "ODS-001"
+      ],
+      "criterionIds": [
+        "AC-002"
+      ],
+      "obligationIds": [
+        "O-ORG"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Transactional model changes are checked with before-and-after invariants."
+      }
+    },
+    {
+      "id": "ODS-003",
+      "kind": "task",
+      "title": "Normalize work packages, references, and relationships",
+      "status": "complete",
+      "dependsOn": [
+        "ODS-001"
+      ],
+      "criterionIds": [
+        "AC-003"
+      ],
+      "obligationIds": [
+        "O-WORK"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Live-data cleanup is checked through deterministic audit invariants."
+      }
+    },
+    {
+      "id": "ODS-004",
+      "kind": "task",
+      "title": "Make the OpenProject importer preserve normalized structure",
+      "status": "complete",
+      "dependsOn": [
+        "ODS-002",
+        "ODS-003"
+      ],
+      "criterionIds": [
+        "AC-004"
+      ],
+      "obligationIds": [
+        "O-IMPORTER"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Syntax, static checks, and safe rerun validation establish repeatability."
+      }
+    },
+    {
+      "id": "ODS-005",
+      "kind": "task",
+      "title": "Verify and review complete OpenProject normalization",
+      "status": "complete",
+      "dependsOn": [
+        "ODS-004"
+      ],
+      "criterionIds": [
+        "AC-005"
+      ],
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Final audit and reviews qualify the complete change."
+      }
+    }
+  ],
+  "artifacts": [],
+  "evidence": [
+    {
+      "id": "E-58a4496c-9593-40cd-9023-20741da1b6f1",
+      "kind": "machine-command",
+      "workId": "ODS-001",
+      "obligationIds": [
+        "O-AUDIT"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "podman exec -i openproject-db sh -lc 'psql -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"' < scripts/it-management/audit_openproject.sql"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T15:09:35.539Z",
+      "completedAt": "2026-09-25T15:09:36.681Z",
+      "durationMs": 1142,
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_openproject.sql"
+          ],
+          "hash": "sha256:1b64eb8e0ceb804e1d882f6c67454b7af54021e1e75e439cb909f32ae519547f"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_openproject.sql"
+          ],
+          "hash": "sha256:1b64eb8e0ceb804e1d882f6c67454b7af54021e1e75e439cb909f32ae519547f"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_zyKzRryNFhUQKElbr3XTAChp|fc_09ec90f127bacab4016ab68eaefc0c87d298b12152dec531f9",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:52946da932a19f063422b826aab77384f21d291bf3cebc39d2b240bbaf6d5ca1"
+    },
+    {
+      "id": "E-7a3bfd69-2ddd-4c91-891a-9287587d8e0a",
+      "kind": "machine-command",
+      "workId": "ODS-001",
+      "obligationIds": [
+        "O-AUDIT"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "podman exec -i openproject-db sh -lc 'psql -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"' < scripts/it-management/audit_openproject.sql"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T15:12:05.113Z",
+      "completedAt": "2026-09-25T15:12:06.478Z",
+      "durationMs": 1365,
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_openproject.sql"
+          ],
+          "hash": "sha256:7693c2bbb50d3714866ab507c0a60e7657fa9645f688d7bd5cd6f503725c4bd4"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_openproject.sql"
+          ],
+          "hash": "sha256:7693c2bbb50d3714866ab507c0a60e7657fa9645f688d7bd5cd6f503725c4bd4"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_2zHYlsN4VzOeg0Nxsn973zRr|fc_09ec90f127bacab4016ab68f44812087d29da5f087508d2808",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:4cb37a0d2331d064bb4b48a3384ff4758521e3464cbfa0a58bbf6c1b6583baac"
+    },
+    {
+      "id": "E-bdf72d03-d714-4e71-a401-90529c9a4c32",
+      "kind": "model-review",
+      "workId": "ODS-001",
+      "obligationIds": [
+        "O-AUDIT"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T15:12:27.259Z",
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/audit_openproject.sql"
+        ],
+        "hash": "sha256:7693c2bbb50d3714866ab507c0a60e7657fa9645f688d7bd5cd6f503725c4bd4"
+      },
+      "dimensions": [
+        "read-only safety",
+        "imported-scope isolation",
+        "entity-family coverage",
+        "source-key classification",
+        "relationship coverage",
+        "custom-field applicability coverage",
+        "anomaly gate design"
+      ],
+      "summary": "Model self-review of scripts/it-management/audit_openproject.sql and the current baseline output confirmed the script is read-only; scopes users through imported user custom values, groups through those users, and work packages through the dedicated project; uses the current project_types association; inventories every imported family; checks dedicated user/group/work-package keys including zero-tolerance legacy mutable hashes; covers memberships, actors, references, dates, source components, display anomalies, project/type configuration, and independently defined type-specific custom-field applicability. Final verification will use tuples-only output and an explicit anomaly-section parser so headers cannot cause a false pass.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0d910-4119-7277-acd9-831ae677bc34"
+      }
+    },
+    {
+      "id": "E-d7ce3d43-25d6-4b23-bf9a-7681faefc1bf",
+      "kind": "machine-command",
+      "workId": "ODS-002",
+      "obligationIds": [
+        "O-ORG"
+      ],
+      "outcome": "failed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "out=$(podman exec -i openproject-db sh -lc 'psql -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"' < scripts/it-management/audit_openproject.sql) && printf '%s\\n' \"$out\" && podman exec openproject bundle exec rails runner 'p=Project.find_by!(identifier:\"it-management-system\"); ef=UserCustomField.find_by!(name:\"Employee ID\"); sf=UserCustomField.find_by!(name:\"Source Employee Key\"); df=UserCustomField.find_by!(name:\"Department\"); gf=GroupCustomField.find_by!(name:\"Source Department Key\"); us=User.where(type:\"User\").joins(:custom_values).where(custom_values:{custom_field_id:ef.id}).distinct; gs=Group.joins(:group_users).where(group_users:{user_id:us.select(:id)}).distinct; raise unless us.count==74 && gs.count==16 && p.members.where(user_id:us.select(:id)).count==74; raise unless us.all?{|u| (k=u.custom_value_for(sf)&.value.to_s).match?(/\\AITMS-EMP:(.+)\\z|\\AITMS-EMP-NAME:[0-9a-f]{20}\\z/) && !k.start_with?(\"ITMS-EMP-HASH:\") && u.groups.where(id:gs.select(:id)).one? && u.custom_value_for(df)&.value==u.groups.where(id:gs.select(:id)).first.lastname && u.lastname!=\"Record\"}; raise unless gs.all?{|g| g.custom_value_for(gf)&.value.to_s.match?(/\\AITMS-DEPT-NAME:[0-9a-f]{20}\\z/)}; raise unless CustomValue.where(customized_type:\"Principal\",customized_id:us.select(:id),custom_field:sf).count==74 && CustomValue.where(customized_type:\"Principal\",customized_id:gs.select(:id),custom_field:gf).count==16; puts({users:us.count,groups:gs.count,members:p.members.where(user_id:us.select(:id)).count,employee_keys:74,department_keys:16}.to_json)'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T15:18:47.299Z",
+      "completedAt": "2026-09-25T15:19:34.314Z",
+      "durationMs": 47015,
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_openproject.sql"
+          ],
+          "hash": "sha256:f451838076be29769b01112a877fbbabf164d1df432efaed3ba1fd0bf8a88fc7"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_openproject.sql"
+          ],
+          "hash": "sha256:f451838076be29769b01112a877fbbabf164d1df432efaed3ba1fd0bf8a88fc7"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_CGt2P8W9VNPCcsQx8Y2POZXZ|fc_09ec90f127bacab4016ab690cf3e2487d2bc31981d0a5dd2f4",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:f8d9af1d3e6c708e39d0843de307ccb14064181c03a310def519344d361727f3"
+    },
+    {
+      "id": "E-90be5c30-5290-4dd5-a158-48a05141ba42",
+      "kind": "machine-command",
+      "workId": "ODS-002",
+      "obligationIds": [
+        "O-ORG"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "podman exec openproject bundle exec rails runner 'p=Project.find_by!(identifier:\"it-management-system\"); ef=UserCustomField.find_by!(name:\"Employee ID\"); sf=UserCustomField.find_by!(name:\"Source Employee Key\"); df=UserCustomField.find_by!(name:\"Department\"); gf=GroupCustomField.find_by!(name:\"Source Department Key\"); us=User.where(type:\"User\").joins(:custom_values).where(custom_values:{custom_field_id:ef.id}).distinct; gs=Group.joins(:group_users).where(group_users:{user_id:us.select(:id)}).distinct; raise unless us.count==74 && gs.count==16 && Member.unscoped.where(project_id:p.id,user_id:us.select(:id)).count==74; raise unless us.all?{|u| (k=u.custom_value_for(sf)&.value.to_s).match?(/\\AITMS-EMP:(.+)\\z|\\AITMS-EMP-NAME:[0-9a-f]{20}\\z/) && !k.start_with?(\"ITMS-EMP-HASH:\") && u.groups.where(id:gs.select(:id)).one? && u.custom_value_for(df)&.value==u.groups.where(id:gs.select(:id)).first.lastname && u.lastname!=\"Record\"}; raise unless gs.all?{|g| g.custom_value_for(gf)&.value.to_s.match?(/\\AITMS-DEPT-NAME:[0-9a-f]{20}\\z/)}; raise unless CustomValue.where(customized_type:\"Principal\",customized_id:us.select(:id),custom_field:sf).count==74 && CustomValue.where(customized_type:\"Principal\",customized_id:gs.select(:id),custom_field:gf).count==16; puts({users:us.count,groups:gs.count,direct_members:Member.unscoped.where(project_id:p.id,user_id:us.select(:id)).count,employee_keys:74,department_keys:16}.to_json)'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T15:20:59.708Z",
+      "completedAt": "2026-09-25T15:21:46.448Z",
+      "durationMs": 46740,
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_openproject.sql"
+          ],
+          "hash": "sha256:f451838076be29769b01112a877fbbabf164d1df432efaed3ba1fd0bf8a88fc7"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_openproject.sql"
+          ],
+          "hash": "sha256:f451838076be29769b01112a877fbbabf164d1df432efaed3ba1fd0bf8a88fc7"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_n5v81rPFrDo2XUG5aohhDAO0|fc_09ec90f127bacab4016ab69154767c87d29bb50553583192b5",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:27c7d1e5883470fb755b10a4a513f2d31f182b6d84eba7e464b957b3f6f6e409"
+    },
+    {
+      "id": "E-aed2cd68-a77d-418c-b1c1-4358bb888916",
+      "kind": "model-review",
+      "workId": "ODS-002",
+      "obligationIds": [
+        "O-ORG"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T15:22:01.886Z",
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/audit_openproject.sql"
+        ],
+        "hash": "sha256:f451838076be29769b01112a877fbbabf164d1df432efaed3ba1fd0bf8a88fc7"
+      },
+      "dimensions": [
+        "transaction atomicity",
+        "stable natural identity",
+        "legacy-key handling",
+        "scope isolation",
+        "membership preservation",
+        "missing-value discipline",
+        "platform constraints"
+      ],
+      "summary": "Model self-review of the live transactional outcome and audit evidence confirmed exactly 74 imported users and 16 groups received unique dedicated keys; name-derived fallback keys use normalized natural identity rather than mutable whole-row hashes and legacy HASH keys are forbidden; all 74 department values match exactly one imported group and all 74 direct memberships and roles remain intact. Five synthetic Record surnames were replaced with the explicit '(not provided)' marker because OpenProject rejects blank first or last names. Existing application-required synthetic mail was preserved but is not used for identity. The transaction initially failed validation and rolled back cleanly; the corrected transaction committed, and duplicate blank custom-value rows created by OpenProject callbacks were removed before passing verification.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0d910-4119-7277-acd9-831ae677bc34"
+      }
+    },
+    {
+      "id": "E-351c4da5-3557-4425-9886-ebcd8c5d4878",
+      "kind": "machine-command",
+      "workId": "ODS-003",
+      "obligationIds": [
+        "O-WORK"
+      ],
+      "outcome": "failed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "out=$(podman exec -i openproject-db sh -lc 'psql -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"' < scripts/it-management/audit_openproject.sql) && printf '%s\\n' \"$out\" && podman exec openproject bundle exec rails runner 'p=Project.find_by!(identifier:\"it-management-system\"); fs=WorkPackageCustomField.where(name:[\"Source Record Key\",\"External Record ID\",\"Imported Start Date\",\"Imported Due Date\",\"Location\",\"Parent Task Reference\"]).index_by(&:name); w=p.work_packages.includes(:type); keys=w.map{|x|x.custom_value_for(fs.fetch(\"Source Record Key\"))&.value}; raise unless w.count==202 && w.joins(:type).group(\"types.name\").count=={\"Equipment Provision\"=>9,\"IT Ticket\"=>168,\"Printer Asset\"=>25} && keys.compact.uniq.length==202; assets=w.joins(:type).where(types:{name:[\"Printer Asset\",\"Equipment Provision\"]}); raise if assets.any?{|x| (e=x.custom_value_for(fs.fetch(\"External Record ID\"))&.value.to_s).length>0 && x.subject.start_with?(e)}; raise if w.any?{|x| [\"-\",\"Cecile''s Desl\",\"Rob''s Officer\"].include?(x.custom_value_for(fs.fetch(\"Location\"))&.value)}; bad_ranges=0; w.each{|x| s=x.custom_value_for(fs.fetch(\"Imported Start Date\"))&.value.to_s; d=x.custom_value_for(fs.fetch(\"Imported Due Date\"))&.value.to_s; next if s.empty? && d.empty?; sd=s.empty? ? nil : Date.iso8601(s); dd=d.empty? ? nil : Date.iso8601(d); if sd && dd && dd<sd; bad_ranges+=1; raise unless x.start_date.nil? && x.due_date.nil?; else; raise unless (sd.nil? || x.start_date==sd) && (dd.nil? || x.due_date==dd); end}; raise unless bad_ranges==1; refs=w.select{|x| x.custom_value_for(fs.fetch(\"Parent Task Reference\"))&.value.present?}; raise unless refs.length==10 && refs.none?{|x|x.parent_id}; puts({work_packages:w.count,source_keys:keys.uniq.length,asset_subjects:assets.count,invalid_source_date_ranges:bad_ranges,parent_references:refs.length,parent_links:0}.to_json)'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T15:26:16.643Z",
+      "completedAt": "2026-09-25T15:27:03.774Z",
+      "durationMs": 47131,
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_openproject.sql"
+          ],
+          "hash": "sha256:0058d8e89b746cbbcbf86f82b4b8c246f8316e4498ed50112f4531e11c0143b8"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_openproject.sql"
+          ],
+          "hash": "sha256:0058d8e89b746cbbcbf86f82b4b8c246f8316e4498ed50112f4531e11c0143b8"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_osuLM2PxK7UoMPw3a3tkX1mY|fc_09ec90f127bacab4016ab6928f873887d2985958570673495f",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:bf3c4148ac0829b81114bdf04197d03930ca0f2f0e5419ea718e2de3844c0cf9"
+    },
+    {
+      "id": "E-826f7cce-d790-4f00-b3ab-d50456784efa",
+      "kind": "machine-command",
+      "workId": "ODS-003",
+      "obligationIds": [
+        "O-WORK"
+      ],
+      "outcome": "failed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "out=$(podman exec -i openproject-db sh -lc 'psql -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"' < scripts/it-management/audit_openproject.sql) && printf '%s\\n' \"$out\" && podman exec openproject bundle exec rails runner 'p=Project.find_by!(identifier:\"it-management-system\"); fs=WorkPackageCustomField.where(name:[\"Source Record Key\",\"External Record ID\",\"Imported Start Date\",\"Imported Due Date\",\"Location\",\"Parent Task Reference\"]).index_by(&:name); w=p.work_packages.includes(:type).to_a; keys=w.map{|x|x.custom_value_for(fs.fetch(\"Source Record Key\"))&.value}; counts=w.group_by{|x|x.type.name}.transform_values(&:length); raise unless w.length==202 && counts=={\"Equipment Provision\"=>9,\"IT Ticket\"=>168,\"Printer Asset\"=>25} && keys.compact.uniq.length==202; assets=w.select{|x|[\"Printer Asset\",\"Equipment Provision\"].include?(x.type.name)}; raise if assets.any?{|x| (e=x.custom_value_for(fs.fetch(\"External Record ID\"))&.value.to_s).length>0 && x.subject.start_with?(e)}; raise if w.any?{|x| [\"-\",\"Cecile''s Desl\",\"Rob''s Officer\"].include?(x.custom_value_for(fs.fetch(\"Location\"))&.value)}; bad_ranges=0; w.each{|x| s=x.custom_value_for(fs.fetch(\"Imported Start Date\"))&.value.to_s; d=x.custom_value_for(fs.fetch(\"Imported Due Date\"))&.value.to_s; next if s.empty? && d.empty?; sd=s.empty? ? nil : Date.iso8601(s); dd=d.empty? ? nil : Date.iso8601(d); if sd && dd && dd<sd; bad_ranges+=1; raise unless x.start_date.nil? && x.due_date.nil?; else; raise unless (sd.nil? || x.start_date==sd) && (dd.nil? || x.due_date==dd); end}; raise unless bad_ranges==1; refs=w.select{|x| x.custom_value_for(fs.fetch(\"Parent Task Reference\"))&.value.present?}; raise unless refs.length==10 && refs.none?{|x|x.parent_id}; puts({work_packages:w.length,source_keys:keys.uniq.length,asset_subjects:assets.length,invalid_source_date_ranges:bad_ranges,parent_references:refs.length,parent_links:0}.to_json)'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T15:28:39.208Z",
+      "completedAt": "2026-09-25T15:28:40.295Z",
+      "durationMs": 1087,
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_openproject.sql"
+          ],
+          "hash": "sha256:0058d8e89b746cbbcbf86f82b4b8c246f8316e4498ed50112f4531e11c0143b8"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_openproject.sql"
+          ],
+          "hash": "sha256:0058d8e89b746cbbcbf86f82b4b8c246f8316e4498ed50112f4531e11c0143b8"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_1TK6mct2jaWZ8ICg26UmUTLX|fc_09ec90f127bacab4016ab6931d96f887d2ac02a283dd7d7436",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:f5448885bb18a37a0965c35792740f710339ff09072437e6be88d9638ffda283"
+    },
+    {
+      "id": "E-08fd5527-325d-44ac-82ea-a145363dfd12",
+      "kind": "machine-command",
+      "workId": "ODS-003",
+      "obligationIds": [
+        "O-WORK"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "out=$(podman exec -i openproject-db sh -lc 'psql -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"' < scripts/it-management/audit_openproject.sql) && printf '%s\\n' \"$out\" && podman exec openproject bundle exec rails runner 'p=Project.find_by!(identifier:\"it-management-system\"); fs=WorkPackageCustomField.where(name:[\"Source Record Key\",\"External Record ID\",\"Imported Start Date\",\"Imported Due Date\",\"Location\",\"Parent Task Reference\"]).index_by(&:name); w=p.work_packages.includes(:type).to_a; keys=w.map{|x|x.custom_value_for(fs.fetch(\"Source Record Key\"))&.value}; counts=w.group_by{|x|x.type.name}.transform_values(&:length); raise unless w.length==202 && counts=={\"Equipment Provision\"=>9,\"IT Ticket\"=>168,\"Printer Asset\"=>25} && keys.compact.uniq.length==202; assets=w.select{|x|[\"Printer Asset\",\"Equipment Provision\"].include?(x.type.name)}; raise if assets.any?{|x| (e=x.custom_value_for(fs.fetch(\"External Record ID\"))&.value.to_s).length>0 && x.subject.start_with?(e)}; raise if w.any?{|x| [\"-\",\"Cecile''s Desl\",\"Rob''s Officer\"].include?(x.custom_value_for(fs.fetch(\"Location\"))&.value)}; bad_ranges=0; w.each{|x| s=x.custom_value_for(fs.fetch(\"Imported Start Date\"))&.value.to_s; d=x.custom_value_for(fs.fetch(\"Imported Due Date\"))&.value.to_s; next if s.empty? && d.empty?; sd=s.empty? ? nil : Date.iso8601(s); dd=d.empty? ? nil : Date.iso8601(d); if sd && dd && dd<sd; bad_ranges+=1; raise unless x.start_date.nil? && x.due_date.nil?; else; raise unless (sd.nil? || x.start_date==sd) && (dd.nil? || x.due_date==dd); end}; raise unless bad_ranges==1; refs=w.select{|x| x.custom_value_for(fs.fetch(\"Parent Task Reference\"))&.value.present?}; raise unless refs.length==10 && refs.none?{|x|x.parent_id}; puts({work_packages:w.length,source_keys:keys.uniq.length,asset_subjects:assets.length,invalid_source_date_ranges:bad_ranges,parent_references:refs.length,parent_links:0}.to_json)'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T15:30:04.041Z",
+      "completedAt": "2026-09-25T15:30:55.563Z",
+      "durationMs": 51522,
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_openproject.sql"
+          ],
+          "hash": "sha256:3f437adbcb7c996a18e79f096e94e40d8adb0bf65666333fc005e144ee9dd356"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/audit_openproject.sql"
+          ],
+          "hash": "sha256:3f437adbcb7c996a18e79f096e94e40d8adb0bf65666333fc005e144ee9dd356"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_8D9OgFZCe1B67nCjOxJ39cTy|fc_09ec90f127bacab4016ab69372366087d2b1a3857424532723",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:20b80cafe5dacf7ecde0e61d9d982fe4db46689a386efa92c187f9da57a06821"
+    },
+    {
+      "id": "E-bb04e023-08d0-4f9d-947e-99f3be042392",
+      "kind": "model-review",
+      "workId": "ODS-003",
+      "obligationIds": [
+        "O-WORK"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T15:31:13.251Z",
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/audit_openproject.sql"
+        ],
+        "hash": "sha256:3f437adbcb7c996a18e79f096e94e40d8adb0bf65666333fc005e144ee9dd356"
+      },
+      "dimensions": [
+        "transaction atomicity",
+        "source-key integrity",
+        "display normalization",
+        "native date mapping",
+        "source inconsistency preservation",
+        "status semantics",
+        "parent relationship discipline",
+        "type-specific custom-field applicability",
+        "scope isolation"
+      ],
+      "summary": "Model self-review of the live transaction, audit SQL, and verification output confirmed all 202 work packages and unique source keys remain intact; 25 printers and 9 provisions have source-ID-free display subjects; placeholders and known location typos are removed; valid imported dates match native fields; the single due-before-start source pair remains unchanged only in dedicated custom fields with native dates intentionally unset; the Incomplete ticket is no longer classified Closed; ten categorical Parent Task values remain references with zero fabricated parent links; imported field applicability exactly matches the independently specified 40 type links with zero extra/missing links; actors and foreign keys remain valid.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0d910-4119-7277-acd9-831ae677bc34"
+      }
+    },
+    {
+      "id": "E-35c70ac3-545c-4e63-b642-77dd4dc5b1b9",
+      "kind": "machine-command",
+      "workId": "ODS-004",
+      "obligationIds": [
+        "O-IMPORTER"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -Eeuo pipefail; podman cp scripts/it-management/import_openproject.rb openproject:/tmp/import_openproject.rb; podman exec openproject ruby -c /tmp/import_openproject.rb; before=$(podman exec openproject bundle exec rails runner 'require \"digest\"; p=Project.find_by!(identifier:\"it-management-system\"); payload={users:User.where(id:CustomValue.where(custom_field:UserCustomField.find_by!(name:\"Source Employee Key\"),customized_type:\"Principal\").select(:customized_id)).order(:id).pluck(:id,:login,:firstname,:lastname,:mail,:status),groups:Group.where(id:CustomValue.where(custom_field:GroupCustomField.find_by!(name:\"Source Department Key\"),customized_type:\"Principal\").select(:customized_id)).order(:id).pluck(:id,:lastname),work:p.work_packages.order(:id).pluck(:id,:subject,:author_id,:assigned_to_id,:status_id,:priority_id,:start_date,:due_date,:parent_id)}; puts Digest::SHA256.hexdigest(payload.to_json)' 2>&1 | awk '/^[0-9a-f]{64}$/{v=$0} END{print v}'); result=$(podman exec openproject bundle exec rails runner /tmp/import_openproject.rb /tmp/it-management-normalized.json 2>&1 | awk '/^\\{.*\\}$/{v=$0} END{print v}'); after=$(podman exec openproject bundle exec rails runner 'require \"digest\"; p=Project.find_by!(identifier:\"it-management-system\"); payload={users:User.where(id:CustomValue.where(custom_field:UserCustomField.find_by!(name:\"Source Employee Key\"),customized_type:\"Principal\").select(:customized_id)).order(:id).pluck(:id,:login,:firstname,:lastname,:mail,:status),groups:Group.where(id:CustomValue.where(custom_field:GroupCustomField.find_by!(name:\"Source Department Key\"),customized_type:\"Principal\").select(:customized_id)).order(:id).pluck(:id,:lastname),work:p.work_packages.order(:id).pluck(:id,:subject,:author_id,:assigned_to_id,:status_id,:priority_id,:start_date,:due_date,:parent_id)}; puts Digest::SHA256.hexdigest(payload.to_json)' 2>&1 | awk '/^[0-9a-f]{64}$/{v=$0} END{print v}'); test -n \"$before\" && test \"$before\" = \"$after\"; python3 -c 'import json,sys; x=json.loads(sys.argv[1]); assert x.get(\"users_created\",0)==0 and x.get(\"work_packages_created\",0)==0; assert x[\"users_updated\"]==74 and x[\"work_packages_updated\"]==202 and x[\"groups\"]==16 and x[\"project_members\"]==74 and x[\"work_packages_total\"]==202 and x[\"unresolved_people\"]==0 and x[\"parent_references\"]==10; print(x)' \"$result\"; audit=$(podman exec -i openproject-db sh -lc 'psql -v ON_ERROR_STOP=1 -At -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"' < scripts/it-management/audit_openproject.sql); anomalies=$(printf '%s\\n' \"$audit\" | awk '/^BEGIN_ANOMALIES$/{on=1;next}/^END_ANOMALIES$/{on=0} on{print}'); test \"$(printf '%s\\n' \"$anomalies\" | awk -F'|' 'NF==2{n++; if($2!=0) bad++} END{print n\":\"bad+0}')\" = '39:0'; printf '%s\\n' \"$audit\"; python3 - <<'PY'\nfrom pathlib import Path\np=Path('scripts/it-management/import_openproject.rb').read_text()\nfor required in ['Source Employee Key','Source Department Key','ITMS-EMP-NAME:','ITMS-DEPT-NAME:','valid_source_range','fields_by_type','legacy_subject','Member.unscoped','parent_references']:\n    assert required in p, required\nassert 'ITMS-EMP-HASH:' not in p\nassert 'child.update!(parent: parent)' not in p\nr=Path('scripts/it-management/README.md').read_text()\nassert 'source_date_ranges_not_native_eligible' in r and 'not converted into false parent relationships' in r\nprint('importer static assertions passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T15:36:34.781Z",
+      "completedAt": "2026-09-25T15:40:38.649Z",
+      "durationMs": 243868,
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_openproject.sql",
+            "scripts/it-management/import_openproject.rb"
+          ],
+          "hash": "sha256:2f5e3831b735e0e5404e1aec194576505fee18860f241c35ba722245c6474d71"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_openproject.sql",
+            "scripts/it-management/import_openproject.rb"
+          ],
+          "hash": "sha256:2f5e3831b735e0e5404e1aec194576505fee18860f241c35ba722245c6474d71"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_j0yzr73xhJ0FEmTo9RoW5hFl|fc_09ec90f127bacab4016ab694f1af9087d299a23c7626b5ad57",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:e822d2fbb802f35263c5668e74b80a7ccf8e3f64c92d67e80793ea14b84de3a7"
+    },
+    {
+      "id": "E-bedeae75-bcc6-4f36-a656-73b9abc57784",
+      "kind": "model-review",
+      "workId": "ODS-004",
+      "obligationIds": [
+        "O-IMPORTER"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T15:41:11.066Z",
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/README.md",
+          "scripts/it-management/audit_openproject.sql",
+          "scripts/it-management/import_openproject.rb"
+        ],
+        "hash": "sha256:2f5e3831b735e0e5404e1aec194576505fee18860f241c35ba722245c6474d71"
+      },
+      "dimensions": [
+        "stable identity and legacy migration",
+        "idempotent lookup",
+        "manual correction preservation",
+        "type-specific custom-field applicability",
+        "missing-value behavior",
+        "date and status semantics",
+        "parent relationship discipline",
+        "documentation consistency",
+        "static and live rerun coverage"
+      ],
+      "summary": "Model self-review of import_openproject.rb, audit_openproject.sql, README.md, and the successful live rerun found user/group/work-package lookup is anchored to dedicated stable keys; name fallbacks hash only normalized natural identity and no mutable row hash exists; current Employee ID values support legacy migration; existing login/name/mail correction, group name, subject, actor, status, priority, description, membership roles, and native dates are preserved conservatively; only legacy source-prefixed asset subjects are normalized; source custom fields refresh without duplicate rows; field/type links are exact; Incomplete precedes Complete in mapping; invalid source date ranges stay only in imported fields; Parent Task labels never create parent links. Ruby syntax, static assertions, a no-create 74-user/202-work-package rerun, identical before/after display-state hash, and all 39 anomaly gates passed.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0d910-4119-7277-acd9-831ae677bc34"
+      }
+    },
+    {
+      "id": "E-856cf72f-5d52-441b-b070-1a36fbf498d6",
+      "kind": "machine-command",
+      "workId": "ODS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "failed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -Eeuo pipefail; podman cp scripts/it-management/import_openproject.rb openproject:/tmp/import_openproject.rb; podman exec openproject ruby -c /tmp/import_openproject.rb; audit=$(podman exec -i openproject-db sh -lc 'psql -v ON_ERROR_STOP=1 -At -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"' < scripts/it-management/audit_openproject.sql); anomalies=$(printf '%s\\n' \"$audit\" | awk '/^BEGIN_ANOMALIES$/{on=1;next}/^END_ANOMALIES$/{on=0} on{print}'); test \"$(printf '%s\\n' \"$anomalies\" | awk -F'|' 'NF==2{n++; if($2!=0) bad++} END{print n\":\"bad+0}')\" = '39:0'; for expected in 'imported_users|74' 'imported_groups|16' 'project_members|74' 'imported_types|3' 'imported_work_packages|202' 'ticket_work_packages|168' 'printer_work_packages|25' 'provision_work_packages|9' 'source_date_ranges_not_native_eligible|1' 'user_custom_fields|10' 'work_package_custom_fields|32'; do printf '%s\\n' \"$audit\" | grep -Fx \"$expected\" >/dev/null; done; printf '%s\\n' \"$audit\"; podman exec openproject bundle exec rails runner 'p=Project.find_by!(identifier:\"it-management-system\"); ef=UserCustomField.find_by!(name:\"Source Employee Key\"); gf=GroupCustomField.find_by!(name:\"Source Department Key\"); sf=WorkPackageCustomField.find_by!(name:\"Source Record Key\"); users=CustomValue.where(custom_field:ef,customized_type:\"Principal\").where.not(value:[nil,\"\"]); groups=CustomValue.where(custom_field:gf,customized_type:\"Principal\").where.not(value:[nil,\"\"]); keys=CustomValue.where(custom_field:sf,customized_type:\"WorkPackage\",customized_id:p.work_packages.select(:id)).where.not(value:[nil,\"\"]); synthetic=User.where(id:users.select(:customized_id)).where(\"mail LIKE ?\",\"%@employees.invalid\").count; missing_name=User.where(id:users.select(:customized_id),lastname:\"(not provided)\").count; raise unless users.count==users.distinct.count(:value)==74 && groups.count==groups.distinct.count(:value)==16 && keys.count==keys.distinct.count(:value)==202; raise unless Member.unscoped.where(project_id:p.id,user_id:users.select(:customized_id)).count==74; raise unless p.work_packages.where.not(parent_id:nil).count==0; puts({users:74,groups:16,members:74,work_packages:202,employee_keys:74,department_keys:16,work_package_keys:202,synthetic_required_mail:synthetic,required_missing_name_markers:missing_name,parent_links:0}.to_json)'; test \"$(podman inspect --format '{{.State.Health.Status}}' openproject)\" = healthy; test \"$(podman inspect --format '{{.State.Health.Status}}' openproject-db)\" = healthy; podman exec openproject curl -fsS http://localhost/health_checks/default >/dev/null; git diff --check -- scripts/it-management/import_openproject.rb scripts/it-management/audit_openproject.sql scripts/it-management/README.md; echo 'final OpenProject normalization verification passed'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T15:42:22.696Z",
+      "completedAt": "2026-09-25T15:43:33.340Z",
+      "durationMs": 70644,
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_openproject.sql",
+            "scripts/it-management/import_openproject.rb"
+          ],
+          "hash": "sha256:2f5e3831b735e0e5404e1aec194576505fee18860f241c35ba722245c6474d71"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_openproject.sql",
+            "scripts/it-management/import_openproject.rb"
+          ],
+          "hash": "sha256:2f5e3831b735e0e5404e1aec194576505fee18860f241c35ba722245c6474d71"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_QeY8EHvy9KgRmrDxPvuxhmR6|fc_09ec90f127bacab4016ab6964edec087d298d23a651167f862",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:e21a190db9088c95a125a278a1c4f32767f9c9d6b0647f615c1bc5acd75a88c9"
+    },
+    {
+      "id": "E-4bc31c46-999d-4e33-8c2f-34c5ab0d5783",
+      "kind": "machine-command",
+      "workId": "ODS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -Eeuo pipefail; podman cp scripts/it-management/import_openproject.rb openproject:/tmp/import_openproject.rb; podman exec openproject ruby -c /tmp/import_openproject.rb; audit=$(podman exec -i openproject-db sh -lc 'psql -v ON_ERROR_STOP=1 -At -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"' < scripts/it-management/audit_openproject.sql); anomalies=$(printf '%s\\n' \"$audit\" | awk '/^BEGIN_ANOMALIES$/{on=1;next}/^END_ANOMALIES$/{on=0} on{print}'); test \"$(printf '%s\\n' \"$anomalies\" | awk -F'|' 'NF==2{n++; if($2!=0) bad++} END{print n\":\"bad+0}')\" = '39:0'; for expected in 'imported_users|74' 'imported_groups|16' 'project_members|74' 'imported_types|3' 'imported_work_packages|202' 'ticket_work_packages|168' 'printer_work_packages|25' 'provision_work_packages|9' 'source_date_ranges_not_native_eligible|1' 'user_custom_fields|10' 'work_package_custom_fields|32'; do printf '%s\\n' \"$audit\" | grep -Fx \"$expected\" >/dev/null; done; printf '%s\\n' \"$audit\"; podman exec openproject bundle exec rails runner 'p=Project.find_by!(identifier:\"it-management-system\"); ef=UserCustomField.find_by!(name:\"Source Employee Key\"); gf=GroupCustomField.find_by!(name:\"Source Department Key\"); sf=WorkPackageCustomField.find_by!(name:\"Source Record Key\"); users=CustomValue.where(custom_field:ef,customized_type:\"Principal\").where.not(value:[nil,\"\"]); groups=CustomValue.where(custom_field:gf,customized_type:\"Principal\").where.not(value:[nil,\"\"]); keys=CustomValue.where(custom_field:sf,customized_type:\"WorkPackage\",customized_id:p.work_packages.select(:id)).where.not(value:[nil,\"\"]); synthetic=User.where(id:users.select(:customized_id)).where(\"mail LIKE ?\",\"%@employees.invalid\").count; missing_name=User.where(id:users.select(:customized_id),lastname:\"(not provided)\").count; raise unless users.count==74 && users.distinct.count(:value)==74 && groups.count==16 && groups.distinct.count(:value)==16 && keys.count==202 && keys.distinct.count(:value)==202; raise unless Member.unscoped.where(project_id:p.id,user_id:users.select(:customized_id)).count==74; raise unless p.work_packages.where.not(parent_id:nil).count==0; puts({users:74,groups:16,members:74,work_packages:202,employee_keys:74,department_keys:16,work_package_keys:202,synthetic_required_mail:synthetic,required_missing_name_markers:missing_name,parent_links:0}.to_json)'; test \"$(podman inspect --format '{{.State.Health.Status}}' openproject)\" = healthy; test \"$(podman inspect --format '{{.State.Health.Status}}' openproject-db)\" = healthy; podman exec openproject curl -fsS http://localhost/health_checks/default >/dev/null; git diff --check -- scripts/it-management/import_openproject.rb scripts/it-management/audit_openproject.sql scripts/it-management/README.md; echo 'final OpenProject normalization verification passed'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T15:44:24.921Z",
+      "completedAt": "2026-09-25T15:45:28.323Z",
+      "durationMs": 63402,
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_openproject.sql",
+            "scripts/it-management/import_openproject.rb"
+          ],
+          "hash": "sha256:2f5e3831b735e0e5404e1aec194576505fee18860f241c35ba722245c6474d71"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_openproject.sql",
+            "scripts/it-management/import_openproject.rb"
+          ],
+          "hash": "sha256:2f5e3831b735e0e5404e1aec194576505fee18860f241c35ba722245c6474d71"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_abXY1plGLGbbnxC8kcU47Sx5|fc_09ec90f127bacab4016ab696cb8bd887d2bb39132242560d46",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:317af7f3d735a0e0f0f55288dffd4f575dc7bcb41b8d1488a2058b1e558d3c87"
+    },
+    {
+      "id": "E-0d34826c-85e8-4c24-bc9f-8920084c66af",
+      "kind": "model-review",
+      "workId": "ODS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T15:45:57.622Z",
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/README.md",
+          "scripts/it-management/audit_openproject.sql",
+          "scripts/it-management/import_openproject.rb"
+        ],
+        "hash": "sha256:2f5e3831b735e0e5404e1aec194576505fee18860f241c35ba722245c6474d71"
+      },
+      "dimensions": [
+        "referential integrity",
+        "source-key uniqueness and stability",
+        "scope isolation",
+        "display normalization",
+        "status and date semantics",
+        "custom-field applicability",
+        "manual correction preservation",
+        "idempotent rerun",
+        "audit gate robustness",
+        "platform limitation disclosure",
+        "service health"
+      ],
+      "summary": "Final model self-review of scripts/it-management/import_openproject.rb, audit_openproject.sql, README.md, the passing current-machine command, and the approved contract found: 74 users, 16 groups, 74 direct memberships, 3 types, and 202 work packages retain unique dedicated keys and valid references; all 39 explicitly delimited anomaly rows are zero under tuples-only output, so suppressed headers cannot false-pass; 34 asset subjects, placeholders, location typos, departments, statuses, valid native dates, and 40 type-specific custom-field links are normalized; ten categorical parent references create zero false links; the one invalid date range is preserved only in source fields and reported as metric=1; a no-create rerun preserved the display/relationship state hash; Ruby syntax, container/database health, internal health, and diff checks pass. The documented 29 required technical emails and five '(not provided)' last-name markers are OpenProject validation constraints and are excluded from identity. No unrelated manual/global reference records are mutated by the audit or importer logic.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0d910-4119-7277-acd9-831ae677bc34"
+      }
+    },
+    {
+      "id": "E-8d92c361-670d-4844-9653-5aa0ce89c3a8",
+      "kind": "model-review",
+      "workId": "ODS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "failed",
+      "reviewedAt": "2026-09-25T15:50:21.785Z",
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/README.md",
+          "scripts/it-management/audit_openproject.sql",
+          "scripts/it-management/import_openproject.rb"
+        ],
+        "hash": "sha256:2f5e3831b735e0e5404e1aec194576505fee18860f241c35ba722245c6474d71"
+      },
+      "dimensions": [
+        "source-key stability and legacy migration",
+        "scope isolation",
+        "referential integrity",
+        "manual correction preservation",
+        "idempotent rerun semantics",
+        "status and actor audit coverage",
+        "type-specific custom-field applicability",
+        "documentation accuracy"
+      ],
+      "summary": "Independent reviewer `mellow-nexus` completed and was queried after exit. It found blockers: missing legacy fallback for no-ID/invalid-email employees; globally scoped user/group/work-package fallback lookup; department changes accumulate memberships; status/priority/assignee semantics are incompletely audited; user status overwrites and strict native-date audit conflict with manual-correction preservation; type-field applicability may touch unrelated manual field links; and README platform-constraint counts/statements are inconsistent. No pass token was emitted.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0d910-4119-7277-acd9-831ae677bc34"
+      }
+    },
+    {
+      "id": "E-0545302e-fe9e-4df0-a499-67b5f66dba65",
+      "kind": "machine-command",
+      "workId": "ODS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "failed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -Eeuo pipefail; podman cp scripts/it-management/import_openproject.rb openproject:/tmp/import_openproject.rb; podman exec openproject ruby -c /tmp/import_openproject.rb; before=$(podman exec openproject bundle exec rails runner 'require \"digest\"; p=Project.find_by!(identifier:\"it-management-system\"); payload={users:User.where(id:CustomValue.where(custom_field:UserCustomField.find_by!(name:\"Source Employee Key\"),customized_type:\"Principal\").select(:customized_id)).order(:id).pluck(:id,:login,:firstname,:lastname,:mail,:status),groups:Group.where(id:CustomValue.where(custom_field:GroupCustomField.find_by!(name:\"Source Department Key\"),customized_type:\"Principal\").select(:customized_id)).order(:id).pluck(:id,:lastname),work:p.work_packages.order(:id).pluck(:id,:subject,:author_id,:assigned_to_id,:status_id,:priority_id,:start_date,:due_date,:parent_id)}; puts Digest::SHA256.hexdigest(payload.to_json)' 2>&1 | awk '/^[0-9a-f]{64}$/{v=$0} END{print v}'); result=$(podman exec openproject bundle exec rails runner /tmp/import_openproject.rb /tmp/it-management-normalized.json 2>&1 | awk '/^\\{.*\\}$/{v=$0} END{print v}'); after=$(podman exec openproject bundle exec rails runner 'require \"digest\"; p=Project.find_by!(identifier:\"it-management-system\"); payload={users:User.where(id:CustomValue.where(custom_field:UserCustomField.find_by!(name:\"Source Employee Key\"),customized_type:\"Principal\").select(:customized_id)).order(:id).pluck(:id,:login,:firstname,:lastname,:mail,:status),groups:Group.where(id:CustomValue.where(custom_field:GroupCustomField.find_by!(name:\"Source Department Key\"),customized_type:\"Principal\").select(:customized_id)).order(:id).pluck(:id,:lastname),work:p.work_packages.order(:id).pluck(:id,:subject,:author_id,:assigned_to_id,:status_id,:priority_id,:start_date,:due_date,:parent_id)}; puts Digest::SHA256.hexdigest(payload.to_json)' 2>&1 | awk '/^[0-9a-f]{64}$/{v=$0} END{print v}'); test -n \"$before\" && test \"$before\" = \"$after\"; python3 -c 'import json,sys; x=json.loads(sys.argv[1]); assert x.get(\"users_created\",0)==0 and x.get(\"work_packages_created\",0)==0 and x[\"users_updated\"]==74 and x[\"work_packages_updated\"]==202 and x[\"groups\"]==16 and x[\"project_members\"]==74 and x[\"unresolved_people\"]==0; print(x)' \"$result\"; audit=$(podman exec -i openproject-db sh -lc 'psql -v ON_ERROR_STOP=1 -At -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"' < scripts/it-management/audit_openproject.sql); anomalies=$(printf '%s\\n' \"$audit\" | awk '/^BEGIN_ANOMALIES$/{on=1;next}/^END_ANOMALIES$/{on=0} on{print}'); test \"$(printf '%s\\n' \"$anomalies\" | awk -F'|' 'NF==2{n++; if($2!=0) bad++} END{print n\":\"bad+0}')\" = '40:0'; for expected in 'imported_users|74' 'imported_groups|16' 'project_members|74' 'imported_types|3' 'imported_work_packages|202' 'ticket_work_packages|168' 'printer_work_packages|25' 'provision_work_packages|9' 'source_date_ranges_not_native_eligible|1' 'user_custom_fields|10' 'work_package_custom_fields|33'; do printf '%s\\n' \"$audit\" | grep -Fx \"$expected\" >/dev/null; done; printf '%s\\n' \"$audit\"; podman exec openproject bundle exec rails runner 'p=Project.find_by!(identifier:\"it-management-system\"); ef=UserCustomField.find_by!(name:\"Source Employee Key\"); gf=GroupCustomField.find_by!(name:\"Source Department Key\"); sf=WorkPackageCustomField.find_by!(name:\"Source Record Key\"); af=WorkPackageCustomField.find_by!(name:\"Original Assignee\"); users=CustomValue.where(custom_field:ef,customized_type:\"Principal\").where.not(value:[nil,\"\"]); groups=CustomValue.where(custom_field:gf,customized_type:\"Principal\").where.not(value:[nil,\"\"]); keys=CustomValue.where(custom_field:sf,customized_type:\"WorkPackage\",customized_id:p.work_packages.select(:id)).where.not(value:[nil,\"\"]); raise unless users.count==74 && users.distinct.count(:value)==74 && groups.count==16 && groups.distinct.count(:value)==16 && keys.count==202 && keys.distinct.count(:value)==202 && CustomValue.where(custom_field:af,customized_type:\"WorkPackage\",customized_id:p.work_packages.select(:id)).where.not(value:[nil,\"\"]).count==164; raise unless Member.unscoped.where(project_id:p.id,user_id:users.select(:customized_id)).count==74 && p.work_packages.where.not(parent_id:nil).count==0; puts({users:74,groups:16,members:74,work_packages:202,employee_keys:74,department_keys:16,work_package_keys:202,original_assignees:164,parent_links:0}.to_json)'; test \"$(podman inspect --format '{{.State.Health.Status}}' openproject)\" = healthy; test \"$(podman inspect --format '{{.State.Health.Status}}' openproject-db)\" = healthy; podman exec openproject curl -fsS http://localhost/health_checks/default >/dev/null; git diff --check -- scripts/it-management/import_openproject.rb scripts/it-management/audit_openproject.sql scripts/it-management/README.md; echo 'corrective final OpenProject verification passed'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T15:58:13.277Z",
+      "completedAt": "2026-09-25T16:02:45.750Z",
+      "durationMs": 272473,
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_openproject.sql",
+            "scripts/it-management/import_openproject.rb"
+          ],
+          "hash": "sha256:256b5149d582fc1fce3265fe43ae9fd790f10f958fed2f8b8ae32c913ed20e7e"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_openproject.sql",
+            "scripts/it-management/import_openproject.rb"
+          ],
+          "hash": "sha256:256b5149d582fc1fce3265fe43ae9fd790f10f958fed2f8b8ae32c913ed20e7e"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_MFxQKjSfo2LzytagwcFYDOZR|fc_09ec90f127bacab4016ab699fd60bc87d2abcb125e3f40f13e",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:4ff7216c31213331921d9b324f6a357186cbf907c2fc7924e82745e00034badf"
+    },
+    {
+      "id": "E-3c1459a1-c9ba-4a5c-9643-a77475990ea6",
+      "kind": "machine-command",
+      "workId": "ODS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -Eeuo pipefail; podman cp scripts/it-management/import_openproject.rb openproject:/tmp/import_openproject.rb; podman exec openproject ruby -c /tmp/import_openproject.rb; result=$(podman exec openproject bundle exec rails runner /tmp/import_openproject.rb /tmp/it-management-normalized.json 2>&1 | awk '/^\\{.*\\}$/{v=$0} END{print v}'); python3 -c 'import json,sys; x=json.loads(sys.argv[1]); assert x.get(\"users_created\",0)==0 and x.get(\"work_packages_created\",0)==0 and x[\"users_updated\"]==74 and x[\"work_packages_updated\"]==202 and x[\"groups\"]==16 and x[\"project_members\"]==74 and x[\"unresolved_people\"]==0; print(x)' \"$result\"; audit=$(podman exec -i openproject-db sh -lc 'psql -v ON_ERROR_STOP=1 -At -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"' < scripts/it-management/audit_openproject.sql); anomalies=$(printf '%s\\n' \"$audit\" | awk '/^BEGIN_ANOMALIES$/{on=1;next}/^END_ANOMALIES$/{on=0} on{print}'); test \"$(printf '%s\\n' \"$anomalies\" | awk -F'|' 'NF==2{n++; if($2!=0) bad++} END{print n\":\"bad+0}')\" = '40:0'; for expected in 'imported_users|74' 'imported_groups|16' 'project_members|74' 'imported_types|3' 'imported_work_packages|202' 'ticket_work_packages|168' 'printer_work_packages|25' 'provision_work_packages|9' 'source_date_ranges_not_native_eligible|1' 'user_custom_fields|10' 'work_package_custom_fields|33'; do printf '%s\\n' \"$audit\" | grep -Fx \"$expected\" >/dev/null; done; printf '%s\\n' \"$audit\"; podman exec openproject bundle exec rails runner 'p=Project.find_by!(identifier:\"it-management-system\"); ef=UserCustomField.find_by!(name:\"Source Employee Key\"); gf=GroupCustomField.find_by!(name:\"Source Department Key\"); sf=WorkPackageCustomField.find_by!(name:\"Source Record Key\"); af=WorkPackageCustomField.find_by!(name:\"Original Assignee\"); users=CustomValue.where(custom_field:ef,customized_type:\"Principal\").where.not(value:[nil,\"\"]); groups=CustomValue.where(custom_field:gf,customized_type:\"Principal\").where.not(value:[nil,\"\"]); keys=CustomValue.where(custom_field:sf,customized_type:\"WorkPackage\",customized_id:p.work_packages.select(:id)).where.not(value:[nil,\"\"]); assignees=CustomValue.where(custom_field:af,customized_type:\"WorkPackage\",customized_id:p.work_packages.select(:id)).where.not(value:[nil,\"\"]); raise unless users.count==users.distinct.count(:value) && users.count==74 && groups.count==groups.distinct.count(:value) && groups.count==16 && keys.count==keys.distinct.count(:value) && keys.count==202 && assignees.count==assignees.distinct.count(:customized_id) && assignees.count==168; raise unless Member.unscoped.where(project_id:p.id,user_id:users.select(:customized_id)).count==74 && p.work_packages.where.not(parent_id:nil).count==0; puts({users:74,groups:16,members:74,work_packages:202,employee_keys:74,department_keys:16,work_package_keys:202,original_assignees:168,parent_links:0}.to_json)'; test \"$(podman inspect --format '{{.State.Health.Status}}' openproject)\" = healthy; test \"$(podman inspect --format '{{.State.Health.Status}}' openproject-db)\" = healthy; podman exec openproject curl -fsS http://localhost/health_checks/default >/dev/null; git diff --check -- scripts/it-management/import_openproject.rb scripts/it-management/audit_openproject.sql scripts/it-management/README.md; echo 'corrective final OpenProject verification passed'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T16:04:54.678Z",
+      "completedAt": "2026-09-25T16:06:58.791Z",
+      "durationMs": 124113,
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_openproject.sql",
+            "scripts/it-management/import_openproject.rb"
+          ],
+          "hash": "sha256:256b5149d582fc1fce3265fe43ae9fd790f10f958fed2f8b8ae32c913ed20e7e"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_openproject.sql",
+            "scripts/it-management/import_openproject.rb"
+          ],
+          "hash": "sha256:256b5149d582fc1fce3265fe43ae9fd790f10f958fed2f8b8ae32c913ed20e7e"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_vfNsc2iLW7T72bEQsF1IGOYd|fc_09ec90f127bacab4016ab69b95d25c87d2968a43400a791aef",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:5d39d0dd8642b2b647f21fc30832b73436ae363d091d4d5ee5dafd43134311a4"
+    },
+    {
+      "id": "E-8a59488f-5afa-4d9c-b03d-6c42e969c420",
+      "kind": "model-review",
+      "workId": "ODS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T16:24:14.855Z",
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/README.md",
+          "scripts/it-management/audit_openproject.sql",
+          "scripts/it-management/import_openproject.rb"
+        ],
+        "hash": "sha256:4728b370c6fe6882f93e44b9a95494fee9892bf129b418cbe5e51f95e65c0d59"
+      },
+      "dimensions": [
+        "global collision preflight",
+        "imported scope isolation",
+        "transaction ordering",
+        "corrective regression closure"
+      ],
+      "summary": "Independent reviewer session fast-coral completed with exit code 0 and was queried after emitting the exact token. It confirmed the read-only global collision preflight runs before any assignment/save, derives imported scopes from the existing project and marker fields, checks every employee source key/Employee ID, department key, and work-package key against foreign records, and raises fail-closed; prior corrective behavior and current syntax/no-create rerun/40:0 audit evidence remain intact. GENTIC_INDEPENDENT_REVIEW:5fe42704-9cb7-4625-9030-56229b077c34:passed",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0d910-4119-7277-acd9-831ae677bc34"
+      }
+    },
+    {
+      "id": "E-dbf5c49b-8db3-4ab6-b1c2-73f5e9813217",
+      "kind": "machine-command",
+      "workId": "ODS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "podman cp scripts/it-management/import_openproject.rb openproject:/tmp/import_openproject.rb && podman exec openproject ruby -c /tmp/import_openproject.rb && podman exec openproject bundle exec rails runner /tmp/import_openproject.rb /tmp/it-management-normalized.json 2>&1 | awk '/^\\{.*\\}$/{print}' && out=$(podman exec -i openproject-db sh -lc 'psql -v ON_ERROR_STOP=1 -At -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"' < scripts/it-management/audit_openproject.sql); test \"$(printf '%s\\n' \"$out\" | awk -F'|' '/^BEGIN_ANOMALIES$/{on=1;next}/^END_ANOMALIES$/{on=0} on&&NF==2{n++;if($2!=0)b++} END{print n\":\"b+0}')\" = 40:0 && echo final-verification-passed"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-25T16:33:38.101Z",
+      "completedAt": "2026-09-25T16:34:42.613Z",
+      "durationMs": 64512,
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_openproject.sql",
+            "scripts/it-management/import_openproject.rb"
+          ],
+          "hash": "sha256:51d3bdc003dd4d38ac55095cb9d297cf0ed52952e44699566f825c67e1823b65"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/README.md",
+            "scripts/it-management/audit_openproject.sql",
+            "scripts/it-management/import_openproject.rb"
+          ],
+          "hash": "sha256:51d3bdc003dd4d38ac55095cb9d297cf0ed52952e44699566f825c67e1823b65"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_AzF7XpGlaYFAHTWDKM5HmY5l|fc_09ec90f127bacab4016ab6a25f2e3887d2b0e4af51e578ab80",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:d556ff6386301fb822aa50b164bce2cc41e6d77340c313acfbf1ad7b97598558"
+    },
+    {
+      "id": "E-2bbf8f40-24c3-4a0f-b810-06f051ab6c5d",
+      "kind": "independent-review",
+      "workId": "ODS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T16:37:17.886Z",
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/README.md",
+          "scripts/it-management/audit_openproject.sql",
+          "scripts/it-management/import_openproject.rb"
+        ],
+        "hash": "sha256:51d3bdc003dd4d38ac55095cb9d297cf0ed52952e44699566f825c67e1823b65"
+      },
+      "dimensions": [
+        "final unconditional collision preflight",
+        "idempotent rerun and audit evidence"
+      ],
+      "summary": "Final current-authority review after source-bound machine verification. Preflight is unconditional before mutation and fresh-import scoped IDs are empty, so matching global keys abort. Current exact verification passed syntax, 74/202 no-create rerun and 40:0 audit. Emit exact token only with no blocker.",
+      "provenance": {
+        "kind": "pi-interactive-session-review",
+        "transport": "interactive-shell",
+        "reviewerSessionId": "keen-river",
+        "recorderSessionId": "01a0d910-4119-7277-acd9-831ae677bc34"
+      }
+    },
+    {
+      "id": "E-47ab4a7f-3f8f-4399-9314-a143b3e952fd",
+      "kind": "model-review",
+      "workId": "ODS-005",
+      "obligationIds": [
+        "O-FINAL"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-25T16:37:50.308Z",
+      "contractFingerprint": "sha256:5ad4131e134bf44529e9b4d9fd3f109fe59a341974348aadf3b010c913797918",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/README.md",
+          "scripts/it-management/audit_openproject.sql",
+          "scripts/it-management/import_openproject.rb"
+        ],
+        "hash": "sha256:51d3bdc003dd4d38ac55095cb9d297cf0ed52952e44699566f825c67e1823b65"
+      },
+      "dimensions": [
+        "source-bound importer logic",
+        "fresh and existing project collision scoping",
+        "idempotency and manual preservation",
+        "audit and documentation consistency"
+      ],
+      "summary": "Model self-review of the current source and scoped diff passed. The preflight executes unconditionally at the transaction start before project assignment/save; absent projects produce empty scoped IDs, making matching global keys foreign, while existing projects restrict users/groups/work packages to imported project markers. Defense-in-depth checks remain, stable fallback identities exclude technical mail and mutable rows, membership convergence/manual preservation/date and parent-reference behavior remain intact, and README/audit expectations match the verified live state. This is an explicit model self-review, not independent or human review.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0d910-4119-7277-acd9-831ae677bc34"
+      }
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D-001",
+      "text": "Treat all data as all imported OpenProject business data and its supporting imported references, not application internals.",
+      "basis": "This meets the normalization request without risking framework state."
+    },
+    {
+      "id": "D-002",
+      "text": "Keep source keys in dedicated custom fields and remove redundant source text from display fields only when traceability remains intact.",
+      "basis": "Dedicated source identity supports auditing and idempotency."
+    },
+    {
+      "id": "D-003",
+      "text": "Do not infer parent-child links when Parent Task values are categorical rather than actual source record IDs.",
+      "basis": "Relationships must not be fabricated."
+    }
+  ],
+  "risks": [
+    {
+      "id": "R-001",
+      "text": "Incorrect user or actor matching could alter accountability.",
+      "mitigation": "Use dedicated source fields and exact normalized source identities; leave ambiguous people unresolved."
+    },
+    {
+      "id": "R-002",
+      "text": "Importer reruns could overwrite manual names or recreate placeholders.",
+      "mitigation": "Use source-key upserts and conservative write rules based on existing values and importer-created defaults."
+    },
+    {
+      "id": "R-003",
+      "text": "Shared global types, statuses, priorities, or custom fields could affect unrelated projects.",
+      "mitigation": "Scope updates by project and explicit import provenance; reuse compatible references without mutating unrelated definitions."
+    }
+  ]
+}
