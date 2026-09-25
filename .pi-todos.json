@@ -1,0 +1,13 @@
+{
+  "kind": "gentic.project-todos",
+  "schemaVersion": 1,
+  "revision": 4,
+  "updatedAt": "2026-09-25T16:48:52.746Z",
+  "todos": [
+    {
+      "id": "ptodo_eacd56c0-94f3-4bb2-8cd8-dffda176ceba",
+      "title": "Export Normalized Data and remove import mapping and scripts",
+      "status": "completed"
+    }
+  ]
+}
