@@ -1,6 +1,6 @@
 services:
   adminer:
-    image: adminer:4
+    image: adminer:latest
     restart: unless-stopped
     ports:
     - 127.0.0.1:8082:8080
