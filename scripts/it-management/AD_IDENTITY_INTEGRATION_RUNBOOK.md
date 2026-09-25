@@ -17,6 +17,8 @@ This runbook defines how GLPI and OpenProject use the organisation's existing id
 
 Passwords must never be copied or synchronized between application databases.
 
+For GLPI computer inventory and ticket creation from `support@fluidhose.com`, follow [GLPI AD, inventory and email intake runbook](GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md).
+
 ## 2. Target architecture
 
 ```text
@@ -267,6 +269,7 @@ If rollout fails:
 
 - [GLPI LDAP directory configuration](https://help.glpi-project.org/documentation/modules/configuration/authentication/ldap)
 - [GLPI authentication configuration](https://help.glpi-project.org/documentation/modules/configuration/authentication)
+- [GLPI AD, inventory and email intake runbook](GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md)
 - [OpenProject LDAP connections](https://www.openproject.org/docs/system-admin-guide/authentication/ldap-connections/)
 - [OpenProject LDAP group synchronization](https://www.openproject.org/docs/system-admin-guide/authentication/ldap-connections/ldap-group-synchronization/)
 - [OpenProject OpenID providers](https://www.openproject.org/docs/system-admin-guide/authentication/openid-providers/)
