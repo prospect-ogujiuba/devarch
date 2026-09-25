@@ -2,6 +2,8 @@ services:
   glpi-db:
     image: mariadb:11.4
     restart: unless-stopped
+    ports:
+      - 127.0.0.1:3307:3306
     environment:
       MARIADB_DATABASE: glpi
       MARIADB_USER: glpi
