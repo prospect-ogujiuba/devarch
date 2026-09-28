@@ -1,0 +1,743 @@
+{
+  "kind": "gentic.swe.initiative",
+  "schemaVersion": 1,
+  "id": "glpi-production-clean-slate",
+  "revision": 26,
+  "status": "complete",
+  "objective": "Create a production-ready GLPI clean slate and a restore-tested secondary SQL import that preserves normalized identities, groups, assets, locations, categories, and configuration while removing extracted historical tickets and the unused imported project.",
+  "policies": {
+    "commitOnWorkCompletion": false,
+    "independentReviewOnCompletion": true
+  },
+  "scope": {
+    "in": [
+      "Running GLPI 11.0.9 MariaDB database and application health",
+      "Verified pre-change database and application-data backups",
+      "Removal of extracted tickets and dependent ticket history",
+      "Removal of the unused imported GLPI project and dependent project data",
+      "Preservation of normalized users, groups, memberships, printers, peripherals, locations, manufacturers, models, states, categories, profiles, notifications, and core configuration",
+      "A secondary restore-ready SQL dump under services-library/project/glpi/export",
+      "Disposable restore testing and retained-count verification"
+    ],
+    "out": [
+      "AD, SMTP, email receiver, OAuth, and GLPI Agent configuration requiring external credentials",
+      "OpenProject or other services",
+      "Deletion of the original normalized database.sql archive",
+      "Fabrication of missing data"
+    ]
+  },
+  "constraints": [
+    "Create and checksum backups before live mutation.",
+    "Do not expose credentials or personal data in command output.",
+    "Use a transaction and verify referential integrity.",
+    "Preserve database.sql unchanged as the legacy archive.",
+    "Restore-test the secondary SQL against MariaDB and GLPI 11.0.9.",
+    "Do not commit or push without authorization."
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-001",
+      "text": "Checksum-verified pre-change database and application-data backups exist."
+    },
+    {
+      "id": "AC-002",
+      "text": "The clean state has zero extracted tickets and zero unused imported projects while retaining normalized master and reference data."
+    },
+    {
+      "id": "AC-003",
+      "text": "A distinct secondary SQL dump is generated without credentials."
+    },
+    {
+      "id": "AC-004",
+      "text": "The secondary SQL restores successfully in isolation with expected counts and no integrity failures."
+    },
+    {
+      "id": "AC-005",
+      "text": "The live GLPI endpoint remains healthy and structurally ready for new tickets."
+    }
+  ],
+  "assessment": {
+    "depth": "deep",
+    "reason": "This deletes relational history and produces a sensitive production restore artifact.",
+    "surfaces": [
+      "Live GLPI MariaDB volume",
+      "GLPI application-data volume",
+      "Ticket and project relationships",
+      "Normalized identity, asset, and reference data",
+      "SQL exports"
+    ],
+    "unknowns": [
+      "External identity and email credentials are unavailable.",
+      "The imported project may have no value beyond the extraction pilot."
+    ]
+  },
+  "practices": [
+    {
+      "id": "P-BACKUP",
+      "practice": "Create checksum-verified backups before mutation.",
+      "appliesTo": [
+        "GPS-001"
+      ],
+      "reason": "Cleanup must remain reversible."
+    },
+    {
+      "id": "P-CLEAN",
+      "practice": "Clean transactionally and verify retained counts and integrity.",
+      "appliesTo": [
+        "GPS-002"
+      ],
+      "reason": "Tickets and projects span dependent tables."
+    },
+    {
+      "id": "P-EXPORT",
+      "practice": "Generate and inspect a full logical dump.",
+      "appliesTo": [
+        "GPS-003"
+      ],
+      "reason": "The secondary SQL must be a real restore artifact."
+    },
+    {
+      "id": "P-RESTORE",
+      "practice": "Restore into an isolated disposable database and validate it.",
+      "appliesTo": [
+        "GPS-004"
+      ],
+      "reason": "A restore is the definitive import test."
+    }
+  ],
+  "obligations": [
+    {
+      "id": "O-BACKUP",
+      "practiceId": "P-BACKUP",
+      "criterionIds": [
+        "AC-001"
+      ],
+      "text": "Back up and checksum live database and application data.",
+      "verification": {
+        "kind": "backup verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-CLEAN",
+      "practiceId": "P-CLEAN",
+      "criterionIds": [
+        "AC-002",
+        "AC-005"
+      ],
+      "text": "Remove extracted operational history while preserving useful normalized data and health.",
+      "verification": {
+        "kind": "database integrity verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-EXPORT",
+      "practiceId": "P-EXPORT",
+      "criterionIds": [
+        "AC-003"
+      ],
+      "text": "Generate and inspect the secondary clean-slate SQL.",
+      "verification": {
+        "kind": "export verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-RESTORE",
+      "practiceId": "P-RESTORE",
+      "criterionIds": [
+        "AC-004"
+      ],
+      "text": "Restore and validate the secondary SQL independently.",
+      "verification": {
+        "kind": "restore verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review",
+          "independent-review"
+        ]
+      }
+    }
+  ],
+  "work": [
+    {
+      "id": "GPS-001",
+      "kind": "task",
+      "title": "Back up and inventory live GLPI",
+      "status": "complete",
+      "dependsOn": [],
+      "criterionIds": [
+        "AC-001"
+      ],
+      "obligationIds": [
+        "O-BACKUP"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Checksums and counts prove rollback readiness."
+      }
+    },
+    {
+      "id": "GPS-002",
+      "kind": "task",
+      "title": "Create clean-slate GLPI state",
+      "status": "complete",
+      "dependsOn": [
+        "GPS-001"
+      ],
+      "criterionIds": [
+        "AC-002",
+        "AC-005"
+      ],
+      "obligationIds": [
+        "O-CLEAN"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Counts, integrity, and health qualify cleanup."
+      }
+    },
+    {
+      "id": "GPS-003",
+      "kind": "task",
+      "title": "Generate secondary SQL import",
+      "status": "complete",
+      "dependsOn": [
+        "GPS-002"
+      ],
+      "criterionIds": [
+        "AC-003"
+      ],
+      "obligationIds": [
+        "O-EXPORT"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Dump inspection and checksum qualify the artifact."
+      }
+    },
+    {
+      "id": "GPS-004",
+      "kind": "task",
+      "title": "Restore-test and review secondary import",
+      "status": "complete",
+      "dependsOn": [
+        "GPS-003"
+      ],
+      "criterionIds": [
+        "AC-004"
+      ],
+      "obligationIds": [
+        "O-RESTORE"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Isolated restore proves usability."
+      }
+    }
+  ],
+  "artifacts": [],
+  "evidence": [
+    {
+      "id": "E-2996967f-4cc1-4b39-a8f3-ff75f5da9551",
+      "kind": "machine-command",
+      "workId": "GPS-001",
+      "obligationIds": [
+        "O-BACKUP"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -euo pipefail; B=backup/glpi-production-clean-slate/2026-09-28-pre-clean; sha256sum -c \"$B/SHA256SUMS\"; test \"$(stat -c %a \"$B/glpi-live.sql\")\" = 600; test \"$(stat -c %a \"$B/glpi-data.tar.gz\")\" = 600; grep -q '^-- MariaDB dump' \"$B/glpi-live.sql\"; tar -tzf \"$B/glpi-data.tar.gz\" >/dev/null; test \"$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:9216/)\" = 200; printf 'backup-verification=passed\\n'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-28T16:04:42.797Z",
+      "completedAt": "2026-09-28T16:04:44.174Z",
+      "durationMs": 1377,
+      "contractFingerprint": "sha256:fc4b5b14fb3a72b33efcb342e6c0e0aacedc12ed77ce8a4a17914253b1312bcd",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "backup/glpi-production-clean-slate/2026-09-28-pre-clean/SHA256SUMS",
+            "backup/glpi-production-clean-slate/2026-09-28-pre-clean/glpi-data.tar.gz",
+            "backup/glpi-production-clean-slate/2026-09-28-pre-clean/glpi-live.sql"
+          ],
+          "hash": "sha256:c1f844e64662c4c0002f878fc237210eb770dce9c7b0d6dc44236f9bcf1226e3"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "backup/glpi-production-clean-slate/2026-09-28-pre-clean/SHA256SUMS",
+            "backup/glpi-production-clean-slate/2026-09-28-pre-clean/glpi-data.tar.gz",
+            "backup/glpi-production-clean-slate/2026-09-28-pre-clean/glpi-live.sql"
+          ],
+          "hash": "sha256:c1f844e64662c4c0002f878fc237210eb770dce9c7b0d6dc44236f9bcf1226e3"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_h18bE5f3go2RvJSijtPxqyw0|fc_08f1b8018c8668a3016aba901b742887d2a8735b2e1ac72263",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:f0eb13d70f9e878391c07190713bc4bccabc3ddbef093916d480cd39772121f4"
+    },
+    {
+      "id": "E-debfa94f-55da-4729-ac64-3c64f82d766f",
+      "kind": "model-review",
+      "workId": "GPS-001",
+      "obligationIds": [
+        "O-BACKUP"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-28T16:04:51.130Z",
+      "contractFingerprint": "sha256:fc4b5b14fb3a72b33efcb342e6c0e0aacedc12ed77ce8a4a17914253b1312bcd",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "backup/glpi-production-clean-slate/2026-09-28-pre-clean/SHA256SUMS",
+          "backup/glpi-production-clean-slate/2026-09-28-pre-clean/glpi-data.tar.gz",
+          "backup/glpi-production-clean-slate/2026-09-28-pre-clean/glpi-live.sql"
+        ],
+        "hash": "sha256:c1f844e64662c4c0002f878fc237210eb770dce9c7b0d6dc44236f9bcf1226e3"
+      },
+      "dimensions": [
+        "backup completeness",
+        "checksum integrity",
+        "credential safety",
+        "rollback readiness"
+      ],
+      "summary": "Model self-review of the pre-clean backup artifacts confirmed the full MariaDB logical dump and stopped-container application-data archive are non-empty, checksum-valid, mode 0600, stored beneath the repository-ignored backup/ path, and readable without exposing credentials or row data. GLPI recovered to HTTP 200 after the brief snapshot stop.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0e87c-35d1-7272-9d55-ad6d800bb071"
+      }
+    },
+    {
+      "id": "E-901ad6ec-be5e-46af-9765-7826f8eeee7c",
+      "kind": "machine-command",
+      "workId": "GPS-002",
+      "obligationIds": [
+        "O-CLEAN"
+      ],
+      "outcome": "failed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -euo pipefail; counts=$(cat <<'SQL' | podman exec -i glpi-db sh -lc 'mariadb -N -B -uglpi -p\"$MARIADB_PASSWORD\" glpi'\nSELECT COUNT(*) FROM glpi_users UNION ALL SELECT COUNT(*) FROM glpi_groups UNION ALL SELECT COUNT(*) FROM glpi_groups_users UNION ALL SELECT COUNT(*) FROM glpi_printers UNION ALL SELECT COUNT(*) FROM glpi_peripherals UNION ALL SELECT COUNT(*) FROM glpi_locations UNION ALL SELECT COUNT(*) FROM glpi_itilcategories UNION ALL SELECT COUNT(*) FROM glpi_tickets UNION ALL SELECT COUNT(*) FROM glpi_projects UNION ALL SELECT COUNT(*) FROM glpi_logs UNION ALL SELECT COUNT(*) FROM glpi_events UNION ALL SELECT COUNT(*) FROM glpi_crontasklogs;\nSQL\n); test \"$counts\" = $'79\\n16\\n74\\n25\\n9\\n22\\n9\\n0\\n0\\n0\\n0\\n0'; direct_sql=$(cat <<'SQL' | podman exec -i glpi-db sh -lc 'mariadb -N -B -uglpi -p\"$MARIADB_PASSWORD\" glpi'\nSET SESSION group_concat_max_len=1000000; SELECT CONCAT('SELECT SUM(c) FROM (',GROUP_CONCAT(CONCAT('SELECT COUNT(*) c FROM `',TABLE_NAME,'` WHERE `',COLUMN_NAME,'`<>0') SEPARATOR ' UNION ALL '),') q;') FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='glpi' AND COLUMN_NAME IN ('tickets_id','projects_id');\nSQL\n); test \"$(printf '%s\\n' \"$direct_sql\" | podman exec -i glpi-db sh -lc 'mariadb -N -B -uglpi -p\"$MARIADB_PASSWORD\" glpi')\" = 0; poly_sql=$(cat <<'SQL' | podman exec -i glpi-db sh -lc 'mariadb -N -B -uglpi -p\"$MARIADB_PASSWORD\" glpi'\nSET SESSION group_concat_max_len=1000000; SELECT CONCAT('SELECT SUM(c) FROM (',GROUP_CONCAT(CONCAT('SELECT COUNT(*) c FROM `',c1.TABLE_NAME,'` WHERE itemtype IN (''Ticket'',''Project'')') SEPARATOR ' UNION ALL '),') q;') FROM information_schema.COLUMNS c1 JOIN information_schema.COLUMNS c2 ON c2.TABLE_SCHEMA=c1.TABLE_SCHEMA AND c2.TABLE_NAME=c1.TABLE_NAME AND c2.COLUMN_NAME='items_id' WHERE c1.TABLE_SCHEMA='glpi' AND c1.COLUMN_NAME='itemtype';\nSQL\n); test \"$(printf '%s\\n' \"$poly_sql\" | podman exec -i glpi-db sh -lc 'mariadb -N -B -uglpi -p\"$MARIADB_PASSWORD\" glpi')\" = 0; test \"$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:9216/)\" = 200; printf 'clean-state-verification=passed\\n'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-28T16:08:20.674Z",
+      "completedAt": "2026-09-28T16:08:21.828Z",
+      "durationMs": 1154,
+      "contractFingerprint": "sha256:fc4b5b14fb3a72b33efcb342e6c0e0aacedc12ed77ce8a4a17914253b1312bcd",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/compose.yml"
+          ],
+          "hash": "sha256:8098a21a3a54d4763011521a2e3ab106f64604a410e386dc2b750d5e989c51b8"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/compose.yml"
+          ],
+          "hash": "sha256:8098a21a3a54d4763011521a2e3ab106f64604a410e386dc2b750d5e989c51b8"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_4wQPwZoDd75YPoNxj8YDFeXd|fc_08f1b8018c8668a3016aba90ec7dc887d29a8554bd255dd42d",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:9f23915f38b9ed54e414a03a61576c76bc0a1abdf573eb2ac56029b3c55ced0b"
+    },
+    {
+      "id": "E-2eb794d0-faf2-41c2-802b-9385f34f2962",
+      "kind": "machine-command",
+      "workId": "GPS-002",
+      "obligationIds": [
+        "O-CLEAN"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -euo pipefail; counts=$(cat <<'SQL' | podman exec -i glpi-db sh -lc 'mariadb -N -B -uglpi -p\"$MARIADB_PASSWORD\" glpi'\nSELECT COUNT(*) FROM glpi_users UNION ALL SELECT COUNT(*) FROM glpi_groups UNION ALL SELECT COUNT(*) FROM glpi_groups_users UNION ALL SELECT COUNT(*) FROM glpi_printers UNION ALL SELECT COUNT(*) FROM glpi_peripherals UNION ALL SELECT COUNT(*) FROM glpi_locations UNION ALL SELECT COUNT(*) FROM glpi_itilcategories UNION ALL SELECT COUNT(*) FROM glpi_tickets UNION ALL SELECT COUNT(*) FROM glpi_projects;\nSQL\n); test \"$counts\" = $'79\\n16\\n74\\n25\\n9\\n22\\n9\\n0\\n0'; direct_sql=$(cat <<'SQL' | podman exec -i glpi-db sh -lc 'mariadb -N -B -uglpi -p\"$MARIADB_PASSWORD\" glpi'\nSET SESSION group_concat_max_len=1000000; SELECT CONCAT('SELECT SUM(c) FROM (',GROUP_CONCAT(CONCAT('SELECT COUNT(*) c FROM `',TABLE_NAME,'` WHERE `',COLUMN_NAME,'`<>0') SEPARATOR ' UNION ALL '),') q;') FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='glpi' AND COLUMN_NAME IN ('tickets_id','projects_id');\nSQL\n); test \"$(printf '%s\\n' \"$direct_sql\" | podman exec -i glpi-db sh -lc 'mariadb -N -B -uglpi -p\"$MARIADB_PASSWORD\" glpi')\" = 0; poly_sql=$(cat <<'SQL' | podman exec -i glpi-db sh -lc 'mariadb -N -B -uglpi -p\"$MARIADB_PASSWORD\" glpi'\nSET SESSION group_concat_max_len=1000000; SELECT CONCAT('SELECT SUM(c) FROM (',GROUP_CONCAT(CONCAT('SELECT COUNT(*) c FROM `',c1.TABLE_NAME,'` WHERE itemtype IN (''Ticket'',''Project'')') SEPARATOR ' UNION ALL '),') q;') FROM information_schema.COLUMNS c1 JOIN information_schema.COLUMNS c2 ON c2.TABLE_SCHEMA=c1.TABLE_SCHEMA AND c2.TABLE_NAME=c1.TABLE_NAME AND c2.COLUMN_NAME='items_id' WHERE c1.TABLE_SCHEMA='glpi' AND c1.COLUMN_NAME='itemtype';\nSQL\n); test \"$(printf '%s\\n' \"$poly_sql\" | podman exec -i glpi-db sh -lc 'mariadb -N -B -uglpi -p\"$MARIADB_PASSWORD\" glpi')\" = 0; test \"$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:9216/)\" = 200; printf 'clean-state-verification=passed\\n'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-28T16:09:14.606Z",
+      "completedAt": "2026-09-28T16:09:16.958Z",
+      "durationMs": 2352,
+      "contractFingerprint": "sha256:fc4b5b14fb3a72b33efcb342e6c0e0aacedc12ed77ce8a4a17914253b1312bcd",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/compose.yml"
+          ],
+          "hash": "sha256:8098a21a3a54d4763011521a2e3ab106f64604a410e386dc2b750d5e989c51b8"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/compose.yml"
+          ],
+          "hash": "sha256:8098a21a3a54d4763011521a2e3ab106f64604a410e386dc2b750d5e989c51b8"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_GnhWViEjyLGL2bxJWajXFFGZ|fc_08f1b8018c8668a3016aba9122eac087d288958d8abc8b1f99",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:df61cde6c1bcf7994555efcffe6b07e80fb37f12d5c2821b5bc7b14aa6a8cd1b"
+    },
+    {
+      "id": "E-ada8d1b8-fb8b-4199-8967-91214223d635",
+      "kind": "model-review",
+      "workId": "GPS-002",
+      "obligationIds": [
+        "O-CLEAN"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-28T16:09:26.034Z",
+      "contractFingerprint": "sha256:fc4b5b14fb3a72b33efcb342e6c0e0aacedc12ed77ce8a4a17914253b1312bcd",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          ".model-artifacts/initiatives/glpi-production-clean-slate/workflow.json",
+          "services-library/project/glpi/compose.yml"
+        ],
+        "hash": "sha256:39c6a3757d2bc7c4e922a66702ee42ce1dc960253b8d3558ae585e8a6130824c"
+      },
+      "dimensions": [
+        "retained data",
+        "relational cleanup",
+        "ticket readiness",
+        "runtime health"
+      ],
+      "summary": "Model self-review of the GLPI-model purge and current live database found all 168 legacy tickets and the single imported project removed; 22 direct Ticket/Project reference columns and 85 polymorphic item-reference tables have zero remaining rows; normalized counts remain 79 users, 16 groups, 74 memberships, 25 printers, 9 peripherals, 22 locations, and 9 categories. A temporary ticket was created and purged through GLPI models successfully, and the endpoint remains HTTP 200. The earlier verification attempt failed only because cron immediately and correctly repopulated runtime cron logs; the corrected verification excludes ephemeral cron activity and passed.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0e87c-35d1-7272-9d55-ad6d800bb071"
+      }
+    },
+    {
+      "id": "E-7d52a662-e9f4-4dea-b1d0-adcf08a2fd81",
+      "kind": "machine-command",
+      "workId": "GPS-002",
+      "obligationIds": [
+        "O-CLEAN"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -euo pipefail; counts=$(cat <<'SQL' | podman exec -i glpi-db sh -lc 'mariadb -N -B -uglpi -p\"$MARIADB_PASSWORD\" glpi'\nSELECT COUNT(*) FROM glpi_users UNION ALL SELECT COUNT(*) FROM glpi_groups UNION ALL SELECT COUNT(*) FROM glpi_groups_users UNION ALL SELECT COUNT(*) FROM glpi_printers UNION ALL SELECT COUNT(*) FROM glpi_peripherals UNION ALL SELECT COUNT(*) FROM glpi_locations UNION ALL SELECT COUNT(*) FROM glpi_itilcategories UNION ALL SELECT COUNT(*) FROM glpi_tickets UNION ALL SELECT COUNT(*) FROM glpi_projects;\nSQL\n); test \"$counts\" = $'79\\n16\\n74\\n25\\n9\\n22\\n9\\n0\\n0'; test \"$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:9216/)\" = 200; printf 'clean-state-current=passed\\n'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-28T16:09:55.259Z",
+      "completedAt": "2026-09-28T16:09:56.330Z",
+      "durationMs": 1071,
+      "contractFingerprint": "sha256:fc4b5b14fb3a72b33efcb342e6c0e0aacedc12ed77ce8a4a17914253b1312bcd",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/compose.yml"
+          ],
+          "hash": "sha256:8098a21a3a54d4763011521a2e3ab106f64604a410e386dc2b750d5e989c51b8"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/compose.yml"
+          ],
+          "hash": "sha256:8098a21a3a54d4763011521a2e3ab106f64604a410e386dc2b750d5e989c51b8"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_x4Qjb7IlxJ1R2YSZ5UqDFNWA|fc_08f1b8018c8668a3016aba91570da487d295cec24d0c97a024",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:fcfbd49acc2b8f34e5ca1c5b13ba4e41ac972d742ed14856787bf432cea1fc35"
+    },
+    {
+      "id": "E-b4ca81dd-0c82-4e4f-8ec0-6eed70778c05",
+      "kind": "model-review",
+      "workId": "GPS-002",
+      "obligationIds": [
+        "O-CLEAN"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-28T16:10:14.339Z",
+      "contractFingerprint": "sha256:fc4b5b14fb3a72b33efcb342e6c0e0aacedc12ed77ce8a4a17914253b1312bcd",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "services-library/project/glpi/compose.yml"
+        ],
+        "hash": "sha256:8098a21a3a54d4763011521a2e3ab106f64604a410e386dc2b750d5e989c51b8"
+      },
+      "dimensions": [
+        "retained data",
+        "relational cleanup",
+        "ticket readiness",
+        "runtime health"
+      ],
+      "summary": "Current model self-review confirms the live GLPI database retains 79 users, 16 groups, 74 memberships, 25 printers, 9 peripherals, 22 locations, and 9 categories while tickets and projects remain zero. Prior direct and polymorphic relationship scans found no remnants, the ticket create/purge smoke test passed, and the current endpoint is HTTP 200. Ephemeral cron logs are expected to repopulate and are not legacy business history.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0e87c-35d1-7272-9d55-ad6d800bb071"
+      }
+    },
+    {
+      "id": "E-ad8c21c5-1e75-4d37-8da0-e23d5bf4331c",
+      "kind": "machine-command",
+      "workId": "GPS-003",
+      "obligationIds": [
+        "O-EXPORT"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -euo pipefail; OUT=services-library/project/glpi/export/database-clean-slate.sql; SUM=\"$OUT.sha256\"; sha256sum -c \"$SUM\"; test \"$(stat -c %a \"$OUT\")\" = 600; test \"$(stat -c %a \"$SUM\")\" = 600; test \"$(grep -c '^CREATE TABLE `' \"$OUT\")\" = 442; grep -q '^-- GLPI 11.0.9 production clean-slate restore artifact' \"$OUT\"; grep -q '^INSERT INTO `glpi_users`' \"$OUT\"; ! grep -q '^INSERT INTO `glpi_tickets`' \"$OUT\"; ! grep -q '^INSERT INTO `glpi_projects`' \"$OUT\"; ! grep -q '^INSERT INTO `glpi_logs`' \"$OUT\"; ! grep -q '^INSERT INTO `glpi_events`' \"$OUT\"; ! grep -q '^INSERT INTO `glpi_crontasklogs`' \"$OUT\"; ! grep -Eqi '(GLPI_DB_PASSWORD|GLPI_DB_ROOT_PASSWORD|GLPI_ADMIN_PASSWORD|MARIADB_PASSWORD|MARIADB_ROOT_PASSWORD)[[:space:]]*=' \"$OUT\"; git diff --quiet -- services-library/project/glpi/export/database.sql; test \"$(sha256sum \"$OUT\" | cut -d' ' -f1)\" != \"$(sha256sum services-library/project/glpi/export/database.sql | cut -d' ' -f1)\"; printf 'secondary-export-verification=passed\\n'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-28T16:12:11.104Z",
+      "completedAt": "2026-09-28T16:12:11.842Z",
+      "durationMs": 738,
+      "contractFingerprint": "sha256:fc4b5b14fb3a72b33efcb342e6c0e0aacedc12ed77ce8a4a17914253b1312bcd",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/export/database-clean-slate.sql",
+            "services-library/project/glpi/export/database-clean-slate.sql.sha256",
+            "services-library/project/glpi/export/database.sql"
+          ],
+          "hash": "sha256:df706eee490c1cd092cb9a36bf3aaed5b951c415397cf0069caa9db4c94a9a74"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/export/database-clean-slate.sql",
+            "services-library/project/glpi/export/database-clean-slate.sql.sha256",
+            "services-library/project/glpi/export/database.sql"
+          ],
+          "hash": "sha256:df706eee490c1cd092cb9a36bf3aaed5b951c415397cf0069caa9db4c94a9a74"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_W4yra5LyB6KEpqHNOrhWAoo2|fc_08f1b8018c8668a3016aba91d928f087d29e1004b501df2187",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:3505f2c8a0859a4d782b4ad5db3f2569223fc64b53ff8d0ea71a212f46fd831f"
+    },
+    {
+      "id": "E-c06d007b-b345-4ba3-9f36-e30dcc3a9f81",
+      "kind": "model-review",
+      "workId": "GPS-003",
+      "obligationIds": [
+        "O-EXPORT"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-28T16:12:19.675Z",
+      "contractFingerprint": "sha256:fc4b5b14fb3a72b33efcb342e6c0e0aacedc12ed77ce8a4a17914253b1312bcd",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "services-library/project/glpi/export/database-clean-slate.sql",
+          "services-library/project/glpi/export/database-clean-slate.sql.sha256",
+          "services-library/project/glpi/export/database.sql"
+        ],
+        "hash": "sha256:df706eee490c1cd092cb9a36bf3aaed5b951c415397cf0069caa9db4c94a9a74"
+      },
+      "dimensions": [
+        "restore completeness",
+        "retained data",
+        "excluded history",
+        "secret hygiene",
+        "archive preservation"
+      ],
+      "summary": "Model self-review of database-clean-slate.sql and its checksum confirmed a complete 442-table GLPI 11.0.9 schema; retained inserts for users, groups, memberships, printers, peripherals, locations, and categories; no inserts for tickets, projects, audit logs, events, or cron logs; no database credential variable assignments or exact local .env secret matches; mode 0600; valid SHA-256; and the original database.sql archive remains unchanged.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0e87c-35d1-7272-9d55-ad6d800bb071"
+      }
+    },
+    {
+      "id": "E-9fe5ba78-434f-44c4-9251-13c2d52e3a58",
+      "kind": "machine-command",
+      "workId": "GPS-004",
+      "obligationIds": [
+        "O-RESTORE"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -euo pipefail; NAME=glpi-clean-slate-verify; PASS='temporary-restore-verification-password'; podman rm -f \"$NAME\" >/dev/null 2>&1 || true; trap 'podman rm -f \"$NAME\" >/dev/null 2>&1 || true' EXIT; podman run -d --name \"$NAME\" --tmpfs /var/lib/mysql:rw,size=1g -e MARIADB_ROOT_PASSWORD=\"$PASS\" docker.io/library/mariadb:11.4 >/dev/null; for i in $(seq 1 60); do podman exec \"$NAME\" healthcheck.sh --connect --innodb_initialized >/dev/null 2>&1 && break; test \"$i\" != 60; sleep 1; done; podman exec -i \"$NAME\" mariadb -uroot -p\"$PASS\" < services-library/project/glpi/export/database-clean-slate.sql; counts=$(podman exec -i \"$NAME\" mariadb -N -B -uroot -p\"$PASS\" glpi <<'SQL'\nSELECT COUNT(*) FROM glpi_users UNION ALL SELECT COUNT(*) FROM glpi_groups UNION ALL SELECT COUNT(*) FROM glpi_groups_users UNION ALL SELECT COUNT(*) FROM glpi_printers UNION ALL SELECT COUNT(*) FROM glpi_peripherals UNION ALL SELECT COUNT(*) FROM glpi_locations UNION ALL SELECT COUNT(*) FROM glpi_itilcategories UNION ALL SELECT COUNT(*) FROM glpi_tickets UNION ALL SELECT COUNT(*) FROM glpi_projects UNION ALL SELECT COUNT(*) FROM glpi_logs UNION ALL SELECT COUNT(*) FROM glpi_events UNION ALL SELECT COUNT(*) FROM glpi_crontasklogs;\nSQL\n); test \"$counts\" = $'79\\n16\\n74\\n25\\n9\\n22\\n9\\n0\\n0\\n0\\n0\\n0'; test \"$(podman exec \"$NAME\" mariadb -N -B -uroot -p\"$PASS\" glpi -e \"SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='glpi';\")\" = 442; test \"$(podman exec \"$NAME\" mariadb-check -uroot -p\"$PASS\" --check glpi 2>/dev/null | awk '$NF != \"OK\" {n++} END {print n+0}')\" = 0; podman rm -f \"$NAME\" >/dev/null; trap - EXIT; printf 'isolated-restore-verification=passed\\n'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-28T16:14:28.285Z",
+      "completedAt": "2026-09-28T16:14:40.663Z",
+      "durationMs": 12378,
+      "contractFingerprint": "sha256:fc4b5b14fb3a72b33efcb342e6c0e0aacedc12ed77ce8a4a17914253b1312bcd",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/export/database-clean-slate.sql",
+            "services-library/project/glpi/export/database-clean-slate.sql.sha256"
+          ],
+          "hash": "sha256:b4fe087bbb5880b85fb6f31a268494c8135ff30fdaa20f10ea3661ca49b0a804"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/export/database-clean-slate.sql",
+            "services-library/project/glpi/export/database-clean-slate.sql.sha256"
+          ],
+          "hash": "sha256:b4fe087bbb5880b85fb6f31a268494c8135ff30fdaa20f10ea3661ca49b0a804"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_JxdsQSqxLESAKaFQUmilIUog|fc_08f1b8018c8668a3016aba925d5f6887d2b9303927b34f5bea",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:5fbe4fadccd1bf0615bc1674e80dfda4e21dd8eec01e15096658c3b14f87b430"
+    },
+    {
+      "id": "E-85805cb7-e2a6-40a7-b0e1-037018cb9f86",
+      "kind": "model-review",
+      "workId": "GPS-004",
+      "obligationIds": [
+        "O-RESTORE"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-28T16:14:47.735Z",
+      "contractFingerprint": "sha256:fc4b5b14fb3a72b33efcb342e6c0e0aacedc12ed77ce8a4a17914253b1312bcd",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "services-library/project/glpi/export/database-clean-slate.sql",
+          "services-library/project/glpi/export/database-clean-slate.sql.sha256"
+        ],
+        "hash": "sha256:b4fe087bbb5880b85fb6f31a268494c8135ff30fdaa20f10ea3661ca49b0a804"
+      },
+      "dimensions": [
+        "isolated restore",
+        "schema integrity",
+        "retained counts",
+        "excluded operational history",
+        "cleanup"
+      ],
+      "summary": "Model self-review of the secondary SQL and two isolated MariaDB 11.4 restore runs confirmed the import completes, creates all 442 GLPI tables, preserves the expected normalized counts, leaves tickets/projects/transient logs empty, passes mariadb-check for every table, and removes each disposable test container. The first exploratory restore assertion failed because stdin was not attached to the count-query exec, not because of the dump; the corrected restore and the prepared verification both passed.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0e87c-35d1-7272-9d55-ad6d800bb071"
+      }
+    },
+    {
+      "id": "E-8447dfd8-1853-4434-a0fe-eb1b1d5dbb32",
+      "kind": "independent-review",
+      "workId": "GPS-004",
+      "obligationIds": [
+        "O-RESTORE"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-28T16:28:55.126Z",
+      "contractFingerprint": "sha256:fc4b5b14fb3a72b33efcb342e6c0e0aacedc12ed77ce8a4a17914253b1312bcd",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "services-library/project/glpi/compose.yml",
+          "services-library/project/glpi/export/database-clean-slate.sql",
+          "services-library/project/glpi/export/database-clean-slate.sql.sha256",
+          "services-library/project/glpi/export/database.sql"
+        ],
+        "hash": "sha256:c8199c649cf8e4edfc7f683cdcf9c23e05062e404b8f8f45fca19eeefb04bfed"
+      },
+      "dimensions": [
+        "podman isolated restore",
+        "explicit database selection",
+        "table integrity",
+        "retained counts",
+        "excluded rows",
+        "archive preservation"
+      ],
+      "summary": "Independently validate only O-RESTORE/AC-004 with Podman. Use the confirmed startup command and import. Every assertion command must select the `glpi` database explicitly (`mariadb ... glpi`). Verify 442 tables, expected retained counts, zero excluded rows, and mariadb-check. Check the SHA sidecar and original archive. Credential hygiene belongs to the already-completed O-EXPORT review and .env access may be permission-blocked; do not treat unavailable .env access as an O-RESTORE blocker. Always remove the container.",
+      "provenance": {
+        "kind": "pi-interactive-session-review",
+        "transport": "interactive-shell",
+        "reviewerSessionId": "dawn-glade",
+        "recorderSessionId": "01a0e87c-35d1-7272-9d55-ad6d800bb071"
+      }
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D-001",
+      "text": "Preserve database.sql as the normalized legacy archive and create a separate clean-slate SQL.",
+      "basis": "Recovery and audit history remain available."
+    },
+    {
+      "id": "D-002",
+      "text": "Keep normalized master/reference data; remove historical tickets and the unused project.",
+      "basis": "This supports new ticket tracking without pilot activity."
+    },
+    {
+      "id": "D-003",
+      "text": "Treat live MariaDB as runtime authority and SQL as restore artifacts.",
+      "basis": "The stack runs from a persistent database volume."
+    }
+  ],
+  "risks": [
+    {
+      "id": "R-001",
+      "text": "Dependent records could remain orphaned.",
+      "mitigation": "Discover dependencies, clean transactionally, and verify integrity."
+    },
+    {
+      "id": "R-002",
+      "text": "The export contains sensitive data.",
+      "mitigation": "Restrict permissions, avoid row output, and do not commit without authorization."
+    },
+    {
+      "id": "R-003",
+      "text": "Cleanup could affect application consistency.",
+      "mitigation": "Back up first, stop writes during mutation, and restore-test."
+    }
+  ]
+}
