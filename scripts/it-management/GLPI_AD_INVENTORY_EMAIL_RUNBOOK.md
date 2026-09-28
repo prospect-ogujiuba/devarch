@@ -132,11 +132,35 @@ In GLPI, configure inventory rules to:
 
 Do not use computer name as the sole matching identifier because names can be reused.
 
-### 5.2 Network devices and printers
+### 5.2 Asset data populated by the agent
 
-Install and enable **GLPI Inventory** only when network discovery, SNMP inventory, ESX inventory, data collection or remote deployment is required. Use a least-privilege SNMP credential, restrict discovery ranges and pilot each range before scheduling broad scans.
+A standard endpoint inventory primarily creates or updates **Assets → Computers**. The exact fields depend on the operating system, available hardware interfaces and GLPI import rules.
 
-### 5.3 Inventory acceptance tests
+| GLPI area | Data normally supplied by GLPI Agent |
+|---|---|
+| Computer identity | Hostname, manufacturer, model, serial number and UUID |
+| Components | Processor, memory, motherboard/BIOS, disks and storage controllers, graphics, sound, batteries and network adapters when detectable |
+| Operating system | Name, edition, version, architecture, kernel and installation details when exposed by the OS |
+| Network | Interfaces, MAC addresses, IP addresses and network ports |
+| Software | Detected installed applications, versions and installation associations; this is installation evidence, not software-license entitlement |
+| Connected devices | Monitors, locally visible printers and peripherals; these may be linked or created as separate **Assets → Monitors**, **Printers** or **Devices** records according to inventory rules |
+| User and inventory metadata | Last logged-in username when detectable, agent version, last contact and last inventory update |
+
+The endpoint agent does **not** authoritatively supply business and lifecycle data. Maintain the following in GLPI or populate them through approved rules and integrations:
+
+- entity, location, assigned user or department;
+- asset status, lifecycle state and internal asset/inventory tag;
+- supplier, purchase date, purchase price and warranty details;
+- contracts, budgets, depreciation and other financial information; and
+- purchased software licences and entitlement counts.
+
+Lock intentionally maintained manual fields where appropriate, and test that subsequent inventories do not overwrite them.
+
+### 5.3 Network devices and printers
+
+Endpoint inventory alone does not fully inventory switches, routers, firewalls, wireless access points or network printers. Install and enable **GLPI Inventory** when network discovery, SNMP inventory, ESX inventory, data collection or remote deployment is required. With supported devices and SNMP access, it can populate **Assets → Network equipment** and **Assets → Printers**, including network identity, ports and device-specific counters or consumable data where available. Use a least-privilege SNMP credential, restrict discovery ranges and pilot each range before scheduling broad scans.
+
+### 5.4 Inventory acceptance tests
 
 Verify that:
 
@@ -262,8 +286,13 @@ Complete these tests before production rollout:
 
 - [GLPI LDAP directory configuration](https://help.glpi-project.org/documentation/modules/configuration/authentication/ldap)
 - [GLPI computer inventory](https://help.glpi-project.org/tutorials/inventory/computer_inventory)
+- [GLPI computer assets](https://help.glpi-project.org/documentation/modules/assets/computers)
+- [GLPI monitor assets](https://help.glpi-project.org/documentation/modules/assets/monitors)
+- [GLPI printer assets](https://help.glpi-project.org/documentation/modules/assets/printers)
+- [GLPI network equipment assets](https://help.glpi-project.org/documentation/modules/assets/network-equipments)
 - [Deploying GLPI Agent through GPO](https://help.glpi-project.org/tutorials/inventory/deploy_agent_gpo)
 - [GLPI Inventory plugin](https://help.glpi-project.org/doc-plugins/plugins-glpi/glpi-inventory)
+- [GLPI Agent inventory categories](https://glpi-agent.readthedocs.io/en/latest/man/glpi-agent.html)
 - [GLPI receivers](https://help.glpi-project.org/documentation/modules/configuration/collectors)
 - [GLPI automatic actions](https://help.glpi-project.org/documentation/modules/configuration/crontasks)
 - [Microsoft Entra OAuth IMAP receiver](https://help.glpi-project.org/tutorials/receivers/oauth_imap_entra)
