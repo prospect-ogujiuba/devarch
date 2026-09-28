@@ -2,8 +2,8 @@
   "kind": "gentic.swe.initiative",
   "schemaVersion": 1,
   "id": "glpi-openproject-pilot",
-  "revision": 17,
-  "status": "active",
+  "revision": 18,
+  "status": "complete",
   "objective": "Import the existing IT Management workbook into clean GLPI and OpenProject instances using repeatable, validated, backup-first tooling.",
   "scope": {
     "in": [
