@@ -1,0 +1,725 @@
+{
+  "kind": "gentic.swe.initiative",
+  "schemaVersion": 1,
+  "id": "glpi-portable-data-seed",
+  "revision": 25,
+  "status": "complete",
+  "objective": "Create an idempotent, data-only SQL seed for an initialized GLPI 11 database that restores normalized long-lived organizational and asset data without restoring schema, runtime configuration, credentials, tickets, projects, logs, or recovery-backup content.",
+  "policies": {
+    "commitOnWorkCompletion": false,
+    "independentReviewOnCompletion": true
+  },
+  "scope": {
+    "in": [
+      "Audit the clean GLPI database against fresh GLPI defaults",
+      "Normalized employee users and contact data",
+      "Department groups, memberships, and required profile assignments",
+      "Locations, categories, manufacturers, types, models, states, printers, peripherals, and ownership relationships",
+      "A documented data-only SQL seed under services-library/project/glpi/export",
+      "Fresh GLPI 11.0.9 import and second-run verification"
+    ],
+    "out": [
+      "GLPI schema or migrations",
+      "Core/default configuration, notification definitions, cron configuration, sessions, caches, logs, or events",
+      "Administrator/default credentials or password hashes",
+      "Tickets, projects, tasks, followups, solutions, or operational history",
+      "Destructive wiping of an active production database",
+      "External identity, email, OAuth, or inventory integrations"
+    ]
+  },
+  "constraints": [
+    "Import only after GLPI initializes its schema and defaults.",
+    "Use stable source identifiers and natural-key lookups, not current numeric IDs.",
+    "A second run must not increase record or relationship counts.",
+    "Do not insert password hashes; imported users remain local-disabled pending authoritative identity integration.",
+    "Do not expose personal row data in verification output.",
+    "Keep recovery dumps distinct from the portable seed.",
+    "Do not commit or push without authorization."
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-001",
+      "text": "A dependency audit identifies retained tables, source keys, required defaults, and excluded internal/operational tables."
+    },
+    {
+      "id": "AC-002",
+      "text": "The SQL contains data manipulation only, performs no schema DDL, and excludes tickets, projects, runtime logs, configuration, and password hashes."
+    },
+    {
+      "id": "AC-003",
+      "text": "Import into freshly initialized GLPI 11.0.9 recreates expected normalized users, groups, memberships, profiles, locations, categories, references, printers, peripherals, and ownership relationships."
+    },
+    {
+      "id": "AC-004",
+      "text": "A second run creates no duplicates and preserves verified counts."
+    },
+    {
+      "id": "AC-005",
+      "text": "The seed is documented as a portable long-lived-data bootstrap rather than a recovery backup or destructive reset and passes review."
+    }
+  ],
+  "assessment": {
+    "depth": "deep",
+    "reason": "A portable relational seed must map multiple GLPI entity families without fixed IDs, secrets, duplicates, or operational history.",
+    "surfaces": [
+      "Live clean GLPI MariaDB data",
+      "Fresh GLPI 11.0.9 defaults",
+      "Users, groups, profiles, references, assets, and relationship tables",
+      "Generated SQL and checksum"
+    ],
+    "unknowns": [
+      "Which reference rows are imported versus defaults without source markers.",
+      "Whether every user has a stable registration_number.",
+      "Which ownership/contact relationships require polymorphic links."
+    ]
+  },
+  "practices": [
+    {
+      "id": "P-AUDIT",
+      "practice": "Compare retained rows with a fresh GLPI baseline and map dependencies.",
+      "appliesTo": [
+        "GPDS-001"
+      ],
+      "reason": "The seed must exclude defaults and internal rows."
+    },
+    {
+      "id": "P-GENERATE",
+      "practice": "Generate deterministic SQL using source keys, natural-key lookups, and idempotent upserts.",
+      "appliesTo": [
+        "GPDS-002"
+      ],
+      "reason": "Numeric IDs vary across databases."
+    },
+    {
+      "id": "P-VERIFY",
+      "practice": "Import into freshly initialized GLPI twice and verify counts and relationships.",
+      "appliesTo": [
+        "GPDS-003",
+        "GPDS-004"
+      ],
+      "reason": "Fresh-install and repeat-run behavior define portability."
+    },
+    {
+      "id": "P-REVIEW",
+      "practice": "Inspect the SQL contract and obtain independent review.",
+      "appliesTo": [
+        "GPDS-004"
+      ],
+      "reason": "The artifact contains sensitive relational data."
+    }
+  ],
+  "obligations": [
+    {
+      "id": "O-AUDIT",
+      "practiceId": "P-AUDIT",
+      "criterionIds": [
+        "AC-001"
+      ],
+      "text": "Audit retained data families and fresh-default differences with stable mapping keys.",
+      "verification": {
+        "kind": "dependency audit",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-SEED",
+      "practiceId": "P-GENERATE",
+      "criterionIds": [
+        "AC-002"
+      ],
+      "text": "Generate the data-only idempotent SQL seed without schema, secrets, or operational history.",
+      "verification": {
+        "kind": "static SQL verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-FRESH",
+      "practiceId": "P-VERIFY",
+      "criterionIds": [
+        "AC-003"
+      ],
+      "text": "Import the seed into freshly initialized GLPI and verify retained data and relationships.",
+      "verification": {
+        "kind": "fresh import verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-IDEMPOTENT",
+      "practiceId": "P-VERIFY",
+      "criterionIds": [
+        "AC-004"
+      ],
+      "text": "Run the seed a second time and prove counts do not increase.",
+      "verification": {
+        "kind": "repeat import verification",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review",
+          "independent-review"
+        ]
+      }
+    },
+    {
+      "id": "O-REVIEW",
+      "practiceId": "P-REVIEW",
+      "criterionIds": [
+        "AC-005"
+      ],
+      "text": "Document intended use and review data-only boundaries and safety.",
+      "verification": {
+        "kind": "artifact contract review",
+        "requiredEvidence": [
+          "model-review",
+          "independent-review"
+        ]
+      }
+    }
+  ],
+  "work": [
+    {
+      "id": "GPDS-001",
+      "kind": "task",
+      "title": "Audit portable retained data and dependencies",
+      "status": "complete",
+      "dependsOn": [],
+      "criterionIds": [
+        "AC-001"
+      ],
+      "obligationIds": [
+        "O-AUDIT"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "A live-versus-fresh audit defines the seed contract."
+      }
+    },
+    {
+      "id": "GPDS-002",
+      "kind": "task",
+      "title": "Generate the idempotent data-only SQL seed",
+      "status": "complete",
+      "dependsOn": [
+        "GPDS-001"
+      ],
+      "criterionIds": [
+        "AC-002"
+      ],
+      "obligationIds": [
+        "O-SEED"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Static checks enforce the data-only contract."
+      }
+    },
+    {
+      "id": "GPDS-003",
+      "kind": "task",
+      "title": "Test fresh GLPI import and retained relationships",
+      "status": "complete",
+      "dependsOn": [
+        "GPDS-002"
+      ],
+      "criterionIds": [
+        "AC-003"
+      ],
+      "obligationIds": [
+        "O-FRESH"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "A fresh target validates portable mapping."
+      }
+    },
+    {
+      "id": "GPDS-004",
+      "kind": "task",
+      "title": "Verify idempotency and independently review the seed",
+      "status": "complete",
+      "dependsOn": [
+        "GPDS-003"
+      ],
+      "criterionIds": [
+        "AC-004",
+        "AC-005"
+      ],
+      "obligationIds": [
+        "O-IDEMPOTENT",
+        "O-REVIEW"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "A second import and independent review qualify repeatable use."
+      }
+    }
+  ],
+  "artifacts": [],
+  "evidence": [
+    {
+      "id": "E-4b68c14f-7094-4dc8-9f5d-eac1067d75ed",
+      "kind": "machine-command",
+      "workId": "GPDS-001",
+      "obligationIds": [
+        "O-AUDIT"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -euo pipefail; live=$(cat <<'SQL' | podman exec -i glpi-db sh -lc 'mariadb -N -B -uglpi -p\"$MARIADB_PASSWORD\" glpi'\nSELECT COUNT(*) FROM glpi_users WHERE id>6 UNION ALL SELECT COUNT(DISTINCT name) FROM glpi_users WHERE id>6 UNION ALL SELECT COUNT(DISTINCT NULLIF(registration_number,'')) FROM glpi_users WHERE id>6 UNION ALL SELECT COUNT(*) FROM glpi_groups UNION ALL SELECT COUNT(*) FROM glpi_groups_users UNION ALL SELECT COUNT(*) FROM glpi_profiles_users pu JOIN glpi_profiles p ON p.id=pu.profiles_id WHERE pu.users_id>6 AND p.name='Self-Service' UNION ALL SELECT COUNT(*) FROM glpi_useremails e JOIN glpi_users u ON u.id=e.users_id WHERE u.id>6 UNION ALL SELECT COUNT(*) FROM glpi_locations UNION ALL SELECT COUNT(*) FROM glpi_itilcategories UNION ALL SELECT COUNT(*) FROM glpi_manufacturers UNION ALL SELECT COUNT(*) FROM glpi_printermodels UNION ALL SELECT COUNT(*) FROM glpi_peripheraltypes UNION ALL SELECT COUNT(*) FROM glpi_states UNION ALL SELECT COUNT(*) FROM glpi_printers UNION ALL SELECT COUNT(DISTINCT otherserial) FROM glpi_printers UNION ALL SELECT COUNT(*) FROM glpi_peripherals UNION ALL SELECT COUNT(DISTINCT otherserial) FROM glpi_peripherals;\nSQL\n); test \"$live\" = $'74\\n74\\n56\\n16\\n74\\n74\\n45\\n22\\n9\\n7\\n14\\n1\\n4\\n25\\n25\\n9\\n9'; NET=glpi-seed-audit-verify-net; DB=glpi-seed-audit-verify-db; APP=glpi-seed-audit-verify-app; PASS=AuditVerify123; podman rm -f \"$APP\" \"$DB\" >/dev/null 2>&1 || true; podman network rm \"$NET\" >/dev/null 2>&1 || true; trap 'podman rm -f \"$APP\" \"$DB\" >/dev/null 2>&1 || true; podman network rm \"$NET\" >/dev/null 2>&1 || true' EXIT; podman network create \"$NET\" >/dev/null; podman run -d --name \"$DB\" --network \"$NET\" --network-alias glpi-db --tmpfs /var/lib/mysql:rw,size=1g -e MARIADB_DATABASE=glpi -e MARIADB_USER=glpi -e MARIADB_PASSWORD=\"$PASS\" -e MARIADB_ROOT_PASSWORD=\"$PASS\" docker.io/library/mariadb:11.4 >/dev/null; for i in $(seq 1 60); do podman exec \"$DB\" healthcheck.sh --connect --innodb_initialized >/dev/null 2>&1 && break; test \"$i\" != 60; sleep 1; done; podman run -d --name \"$APP\" --network \"$NET\" -e GLPI_DB_HOST=glpi-db -e GLPI_DB_PORT=3306 -e GLPI_DB_NAME=glpi -e GLPI_DB_USER=glpi -e GLPI_DB_PASSWORD=\"$PASS\" docker.io/glpi/glpi:11.0.9 >/dev/null; for i in $(seq 1 120); do tables=$(podman exec \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi -e \"SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='glpi';\" 2>/dev/null || echo 0); test \"${tables:-0}\" -ge 400 && break; test \"$i\" != 120; sleep 1; done; fresh=$(podman exec -i \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi <<'SQL'\nSELECT COUNT(*) FROM glpi_users UNION ALL SELECT COUNT(*) FROM glpi_profiles_users UNION ALL SELECT COUNT(*) FROM glpi_groups UNION ALL SELECT COUNT(*) FROM glpi_groups_users UNION ALL SELECT COUNT(*) FROM glpi_useremails UNION ALL SELECT COUNT(*) FROM glpi_locations UNION ALL SELECT COUNT(*) FROM glpi_itilcategories UNION ALL SELECT COUNT(*) FROM glpi_manufacturers UNION ALL SELECT COUNT(*) FROM glpi_printermodels UNION ALL SELECT COUNT(*) FROM glpi_peripheraltypes UNION ALL SELECT COUNT(*) FROM glpi_states UNION ALL SELECT COUNT(*) FROM glpi_printers UNION ALL SELECT COUNT(*) FROM glpi_peripherals;\nSQL\n); test \"$fresh\" = $'5\\n4\\n0\\n0\\n0\\n0\\n0\\n0\\n0\\n0\\n0\\n0\\n0'; podman rm -f \"$APP\" \"$DB\" >/dev/null; podman network rm \"$NET\" >/dev/null; trap - EXIT; printf 'portable-data-audit=passed\\n'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-28T17:12:40.893Z",
+      "completedAt": "2026-09-28T17:13:12.797Z",
+      "durationMs": 31904,
+      "contractFingerprint": "sha256:afd627586c4714e6a3ce5a5b79750660293b379b43c8ccae4b48cefad5c879c2",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/compose.yml"
+          ],
+          "hash": "sha256:8098a21a3a54d4763011521a2e3ab106f64604a410e386dc2b750d5e989c51b8"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/compose.yml"
+          ],
+          "hash": "sha256:8098a21a3a54d4763011521a2e3ab106f64604a410e386dc2b750d5e989c51b8"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_aLxGPJLkHgYMrlaKrt5n9U2s|fc_08f1b8018c8668a3016aba9ff9a33c87d29c2860027e766c64",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:e3c503687aca51e10837dd33b66834bcb4c324f8643c6ab12174da2b611970b8"
+    },
+    {
+      "id": "E-5a53ee4e-6ad2-4194-8c88-22ab832c45a9",
+      "kind": "model-review",
+      "workId": "GPDS-001",
+      "obligationIds": [
+        "O-AUDIT"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-28T17:13:21.385Z",
+      "contractFingerprint": "sha256:afd627586c4714e6a3ce5a5b79750660293b379b43c8ccae4b48cefad5c879c2",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "services-library/project/glpi/compose.yml"
+        ],
+        "hash": "sha256:8098a21a3a54d4763011521a2e3ab106f64604a410e386dc2b750d5e989c51b8"
+      },
+      "dimensions": [
+        "fresh-default separation",
+        "stable keys",
+        "dependency mapping",
+        "operational exclusions"
+      ],
+      "summary": "Model self-review of the live-versus-fresh audit confirms fresh GLPI 11.0.9 contributes only five default users and four profile assignments across the retained families. All retained business families are absent from a fresh baseline. Imported users are uniquely resolvable by 56 registration numbers plus 18 unique login-name fallbacks; groups and references have unique root-scoped names; printers and peripherals have complete unique otherserial keys; all memberships, profile links, ownership, and asset reference relationships resolve without orphans. Tickets, projects, configuration, logs, events, cron data, and credentials are not dependencies of the portable set.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0e87c-35d1-7272-9d55-ad6d800bb071"
+      }
+    },
+    {
+      "id": "E-5fd08ddc-791a-43c1-819b-bc69e446cc4f",
+      "kind": "machine-command",
+      "workId": "GPDS-002",
+      "obligationIds": [
+        "O-SEED"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -euo pipefail; OUT=services-library/project/glpi/export/data-portable-seed.sql; sha256sum -c \"$OUT.sha256\"; test \"$(stat -c %a \"$OUT\")\" = 600; test \"$(stat -c %a \"$OUT.sha256\")\" = 600; python3 - <<'PY'\nimport re\nfrom pathlib import Path\np=Path('services-library/project/glpi/export/data-portable-seed.sql')\ns=p.read_text()\nbody=re.sub(r'^--.*$', '', s, flags=re.M)\nstatements=[x.strip() for x in body.split(';') if x.strip()]\nassert not any(re.match(r'^(CREATE|DROP|ALTER|TRUNCATE|REPLACE|GRANT|LOCK|UNLOCK)\\\\b', x, re.I) for x in statements)\nallowed={'glpi_manufacturers','glpi_printermodels','glpi_peripheraltypes','glpi_states','glpi_locations','glpi_itilcategories','glpi_groups','glpi_users','glpi_useremails','glpi_profiles_users','glpi_groups_users','glpi_printers','glpi_peripherals'}\ninserts=re.findall(r'INSERT INTO `([^`]+)`',body)\nupdates=re.findall(r'UPDATE `([^`]+)`',body)\nassert set(inserts)==allowed and set(updates)==allowed\nassert len(inserts)==374 and len(updates)==374\nfor forbidden in ['glpi_tickets','glpi_projects','glpi_logs','glpi_events','glpi_crontasklogs','glpi_configs','glpi_sessions','glpi_queuednotifications','glpi_queuedwebhooks']:\n    assert forbidden not in body\nassert not re.search(r'`(?:password|password_history|personal_token|api_token|cookie_token|2fa|user_dn)`',body,re.I)\nassert 'START TRANSACTION;' in s and 'COMMIT;' in s\nassert 'Apply only after GLPI has initialized its own empty schema and defaults.' in s\nassert not re.search(r'@[A-Za-z0-9.-]+',body)\nprint('portable-seed-static-verification=passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-28T17:21:17.833Z",
+      "completedAt": "2026-09-28T17:21:18.783Z",
+      "durationMs": 950,
+      "contractFingerprint": "sha256:afd627586c4714e6a3ce5a5b79750660293b379b43c8ccae4b48cefad5c879c2",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/export/data-portable-seed.sql",
+            "services-library/project/glpi/export/data-portable-seed.sql.sha256"
+          ],
+          "hash": "sha256:73a5f00e497dc427fe04306084b78043924021c14d433cdb855225aae273275e"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/export/data-portable-seed.sql",
+            "services-library/project/glpi/export/data-portable-seed.sql.sha256"
+          ],
+          "hash": "sha256:73a5f00e497dc427fe04306084b78043924021c14d433cdb855225aae273275e"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_HfiWHobQzWitoYrW2ovUQrAh|fc_08f1b8018c8668a3016abaa209038887d2813e8e12f36c3259",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:86276473eb215871851b75a16a8a8fb313c7bd355ed7c96b6cd63575945082bb"
+    },
+    {
+      "id": "E-583f6244-28ee-480b-869b-5ab3e1e2e539",
+      "kind": "model-review",
+      "workId": "GPDS-002",
+      "obligationIds": [
+        "O-SEED"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-28T17:21:30.600Z",
+      "contractFingerprint": "sha256:afd627586c4714e6a3ce5a5b79750660293b379b43c8ccae4b48cefad5c879c2",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "services-library/project/glpi/export/data-portable-seed.sql",
+          "services-library/project/glpi/export/data-portable-seed.sql.sha256"
+        ],
+        "hash": "sha256:73a5f00e497dc427fe04306084b78043924021c14d433cdb855225aae273275e"
+      },
+      "dimensions": [
+        "data-only boundary",
+        "stable lookup strategy",
+        "secret exclusion",
+        "fresh-instance safety",
+        "documentation"
+      ],
+      "summary": "Model self-review of data-portable-seed.sql confirms it contains no schema DDL or destructive statements; writes only 13 curated long-lived business tables; references no tickets, projects, configuration, sessions, queues, logs, or events; contains no password, token, 2FA, or directory-auth columns; exposes no raw email literals; wraps changes in a transaction; and explicitly requires an initialized empty GLPI. Dependencies use root-scoped natural names, the existing Self-Service profile name, user registration/login keys, and unique asset otherserial keys rather than current numeric IDs. The validated fresh-import smoke test also confirmed zero imported password hashes.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0e87c-35d1-7272-9d55-ad6d800bb071"
+      }
+    },
+    {
+      "id": "E-2228e405-c835-4209-b569-421b19381923",
+      "kind": "machine-command",
+      "workId": "GPDS-003",
+      "obligationIds": [
+        "O-FRESH"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -euo pipefail; NET=glpi-seed-fresh-verify-net; DB=glpi-seed-fresh-verify-db; APP=glpi-seed-fresh-verify-app; PASS=FreshVerify456; podman rm -f \"$APP\" \"$DB\" >/dev/null 2>&1 || true; podman network rm \"$NET\" >/dev/null 2>&1 || true; trap 'podman rm -f \"$APP\" \"$DB\" >/dev/null 2>&1 || true; podman network rm \"$NET\" >/dev/null 2>&1 || true' EXIT; podman network create \"$NET\" >/dev/null; podman run -d --name \"$DB\" --network \"$NET\" --network-alias glpi-db --tmpfs /var/lib/mysql:rw,size=1g -e MARIADB_DATABASE=glpi -e MARIADB_USER=glpi -e MARIADB_PASSWORD=\"$PASS\" -e MARIADB_ROOT_PASSWORD=\"$PASS\" docker.io/library/mariadb:11.4 >/dev/null; for i in $(seq 1 60); do podman exec \"$DB\" healthcheck.sh --connect --innodb_initialized >/dev/null 2>&1 && break; test \"$i\" != 60; sleep 1; done; podman run -d --name \"$APP\" --network \"$NET\" -e GLPI_DB_HOST=glpi-db -e GLPI_DB_PORT=3306 -e GLPI_DB_NAME=glpi -e GLPI_DB_USER=glpi -e GLPI_DB_PASSWORD=\"$PASS\" docker.io/glpi/glpi:11.0.9 >/dev/null; for i in $(seq 1 120); do tables=$(podman exec \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi -e \"SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='glpi';\" 2>/dev/null || echo 0); test \"${tables:-0}\" -ge 400 && break; test \"$i\" != 120; sleep 1; done; podman exec -i \"$DB\" mariadb --abort-source-on-error -uglpi -p\"$PASS\" glpi < services-library/project/glpi/export/data-portable-seed.sql >/dev/null; counts=$(podman exec -i \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi <<'SQL'\nSELECT COUNT(*)-5 FROM glpi_users UNION ALL SELECT COUNT(*) FROM glpi_groups UNION ALL SELECT COUNT(*) FROM glpi_groups_users UNION ALL SELECT COUNT(*)-4 FROM glpi_profiles_users UNION ALL SELECT COUNT(*) FROM glpi_useremails UNION ALL SELECT COUNT(*) FROM glpi_locations UNION ALL SELECT COUNT(*) FROM glpi_itilcategories UNION ALL SELECT COUNT(*) FROM glpi_manufacturers UNION ALL SELECT COUNT(*) FROM glpi_printermodels UNION ALL SELECT COUNT(*) FROM glpi_peripheraltypes UNION ALL SELECT COUNT(*) FROM glpi_states UNION ALL SELECT COUNT(*) FROM glpi_printers UNION ALL SELECT COUNT(*) FROM glpi_peripherals;\nSQL\n); test \"$counts\" = $'74\\n16\\n74\\n74\\n45\\n22\\n9\\n7\\n14\\n1\\n4\\n25\\n9'; invariants=$(podman exec -i \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi <<'SQL'\nSELECT COUNT(*) FROM glpi_users WHERE id>6 AND password IS NOT NULL AND password<>'' UNION ALL SELECT COUNT(*) FROM glpi_tickets UNION ALL SELECT COUNT(*) FROM glpi_projects UNION ALL SELECT COUNT(*) FROM glpi_groups_users gu LEFT JOIN glpi_groups g ON g.id=gu.groups_id LEFT JOIN glpi_users u ON u.id=gu.users_id WHERE g.id IS NULL OR u.id IS NULL UNION ALL SELECT COUNT(*) FROM glpi_profiles_users pu LEFT JOIN glpi_profiles p ON p.id=pu.profiles_id LEFT JOIN glpi_users u ON u.id=pu.users_id WHERE pu.users_id>6 AND (p.id IS NULL OR u.id IS NULL) UNION ALL SELECT COUNT(*) FROM glpi_printers p LEFT JOIN glpi_users u ON u.id=p.users_id WHERE p.users_id<>0 AND u.id IS NULL UNION ALL SELECT COUNT(*) FROM glpi_peripherals p LEFT JOIN glpi_users u ON u.id=p.users_id WHERE p.users_id<>0 AND u.id IS NULL;\nSQL\n); test \"$invariants\" = $'0\\n0\\n0\\n0\\n0\\n0\\n0'; refs=$(podman exec -i \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi <<'SQL'\nSELECT SUM(locations_id<>0),SUM(printermodels_id<>0),SUM(manufacturers_id<>0),SUM(states_id<>0),SUM(users_id<>0) FROM glpi_printers UNION ALL SELECT SUM(locations_id<>0),SUM(peripheraltypes_id<>0),SUM(manufacturers_id<>0),SUM(states_id<>0),SUM(users_id<>0) FROM glpi_peripherals;\nSQL\n); test \"$refs\" = $'23\\t25\\t25\\t25\\t21\\n0\\t9\\t0\\t9\\t9'; podman rm -f \"$APP\" \"$DB\" >/dev/null; podman network rm \"$NET\" >/dev/null; trap - EXIT; printf 'fresh-portable-seed-verification=passed\\n'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-28T17:24:26.971Z",
+      "completedAt": "2026-09-28T17:24:59.842Z",
+      "durationMs": 32871,
+      "contractFingerprint": "sha256:afd627586c4714e6a3ce5a5b79750660293b379b43c8ccae4b48cefad5c879c2",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/compose.yml",
+            "services-library/project/glpi/export/data-portable-seed.sql",
+            "services-library/project/glpi/export/data-portable-seed.sql.sha256"
+          ],
+          "hash": "sha256:535aafe1e9f6f28687379e26866a09c12ed27b4843172198ae570ceb14701475"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/compose.yml",
+            "services-library/project/glpi/export/data-portable-seed.sql",
+            "services-library/project/glpi/export/data-portable-seed.sql.sha256"
+          ],
+          "hash": "sha256:535aafe1e9f6f28687379e26866a09c12ed27b4843172198ae570ceb14701475"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_XMA9ridlRheLocq0YoTMgyFA|fc_08f1b8018c8668a3016abaa2b96bd087d2b0875e0e41768955",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:be3bc63b9b9d8bed74daf4f3c6a6796d4b3deeb235a63183ededdf0c7a225749"
+    },
+    {
+      "id": "E-7bda0913-8c71-47e0-ba58-2bb30cb9e3af",
+      "kind": "model-review",
+      "workId": "GPDS-003",
+      "obligationIds": [
+        "O-FRESH"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-28T17:25:10.092Z",
+      "contractFingerprint": "sha256:afd627586c4714e6a3ce5a5b79750660293b379b43c8ccae4b48cefad5c879c2",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "services-library/project/glpi/compose.yml",
+          "services-library/project/glpi/export/data-portable-seed.sql",
+          "services-library/project/glpi/export/data-portable-seed.sql.sha256"
+        ],
+        "hash": "sha256:535aafe1e9f6f28687379e26866a09c12ed27b4843172198ae570ceb14701475"
+      },
+      "dimensions": [
+        "fresh GLPI initialization",
+        "retained counts",
+        "semantic fidelity",
+        "relationship integrity",
+        "credential exclusion"
+      ],
+      "summary": "Model self-review of the fresh GLPI 11.0.9 import found all 13 retained families recreated at exact expected counts. A separate 13-family semantic fingerprint comparison matched the live normalized source across identity/contact fields, groups, memberships, profiles, references, assets, and ownership. Current prepared verification reconfirmed 74 users, 16 groups, 74 memberships, 74 Self-Service profile links, 45 emails, 22 locations, 9 categories, 7 manufacturers, 14 printer models, 1 peripheral type, 4 states, 25 printers, and 9 peripherals; zero password hashes, tickets, projects, orphans, or broken owner links; and exact asset reference distributions.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0e87c-35d1-7272-9d55-ad6d800bb071"
+      }
+    },
+    {
+      "id": "E-b25fca97-52f7-4067-a556-31631505a499",
+      "kind": "machine-command",
+      "workId": "GPDS-004",
+      "obligationIds": [
+        "O-IDEMPOTENT"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -euo pipefail; NET=glpi-seed-idem-verify-net; DB=glpi-seed-idem-verify-db; APP=glpi-seed-idem-verify-app; PASS=IdemVerify456; podman rm -f \"$APP\" \"$DB\" >/dev/null 2>&1 || true; podman network rm \"$NET\" >/dev/null 2>&1 || true; trap 'podman rm -f \"$APP\" \"$DB\" >/dev/null 2>&1 || true; podman network rm \"$NET\" >/dev/null 2>&1 || true' EXIT; podman network create \"$NET\" >/dev/null; podman run -d --name \"$DB\" --network \"$NET\" --network-alias glpi-db --tmpfs /var/lib/mysql:rw,size=1g -e MARIADB_DATABASE=glpi -e MARIADB_USER=glpi -e MARIADB_PASSWORD=\"$PASS\" -e MARIADB_ROOT_PASSWORD=\"$PASS\" docker.io/library/mariadb:11.4 >/dev/null; for i in $(seq 1 60); do podman exec \"$DB\" healthcheck.sh --connect --innodb_initialized >/dev/null 2>&1 && break; test \"$i\" != 60; sleep 1; done; podman run -d --name \"$APP\" --network \"$NET\" -e GLPI_DB_HOST=glpi-db -e GLPI_DB_PORT=3306 -e GLPI_DB_NAME=glpi -e GLPI_DB_USER=glpi -e GLPI_DB_PASSWORD=\"$PASS\" docker.io/glpi/glpi:11.0.9 >/dev/null; for i in $(seq 1 120); do tables=$(podman exec \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi -e \"SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='glpi';\" 2>/dev/null || echo 0); test \"${tables:-0}\" -ge 400 && break; test \"$i\" != 120; sleep 1; done; podman stop \"$APP\" >/dev/null; podman exec -i \"$DB\" mariadb --abort-source-on-error -uglpi -p\"$PASS\" glpi < services-library/project/glpi/export/data-portable-seed.sql >/dev/null; first_counts=$(podman exec -i \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi <<'SQL'\nSELECT COUNT(*) FROM glpi_users UNION ALL SELECT COUNT(*) FROM glpi_groups UNION ALL SELECT COUNT(*) FROM glpi_groups_users UNION ALL SELECT COUNT(*) FROM glpi_profiles_users UNION ALL SELECT COUNT(*) FROM glpi_useremails UNION ALL SELECT COUNT(*) FROM glpi_locations UNION ALL SELECT COUNT(*) FROM glpi_itilcategories UNION ALL SELECT COUNT(*) FROM glpi_manufacturers UNION ALL SELECT COUNT(*) FROM glpi_printermodels UNION ALL SELECT COUNT(*) FROM glpi_peripheraltypes UNION ALL SELECT COUNT(*) FROM glpi_states UNION ALL SELECT COUNT(*) FROM glpi_printers UNION ALL SELECT COUNT(*) FROM glpi_peripherals;\nSQL\n); first_sum=$(podman exec \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi -e \"CHECKSUM TABLE glpi_users,glpi_groups,glpi_groups_users,glpi_profiles_users,glpi_useremails,glpi_locations,glpi_itilcategories,glpi_manufacturers,glpi_printermodels,glpi_peripheraltypes,glpi_states,glpi_printers,glpi_peripherals;\"); podman exec -i \"$DB\" mariadb --abort-source-on-error -uglpi -p\"$PASS\" glpi < services-library/project/glpi/export/data-portable-seed.sql >/dev/null; second_counts=$(podman exec -i \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi <<'SQL'\nSELECT COUNT(*) FROM glpi_users UNION ALL SELECT COUNT(*) FROM glpi_groups UNION ALL SELECT COUNT(*) FROM glpi_groups_users UNION ALL SELECT COUNT(*) FROM glpi_profiles_users UNION ALL SELECT COUNT(*) FROM glpi_useremails UNION ALL SELECT COUNT(*) FROM glpi_locations UNION ALL SELECT COUNT(*) FROM glpi_itilcategories UNION ALL SELECT COUNT(*) FROM glpi_manufacturers UNION ALL SELECT COUNT(*) FROM glpi_printermodels UNION ALL SELECT COUNT(*) FROM glpi_peripheraltypes UNION ALL SELECT COUNT(*) FROM glpi_states UNION ALL SELECT COUNT(*) FROM glpi_printers UNION ALL SELECT COUNT(*) FROM glpi_peripherals;\nSQL\n); second_sum=$(podman exec \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi -e \"CHECKSUM TABLE glpi_users,glpi_groups,glpi_groups_users,glpi_profiles_users,glpi_useremails,glpi_locations,glpi_itilcategories,glpi_manufacturers,glpi_printermodels,glpi_peripheraltypes,glpi_states,glpi_printers,glpi_peripherals;\"); test \"$first_counts\" = \"$second_counts\"; test \"$first_sum\" = \"$second_sum\"; test \"$second_counts\" = $'79\\n16\\n74\\n78\\n45\\n22\\n9\\n7\\n14\\n1\\n4\\n25\\n9'; podman rm -f \"$APP\" \"$DB\" >/dev/null; podman network rm \"$NET\" >/dev/null; trap - EXIT; printf 'portable-seed-idempotency=passed\\n'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-28T17:29:04.555Z",
+      "completedAt": "2026-09-28T17:29:35.719Z",
+      "durationMs": 31164,
+      "contractFingerprint": "sha256:afd627586c4714e6a3ce5a5b79750660293b379b43c8ccae4b48cefad5c879c2",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/compose.yml",
+            "services-library/project/glpi/export/data-portable-seed.sql",
+            "services-library/project/glpi/export/data-portable-seed.sql.sha256"
+          ],
+          "hash": "sha256:535aafe1e9f6f28687379e26866a09c12ed27b4843172198ae570ceb14701475"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/compose.yml",
+            "services-library/project/glpi/export/data-portable-seed.sql",
+            "services-library/project/glpi/export/data-portable-seed.sql.sha256"
+          ],
+          "hash": "sha256:535aafe1e9f6f28687379e26866a09c12ed27b4843172198ae570ceb14701475"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_aBpZPe3CbEakJrsb8Samuaa2|fc_08f1b8018c8668a3016abaa3cf208487d281d59f333ce642b1",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:b8d22def9c5080115b67f1915166cb234e8bd04fd2ef05dfdc0190f92657683f"
+    },
+    {
+      "id": "E-de3d177d-5a9f-4bc5-86b9-983532814053",
+      "kind": "model-review",
+      "workId": "GPDS-004",
+      "obligationIds": [
+        "O-IDEMPOTENT",
+        "O-REVIEW"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-28T17:29:48.125Z",
+      "contractFingerprint": "sha256:afd627586c4714e6a3ce5a5b79750660293b379b43c8ccae4b48cefad5c879c2",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "services-library/project/glpi/export/data-portable-seed.sql",
+          "services-library/project/glpi/export/data-portable-seed.sql.sha256"
+        ],
+        "hash": "sha256:73a5f00e497dc427fe04306084b78043924021c14d433cdb855225aae273275e"
+      },
+      "dimensions": [
+        "second-run idempotency",
+        "full-table stability",
+        "data-only contract",
+        "non-destructive usage",
+        "sensitive-data handling"
+      ],
+      "summary": "Model self-review confirms a fresh GLPI 11.0.9 database imported the seed twice with identical counts and CHECKSUM TABLE results across all 13 curated tables: 79 total users, 16 groups, 74 memberships, 78 total profile links, 45 emails, 22 locations, 9 categories, 7 manufacturers, 14 printer models, 1 peripheral type, 4 states, 25 printers, and 9 peripherals. No second-run duplicates or mutations occurred. The artifact explicitly requires a fresh initialized schema, does not erase active systems, contains no DDL/destructive statements, and excludes schema, configuration, credentials, password/token columns, tickets, projects, and runtime history. It remains mode 0600 with a valid checksum because it contains personal and asset data.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0e87c-35d1-7272-9d55-ad6d800bb071"
+      }
+    },
+    {
+      "id": "E-20cdc988-e9c3-4bda-9983-9eca46c3cc9b",
+      "kind": "machine-command",
+      "workId": "GPDS-004",
+      "obligationIds": [
+        "O-IDEMPOTENT"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "set -euo pipefail; OUT=services-library/project/glpi/export/data-portable-seed.sql; sha256sum -c \"$OUT.sha256\"; ! grep -q '`2fa_enforced`' \"$OUT\"; NET=glpi-seed-idem-final-net; DB=glpi-seed-idem-final-db; APP=glpi-seed-idem-final-app; PASS=IdemFinal456; podman rm -f \"$APP\" \"$DB\" >/dev/null 2>&1 || true; podman network rm \"$NET\" >/dev/null 2>&1 || true; trap 'podman rm -f \"$APP\" \"$DB\" >/dev/null 2>&1 || true; podman network rm \"$NET\" >/dev/null 2>&1 || true' EXIT; podman network create \"$NET\" >/dev/null; podman run -d --name \"$DB\" --network \"$NET\" --network-alias glpi-db --tmpfs /var/lib/mysql:rw,size=1g -e MARIADB_DATABASE=glpi -e MARIADB_USER=glpi -e MARIADB_PASSWORD=\"$PASS\" -e MARIADB_ROOT_PASSWORD=\"$PASS\" docker.io/library/mariadb:11.4 >/dev/null; for i in $(seq 1 60); do podman exec \"$DB\" healthcheck.sh --connect --innodb_initialized >/dev/null 2>&1 && break; test \"$i\" != 60; sleep 1; done; podman run -d --name \"$APP\" --network \"$NET\" -e GLPI_DB_HOST=glpi-db -e GLPI_DB_PORT=3306 -e GLPI_DB_NAME=glpi -e GLPI_DB_USER=glpi -e GLPI_DB_PASSWORD=\"$PASS\" docker.io/glpi/glpi:11.0.9 >/dev/null; for i in $(seq 1 120); do tables=$(podman exec \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi -e \"SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='glpi';\" 2>/dev/null || echo 0); test \"${tables:-0}\" -ge 400 && break; test \"$i\" != 120; sleep 1; done; podman stop \"$APP\" >/dev/null; podman exec -i \"$DB\" mariadb --abort-source-on-error -uglpi -p\"$PASS\" glpi < \"$OUT\" >/dev/null; first_counts=$(podman exec -i \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi <<'SQL'\nSELECT COUNT(*) FROM glpi_users UNION ALL SELECT COUNT(*) FROM glpi_groups UNION ALL SELECT COUNT(*) FROM glpi_groups_users UNION ALL SELECT COUNT(*) FROM glpi_profiles_users UNION ALL SELECT COUNT(*) FROM glpi_useremails UNION ALL SELECT COUNT(*) FROM glpi_locations UNION ALL SELECT COUNT(*) FROM glpi_itilcategories UNION ALL SELECT COUNT(*) FROM glpi_manufacturers UNION ALL SELECT COUNT(*) FROM glpi_printermodels UNION ALL SELECT COUNT(*) FROM glpi_peripheraltypes UNION ALL SELECT COUNT(*) FROM glpi_states UNION ALL SELECT COUNT(*) FROM glpi_printers UNION ALL SELECT COUNT(*) FROM glpi_peripherals;\nSQL\n); first_sum=$(podman exec \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi -e \"CHECKSUM TABLE glpi_users,glpi_groups,glpi_groups_users,glpi_profiles_users,glpi_useremails,glpi_locations,glpi_itilcategories,glpi_manufacturers,glpi_printermodels,glpi_peripheraltypes,glpi_states,glpi_printers,glpi_peripherals;\"); podman exec -i \"$DB\" mariadb --abort-source-on-error -uglpi -p\"$PASS\" glpi < \"$OUT\" >/dev/null; second_counts=$(podman exec -i \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi <<'SQL'\nSELECT COUNT(*) FROM glpi_users UNION ALL SELECT COUNT(*) FROM glpi_groups UNION ALL SELECT COUNT(*) FROM glpi_groups_users UNION ALL SELECT COUNT(*) FROM glpi_profiles_users UNION ALL SELECT COUNT(*) FROM glpi_useremails UNION ALL SELECT COUNT(*) FROM glpi_locations UNION ALL SELECT COUNT(*) FROM glpi_itilcategories UNION ALL SELECT COUNT(*) FROM glpi_manufacturers UNION ALL SELECT COUNT(*) FROM glpi_printermodels UNION ALL SELECT COUNT(*) FROM glpi_peripheraltypes UNION ALL SELECT COUNT(*) FROM glpi_states UNION ALL SELECT COUNT(*) FROM glpi_printers UNION ALL SELECT COUNT(*) FROM glpi_peripherals;\nSQL\n); second_sum=$(podman exec \"$DB\" mariadb -N -B -uglpi -p\"$PASS\" glpi -e \"CHECKSUM TABLE glpi_users,glpi_groups,glpi_groups_users,glpi_profiles_users,glpi_useremails,glpi_locations,glpi_itilcategories,glpi_manufacturers,glpi_printermodels,glpi_peripheraltypes,glpi_states,glpi_printers,glpi_peripherals;\"); test \"$first_counts\" = \"$second_counts\"; test \"$first_sum\" = \"$second_sum\"; test \"$second_counts\" = $'79\\n16\\n74\\n78\\n45\\n22\\n9\\n7\\n14\\n1\\n4\\n25\\n9'; podman rm -f \"$APP\" \"$DB\" >/dev/null; podman network rm \"$NET\" >/dev/null; trap - EXIT; printf 'corrected-portable-seed-idempotency=passed\\n'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-28T17:34:38.072Z",
+      "completedAt": "2026-09-28T17:35:08.333Z",
+      "durationMs": 30261,
+      "contractFingerprint": "sha256:afd627586c4714e6a3ce5a5b79750660293b379b43c8ccae4b48cefad5c879c2",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/compose.yml",
+            "services-library/project/glpi/export/data-portable-seed.sql",
+            "services-library/project/glpi/export/data-portable-seed.sql.sha256"
+          ],
+          "hash": "sha256:5bec46544df06419fac7dfbdfa6f8a8156328fb535878ce0626a62af27a292b6"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "services-library/project/glpi/compose.yml",
+            "services-library/project/glpi/export/data-portable-seed.sql",
+            "services-library/project/glpi/export/data-portable-seed.sql.sha256"
+          ],
+          "hash": "sha256:5bec46544df06419fac7dfbdfa6f8a8156328fb535878ce0626a62af27a292b6"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_IhV4KhQ3a5VBG4rwDlvIRMV9|fc_08f1b8018c8668a3016abaa51c7cd487d2bb292cb0b9587423",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:07ec59f98c7e4154c8886bdb881596be7d50b01413f49b8b7885cc1fccd7db67"
+    },
+    {
+      "id": "E-5d829e42-450b-4710-a5c0-160c64eafd50",
+      "kind": "model-review",
+      "workId": "GPDS-004",
+      "obligationIds": [
+        "O-IDEMPOTENT",
+        "O-REVIEW"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-28T17:35:18.920Z",
+      "contractFingerprint": "sha256:afd627586c4714e6a3ce5a5b79750660293b379b43c8ccae4b48cefad5c879c2",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "services-library/project/glpi/export/data-portable-seed.sql",
+          "services-library/project/glpi/export/data-portable-seed.sql.sha256"
+        ],
+        "hash": "sha256:c94d238142bc7235d54645841abf0147ad2e661edb3a76b501a7b3b63bd1ceea"
+      },
+      "dimensions": [
+        "independent-review correction",
+        "authentication exclusion",
+        "read-only default lookup",
+        "second-run idempotency",
+        "use contract"
+      ],
+      "summary": "Corrective model self-review confirms group-level 2fa_enforced has been removed from the regenerated seed and no password, token, 2FA, DN, authentication-secret, schema, operational-history, or runtime-configuration fields remain. The glpi_profiles table is only read through a natural-name subquery to resolve GLPI's pre-existing Self-Service default profile; it is never inserted or updated and avoids a fixed numeric profile ID. A current fresh GLPI verification imported the corrected seed twice with identical counts and CHECKSUM TABLE results across all 13 writable business tables.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0e87c-35d1-7272-9d55-ad6d800bb071"
+      }
+    },
+    {
+      "id": "E-e9245df8-7099-4b0b-9fd1-ee55edbbaed7",
+      "kind": "independent-review",
+      "workId": "GPDS-004",
+      "obligationIds": [
+        "O-IDEMPOTENT",
+        "O-REVIEW"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-28T17:40:05.664Z",
+      "contractFingerprint": "sha256:afd627586c4714e6a3ce5a5b79750660293b379b43c8ccae4b48cefad5c879c2",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "services-library/project/glpi/compose.yml",
+          "services-library/project/glpi/export/data-portable-seed.sql",
+          "services-library/project/glpi/export/data-portable-seed.sql.sha256"
+        ],
+        "hash": "sha256:5bec46544df06419fac7dfbdfa6f8a8156328fb535878ce0626a62af27a292b6"
+      },
+      "dimensions": [
+        "corrected authentication exclusion",
+        "13 writable-table boundary",
+        "read-only default profile lookup",
+        "fresh GLPI import",
+        "second-run idempotency",
+        "non-destructive documentation"
+      ],
+      "summary": "Review the corrected seed after removal of group-level 2fa_enforced. Validate no authentication/security fields remain. The 13-table boundary applies to INSERT/UPDATE targets; a read-only SELECT from GLPI's existing glpi_profiles table is intentionally allowed solely to resolve the Self-Service profile by name instead of fixed ID. Confirm checksum, static non-destructive/data-only contract, fresh GLPI import, and unchanged counts/CHECKSUM TABLE results after a second import. Remove disposable resources and do not modify repository files.",
+      "provenance": {
+        "kind": "pi-interactive-session-review",
+        "transport": "interactive-shell",
+        "reviewerSessionId": "mild-falcon",
+        "recorderSessionId": "01a0e87c-35d1-7272-9d55-ad6d800bb071"
+      }
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D-001",
+      "text": "Target an already initialized GLPI schema and include no schema DDL.",
+      "basis": "GLPI owns schema and migrations."
+    },
+    {
+      "id": "D-002",
+      "text": "Create a clean slate by initializing fresh GLPI then applying the seed, not by deleting an active system.",
+      "basis": "Avoid accidental production loss."
+    },
+    {
+      "id": "D-003",
+      "text": "Retain identity/contact data without reusable local password hashes.",
+      "basis": "Authentication must be re-established authoritatively."
+    }
+  ],
+  "risks": [
+    {
+      "id": "R-001",
+      "text": "Fixed IDs could connect data to wrong defaults.",
+      "mitigation": "Resolve dependencies through source or natural keys."
+    },
+    {
+      "id": "R-002",
+      "text": "Upserts could mutate unrelated same-name records.",
+      "mitigation": "Prefer source identifiers and fail on ambiguity."
+    },
+    {
+      "id": "R-003",
+      "text": "The SQL contains personal and asset data.",
+      "mitigation": "Restrict permissions, avoid row output, checksum, and do not commit without authorization."
+    }
+  ]
+}
