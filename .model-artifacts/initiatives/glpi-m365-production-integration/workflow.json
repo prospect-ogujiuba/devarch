@@ -1,0 +1,1308 @@
+{
+  "kind": "gentic.swe.initiative",
+  "schemaVersion": 1,
+  "id": "glpi-m365-production-integration",
+  "revision": 37,
+  "status": "complete",
+  "objective": "Prepare a secure pilot-first GLPI production rollout in which Microsoft 365 identity is authoritative, existing users can sign in, and managed computers report reliable hardware and software inventory.",
+  "policies": {
+    "commitOnWorkCompletion": false,
+    "independentReviewOnCompletion": true
+  },
+  "scope": {
+    "in": [
+      "Assess the current GLPI repository deployment and identity/inventory guidance",
+      "Select the correct Entra cloud-only or hybrid AD integration path",
+      "Document least-privilege GLPI Agent deployment through Intune or the MSP",
+      "Document existing Microsoft 365 user provisioning and sign-in",
+      "Add safe configuration scaffolding that contains no tenant secrets"
+    ],
+    "out": [
+      "Creating tenant credentials without an authorized administrator",
+      "Broad endpoint deployment before pilot acceptance",
+      "Irreversible production tenant changes",
+      "Storing passwords, client secrets, certificates, or tokens in Git"
+    ]
+  },
+  "constraints": [
+    "Microsoft 365 or AD/Entra remains authoritative for identities and groups.",
+    "Use a pilot device and pilot user group before broad rollout.",
+    "Preserve and test a local GLPI break-glass administrator.",
+    "Stop at any credential, admin-consent, or production deployment gate requiring tenant authorization."
+  ],
+  "acceptanceCriteria": [
+    {
+      "id": "AC-001",
+      "text": "Current GLPI deployment assumptions, tenant topology decision, and required roles are documented."
+    },
+    {
+      "id": "AC-002",
+      "text": "A pilot-first GLPI Agent rollout procedure explains monitor and printer coverage, limitations, packaging, validation, rollback, and broad-deployment gates."
+    },
+    {
+      "id": "AC-003",
+      "text": "The identity procedure clearly distinguishes cloud-only Entra SCIM/OAuth SSO from hybrid/on-premises LDAP and enables existing Microsoft 365 users without duplicate identities."
+    },
+    {
+      "id": "AC-004",
+      "text": "Secrets remain outside the repository, least privilege is specified, and local break-glass access is preserved."
+    },
+    {
+      "id": "AC-005",
+      "text": "Changed repository content passes deterministic checks and independent review."
+    }
+  ],
+  "assessment": {
+    "depth": "deep",
+    "reason": "The work affects production identity, authentication, endpoint software distribution, and potentially most managed computers.",
+    "surfaces": [
+      "GLPI 11 identity and inventory configuration",
+      "Microsoft Entra ID and Microsoft Intune",
+      "On-premises Active Directory if present",
+      "MSP deployment tooling",
+      "Repository operational runbooks"
+    ],
+    "unknowns": [
+      "Whether the tenant is cloud-only, hybrid, or has reachable AD DS.",
+      "Which Entra and Intune roles the user holds.",
+      "Whether endpoints are Intune-enrolled or managed solely by the MSP.",
+      "The production GLPI URL and external connectivity design.",
+      "Whether GLPI SCIM and OAuth SSO plugins are installed and licensed."
+    ]
+  },
+  "practices": [
+    {
+      "id": "P-ASSESS",
+      "practice": "Discover topology and privileges before changing production systems.",
+      "appliesTo": [
+        "M365-001"
+      ],
+      "reason": "Entra cloud-only and LDAP/hybrid require different architectures and privileges."
+    },
+    {
+      "id": "P-PILOT",
+      "practice": "Use pilot-first deployment with explicit validation and rollback.",
+      "appliesTo": [
+        "M365-002"
+      ],
+      "reason": "Inventory agents and sign-in changes affect endpoints and access."
+    },
+    {
+      "id": "P-SECURITY",
+      "practice": "Use least privilege, external secret storage, and break-glass access.",
+      "appliesTo": [
+        "M365-002",
+        "M365-003"
+      ],
+      "reason": "Identity integrations require sensitive credentials and admin consent."
+    },
+    {
+      "id": "P-VERIFY",
+      "practice": "Run deterministic repository checks and independent review.",
+      "appliesTo": [
+        "M365-004"
+      ],
+      "reason": "Operational guidance must be internally consistent before production use."
+    }
+  ],
+  "obligations": [
+    {
+      "id": "O-ASSESS",
+      "practiceId": "P-ASSESS",
+      "criterionIds": [
+        "AC-001"
+      ],
+      "text": "Assess current deployment, topology questions, and required Entra/Intune/AD privileges.",
+      "verification": {
+        "kind": "document review",
+        "requiredEvidence": [
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-INVENTORY",
+      "practiceId": "P-PILOT",
+      "criterionIds": [
+        "AC-002"
+      ],
+      "text": "Provide an actionable pilot-first agent rollout and asset validation procedure.",
+      "verification": {
+        "kind": "documentation and command checks",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-IDENTITY",
+      "practiceId": "P-SECURITY",
+      "criterionIds": [
+        "AC-003",
+        "AC-004"
+      ],
+      "text": "Provide the correct Entra or LDAP source-of-truth sign-in procedure without repository secrets.",
+      "verification": {
+        "kind": "security-focused documentation review",
+        "requiredEvidence": [
+          "machine-command",
+          "model-review"
+        ]
+      }
+    },
+    {
+      "id": "O-VERIFY",
+      "practiceId": "P-VERIFY",
+      "criterionIds": [
+        "AC-005"
+      ],
+      "text": "Verify changed content and obtain independent review.",
+      "verification": {
+        "kind": "repository verification",
+        "requiredEvidence": [
+          "machine-command",
+          "independent-review"
+        ]
+      }
+    }
+  ],
+  "work": [
+    {
+      "id": "M365-001",
+      "kind": "task",
+      "title": "Assess GLPI deployment and Microsoft identity topology",
+      "status": "complete",
+      "dependsOn": [],
+      "criterionIds": [
+        "AC-001"
+      ],
+      "obligationIds": [
+        "O-ASSESS"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Read-only discovery defines the implementation path."
+      }
+    },
+    {
+      "id": "M365-002",
+      "kind": "task",
+      "title": "Document GLPI Agent pilot and managed deployment",
+      "status": "complete",
+      "dependsOn": [
+        "M365-001"
+      ],
+      "criterionIds": [
+        "AC-002",
+        "AC-004"
+      ],
+      "obligationIds": [
+        "O-INVENTORY"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Validate documentation structure and operational commands after editing."
+      }
+    },
+    {
+      "id": "M365-003",
+      "kind": "task",
+      "title": "Document Entra or AD identity integration and sign-in",
+      "status": "complete",
+      "dependsOn": [
+        "M365-001"
+      ],
+      "criterionIds": [
+        "AC-003",
+        "AC-004"
+      ],
+      "obligationIds": [
+        "O-IDENTITY"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Validate references, consistency, and secret exclusions after editing."
+      }
+    },
+    {
+      "id": "M365-004",
+      "kind": "task",
+      "title": "Verify and independently review rollout guidance",
+      "status": "complete",
+      "dependsOn": [
+        "M365-002",
+        "M365-003"
+      ],
+      "criterionIds": [
+        "AC-005"
+      ],
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "testing": {
+        "approach": "test-after",
+        "reason": "Final verification covers all changed operational guidance."
+      }
+    }
+  ],
+  "artifacts": [],
+  "evidence": [
+    {
+      "id": "E-36987f2d-cd08-4b14-9fbd-fa10d90cfc20",
+      "kind": "model-review",
+      "workId": "M365-001",
+      "obligationIds": [
+        "O-ASSESS"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-29T15:56:40.526Z",
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+          "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+          "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md",
+          "scripts/project-management/README.md"
+        ],
+        "hash": "sha256:22a5c2d8ac4838734b53a6ef865b40b185bcc2158875f9c0ee0837ca48fc1d1a"
+      },
+      "dimensions": [
+        "factual accuracy",
+        "architecture decision safety",
+        "least privilege",
+        "production gating"
+      ],
+      "summary": "Source-bound model self-review of the current-state assessment against the running GLPI 11.0.9 container, empty plugin list, repository deployment documentation, GLPI identity/inventory runbooks, Microsoft Intune RBAC guidance, Microsoft Entra provisioning-role guidance, and GLPI SCIM/OAuth guidance. The assessment correctly separates cloud-only Entra from hybrid AD, states that Entra access alone does not grant Intune deployment rights, preserves break-glass access, avoids secrets, and identifies the production URL and tenant topology as blocking inputs.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0e95b-67cc-7272-9d55-ad6f56e925ad"
+      }
+    },
+    {
+      "id": "E-29ad0dca-2a7e-4003-aab8-694ce00d2bc1",
+      "kind": "machine-command",
+      "workId": "M365-002",
+      "obligationIds": [
+        "O-INVENTORY"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check -- scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md && grep -q '#### 5.1.1 Deployment authority and prerequisites' scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md && grep -q '### 5.4 Pilot inventory acceptance tests' scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md && grep -q '### 5.5 Expansion, monitoring and rollback' scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T15:57:52.786Z",
+      "completedAt": "2026-09-29T15:57:53.587Z",
+      "durationMs": 801,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:4b1549554fb15cbff45ccdbeee0a7734a9f1fb1787457dd679e416c1c527de65"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:4b1549554fb15cbff45ccdbeee0a7734a9f1fb1787457dd679e416c1c527de65"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_p0QgE0g59rjakbxBzAOH4lBY|fc_0e356ec799316a27016abbdfff59ec87d2b6d32734a27ce477",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:efefc15c24ee8645a3f5f6958389db729c1577eb6b32aeac4caab2a86d90daa3"
+    },
+    {
+      "id": "E-d6a9312e-189e-47d2-90ca-27387fb1036f",
+      "kind": "model-review",
+      "workId": "M365-002",
+      "obligationIds": [
+        "O-INVENTORY"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-29T15:58:06.168Z",
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+        ],
+        "hash": "sha256:4b1549554fb15cbff45ccdbeee0a7734a9f1fb1787457dd679e416c1c527de65"
+      },
+      "dimensions": [
+        "operational completeness",
+        "least privilege",
+        "monitor and printer accuracy",
+        "rollback safety",
+        "secret handling"
+      ],
+      "summary": "Source-bound model self-review of the updated inventory sections against the GLPI Agent inventory categories, GLPI computer/monitor/printer/network-equipment guidance, Microsoft Intune RBAC and Win32 app deployment guidance, and the repository's GLPI 11 deployment. The procedure is pilot-first, correctly treats monitor and endpoint-printer inventory as best-effort, separates SNMP inventory, specifies system-context MSI deployment and deterministic detection, avoids credentials in packages, and includes expansion stop conditions and rollback.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0e95b-67cc-7272-9d55-ad6f56e925ad"
+      }
+    },
+    {
+      "id": "E-a218f91e-a512-47f5-aa6b-fc49a23760db",
+      "kind": "machine-command",
+      "workId": "M365-003",
+      "obligationIds": [
+        "O-IDENTITY"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check -- scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md && grep -q '### 4.1 Select one authoritative path' scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md && grep -q '### 4.2 Reconcile existing GLPI users before provisioning' scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md && grep -q '#### 4.3.1 Provision users and groups with SCIM' scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md && grep -q '#### 4.3.2 Authenticate with Microsoft using OAuth SSO' scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md && grep -q '### 4.4 On-premises or hybrid AD through LDAPS' scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md && ! git diff -- scripts/it-management | grep -Ei '^\\+.*(client_secret|bearer token|password)[[:space:]]*[:=][[:space:]]*[^<`]'"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:00:16.948Z",
+      "completedAt": "2026-09-29T16:00:18.847Z",
+      "durationMs": 1899,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:689e8901a104a4e54b3537219f7402ef2316a370b170fccb991022bb15922364"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:689e8901a104a4e54b3537219f7402ef2316a370b170fccb991022bb15922364"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_uUXXiznylqWgslfAXfEOOWij|fc_0e356ec799316a27016abbe08d136887d2a66c0e65a81d0888",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:efefc15c24ee8645a3f5f6958389db729c1577eb6b32aeac4caab2a86d90daa3"
+    },
+    {
+      "id": "E-be91cdc7-2a80-484b-875f-327fe41bff6a",
+      "kind": "model-review",
+      "workId": "M365-003",
+      "obligationIds": [
+        "O-IDENTITY"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-29T16:00:34.055Z",
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+          "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+        ],
+        "hash": "sha256:689e8901a104a4e54b3537219f7402ef2316a370b170fccb991022bb15922364"
+      },
+      "dimensions": [
+        "topology correctness",
+        "existing-account preservation",
+        "least privilege",
+        "authorization safety",
+        "secret handling",
+        "break-glass access"
+      ],
+      "summary": "Source-bound model self-review of both identity runbooks against GLPI SCIM and OAuth SSO guidance, Microsoft Entra application provisioning and role documentation, and the inspected GLPI deployment. The guidance correctly rejects LDAP for cloud-only tenants, prevents dual SCIM/LDAP provisioning, separates SCIM lifecycle from OAuth authentication, requires deterministic existing-account reconciliation and pilot scope, avoids invented broad Graph permissions, keeps secrets external, and preserves a local break-glass administrator.",
+      "provenance": {
+        "kind": "pi-model-self-review",
+        "sessionId": "01a0e95b-67cc-7272-9d55-ad6f56e925ad"
+      }
+    },
+    {
+      "id": "E-f759f9c0-b5d1-448e-8b7d-5ac3a1c22994",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nrequired = [\n    '### 4.1 Select one authoritative path',\n    '### 4.2 Reconcile existing GLPI users before provisioning',\n    '#### 4.3.1 Provision users and groups with SCIM',\n    '#### 4.3.2 Authenticate with Microsoft using OAuth SSO',\n    '### 4.4 On-premises or hybrid AD through LDAPS',\n    '#### 5.1.1 Deployment authority and prerequisites',\n    '#### 5.1.2 Windows package and pilot assignment',\n    '### 5.4 Pilot inventory acceptance tests',\n    '### 5.5 Expansion, monitoring and rollback',\n]\nmissing = [heading for heading in required if heading not in p]\nassert not missing, f'missing headings: {missing}'\nassert 'Use LDAPS as the initial common authentication mechanism' not in a\nassert 'SERVER=\"https://glpi.test' not in p\nassert 'Do not provision the same users independently through SCIM and LDAP.' in p\nassert 'Keep the local `glpi` break-glass administrator outside SCIM/LDAP lifecycle control' in p\nassert 'assign as **Required** only to the pilot device group initially' in p\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:01:14.414Z",
+      "completedAt": "2026-09-29T16:01:15.774Z",
+      "durationMs": 1360,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:b5cb7c772690ea4f186849deceb248e4d6eb8451ce4d85fc3290b36317d7865b"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:b5cb7c772690ea4f186849deceb248e4d6eb8451ce4d85fc3290b36317d7865b"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_0pL5rdubrrAC7vhjnU7cQoDI|fc_0e356ec799316a27016abbe0c4caa087d2b6249ac274b5f4f6",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:cdf5ef3fe24ecc18352a9514cd99c91cbbabde884375bf4232def3837c4f767c"
+    },
+    {
+      "id": "E-29fec562-829c-42c1-8288-525e3afbea2b",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "failed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nf = Path('.model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md').read_text()\nrequired = [\n    'official GLPI Network Marketplace packages',\n    'Entra user object ID carried in the SCIM `externalId` mapping',\n    '### 4.5 Identity rollback and recovery test',\n    'Confirm the provisioning job is stopped before continuing.',\n    'MSI detection rule no longer matches',\n    'delegated `IMAP.AccessAsUser.All` plus `offline_access`',\n    'grant delegated `SMTP.Send` only to the dedicated sending identity',\n    'Exchange Online RBAC for Applications',\n]\nmissing = [text for text in required if text not in p]\nassert not missing, f'missing controls: {missing}'\nassert 'Use LDAPS as the initial common authentication mechanism' not in a\nassert 'SERVER=\"https://glpi.test' not in p\nassert 'This assessment and the runbooks prepare a rollout; they do not assert that the current environment is production-ready.' in f\nassert 'production identity work is blocked until' in f\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:08:34.023Z",
+      "completedAt": "2026-09-29T16:08:34.838Z",
+      "durationMs": 815,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:b295c4095a87cee0f2ddbe21c34cb71f2fbb4f3e7e2786dc86b29419712a8523"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:b295c4095a87cee0f2ddbe21c34cb71f2fbb4f3e7e2786dc86b29419712a8523"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_yLybvWKalZrj4q9zjQ26faKd|fc_0e356ec799316a27016abbe27c7a1c87d291720a0f2d08f0d7",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:e9dbb48afe27922778745955a313afd5c028dd7bf646f1d1ae318248fd5663a2"
+    },
+    {
+      "id": "E-932f0ea8-1275-48ea-9c2b-55a21f5d772a",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nf = Path('.model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md').read_text()\nrequired = [\n    'official GLPI Network Marketplace packages',\n    'Entra user object ID carried in the SCIM `externalId` mapping',\n    '### 4.5 Identity rollback and recovery test',\n    'Confirm the provisioning job is stopped before continuing.',\n    'MSI detection rule no longer matches',\n    'delegated `IMAP.AccessAsUser.All` plus `offline_access`',\n    'grant delegated `SMTP.Send` only to the dedicated sending identity',\n    'Exchange Online RBAC for Applications',\n]\nmissing = [text for text in required if text not in p]\nassert not missing, f'missing controls: {missing}'\nassert 'Use LDAPS as the initial common authentication mechanism' not in a\nassert 'SERVER=\"https://glpi.test' not in p\nassert 'This assessment and the runbooks prepare a rollout; they do not assert that the current environment is production-ready.' in f\nassert 'Production identity work is blocked until' in f\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:09:14.089Z",
+      "completedAt": "2026-09-29T16:09:14.788Z",
+      "durationMs": 699,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:c5ea7f166084c314cf30711c451021b0c9df899973b0b294647db7df67747757"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:c5ea7f166084c314cf30711c451021b0c9df899973b0b294647db7df67747757"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_Xzd9pO6W6Lxd2zfqxKXH7S9r|fc_0e356ec799316a27016abbe2a37cf087d2bc151d7255bce521",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:cdf5ef3fe24ecc18352a9514cd99c91cbbabde884375bf4232def3837c4f767c"
+    },
+    {
+      "id": "E-0da9e7a4-1e42-4911-9555-8d2bd0122d18",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "failed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nf = Path('.model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md').read_text()\nrequired = [\n    'authenticated in-application Marketplace',\n    'documented HTTPS download plus a checksum or signature',\n    'no `User.ReadWrite.All` or `Group.ReadWrite.All`',\n    'authoritative matching precedence',\n    'Do not auto-create, merge, relink or deactivate any conflicting record',\n    '### 4.5 Identity rollback and recovery test',\n    'restore the recorded prior version/configuration',\n    'MSI detection rule no longer matches',\n    'delegated `IMAP.AccessAsUser.All` plus `offline_access`',\n    'Exchange Online RBAC for Applications',\n]\nmissing = [text for text in required if text not in p]\nassert not missing, f'missing controls: {missing}'\nassert 'authoritative detailed procedure is **Identity rollback and recovery test**' in a\nassert 'first, one existing GLPI user carrying the same persisted Entra-object-ID/SCIM-`externalId` correlation' in f\nassert 'Production identity work is blocked until' in f\nassert 'SERVER=\"https://glpi.test' not in p\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:15:54.194Z",
+      "completedAt": "2026-09-29T16:15:55.781Z",
+      "durationMs": 1587,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:4d1b6bdcd6911baa06db6da488f6ab3dc2410385132eb7104946bcb754fd06ad"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:4d1b6bdcd6911baa06db6da488f6ab3dc2410385132eb7104946bcb754fd06ad"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_ixKuyb0xIWcaylBnmdUuTFhB|fc_0e356ec799316a27016abbe43415c487d295330284ea54389c",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:08b52c8aa5870c8fa3c771e43e8d10d2ef6c8cb5a1ab485d88868c96a4986b7b"
+    },
+    {
+      "id": "E-af985add-f14a-40bf-9f42-d59e3db42a41",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "failed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nf = Path('.model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md').read_text()\nrequired = [\n    'authenticated in-application Marketplace',\n    'documented HTTPS download plus a checksum or signature',\n    'no `User.ReadWrite.All` or `Group.ReadWrite.All`',\n    'authoritative matching precedence',\n    'Do not auto-create, merge, relink or deactivate any conflicting record',\n    '### 4.5 Identity rollback and recovery test',\n    'reinstall the recorded prior version/configuration',\n    'MSI detection rule no longer matches',\n    'delegated `IMAP.AccessAsUser.All` plus `offline_access`',\n    'Exchange Online RBAC for Applications',\n]\nmissing = [text for text in required if text not in p]\nassert not missing, f'missing controls: {missing}'\nassert 'authoritative detailed procedure is **Identity rollback and recovery test**' in a\nassert 'first, one existing GLPI user carrying the same persisted Entra-object-ID/SCIM-`externalId` correlation' in f\nassert 'Production identity work is blocked until' in f\nassert 'SERVER=\"https://glpi.test' not in p\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:16:22.179Z",
+      "completedAt": "2026-09-29T16:16:23.786Z",
+      "durationMs": 1607,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:329231fba297e6bdd340d0175b7d10a1e0d1dba98b72ccade996308a8c1a98e9"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:329231fba297e6bdd340d0175b7d10a1e0d1dba98b72ccade996308a8c1a98e9"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_ScGrO39nl3zVbzRaa7i0mAoW|fc_0e356ec799316a27016abbe44fc68887d2bcba41378407bb42",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:e9dbb48afe27922778745955a313afd5c028dd7bf646f1d1ae318248fd5663a2"
+    },
+    {
+      "id": "E-6935a581-133b-40b1-8364-50ad51d244d3",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nf = Path('.model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md').read_text()\nrequired = [\n    'authenticated in-application Marketplace',\n    'documented HTTPS download plus a checksum or signature',\n    'no `User.ReadWrite.All` or `Group.ReadWrite.All`',\n    'authoritative matching precedence',\n    'Do not auto-create, merge, relink or deactivate any conflicting record',\n    '### 4.5 Identity rollback and recovery test',\n    'reinstall the recorded prior version/configuration',\n    'MSI detection rule no longer matches',\n    'delegated `IMAP.AccessAsUser.All` plus `offline_access`',\n    'Exchange Online RBAC for Applications',\n]\nmissing = [text for text in required if text not in p]\nassert not missing, f'missing controls: {missing}'\nassert 'authoritative detailed procedure is **Identity rollback and recovery test**' in a\nassert 'Matching precedence is: (1) exactly one existing GLPI user carrying the same persisted Entra-object-ID/SCIM-`externalId` correlation' in f\nassert 'Production identity work is blocked until' in f\nassert 'SERVER=\"https://glpi.test' not in p\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:17:19.247Z",
+      "completedAt": "2026-09-29T16:17:20.564Z",
+      "durationMs": 1317,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:357e1299a4a9805e734b0dde53ea69aa90123035fd245a3e1f3b6e0c9202992c"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:357e1299a4a9805e734b0dde53ea69aa90123035fd245a3e1f3b6e0c9202992c"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_deDyccCo0mPIdz1Ceo5l1gyH|fc_0e356ec799316a27016abbe4808d9c87d2b2b86be4d3bf4795",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:cdf5ef3fe24ecc18352a9514cd99c91cbbabde884375bf4232def3837c4f767c"
+    },
+    {
+      "id": "E-5dbec35c-843b-4a31-b260-6e91d947f691",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nf = Path('.model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md').read_text()\nrequired = [\n    'authenticated in-application Marketplace',\n    'no `User.ReadWrite.All` or `Group.ReadWrite.All`',\n    'authoritative matching precedence',\n    'Do not auto-create, merge, relink or deactivate any conflicting record',\n    'remove the GLPI production redirect URI',\n    'delegated permission grants/admin consent',\n    \"OAuth refresh/sign-in sessions\",\n    'retired credentials can no longer authenticate',\n    'reinstall the recorded prior version/configuration',\n    'delegated `IMAP.AccessAsUser.All` plus `offline_access`',\n]\nmissing = [text for text in required if text not in p]\nassert not missing, f'missing controls: {missing}'\nassert 'authoritative detailed procedure is **Identity rollback and recovery test**' in a\nassert 'Matching precedence is: (1) exactly one existing GLPI user' in f\nassert 'Production identity work is blocked until' in f\nassert 'SERVER=\"https://glpi.test' not in p\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:19:29.485Z",
+      "completedAt": "2026-09-29T16:19:30.562Z",
+      "durationMs": 1077,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:f8335c2eacdcd19ca58ed212b4fb4f8cfe02760a3fff59d9fefba94893b46674"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:f8335c2eacdcd19ca58ed212b4fb4f8cfe02760a3fff59d9fefba94893b46674"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_6ibcU0OYF4IHMScvnE7doMJ7|fc_0e356ec799316a27016abbe50bc46087d2b081e7fe5b4ef8e4",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:cdf5ef3fe24ecc18352a9514cd99c91cbbabde884375bf4232def3837c4f767c"
+    },
+    {
+      "id": "E-68f0aae0-c5d2-4f29-be03-ee8cd4e662d4",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nf = Path('.model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md').read_text()\nrequired = [\n    'set the Entra Enterprise Application to block user sign-in',\n    'remove the GLPI delegated API-permission configuration',\n    'revoke both user consent and any admin-consent/service-principal grants',\n    'delete every retired credential including superseded secrets',\n    'an old refresh token and every retired client secret cannot obtain a token',\n    'Confirm no install/retry action remains queued',\n    \"agent's local pending/spool queue is absent or empty\",\n    'wait at least one full former agent scheduling interval plus the server processing interval',\n]\nmissing = [text for text in required if text not in p]\nassert not missing, f'missing controls: {missing}'\nassert 'identity rollback and recovery test' in a\nassert 'including its exact correlation, consent/session revocation and rollback tests' in a\nassert 'Matching precedence is: (1) exactly one existing GLPI user' in f\nassert 'Production identity work is blocked until' in f\nassert 'SERVER=\"https://glpi.test' not in p\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:22:02.152Z",
+      "completedAt": "2026-09-29T16:22:03.315Z",
+      "durationMs": 1163,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:9bec7126045cb0bf1894f239a7997218502997a1785a07e93d362101d0868ba6"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:9bec7126045cb0bf1894f239a7997218502997a1785a07e93d362101d0868ba6"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_BP66VwOJJDtRTDgSISA3DH28|fc_0e356ec799316a27016abbe5a3b37087d290b479d74864d78b",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:cdf5ef3fe24ecc18352a9514cd99c91cbbabde884375bf4232def3837c4f767c"
+    },
+    {
+      "id": "E-83657cf9-982e-4a00-83e8-6e1d6531be99",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "failed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nf = Path('.model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md').read_text()\nrequired = [\n    'Suspend the scheduled `glpi:ldap:synchronize_users` action',\n    'no pending directory import/synchronization work',\n    'cancel every pending install/uninstall/retry action',\n    'identify any inventory submission received before the service stopped',\n    'authenticated in-application Marketplace',\n    'plugin manifest](https://github.com/pluginsGLPI/oauthimap/blob/main/oauthimap.xml)',\n]\nmissing = [text for text in required if text not in p]\nassert not missing, f'missing controls: {missing}'\nassert 'integration **boundary**' in a\nassert 'does not transfer ownership of hybrid identity attributes away from AD' in a\nassert '## Claim-level sources' in f\nassert 'https://help.glpi-project.org/faq/plugins/scim' in f\nassert 'https://learn.microsoft.com/en-us/intune/app-management/deployment/add-win32' in f\nassert 'SERVER=\"https://glpi.test' not in p\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:25:04.347Z",
+      "completedAt": "2026-09-29T16:25:09.643Z",
+      "durationMs": 5296,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:eac8528e4c8f39eae9e02ec369ee0ecfcc2400dd2be721223a282bbcc9c337cc"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:eac8528e4c8f39eae9e02ec369ee0ecfcc2400dd2be721223a282bbcc9c337cc"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_r1kZ3nRzxbzBOLwWPdB28D2U|fc_0e356ec799316a27016abbe65af31887d2877b28d8afb7447e",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:90c32a61357c772c066dfb354d7866d523115d029000720c2e9458a39ee87c12"
+    },
+    {
+      "id": "E-d4b5732d-42e0-4a90-af8c-1ab17086883e",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nf = Path('.model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md').read_text()\nrequired = [\n    'Suspend the scheduled `glpi:ldap:synchronize_users` action',\n    'no pending directory import/synchronization work',\n    'cancel every pending install/uninstall/retry action',\n    'identify any inventory submission received before the service stopped',\n    'authenticated in-application Marketplace',\n    'plugin manifest](https://github.com/pluginsGLPI/oauthimap/blob/main/oauthimap.xml)',\n]\nmissing = [text for text in required if text not in p]\nassert not missing, f'missing controls: {missing}'\nassert '**integration boundary**' in a\nassert 'does not transfer ownership of hybrid identity attributes away from AD' in a\nassert '## Claim-level sources' in f\nassert 'https://help.glpi-project.org/faq/plugins/scim' in f\nassert 'https://learn.microsoft.com/en-us/intune/app-management/deployment/add-win32' in f\nassert 'SERVER=\"https://glpi.test' not in p\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:25:49.502Z",
+      "completedAt": "2026-09-29T16:25:52.193Z",
+      "durationMs": 2691,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:669698fa9c14f753d318a337ffe00e6f99d2d738c97d01de18c54950ae507891"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:669698fa9c14f753d318a337ffe00e6f99d2d738c97d01de18c54950ae507891"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_oqPrz0lRbBaSSjAiRCcmrEsK|fc_0e356ec799316a27016abbe68730dc87d2a8cea8bb56429bc9",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:cdf5ef3fe24ecc18352a9514cd99c91cbbabde884375bf4232def3837c4f767c"
+    },
+    {
+      "id": "E-3a0d3e33-afe5-4a55-80a8-c9d4bd69cbe5",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nf = Path('.model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md').read_text()\nrequired = [\n    '#### 4.5.1 Queue-drain barrier for every identity path',\n    'identify retries/quarantined events',\n    'bind failures, scheduler retries and pending directory updates',\n    'rollback is incomplete until every Intune/MSP/RMM management command',\n    'confirm the installed GLPI 11 UI accepts `objectGUID`',\n    'Documentation baseline reviewed **2026-09-29**',\n]\nmissing = [text for text in required if text not in p]\nassert not missing, f'missing controls: {missing}'\nassert '**integration boundary**' in a\nassert 'does not transfer ownership of hybrid identity attributes away from AD' in a\nassert 'retrieved or reviewed on **2026-09-29**' in f\nassert 'installed-core validation basis for `objectGUID`' in f\nassert 'SERVER=\"https://glpi.test' not in p\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:29:03.710Z",
+      "completedAt": "2026-09-29T16:29:04.973Z",
+      "durationMs": 1263,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:f2be3a17d0e2288b32ebb983a6ab4602debbd3d465b655c05cc64b2c6d1ac688"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:f2be3a17d0e2288b32ebb983a6ab4602debbd3d465b655c05cc64b2c6d1ac688"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_IHjTb4NN78ZGB0qoE4ze07Kw|fc_0e356ec799316a27016abbe74a68d087d2821be51c7d4e70f8",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:cdf5ef3fe24ecc18352a9514cd99c91cbbabde884375bf4232def3837c4f767c"
+    },
+    {
+      "id": "E-277948a8-7383-4b9b-b7b2-506990298542",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nf = Path('.model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md').read_text()\nrequired = [\n    'No import may proceed until this installed-version validation passes.',\n    'every queued scheduler/import operation',\n    'pending/running counts must be zero',\n    'every previously queued operation has a recorded canceled/succeeded/failed/quarantined terminal result',\n    'every queued, retried, processing and quarantined submission',\n    'pending/running/retry counts must be zero before rollback completion',\n    'Documentation baseline reviewed **2026-09-29**',\n]\nmissing = [text for text in required if text not in p]\nassert not missing, f'missing controls: {missing}'\nassert '**integration boundary**' in a\nassert 'retrieved or reviewed on **2026-09-29**' in f\nassert 'installed-core validation basis for `objectGUID`' in f\nassert 'SERVER=\"https://glpi.test' not in p\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:31:23.275Z",
+      "completedAt": "2026-09-29T16:31:24.895Z",
+      "durationMs": 1620,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:0de32a08a2b1e558e6b88b40e7e10e7e4f870860bfa1793cf1e5676a306c918c"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:0de32a08a2b1e558e6b88b40e7e10e7e4f870860bfa1793cf1e5676a306c918c"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_akUhO20ZFcNTi22LcfJHRcPW|fc_0e356ec799316a27016abbe7d6596087d2b3f882038c4dd01d",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:cdf5ef3fe24ecc18352a9514cd99c91cbbabde884375bf4232def3837c4f767c"
+    },
+    {
+      "id": "E-1fe6e307-2bad-4473-8ff9-98bf5505401f",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nf = Path('.model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md').read_text()\nrequired_p = [\n    'queued/running counts must be zero',\n    'No import may proceed until this installed-version validation passes.',\n    'Microsoft Active Directory `objectGUID` schema',\n    'zero queued/running SCIM or LDAP synchronization operations',\n    'no test message is stranded for retry',\n    'pending/running/retry counts must be zero before rollback completion',\n]\nrequired_a = [\n    '`userPrincipalName` when GLPI sign-in must match Microsoft 365',\n    'prefer `userPrincipalName` for Microsoft 365-aligned sign-in',\n]\nassert not [x for x in required_p if x not in p]\nassert not [x for x in required_a if x not in a]\nassert 'time-bounded local observations from **2026-09-29**' in f\nassert \"podman exec glpi php bin/console glpi:plugin:list\" in f\nassert 'SERVER=\"https://glpi.test' not in p\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:34:52.132Z",
+      "completedAt": "2026-09-29T16:34:53.597Z",
+      "durationMs": 1465,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:78940ab6bde4b2c31110f437f13c14d60508d062bca71266178788ef44cb5230"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:78940ab6bde4b2c31110f437f13c14d60508d062bca71266178788ef44cb5230"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_cDa0VCw2wKo6I2mx49GcyGjq|fc_0e356ec799316a27016abbe8a6b2d887d2890b5461ad1227bd",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:cdf5ef3fe24ecc18352a9514cd99c91cbbabde884375bf4232def3837c4f767c"
+    },
+    {
+      "id": "E-015ea058-8950-4e2d-9f4e-0363a2d5d7ea",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nf = Path('.model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md').read_text()\nassert '`userPrincipalName` for this Microsoft 365-aligned pilot' in p\nassert a.count('`userPrincipalName` for this Microsoft 365-aligned pilot') >= 2\nassert 'endpoint inventory has zero pending/running/retry submissions' in p\nassert '## Pilot evidence record required before rollout' in f\nfor gate in ['Identity topology and correlation','Provisioning queue','OAuth and least privilege','Endpoint deployment and inventory','Mail collection','Fail-closed rollback']:\n    assert gate in f, gate\nassert 'No pilot control has yet been asserted as passed.' in f\nassert 'SERVER=\"https://glpi.test' not in p\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:37:24.325Z",
+      "completedAt": "2026-09-29T16:37:25.418Z",
+      "durationMs": 1093,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:6c0031b272de03ebd8422cea3afbf6634b1cc3b678a4ac2000d1b50bb35108fc"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:6c0031b272de03ebd8422cea3afbf6634b1cc3b678a4ac2000d1b50bb35108fc"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_JnccuasW1tJ9d83ZiPAG3bfc|fc_0e356ec799316a27016abbe94052f487d28f06e81900752d57",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:cdf5ef3fe24ecc18352a9514cd99c91cbbabde884375bf4232def3837c4f767c"
+    },
+    {
+      "id": "E-e389f664-41a5-46bd-8248-8d192943d892",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nf = Path('.model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md').read_text()\nassert 'Preferred login: sAMAccountName or userPrincipalName' not in a\nassert 'Pilot login standard: `userPrincipalName`.' in a\nassert a.count('`userPrincipalName` for this Microsoft 365-aligned pilot') >= 2\nassert '`userPrincipalName` for this Microsoft 365-aligned pilot' in p\nassert 'endpoint inventory has zero pending/running/retry submissions' in p\nassert '## Pilot evidence record required before rollout' in f\nassert 'No pilot control has yet been asserted as passed.' in f\nassert 'SERVER=\"https://glpi.test' not in p\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:39:14.422Z",
+      "completedAt": "2026-09-29T16:39:15.136Z",
+      "durationMs": 714,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:eb69f93f54037ee927e17e3a3a88e5d4007271377de5bfa903c74b10dafdeeea"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:eb69f93f54037ee927e17e3a3a88e5d4007271377de5bfa903c74b10dafdeeea"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_LPP3un9Ako1Hp5AjJ13S6gbi|fc_0e356ec799316a27016abbe9aebd5c87d2a7e68e6d115c8019",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:cdf5ef3fe24ecc18352a9514cd99c91cbbabde884375bf4232def3837c4f767c"
+    },
+    {
+      "id": "E-cae2a506-ff8c-43b0-a393-5605ea85d444",
+      "kind": "independent-review",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-29T16:46:25.589Z",
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+          ".model-artifacts/initiatives/glpi-m365-production-integration/workflow.json",
+          "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+          "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+        ],
+        "hash": "sha256:a3a7aa2bd5b0af8f7aebe4562b67445e56c41316c2d55dd2c3a8dfe4d3864f9f"
+      },
+      "dimensions": [
+        "selected UPN pilot standard across every prerequisite and configuration section",
+        "identity endpoint inventory and mailbox zero-queue acceptance",
+        "future pilot evidence-record completeness",
+        "dated reproducible local observations",
+        "least privilege and fail-closed production gates"
+      ],
+      "summary": "Final independent review after replacing the last ambiguous prerequisite with an explicit userPrincipalName pilot standard and separate approved reconciliation path for existing sAMAccountName users. Inspect current text only; tenant execution evidence remains a documented pre-rollout prerequisite.",
+      "provenance": {
+        "kind": "pi-interactive-session-review",
+        "transport": "interactive-shell",
+        "reviewerSessionId": "sharp-zephyr",
+        "recorderSessionId": "01a0e95b-67cc-7272-9d55-ad6f56e925ad"
+      }
+    },
+    {
+      "id": "E-c84a1fd7-0dc9-4485-8e41-cd475c071e8b",
+      "kind": "machine-command",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "passed",
+      "execution": {
+        "executable": "bash",
+        "args": [
+          "-lc",
+          "git diff --check && python3 - <<'PY'\nfrom pathlib import Path\np = Path('scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md').read_text()\na = Path('scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md').read_text()\nf = Path('.model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md').read_text()\nassert 'Pilot login standard: `userPrincipalName`.' in a\nassert '`userPrincipalName` for this Microsoft 365-aligned pilot' in p\nassert 'endpoint inventory has zero pending/running/retry submissions' in p\nassert 'zero queued/running SCIM or LDAP synchronization operations' in p\nassert 'no test message is stranded for retry' in p\nassert '## Pilot evidence record required before rollout' in f\nassert 'No pilot control has yet been asserted as passed.' in f\nassert 'SERVER=\"https://glpi.test' not in p\nprint('documentation checks passed')\nPY"
+        ],
+        "cwd": "."
+      },
+      "startedAt": "2026-09-29T16:46:55.829Z",
+      "completedAt": "2026-09-29T16:46:56.978Z",
+      "durationMs": 1149,
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "before": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:36b8e01340946c13d9b3ef04661b5187f72f66fa0fa3cc888b7712806301d21e"
+        },
+        "after": {
+          "kind": "bounded-paths",
+          "paths": [
+            ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+            "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+            "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+          ],
+          "hash": "sha256:36b8e01340946c13d9b3ef04661b5187f72f66fa0fa3cc888b7712806301d21e"
+        }
+      },
+      "provenance": {
+        "kind": "pi-tool-observation",
+        "toolCallId": "call_JsmubfjULyLckKer3obOci6I|fc_0e356ec799316a27016abbeb7aad1887d28070081b7f1ce178",
+        "permissionBoundary": "ordinary-bash-tool-call"
+      },
+      "outputHash": "sha256:cdf5ef3fe24ecc18352a9514cd99c91cbbabde884375bf4232def3837c4f767c"
+    },
+    {
+      "id": "E-c810ce57-500f-47af-a087-d69646833f83",
+      "kind": "independent-review",
+      "workId": "M365-004",
+      "obligationIds": [
+        "O-VERIFY"
+      ],
+      "outcome": "passed",
+      "reviewedAt": "2026-09-29T16:48:17.571Z",
+      "contractFingerprint": "sha256:3748cc46d9052c668e16126edb58575eb8ccc7609cb1fac45efa59dcb46e56f7",
+      "source": {
+        "kind": "bounded-paths",
+        "paths": [
+          ".model-artifacts/initiatives/glpi-m365-production-integration/findings/2026-09-29_1555-current-state-and-access-assessment.md",
+          "scripts/it-management/AD_IDENTITY_INTEGRATION_RUNBOOK.md",
+          "scripts/it-management/GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md"
+        ],
+        "hash": "sha256:36b8e01340946c13d9b3ef04661b5187f72f66fa0fa3cc888b7712806301d21e"
+      },
+      "dimensions": [
+        "selected UPN pilot standard across runbooks",
+        "identity endpoint inventory and mailbox terminal zero-queue acceptance",
+        "future pilot evidence-record completeness",
+        "dated reproducible local observations",
+        "least privilege and fail-closed production gates"
+      ],
+      "summary": "Current documentation-only final review. Tenant-specific execution evidence is deliberately a future rollout gate, not required for this preparation task. Workflow authority is excluded from the source snapshot because recording evidence mutates it; review the three substantive documentation artifacts.",
+      "provenance": {
+        "kind": "pi-interactive-session-review",
+        "transport": "interactive-shell",
+        "reviewerSessionId": "clear-coral",
+        "recorderSessionId": "01a0e95b-67cc-7272-9d55-ad6f56e925ad"
+      }
+    }
+  ],
+  "decisions": [],
+  "risks": [
+    {
+      "id": "R-001",
+      "text": "Selecting LDAP for a cloud-only tenant would create an invalid design.",
+      "mitigation": "Determine cloud-only versus hybrid topology before implementation."
+    },
+    {
+      "id": "R-002",
+      "text": "A broad agent deployment could expose packaging, proxy, TLS, or duplicate-asset problems.",
+      "mitigation": "Pilot on a small ring and require inventory acceptance before expansion."
+    },
+    {
+      "id": "R-003",
+      "text": "An SSO configuration error could lock administrators out.",
+      "mitigation": "Retain and test the local break-glass account before enabling or enforcing SSO."
+    },
+    {
+      "id": "R-004",
+      "text": "Secrets or excessive Graph permissions could be exposed.",
+      "mitigation": "Use external secret storage, least privilege, scoped groups, and documented rotation."
+    }
+  ]
+}

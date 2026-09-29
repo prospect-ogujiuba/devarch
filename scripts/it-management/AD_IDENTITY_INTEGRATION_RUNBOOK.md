@@ -9,8 +9,8 @@
 
 This runbook defines how GLPI and OpenProject use the organisation's existing identities without maintaining separate user directories.
 
-- Active Directory (AD) is the authoritative source for identities when accounts originate on premises.
-- Microsoft Entra Connect synchronizes those identities to Entra ID for Microsoft 365.
+- Active Directory (AD) is the organisational authoritative source for identity attributes when accounts originate on premises.
+- Microsoft Entra Connect synchronizes those identities to Entra ID for Microsoft 365. Entra may still be selected as GLPI's provisioning/authentication **integration boundary**; that interface choice does not transfer ownership of hybrid identity attributes away from AD.
 - GLPI is the system of record for support requests, assets and IT service-management data.
 - OpenProject is the system of record for projects, milestones, dependencies and planned work.
 - Project-specific membership and roles remain managed by OpenProject.
@@ -22,18 +22,19 @@ For GLPI computer inventory and ticket creation from `support@fluidhose.com`, fo
 ## 2. Target architecture
 
 ```text
-                    Microsoft Entra Connect
-Active Directory ------------------------------> Entra ID / Microsoft 365
-      |                                                |
-      | LDAPS                                          | optional future SSO
-      +------------------> GLPI                        |
-      |                                                |
-      +------------------> OpenProject <---------------+
+Hybrid source:  Active Directory -- Entra Connect --> Entra ID / Microsoft 365
+                       |                                  |
+                       | optional LDAPS                   | SCIM + OAuth SSO
+                       +---------------> GLPI <-----------+
+                       |
+                       +---------------> OpenProject
+
+Cloud-only source: Entra ID / Microsoft 365 -- SCIM + OAuth SSO --> GLPI
 
 GLPI support ticket -------- linked reference -------- OpenProject project/work package
 ```
 
-Use LDAPS as the initial common authentication mechanism. Entra-based OpenID Connect may replace it where the installed application edition supports that integration.
+Choose one GLPI provisioning path. Use Entra SCIM plus OAuth SSO for cloud-only identities and when Entra is the deliberate GLPI integration boundary. Use LDAPS when identities originate in on-premises AD and GLPI has secure domain-controller connectivity. Never provision the same GLPI population independently through both paths. For every GLPI SCIM/OAuth change, the GLPI-specific runbook's [identity rollback and recovery test](GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md#45-identity-rollback-and-recovery-test) is mandatory and authoritative; this broader runbook's generic rollback does not replace it.
 
 Keycloak is not required for the initial implementation. Introduce it only if a shared OIDC/SAML broker is needed and the additional operational responsibility is accepted.
 
@@ -41,9 +42,9 @@ Keycloak is not required for the initial implementation. Introduce it only if a 
 
 | Information | Authoritative system |
 |---|---|
-| Name, login, email, department and account status | AD |
+| Name, login, email, department and account status | AD for hybrid identities; Entra ID for cloud-only identities. A hybrid GLPI deployment may consume the synchronized values through Entra without making Entra the upstream authoring source. |
 | Microsoft 365 identity | Entra ID |
-| Application access entitlement | AD security groups |
+| Application access entitlement | AD-synchronized or Entra security groups, according to the selected path |
 | Assets, contracts and equipment assignments | GLPI |
 | Incidents, requests and support SLAs | GLPI |
 | GLPI profiles and technician permissions | GLPI, mapped from AD groups where practical |
@@ -65,7 +66,7 @@ Groups OU DN:
 Domain controller FQDN:
 LDAPS port: 636
 Nested AD groups used: yes/no
-Preferred login: sAMAccountName or userPrincipalName
+Pilot login standard: `userPrincipalName`. If existing GLPI users use `sAMAccountName`, stop and complete the documented reconciliation/migration under a separate approved change before import.
 OpenProject Enterprise token available: yes/no
 ```
 
@@ -111,7 +112,9 @@ Add only a small pilot cohort initially. Department groups may supply organisati
 
 ## 6. Configure GLPI
 
-In GLPI, open **Setup → Authentication → LDAP directories** and add a directory using the Active Directory preset.
+For an Entra SCIM/OAuth design, do not follow the LDAPS procedure below. Follow sections 4.1 through 4.5 of the [GLPI AD, inventory and email intake runbook](GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md#4-configure-identity-provisioning), including its exact correlation, consent/session revocation and rollback tests.
+
+For the selected LDAPS design, open **Setup → Authentication → LDAP directories** in GLPI and add a directory using the Active Directory preset.
 
 Use values equivalent to:
 
@@ -122,10 +125,10 @@ Use values equivalent to:
 | Encryption | LDAPS/TLS enabled |
 | Base DN | Organisation's AD base DN |
 | Bind DN | DN of `svc_glpi_ldap` |
-| Login field | `sAMAccountName` |
+| Login field | `userPrincipalName` for this Microsoft 365-aligned pilot |
 | Synchronization field | `objectGUID` |
 
-`objectGUID` is the stable synchronization identifier and must be selected before importing users.
+`objectGUID` is selected as the stable AD synchronization identifier, subject to the installed GLPI core/version validation in the GLPI-specific runbook. The selected pilot login attribute is `userPrincipalName`. If existing GLPI users use `sAMAccountName`, stop and reconcile/migrate them under a separate approved change before import; do not switch the pilot standard silently.
 
 Use the standard enabled-user filter:
 
@@ -174,7 +177,7 @@ In OpenProject, open **Administration → Authentication → LDAP connections** 
 | Encryption | LDAPS/SSL with certificate verification |
 | Account | DN of `svc_openproject_ldap` |
 | Base DN | Users OU or approved search root |
-| Login attribute | `sAMAccountName` |
+| Login attribute | `userPrincipalName` for this Microsoft 365-aligned pilot; an existing `sAMAccountName` deployment requires a separately approved reconciliation/migration before import |
 | First name | `givenName` |
 | Last name | `sn` |
 | Email | `mail` |
@@ -259,11 +262,15 @@ During each stage, monitor authentication failures, duplicate accounts, missing 
 
 If rollout fails:
 
-1. disable the new LDAP source or automatic account creation;
-2. use the local break-glass administrator;
-3. restore the previous authentication configuration;
-4. do not delete newly created accounts until record ownership has been checked;
-5. restore application data only when configuration rollback is insufficient.
+1. stop the active directory-provisioning job or LDAP synchronization before changing mappings;
+2. prove a new local break-glass login works;
+3. disable the new SSO/LDAP source and pilot assignment, then restore the recorded authentication and authorization configuration;
+4. revoke or rotate integration tokens, OAuth secrets and bind credentials after the integration is disabled;
+5. preserve existing application user IDs and ownership; disable suspect new accounts and do not delete, merge or relink them until ticket, asset and project ownership has been audited;
+6. compare users, profiles, memberships and record owners with the pre-change export; and
+7. restore application data only inside an approved rollback window when configuration rollback is insufficient and post-backup changes have been accounted for.
+
+For GLPI, the authoritative detailed procedure is **Identity rollback and recovery test** in [GLPI AD, inventory and email intake runbook](GLPI_AD_INVENTORY_EMAIL_RUNBOOK.md#45-identity-rollback-and-recovery-test). Rehearse it during the pilot; this broader runbook does not replace its SCIM/OAuth-specific stop, token-revocation and ownership checks.
 
 ## 12. References
 
