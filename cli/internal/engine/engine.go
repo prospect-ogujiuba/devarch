@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/prospect-ogujiuba/devarch/cli/internal/catalog"
+	"github.com/prospect-ogujiuba/devarch/cli/internal/hosts"
 	"github.com/prospect-ogujiuba/devarch/cli/internal/runner"
 	"github.com/prospect-ogujiuba/devarch/cli/internal/state"
 )
@@ -31,6 +32,12 @@ type Engine struct {
 	Log io.Writer
 	// Sleep is replaceable in tests.
 	Sleep func(time.Duration)
+	// DryRun suppresses state-file writes (the runner suppresses commands).
+	DryRun bool
+	// SaveVersions persists Versions; nil skips persistence.
+	SaveVersions func(state.Versions) error
+	// Hosts manages the hosts file; nil disables hostname registration.
+	Hosts *hosts.Manager
 }
 
 func (e *Engine) logf(format string, args ...any) {
@@ -103,6 +110,8 @@ type UpOptions struct {
 	Timeout time.Duration
 	// NoRequires starts only the named services.
 	NoRequires bool
+	// NoHosts skips hostname registration.
+	NoHosts bool
 }
 
 // Up starts services (dependencies first), retrying a failed start once:
@@ -131,6 +140,9 @@ func (e *Engine) Up(ctx context.Context, svcs []catalog.Service, opts UpOptions)
 				return err
 			}
 		}
+	}
+	if !opts.NoHosts {
+		e.EnsureHosts(ctx, svcs)
 	}
 	return nil
 }

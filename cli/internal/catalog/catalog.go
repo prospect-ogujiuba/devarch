@@ -45,11 +45,11 @@ type Meta struct {
 
 // Container is one compose service inside a catalog entry.
 type Container struct {
-	Service       string   `json:"service"`
-	ContainerName string   `json:"container_name,omitempty"`
-	Image         string   `json:"image,omitempty"`
-	Build         bool     `json:"build,omitempty"`
-	Ports         []string `json:"ports,omitempty"`
+	Service       string `json:"service"`
+	ContainerName string `json:"container_name,omitempty"`
+	Image         string `json:"image,omitempty"`
+	Build         bool   `json:"build,omitempty"`
+	Ports         []Port `json:"ports,omitempty"`
 }
 
 // Service is one catalog entry: a directory holding compose.yml.
@@ -231,7 +231,7 @@ func loadService(p Path, category, name, dir string) (Service, error) {
 	for sn, s := range cf.Services {
 		c := Container{Service: sn, ContainerName: s.ContainerName, Image: s.Image, Build: !s.Build.IsZero()}
 		for _, port := range s.Ports {
-			c.Ports = append(c.Ports, fmt.Sprint(port))
+			c.Ports = append(c.Ports, ParsePort(port))
 		}
 		svc.Containers = append(svc.Containers, c)
 	}

@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -27,6 +28,10 @@ func newHarness(t *testing.T) *harness {
 	})
 	cfg := t.TempDir()
 	testutil.WriteFiles(t, cfg, map[string]string{"versions.env": "POSTGRES_VERSION=17\n"})
+	hostsFile := filepath.Join(t.TempDir(), "hosts")
+	testutil.WriteFiles(t, filepath.Dir(hostsFile), map[string]string{"hosts": "127.0.0.1 localhost\n"})
+	t.Setenv("HOSTS_FILE", hostsFile)
+	t.Setenv("DEVARCH_HOSTS_PLATFORM", "unix")
 	t.Setenv("DEVARCH_ROOT", repo)
 	t.Setenv("DEVARCH_CONFIG_HOME", cfg)
 	return &harness{fake: &runner.Fake{Responses: map[string]runner.Response{"podman ps": {Out: []byte("[]")}}}, repo: repo}
@@ -138,5 +143,63 @@ func TestLogs(t *testing.T) {
 	lines := h.fake.Lines()
 	if last := lines[len(lines)-1]; !strings.HasSuffix(last, "podman compose logs -f --tail 50)") {
 		t.Fatalf("got %s", last)
+	}
+}
+
+func TestUpRegistersMissingHostsOnce(t *testing.T) {
+	h := newHarness(t)
+	if err := h.run(t, "up", "postgres"); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(os.Getenv("HOSTS_FILE"))
+	for _, want := range []string{"127.0.0.1 localhost\n\n# BEGIN DEVARCH HOSTS", "pg.test", "postgres.test", "glpi.test"} {
+		if !strings.Contains(string(data), want) {
+			t.Fatalf("missing %q in hosts:\n%s", want, data)
+		}
+	}
+	if !strings.Contains(h.err.String(), "registering") {
+		t.Fatalf("no registration message: %s", h.err.String())
+	}
+	if err := h.run(t, "up", "postgres"); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(h.err.String(), "registering") {
+		t.Fatal("registered again although every hostname is mapped")
+	}
+}
+
+func TestUpNoHosts(t *testing.T) {
+	h := newHarness(t)
+	if err := h.run(t, "up", "postgres", "--no-hosts"); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(os.Getenv("HOSTS_FILE"))
+	if strings.Contains(string(data), "DEVARCH") {
+		t.Fatal("--no-hosts wrote the hosts file")
+	}
+}
+
+func TestHostsCommands(t *testing.T) {
+	h := newHarness(t)
+	if err := h.run(t, "--dry-run", "hosts", "sync"); err != nil || !strings.Contains(h.out.String(), "127.0.0.1 glpi.test pg.test postgres.test redmine.test") {
+		t.Fatalf("dry run: %v\n%s", err, h.out.String())
+	}
+	if err := h.run(t, "hosts", "list"); err == nil {
+		t.Fatal("list without a block should fail")
+	}
+	if err := h.run(t, "hosts", "sync"); err != nil || !strings.Contains(h.out.String(), "synchronized 5 domains") {
+		t.Fatalf("sync: %v %s", err, h.out.String())
+	}
+	if err := h.run(t, "hosts", "list"); err != nil || strings.Contains(h.err.String(), "out of date") {
+		t.Fatalf("list: %v %s", err, h.err.String())
+	}
+	if err := h.run(t, "hosts", "add", "demo.test"); err != nil || !strings.Contains(h.out.String(), "registered 127.0.0.1 demo.test") {
+		t.Fatalf("add: %v %s", err, h.out.String())
+	}
+	if err := h.run(t, "hosts", "remove", "demo.test"); err != nil || !strings.Contains(h.out.String(), "removed demo.test") {
+		t.Fatalf("remove: %v %s", err, h.out.String())
+	}
+	if err := h.run(t, "hosts", "add", "Bad Name"); err == nil {
+		t.Fatal("accepted invalid hostname")
 	}
 }

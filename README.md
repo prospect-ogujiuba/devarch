@@ -70,14 +70,14 @@ The user service starts persistently and Nginx Proxy Manager provides the local 
 
 ## Local `.test` domains
 
-Synchronize every service `container_name`, routable `apps/*` workspace, and `devarch.test` into one managed hosts-file block:
+Synchronize every service `container_name`, `.test` host in `x-devarch` URLs, routable `apps/*` workspace, and `devarch.test` into one managed hosts-file block:
 
 ```bash
-scripts/hosts/sync-hosts.sh --dry-run
-scripts/hosts/sync-hosts.sh
+devarch --dry-run hosts sync
+devarch hosts sync
 ```
 
-The command requests elevation once and only replaces content between its DevArch markers. See [`scripts/hosts/README.md`](scripts/hosts/README.md) for discovery rules, cross-platform behavior, and tests.
+The command requests elevation once and only replaces content between its DevArch markers. `devarch up` runs the same synchronization automatically when a started service's hostname is unmapped (`--no-hosts` opts out). See [`scripts/hosts/README.md`](scripts/hosts/README.md) for discovery rules and cross-platform behavior.
 
 ## Rapid WordPress bootstrap
 
@@ -180,15 +180,10 @@ See [`scripts/browser/README.md`](scripts/browser/README.md) for setup, example 
 ## Development checks
 
 ```bash
-# validate compose YAML structure
-python - <<'PY'
-from pathlib import Path
-import yaml
-for path in sorted(Path('services-library').glob('**/compose.yml')):
-    data = yaml.safe_load(path.read_text())
-    assert isinstance(data, dict) and 'services' in data, path
-print('compose yaml ok')
-PY
+devarch lint                       # compose structure, x-devarch metadata, port collisions, image pins
+devarch lint --native              # also run podman compose config for every service (slow)
+devarch doctor                     # Podman, network, ports, certificate, hosts, lingering
+(cd cli && go test ./...)
 
 # check PHP syntax
 php -l apps/serverinfo/index.php

@@ -13,7 +13,7 @@ devarch down --tag project-management      # stop and remove containers; volumes
 
 A start that fails on the first attempt is retried once, as the former `manage.sh` launcher did. To reset one product completely, run `devarch down <name> --volumes`. It names the volumes it will delete and asks first; this permanently deletes the local database and attachments.
 
-The preferred endpoints are `https://redmine.test`, `https://openproject.test`, `https://plane.test`, `https://glpi.test`, `https://leantime.test`, and `https://vikunja.test`. They are routed through the shared Nginx Proxy Manager container. Refresh local name resolution after catalog changes with `scripts/hosts/sync-hosts.sh`.
+The preferred endpoints are `https://redmine.test`, `https://openproject.test`, `https://plane.test`, `https://glpi.test`, `https://leantime.test`, and `https://vikunja.test`. They are routed through the shared Nginx Proxy Manager container. Refresh local name resolution after catalog changes with `devarch hosts sync`.
 
 OpenProject and GLPI read generated credentials from their gitignored, mode-`0600` `.env` files. Tracked `.env.example` files document the required variables. Retrieve a login locally with:
 

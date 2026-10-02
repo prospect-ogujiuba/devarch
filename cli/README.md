@@ -31,11 +31,25 @@ devarch down redis                  # volumes are kept
 devarch down redis --volumes        # names the volumes and asks first (--yes to skip)
 devarch compose postgres -- exec postgres psql -U postgres
 devarch --dry-run up --tag project-management
+
+devarch use php                     # list versions; * marks the selected one
+devarch use php 8.3                 # record, rebuild, and recreate if running
+devarch use postgres 17             # refused while a postgres volume exists (--force overrides)
+
+devarch hosts sync                  # write every .test domain into the managed hosts block
+devarch hosts add demo.test
+devarch hosts list                  # show the block and whether it is current
+devarch doctor                      # environment checks with fixes
+devarch lint                        # catalog contract checks (--native, --strict, --json)
 ```
 
 Services are named by canonical ID (`database/redis`) or a unique short name (`redis`). An ambiguous short name lists its candidates.
 
-`up` creates the `microservices-net` network when it is missing, starts each service's `requires` first, and retries a failed start once. `--wait` blocks until every container passes its compose healthcheck and the optional `ready` probe.
+`up` creates the `microservices-net` network when it is missing, starts each service's `requires` first, retries a failed start once, and registers any unmapped `.test` hostname by synchronizing the hosts block (`--no-hosts` skips this). `--wait` blocks until every container passes its compose healthcheck and the optional `ready` probe.
+
+`use` protects data volumes: a downgrade of an `upgrade-only` service, or a major-version change of a `same-major` service, is refused while its volume exists. Built services (`rebuild: true`) are rebuilt immediately, because `podman compose up -d` does not rebuild an existing image.
+
+On WSL the hosts commands edit the Windows hosts file, the one the browser uses, through embedded PowerShell helpers that request UAC elevation; elsewhere they edit `/etc/hosts` (or `HOSTS_FILE`) with `sudo` when needed.
 
 Any `devarch-<name>` executable on `PATH` runs as `devarch <name>`, with `DEVARCH_ROOT` set.
 
