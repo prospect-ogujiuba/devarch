@@ -581,6 +581,28 @@ func (m *Model) noteMissingHosts(svc catalog.Service) {
 	}
 }
 
+// noteMissingAppHost tells the user when <app>.test is not mapped yet.
+func (m *Model) noteMissingAppHost(app string) {
+	if m.eng.Hosts == nil || !m.eng.Settings.HostsManage {
+		return
+	}
+	if content, err := m.eng.Hosts.Read(); err == nil {
+		if _, ok := hosts.Mapped(content)[app+".test"]; !ok {
+			m.setStatus(false, "%s.test is not in the hosts file; press H to register", app)
+		}
+	}
+}
+
+// appState is the state of a JavaScript app's container, or "" when it has none.
+func (m *Model) appState(app string) string {
+	for _, c := range m.containers {
+		if c.Name == engine.AppContainer(app) {
+			return c.State
+		}
+	}
+	return ""
+}
+
 func (m *Model) syncHosts() tea.Cmd {
 	if m.deps.Exe == "" {
 		return nil
@@ -652,6 +674,8 @@ func (m *Model) runDoctor() tea.Cmd {
 type appInfo struct {
 	Name, Kind, Dir string
 	Routable        bool
+	// Node apps have a package.json and can run in their own container.
+	Node bool
 }
 
 func discoverApps(dir string) []appInfo {
@@ -665,7 +689,8 @@ func discoverApps(dir string) []appInfo {
 			continue
 		}
 		d := filepath.Join(dir, e.Name())
-		out = append(out, appInfo{Name: e.Name(), Dir: d, Kind: detectKind(d), Routable: hosts.Routable(d)})
+		_, pkgErr := os.Stat(filepath.Join(d, "package.json"))
+		out = append(out, appInfo{Name: e.Name(), Dir: d, Kind: detectKind(d), Routable: hosts.Routable(d), Node: pkgErr == nil})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
@@ -722,6 +747,28 @@ func (m *Model) handleAppsKey(key string) tea.Cmd {
 			return nil
 		}
 		return m.open("https://" + app.Name + ".test")
+	case "u", "d":
+		if !app.Node {
+			m.setStatus(false, "%s has no package.json; only JavaScript apps run in their own container", app.Name)
+			return nil
+		}
+		if key == "d" {
+			return m.runAction("stop "+engine.AppContainer(app.Name), func(ctx context.Context) error {
+				return m.eng.StopApp(ctx, app.Name, false)
+			}, func(m *Model) tea.Cmd { return m.loadContainers() })
+		}
+		plan, err := m.eng.PlanApp(app.Name, engine.AppOptions{})
+		if err != nil {
+			m.setStatus(false, "%v", err)
+			return nil
+		}
+		// Hostname registration may need sudo, so it is left to H.
+		return m.runAction("start "+plan.Container, func(ctx context.Context) error {
+			return m.eng.StartApp(ctx, plan, engine.AppOptions{NoHosts: true})
+		}, func(m *Model) tea.Cmd {
+			m.noteMissingAppHost(app.Name)
+			return m.loadContainers()
+		})
 	case "e":
 		if m.deps.OpenDir == nil {
 			return nil

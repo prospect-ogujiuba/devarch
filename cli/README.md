@@ -34,7 +34,7 @@ u up · d down · r restart · v version · l logs · o open · / filter · n ne
 ```
 
 - **Services**: the whole catalog with live state. `/` filters, `u` `d` `r` start, stop and restart, `v` switches the version (asking before it recreates a running service), `l` follows logs inside the screen, `o` opens the service URL.
-- **Apps**: `apps/` directories with their detected framework; `o` opens `https://<name>.test`, `e` opens the folder in VS Code.
+- **Apps**: `apps/` directories with their detected framework and, for JavaScript apps, their container state; `u` and `d` start and stop a JavaScript app's container, `o` opens `https://<name>.test`, `e` opens the folder in the configured editor.
 - **Running**: every running container, including ones outside the catalog; `l` logs, `r` restart.
 - **Doctor**: `devarch doctor` plus the catalog lint summary; `r` reruns it.
 - **New project** (`n`): pick a recipe, fill in a form built from its `recipe.yml`, review the exact command, and watch its steps complete. Destructive flags such as `--force` need an explicit `y`.
@@ -66,6 +66,8 @@ devarch db create api --engine postgres --env   # DB_* lines for scripts
 devarch db create wp_blog --existing replace    # saves the old database, then recreates
 devarch db drop shop --user shop    # asks first (--yes to skip)
 
+devarch app start storefront        # run a JavaScript app in node-storefront behind https://storefront.test
+devarch app stop storefront
 devarch app backup shop             # copy apps/shop to apps/.devarch-backups/shop-<stamp>
 devarch app recover shop            # undo a failed bootstrap run (see below)
 

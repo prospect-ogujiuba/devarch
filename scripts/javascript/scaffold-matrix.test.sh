@@ -17,7 +17,7 @@ assert_contains() { grep -Fq -- "$2" <<<"$1" || fail "$3 (missing '$2')"; pass; 
 mkdir -p \
   "$PROJECT_ROOT/scripts/javascript/profiles/alpha" \
   "$PROJECT_ROOT/scripts/javascript/profiles/beta" \
-  "$PROJECT_ROOT/scripts/node" \
+  "$PROJECT_ROOT/scripts/devarch/lib" \
   "$PROJECT_ROOT/services-library/backend/node" \
   "$PROJECT_ROOT/apps" \
   "$TEST_TMP/bin"
@@ -53,20 +53,20 @@ fi
 mkdir -p "${MATRIX_PROJECT_ROOT:?}/apps/$app"
 printf '{"name":"%s","scripts":{"devarch":"true"}}\n' "$app" > "${MATRIX_PROJECT_ROOT:?}/apps/$app/package.json"
 FAKE
-cat > "$PROJECT_ROOT/scripts/node/bootstrap.sh" <<'FAKE'
+cp "$SOURCE_DIR/../devarch/lib/platform.sh" "$PROJECT_ROOT/scripts/devarch/lib/platform.sh"
+cat > "$TEST_TMP/bin/fake-devarch" <<'FAKE'
 #!/usr/bin/env bash
-printf 'start %s\n' "$*" >> "${MATRIX_CALL_LOG:?}"
-[[ ${MATRIX_START_FAIL_APP:-} != "${1:-}" ]] || exit 7
+[[ "$1" == app ]] || exit 9
+shift
+printf '%s\n' "$*" >> "${MATRIX_CALL_LOG:?}"
+[[ "$1" == stop || ${MATRIX_START_FAIL_APP:-} != "${2:-}" ]] || exit 7
 FAKE
-cat > "$TEST_TMP/bin/podman" <<'FAKE'
-#!/usr/bin/env bash
-printf 'stop app=%s %s\n' "${DEVARCH_NODE_APP_NAME:-}" "$*" >> "${MATRIX_CALL_LOG:?}"
-FAKE
-chmod +x "$MATRIX" "$PROJECT_ROOT/scripts/javascript/bootstrap.sh" "$PROJECT_ROOT/scripts/node/bootstrap.sh" "$TEST_TMP/bin/podman"
+chmod +x "$MATRIX" "$PROJECT_ROOT/scripts/javascript/bootstrap.sh" "$TEST_TMP/bin/fake-devarch"
 : > "$CALL_LOG"
 
 run_matrix() {
   PATH="$TEST_TMP/bin:$PATH" \
+  DEVARCH_BIN="$TEST_TMP/bin/fake-devarch" \
   MATRIX_CALL_LOG="$CALL_LOG" \
   MATRIX_PROJECT_ROOT="$PROJECT_ROOT" \
   MATRIX_ATTEMPT_DIR="$TEST_TMP/attempts" \
@@ -120,7 +120,7 @@ assert_contains "$failure_output" 'total=3 created=1 skipped=1 failed=1' 'failur
 assert_contains "$failure_output" 'failed profiles: alpha/two' 'failure summary should identify retry targets'
 
 run_matrix start beta basic --no-hosts >/dev/null
-grep -Fqx 'start showcase-beta-basic --no-hosts' "$CALL_LOG" || fail 'start should delegate to the Node bootstrap and preserve options'
+grep -Fqx 'start showcase-beta-basic --no-hosts' "$CALL_LOG" || fail 'start should delegate to devarch app start and preserve options'
 pass
 
 : > "$CALL_LOG"
@@ -144,7 +144,7 @@ assert_contains "$start_all_failure" 'total=3 started=1 skipped=1 failed=1' 'sta
 assert_contains "$start_all_failure" 'failed applications: alpha/one' 'start-all should identify applications that failed'
 
 run_matrix stop beta basic >/dev/null
-grep -Fq 'stop app=showcase-beta-basic compose -p devarch-node-showcase-beta-basic' "$CALL_LOG" || fail 'stop should target the isolated Compose project'
+grep -Fqx 'stop showcase-beta-basic' "$CALL_LOG" || fail 'stop should delegate to devarch app stop'
 pass
 
 if run_matrix scaffold missing basic >"$TEST_TMP/error" 2>&1; then

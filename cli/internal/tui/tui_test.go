@@ -357,3 +357,34 @@ args:
 		t.Fatalf("after choosing bare:\n%s", v)
 	}
 }
+
+func TestAppsViewStartsAndStopsNodeApps(t *testing.T) {
+	h := newHarness(t)
+	lib := filepath.Join(h.root, "services-library")
+	testutil.WriteFiles(t, lib, map[string]string{
+		"backend/node/compose.yml":     testutil.Compose("node", ""),
+		"backend/node/app.compose.yml": "services: {}\n",
+	})
+	testutil.WriteFiles(t, h.root, map[string]string{"apps/web/package.json": `{"dependencies":{"next":"15"},"scripts":{"devarch":"next dev"}}`})
+	c, _ := catalog.Load([]catalog.Path{{Dir: lib, Source: "builtin"}})
+	h.m.eng.Catalog = c
+	h.press("2")
+	if cmd := h.press("u"); cmd != nil {
+		t.Fatal("u started a non-JavaScript app")
+	}
+	h.press("down") // web
+	cmd := h.press("u")
+	if cmd == nil {
+		t.Fatalf("u did nothing: %s", h.m.status)
+	}
+	h.m.Update(cmd())
+	joined := strings.Join(h.fake.Lines(), "\n")
+	if !strings.Contains(joined, "DEVARCH_NODE_APP_NAME=web") || !strings.Contains(joined, "-p devarch-node-web -f app.compose.yml up -d --build --force-recreate") {
+		t.Fatalf("start commands:\n%s", joined)
+	}
+	cmd = h.press("d")
+	h.m.Update(cmd())
+	if last := h.fake.Lines()[len(h.fake.Lines())-1]; !strings.HasSuffix(last, "-p devarch-node-web -f app.compose.yml down)") {
+		t.Fatalf("stop: %s", last)
+	}
+}

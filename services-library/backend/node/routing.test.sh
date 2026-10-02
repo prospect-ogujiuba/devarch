@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 ROUTER_COMPOSE="$PROJECT_ROOT/services-library/backend/node/compose.yml"
 APP_COMPOSE="$PROJECT_ROOT/services-library/backend/node/app.compose.yml"
 PROXY_CONTAINER=nginx-proxy-manager

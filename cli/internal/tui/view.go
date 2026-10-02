@@ -106,7 +106,7 @@ func (m *Model) footerView(w int) string {
 	default:
 		keys := map[view]string{
 			viewServices: "u up · d down · r restart · v version · l logs · o open · / filter",
-			viewApps:     "o open · e editor",
+			viewApps:     "u start · d stop (JavaScript) · o open · e editor",
 			viewRunning:  "l logs · r restart",
 			viewDoctor:   "r rerun",
 		}[m.view]
@@ -181,7 +181,11 @@ func (m *Model) listView(w, h int) string {
 			if a.Routable {
 				url = "https://" + a.Name + ".test"
 			}
-			rows = append(rows, m.row(fmt.Sprintf("%s  %s  %s", pad(truncate(a.Name, 34), 34), pad(a.Kind, 12), url), i == cursor, w))
+			state := ""
+			if a.Node {
+				state = dashIf(m.appState(a.Name))
+			}
+			rows = append(rows, m.row(fmt.Sprintf("%s  %s  %s  %s", pad(truncate(a.Name, 34), 34), pad(a.Kind, 12), pad(state, 8), url), i == cursor, w))
 		}
 	case viewRunning:
 		rs := m.running()
@@ -325,7 +329,11 @@ func (m *Model) detailView(w int) string {
 	case viewApps:
 		if c := m.cursor[viewApps]; c < len(m.apps) {
 			a := m.apps[c]
-			return titleStyle.Render(a.Name) + " · " + a.Kind + "\n" + dimStyle.Render(a.Dir)
+			detail := titleStyle.Render(a.Name) + " · " + a.Kind + "\n" + dimStyle.Render(a.Dir)
+			if a.Node {
+				detail += "\n" + engine.AppContainer(a.Name) + ": " + dashIf(m.appState(a.Name)) + dimStyle.Render("  (devarch app start|stop "+a.Name+")")
+			}
+			return detail
 		}
 	case viewRunning:
 		if rs := m.running(); m.cursor[viewRunning] < len(rs) {

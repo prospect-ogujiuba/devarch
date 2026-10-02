@@ -6,8 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PROFILES_DIR="$SCRIPT_DIR/profiles"
 SCAFFOLD_BOOTSTRAP="$SCRIPT_DIR/bootstrap.sh"
-NODE_BOOTSTRAP="$PROJECT_ROOT/scripts/node/bootstrap.sh"
-APP_COMPOSE="$PROJECT_ROOT/services-library/backend/node/app.compose.yml"
+# shellcheck source=../devarch/lib/platform.sh
+source "$PROJECT_ROOT/scripts/devarch/lib/platform.sh"
 APPS_DIR="$PROJECT_ROOT/apps"
 APP_PREFIX="${DEVARCH_MATRIX_APP_PREFIX:-showcase}"
 LOG_DIR="${DEVARCH_MATRIX_LOG_DIR:-$PROJECT_ROOT/.model-artifacts/logs/javascript-scaffold-matrix}"
@@ -22,21 +22,21 @@ usage() {
 Usage: scripts/javascript/scaffold-matrix.sh list
        scripts/javascript/scaffold-matrix.sh scaffold <framework> <profile>
        scripts/javascript/scaffold-matrix.sh scaffold-all
-       scripts/javascript/scaffold-matrix.sh start <framework> <profile> [node-bootstrap-options]
-       scripts/javascript/scaffold-matrix.sh start-all [node-bootstrap-options]
+       scripts/javascript/scaffold-matrix.sh start <framework> <profile> [devarch-app-start-options]
+       scripts/javascript/scaffold-matrix.sh start-all [devarch-app-start-options]
        scripts/javascript/scaffold-matrix.sh stop <framework> <profile>
 
 Discover the curated JavaScript profile matrix and manage deterministic
 apps/showcase-<framework>-<profile> applications. Bulk commands run
 sequentially: scaffold-all skips existing applications, while start-all
-starts only applications that already contain package.json. Upstream scaffold
+starts only applications that already contain package.json, through
+`devarch app start` (stop uses `devarch app stop`). Upstream scaffold
 output is captured to a run log so terminal progress stays concise.
 
 Environment:
   DEVARCH_MATRIX_APP_PREFIX  Application prefix (default: showcase)
   DEVARCH_MATRIX_ATTEMPTS    Attempts per profile in scaffold-all (default: 2)
   DEVARCH_MATRIX_LOG_DIR     Run log directory (default: .model-artifacts/logs/...)
-  CONTAINER_RUNTIME          podman or docker (auto-detected for stop)
 EOF
 }
 
@@ -199,20 +199,21 @@ start_one() {
   local framework=$1 profile=$2
   shift 2
   validate_combination "$framework" "$profile"
-  [[ -x "$NODE_BOOTSTRAP" ]] || die "Node bootstrap is not executable: $NODE_BOOTSTRAP"
+  local devarch name
+  devarch=$(devarch_bin) || die 'the devarch CLI is required to start applications'
 
-  local name
   name=$(app_name "$framework" "$profile")
   [[ -f "$APPS_DIR/$name/package.json" ]] ||
     die "application is not scaffolded: apps/$name (run scaffold first)"
-  "$NODE_BOOTSTRAP" "$name" "$@"
+  "$devarch" app start "$name" "$@"
 }
 
 start_all() {
   local -a paths=() failures=()
   local path framework profile name current total
   local started=0 skipped=0 failed=0
-  [[ -x "$NODE_BOOTSTRAP" ]] || die "Node bootstrap is not executable: $NODE_BOOTSTRAP"
+  local devarch
+  devarch=$(devarch_bin) || die 'the devarch CLI is required to start applications'
   mapfile -d '' paths < <(profile_paths)
   total=${#paths[@]}
   log "start-all: total=$total"
@@ -230,7 +231,7 @@ start_all() {
     fi
 
     printf '[javascript-matrix] [%d/%d] %s/%s — starting\n' "$current" "$total" "$framework" "$profile"
-    if "$NODE_BOOTSTRAP" "$name" "$@"; then
+    if "$devarch" app start "$name" "$@"; then
       ((started += 1))
     else
       printf '[javascript-matrix] [%d/%d] %s/%s — failed\n' "$current" "$total" "$framework" "$profile" >&2
@@ -246,32 +247,13 @@ start_all() {
   fi
 }
 
-detect_runtime() {
-  if [[ -n ${CONTAINER_RUNTIME:-} ]]; then
-    case "$CONTAINER_RUNTIME" in
-      podman|docker) printf '%s\n' "$CONTAINER_RUNTIME" ;;
-      *) die 'CONTAINER_RUNTIME must be podman or docker' ;;
-    esac
-  elif command -v podman >/dev/null 2>&1; then
-    printf 'podman\n'
-  elif command -v docker >/dev/null 2>&1; then
-    printf 'docker\n'
-  else
-    die 'Podman or Docker is required to stop an application'
-  fi
-}
-
 stop_one() {
-  local framework=$1 profile=$2
+  local framework=$1 profile=$2 devarch name
   validate_combination "$framework" "$profile"
-  [[ -f "$APP_COMPOSE" ]] || die "Node app Compose file does not exist: $APP_COMPOSE"
-
-  local name runtime
+  devarch=$(devarch_bin) || die 'the devarch CLI is required to stop applications'
   name=$(app_name "$framework" "$profile")
-  runtime=$(detect_runtime)
   log "stop apps/$name"
-  DEVARCH_NODE_APP_NAME="$name" \
-    "$runtime" compose -p "devarch-node-$name" -f "$APP_COMPOSE" down
+  "$devarch" app stop "$name"
 }
 
 main() {
