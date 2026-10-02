@@ -17,6 +17,7 @@ import (
 
 	"github.com/prospect-ogujiuba/devarch/cli/internal/catalog"
 	"github.com/prospect-ogujiuba/devarch/cli/internal/engine"
+	"github.com/prospect-ogujiuba/devarch/cli/internal/hosts"
 	"github.com/prospect-ogujiuba/devarch/cli/internal/root"
 	"github.com/prospect-ogujiuba/devarch/cli/internal/runner"
 	"github.com/prospect-ogujiuba/devarch/cli/internal/state"
@@ -30,6 +31,7 @@ type app struct {
 	in        io.Reader
 	dryRun    bool
 	configDir string
+	rootHow   root.How
 	eng       *engine.Engine
 	problems  []catalog.Problem
 	// newRunner is replaceable in tests.
@@ -54,6 +56,7 @@ func (a *app) load() error {
 	if err != nil {
 		return err
 	}
+	a.rootHow = how
 	if how == root.FromWalk && cfg.Root == "" && !a.dryRun {
 		cfg.Root = rootDir
 		if err := state.SaveConfig(dir, cfg); err == nil {
@@ -78,7 +81,11 @@ func (a *app) load() error {
 		r = runner.DryRun{Inner: r, Log: a.out}
 	}
 	a.problems = problems
-	a.eng = &engine.Engine{Root: rootDir, Catalog: cat, Runner: r, Versions: versions, Log: a.err}
+	a.eng = &engine.Engine{
+		Root: rootDir, Catalog: cat, Runner: r, Versions: versions, Log: a.err, DryRun: a.dryRun,
+		SaveVersions: func(v state.Versions) error { return state.SaveVersions(dir, v) },
+		Hosts:        hosts.NewManager(r, filepath.Join(dir, "windows")),
+	}
 	return nil
 }
 
@@ -102,9 +109,13 @@ Every action prints the command it runs; --dry-run prints without running.`,
 	rootCmd.SetOut(a.out)
 	rootCmd.SetErr(a.err)
 	rootCmd.PersistentFlags().BoolVar(&a.dryRun, "dry-run", false, "print native commands instead of running them")
-	rootCmd.AddGroup(&cobra.Group{ID: "services", Title: "Services:"})
-	for _, c := range []*cobra.Command{lsCmd(a), upCmd(a), downCmd(a), restartCmd(a), psCmd(a), logsCmd(a), composeCmd(a)} {
+	rootCmd.AddGroup(&cobra.Group{ID: "services", Title: "Services:"}, &cobra.Group{ID: "env", Title: "Environment:"})
+	for _, c := range []*cobra.Command{lsCmd(a), upCmd(a), downCmd(a), restartCmd(a), psCmd(a), logsCmd(a), useCmd(a), composeCmd(a)} {
 		c.GroupID = "services"
+		rootCmd.AddCommand(c)
+	}
+	for _, c := range []*cobra.Command{doctorCmd(a), hostsCmd(a), lintCmd(a)} {
+		c.GroupID = "env"
 		rootCmd.AddCommand(c)
 	}
 	return rootCmd
@@ -124,6 +135,9 @@ func Main(args []string) int {
 	err := rootCmd.Execute()
 	if err == nil {
 		return 0
+	}
+	if errors.Is(err, errSilent) {
+		return 1
 	}
 	var exit *runner.ExitError
 	if errors.As(err, &exit) && exit.Stderr == "" {
@@ -241,6 +255,7 @@ func upCmd(a *app) *cobra.Command {
 	c.Flags().BoolVarP(&opts.Wait, "wait", "w", false, "wait until containers are healthy")
 	c.Flags().DurationVar(&opts.Timeout, "timeout", 120*time.Second, "how long --wait waits per service")
 	c.Flags().BoolVar(&opts.NoRequires, "no-requires", false, "do not start x-devarch requires first")
+	c.Flags().BoolVar(&opts.NoHosts, "no-hosts", false, "do not register missing .test hostnames")
 	return c
 }
 

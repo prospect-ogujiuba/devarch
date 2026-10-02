@@ -2,23 +2,24 @@
 
 ## Synchronize every DevArch domain
 
-`sync-hosts.sh` discovers literal `container_name` values in `services-library/**/compose.yml`, routable workspaces in `apps/*`, and `devarch.test`. It writes them as sorted `.test` domains inside a clearly delimited managed block:
+`devarch hosts sync` (see [`cli/README.md`](../../cli/README.md)) discovers every literal `container_name` in the catalog, `.test` hosts listed in `x-devarch.urls`, routable workspaces in `apps/*`, and `devarch.test`. It writes them as sorted `.test` domains inside a clearly delimited managed block:
 
 ```bash
-scripts/hosts/sync-hosts.sh --dry-run
-scripts/hosts/sync-hosts.sh
+devarch --dry-run hosts sync
+devarch hosts sync
+devarch hosts list          # show the block and whether it is current
 ```
 
-Only content between `# BEGIN DEVARCH HOSTS` and `# END DEVARCH HOSTS` is replaced. Unrelated hosts-file content is preserved, and rerunning an already-current synchronization performs no write. App directories are included when they contain `index.php`, `public/index.php`, `public/index.html`, or `package.json`. Catalog services are included whether or not their containers are currently running.
+Only content between `# BEGIN DEVARCH HOSTS` and `# END DEVARCH HOSTS` is replaced. Unrelated hosts-file content is preserved, and rerunning an already-current synchronization performs no write. App directories are included when they contain `index.php`, `public/index.php`, `public/index.html`, or `package.json`. Catalog services are included whether or not their containers are currently running. `devarch up` synchronizes automatically when a started service's hostname is unmapped.
 
-On Linux and macOS the script updates `/etc/hosts`, requesting `sudo` once when needed. Under WSL and Git Bash/MSYS it delegates to `sync-hosts.ps1`, which requests Windows UAC elevation and updates `%SystemRoot%\System32\drivers\etc\hosts` while preserving the file's encoding and line endings. Run the shell script as your normal WSL user rather than with `sudo`; it invokes Windows PowerShell through WSL's `/init` interop host so Wine or another `.exe` binfmt handler cannot intercept it.
+On Linux and macOS `devarch` updates `/etc/hosts` (or `HOSTS_FILE`), requesting `sudo` once when needed. Under WSL and Git Bash/MSYS it delegates to its embedded `sync-hosts.ps1`, which requests Windows UAC elevation and updates `%SystemRoot%\System32\drivers\etc\hosts` while preserving the file's encoding and line endings. Run it as your normal WSL user rather than with `sudo`; it invokes Windows PowerShell through WSL's `/init` interop host so Wine or another `.exe` binfmt handler cannot intercept it.
 
 ## Register one domain
 
-`register-host.sh` idempotently maps one validated local hostname to `127.0.0.1`. Application bootstraps call it after successful provisioning.
+`devarch hosts add` idempotently maps one validated local hostname to `127.0.0.1`; `devarch hosts remove` unmaps one on Linux and macOS. The application bootstraps still call `register-host.sh`, which has the same behavior, until they move onto the `devarch` binary.
 
 ```bash
-scripts/hosts/register-host.sh demo.test
+devarch hosts add demo.test
 scripts/hosts/register-host.sh demo.test --dry-run
 ```
 
@@ -29,6 +30,6 @@ Use `--no-hosts` on an application bootstrap when local DNS already resolves `*.
 Tests use temporary hosts-file overrides and never edit the real system file:
 
 ```bash
-scripts/hosts/sync-hosts.test.sh
+(cd cli && go test ./internal/hosts/)
 scripts/hosts/register-host.test.sh
 ```

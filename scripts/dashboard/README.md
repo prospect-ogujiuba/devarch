@@ -18,7 +18,7 @@ systemctl --user restart devarch-dashboard.service
 journalctl --user -u devarch-dashboard.service
 ```
 
-The compiled Tailwind CSS is tracked, so normal use needs only Python 3, Podman, and user-systemd. `devarch.test` must resolve to `127.0.0.1`; `scripts/hosts/sync-hosts.sh` manages that entry. The existing Nginx Proxy Manager container terminates local HTTPS and proxies the domain to the host service.
+The compiled Tailwind CSS is tracked, so normal use needs only Python 3, Podman, and user-systemd. `devarch.test` must resolve to `127.0.0.1`; `devarch hosts sync` manages that entry. The existing Nginx Proxy Manager container terminates local HTTPS and proxies the domain to the host service.
 
 For temporary direct development, run `scripts/dashboard/start.sh` and open <http://127.0.0.1:7411>. The direct server binds to `127.0.0.1` by default; use `--port` to choose another port.
 

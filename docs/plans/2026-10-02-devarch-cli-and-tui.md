@@ -167,7 +167,7 @@ Bash code moves only when it is platform logic duplicated across scripts, or whe
 | `start_services` / `compose_up` | `compose` (`up`) | 1 | Same. |
 | `wait_for_services` (90×1s exec loops) | `health` + recipe `ready` | 1 | Same. |
 | `project-management/manage.sh` | `devarch up --tag project-management`, `devarch ls --tag … ` (urls) | 1 | Script deleted. |
-| `sync-hosts.sh`, `register-host.sh`, `register-host.ps1`, `register_*_host` | `hosts` (embeds the PowerShell helper and uses the existing `/init powershell.exe` WSL route) | 3 | Scripts deleted; their test cases ported to Go table tests. |
+| `sync-hosts.sh`, `register-host.sh`, `register-host.ps1`, `register_*_host` | `hosts` (embeds the PowerShell helper and uses the existing `/init powershell.exe` WSL route) | 3 | `sync-hosts.*` deleted in Phase 3 with its cases ported to Go. `register-host.*` stays until Phase 4 because the bootstraps call it directly. |
 | `dotenv.sh` | `state` (reads the root `.env` with the same data-only rules) | 4 | Kept while any Bash consumer remains. |
 | `print_plan` / dry-run plumbing | `--dry-run` on every command | 1–4 | Bootstrap dry-run keeps covering only its own filesystem steps. |
 
@@ -261,7 +261,7 @@ Each phase can ship on its own and has a clear exit check.
 - `up` registers hosts.
 - Port the `sync-hosts.test.sh` and `register-host.test.sh` cases to Go.
 - Add `doctor` and `lint`, and replace the README's Python validation snippet with `devarch lint`.
-- **Exit check:** hosts tests pass in Go, `scripts/hosts/` is deleted, and `devarch lint` exits 0 on the catalog.
+- **Exit check:** hosts tests pass in Go, `sync-hosts.*` is deleted (`register-host.*` follows in Phase 4, once the bootstraps stop calling it), and `devarch lint` exits 0 on a clean checkout.
 
 ### Phase 4: recipes
 - Add `recipe.yml` for wordpress, laravel and javascript.

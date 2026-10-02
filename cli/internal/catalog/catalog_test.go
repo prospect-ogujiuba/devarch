@@ -173,3 +173,23 @@ func TestMissingSearchPathIsSkipped(t *testing.T) {
 		t.Fatalf("got %v %v", c.Services, problems)
 	}
 }
+
+func TestParsePort(t *testing.T) {
+	for raw, want := range map[any]catalog.Port{
+		"127.0.0.1:8091:8091":           {HostIP: "127.0.0.1", Published: 8091, Target: "8091", Protocol: "tcp"},
+		"8080:80/udp":                   {Published: 8080, Target: "80", Protocol: "udp"},
+		"3000":                          {Target: "3000", Protocol: "tcp"},
+		"127.0.0.1:5173-5182:5173-5182": {HostIP: "127.0.0.1", Published: 5173, Target: "5173-5182", Protocol: "tcp"},
+		"${PORT:-80}:80":                {Published: 0, Target: "80", Protocol: "tcp"},
+	} {
+		got := catalog.ParsePort(raw)
+		got.Raw = ""
+		if got != want {
+			t.Errorf("ParsePort(%v) = %+v, want %+v", raw, got, want)
+		}
+	}
+	long := catalog.ParsePort(map[string]any{"host_ip": "127.0.0.1", "published": 9000, "target": 80})
+	if long.Published != 9000 || long.HostIP != "127.0.0.1" || long.Target != "80" {
+		t.Errorf("long syntax = %+v", long)
+	}
+}
