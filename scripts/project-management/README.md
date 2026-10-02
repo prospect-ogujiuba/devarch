@@ -1,17 +1,19 @@
 # Project management evaluation stacks
 
-This launcher manages six independent Podman Compose projects from `services-library/project/`. Each application has a dedicated database container, private stack network, persistent named volumes, a unique loopback-only port, and access to the external `microservices-net` network.
+This directory documents six independent Podman Compose projects from `services-library/project/`. Each application has a dedicated database container, private stack network, persistent named volumes, a unique loopback-only port, and access to the external `microservices-net` network.
+
+Every stack carries the `project-management` tag in its `x-devarch` metadata, so the `devarch` CLI (see [`cli/README.md`](../../cli/README.md)) manages them as a group:
 
 ```bash
-scripts/project-management/manage.sh up
-scripts/project-management/manage.sh status
-scripts/project-management/manage.sh urls
-scripts/project-management/manage.sh down
+devarch up --tag project-management        # create the shared network if needed, start all six, print URLs
+devarch ls --tag project-management        # state and URL of each stack
+devarch ps                                 # running containers, mapped to their stack
+devarch down --tag project-management      # stop and remove containers; volumes are retained
 ```
 
-`down` removes the containers and private networks but retains database and application volumes. To reset one product completely, run `podman compose down -v` from that product's service-library directory. This permanently deletes its local database and attachments.
+A start that fails on the first attempt is retried once, as the former `manage.sh` launcher did. To reset one product completely, run `devarch down <name> --volumes`. It names the volumes it will delete and asks first; this permanently deletes the local database and attachments.
 
-The preferred endpoints are `https://redmine.test`, `https://openproject.test`, `https://plane.test`, `https://glpi.test`, `https://leantime.test`, and `https://vikunja.test`. They are routed through the shared Nginx Proxy Manager container. Refresh local name resolution after catalog changes with `scripts/hosts/sync-hosts.sh`.
+The preferred endpoints are `https://redmine.test`, `https://openproject.test`, `https://plane.test`, `https://glpi.test`, `https://leantime.test`, and `https://vikunja.test`. They are routed through the shared Nginx Proxy Manager container. Refresh local name resolution after catalog changes with `devarch hosts sync`.
 
 OpenProject and GLPI read generated credentials from their gitignored, mode-`0600` `.env` files. Tracked `.env.example` files document the required variables. Retrieve a login locally with:
 

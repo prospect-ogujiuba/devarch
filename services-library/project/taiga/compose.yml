@@ -44,7 +44,7 @@ services:
     container_name: taiga-db
 
   taiga-back:
-    image: taigaio/taiga-back:latest
+    image: taigaio/taiga-back:6.10.2
     restart: unless-stopped
     environment: *back-environment
     volumes: *back-volumes
@@ -60,7 +60,7 @@ services:
     container_name: taiga-back
 
   taiga-async:
-    image: taigaio/taiga-back:latest
+    image: taigaio/taiga-back:6.10.2
     restart: unless-stopped
     entrypoint: [/taiga-back/docker/async_entrypoint.sh]
     environment: *back-environment
@@ -92,7 +92,7 @@ services:
     container_name: taiga-async-rabbitmq
 
   taiga-front:
-    image: taigaio/taiga-front:latest
+    image: taigaio/taiga-front:6.10.3
     restart: unless-stopped
     environment:
       TAIGA_URL: https://taiga.test
@@ -103,7 +103,7 @@ services:
     container_name: taiga-front
 
   taiga-events:
-    image: taigaio/taiga-events:latest
+    image: taigaio/taiga-events:6.10.0
     restart: unless-stopped
     environment:
       RABBITMQ_USER: taiga
@@ -132,7 +132,7 @@ services:
     container_name: taiga-events-rabbitmq
 
   taiga-protected:
-    image: taigaio/taiga-protected:latest
+    image: taigaio/taiga-protected:6.10.1
     restart: unless-stopped
     environment:
       MAX_AGE: "360"
@@ -173,3 +173,4 @@ volumes:
 networks:
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}

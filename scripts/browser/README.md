@@ -18,7 +18,7 @@ The first browser launch may report that no browser executable is installed. Ask
 
 ## Collaborative workflow
 
-1. Start the target app, for example with `scripts/node/bootstrap.sh <app-name>` or the app's normal development command.
+1. Start the target app, for example with `devarch app start <app-name>` or the app's normal development command.
 2. Tell the AI the URL and the behavior to verify.
 3. Keep the headed browser visible. You can take over to enter credentials, solve a challenge, demonstrate a bug, or point out a visual issue.
 4. Tell the AI what you changed or observed; it can continue from the current page state, inspect the page, and retest after code changes.

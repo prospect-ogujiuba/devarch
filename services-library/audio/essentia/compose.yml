@@ -1,6 +1,6 @@
 services:
   essentia:
-    image: ghcr.io/mtg/essentia:latest
+    image: ghcr.io/mtg/essentia:ubuntu20.04-v2.1_beta5
     working_dir: /work
     ports:
       - "127.0.0.1:8091:8091"
@@ -43,3 +43,4 @@ volumes:
 networks:
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}

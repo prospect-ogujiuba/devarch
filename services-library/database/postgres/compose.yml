@@ -1,6 +1,15 @@
+x-devarch:
+  title: PostgreSQL
+  description: Relational database
+  tags: [database, sql]
+  version:
+    var: POSTGRES_VERSION
+    default: "18.2"
+    choices: ["18.2", "17", "16", "15"]
+    data: same-major
 services:
   postgres:
-    image: postgres:18.2
+    image: postgres:${POSTGRES_VERSION:-18.2}
     restart: unless-stopped
     ports:
     - 127.0.0.1:8502:5432
@@ -26,3 +35,4 @@ volumes:
 networks:
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}

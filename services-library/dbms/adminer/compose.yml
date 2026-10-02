@@ -1,6 +1,12 @@
+x-devarch:
+  title: Adminer
+  description: Single-page database manager (defaults to the postgres server)
+  tags: [dbms, database-ui]
+  urls:
+    - https://adminer.test
 services:
   adminer:
-    image: adminer:latest
+    image: adminer:6.1.0
     restart: unless-stopped
     ports:
     - 127.0.0.1:8082:8080
@@ -21,3 +27,4 @@ services:
 networks:
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}

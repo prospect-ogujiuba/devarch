@@ -14,14 +14,16 @@ fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 assert_contains() { grep -Fq -- "$2" <<<"$1" || fail "$3 (missing '$2')"; pass; }
 assert_absent() { ! grep -Fq -- "$2" <<<"$1" || fail "$3 (found '$2')"; pass; }
 
-mkdir -p "$PROJECT_ROOT/scripts/javascript" "$PROJECT_ROOT/scripts/node" "$PROJECT_ROOT/apps" "$TEST_TMP/bin"
+mkdir -p "$PROJECT_ROOT/scripts/javascript" "$PROJECT_ROOT/apps" "$TEST_TMP/bin"
 cp "$SOURCE_DIR/bootstrap.sh" "$BOOTSTRAP"
 cp -R "$SOURCE_DIR/profiles" "$PROJECT_ROOT/scripts/javascript/profiles"
-cat > "$PROJECT_ROOT/scripts/node/bootstrap.sh" <<'RUNTIME'
+mkdir -p "$PROJECT_ROOT/scripts/devarch/lib"
+cp "$SOURCE_DIR/../devarch/lib/platform.sh" "$PROJECT_ROOT/scripts/devarch/lib/platform.sh"
+cat > "$TEST_TMP/bin/fake-devarch" <<'RUNTIME'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "${FAKE_START_LOG:?}"
 RUNTIME
-chmod +x "$BOOTSTRAP" "$PROJECT_ROOT/scripts/node/bootstrap.sh"
+chmod +x "$BOOTSTRAP" "$TEST_TMP/bin/fake-devarch"
 
 cat > "$TEST_TMP/bin/npm" <<'FAKE'
 #!/usr/bin/env bash
@@ -45,7 +47,7 @@ chmod +x "$TEST_TMP/bin/npm" "$TEST_TMP/bin/npx"
 
 run_bootstrap() {
   PATH="$TEST_TMP/bin:$PATH" FAKE_COMMAND_LOG="$TEST_TMP/commands.log" \
-    FAKE_START_LOG="$TEST_TMP/start.log" bash "$BOOTSTRAP" "$@"
+    FAKE_START_LOG="$TEST_TMP/start.log" DEVARCH_BIN="$TEST_TMP/bin/fake-devarch" bash "$BOOTSTRAP" "$@"
 }
 
 help_output="$(run_bootstrap --help)" || fail '--help should succeed'
@@ -146,7 +148,7 @@ printf 'preserve\n' > "$PROJECT_ROOT/apps/demo/original.txt"
 if run_bootstrap demo --framework next --profile fullstack >"$TEST_TMP/error" 2>&1; then fail 'existing apps must be preserved without --force'; fi
 pass
 run_bootstrap demo --profile next --force --start --no-hosts >/dev/null || fail 'legacy alias force replacement and start should succeed'
-grep -Fqx 'demo --no-hosts' "$TEST_TMP/start.log" || fail '--start should hand off runtime arguments'
+grep -Fqx 'app start demo --no-hosts' "$TEST_TMP/start.log" || fail '--start should hand off to devarch app start'
 pass
 grep -Fq 'allowedDevOrigins: ["demo.test"]' "$PROJECT_ROOT/apps/demo/next.config.ts" ||
   fail 'Next.js profile should allow its wildcard-proxy development origin'

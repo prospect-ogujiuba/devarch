@@ -10,9 +10,10 @@ scripts/javascript/bootstrap.sh --list-profiles --framework next
 scripts/javascript/bootstrap.sh storefront --framework next --profile fullstack --dry-run
 scripts/javascript/bootstrap.sh storefront --framework next --profile fullstack --start
 # open https://storefront.test
+# equivalently: devarch new javascript storefront --framework next --profile fullstack --start
 ```
 
-The app name must be lowercase DNS-safe text, such as `storefront` or `admin-ui`. Creation uses npm and requires Node/npm on the host. Generated apps run in DevArch's isolated Node 22 container through [`scripts/node/bootstrap.sh`](../node/README.md).
+The app name must be lowercase DNS-safe text, such as `storefront` or `admin-ui`. Creation uses npm and requires Node/npm on the host. Generated apps run in DevArch's isolated Node 22 container started with `devarch app start <app-name>` (see [the Node runtime](../../services-library/backend/node/README.md)).
 
 ## Curated combinations
 
@@ -64,7 +65,7 @@ scripts/javascript/bootstrap.sh dashboard --framework vite-react --profile compi
 
 # Create now, start later
 scripts/javascript/bootstrap.sh dashboard --framework astro --profile blog
-scripts/node/bootstrap.sh dashboard
+devarch app start dashboard
 
 # Replace only after backing up the existing app
 scripts/javascript/bootstrap.sh dashboard --framework nuxt --profile content --force
@@ -128,5 +129,5 @@ Adding a valid profile file automatically exposes it through `--list-profiles`; 
 ```bash
 bash scripts/javascript/bootstrap.test.sh
 bash scripts/javascript/scaffold-matrix.test.sh
-bash scripts/node/bootstrap.test.sh
+(cd cli && go test ./internal/engine -run App)
 ```

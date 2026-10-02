@@ -1,3 +1,9 @@
+x-devarch:
+  title: Redmine
+  description: Issue tracking and project management
+  tags: [project-management]
+  urls:
+    - https://redmine.test
 services:
   redmine-db:
     image: postgres:17-alpine
@@ -49,3 +55,4 @@ networks:
   redmine-internal: null
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}

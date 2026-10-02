@@ -1,6 +1,7 @@
 networks:
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}
 services:
   kibana:
     container_name: kibana

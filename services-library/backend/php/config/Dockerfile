@@ -1,4 +1,5 @@
-FROM php:8.4-fpm
+ARG PHP_VERSION=8.4
+FROM php:${PHP_VERSION}-fpm
 
 ARG COMPOSER_VERSION=latest
 

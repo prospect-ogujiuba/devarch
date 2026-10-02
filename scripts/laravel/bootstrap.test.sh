@@ -16,10 +16,11 @@ cleanup() {
   rm -rf "$TEST_TMP"
 }
 trap cleanup EXIT
+unset DEVARCH_RUNTIME DEVARCH_CONTAINER_USER
 
 mkdir -p "$SCRIPT_DIR" "$PROJECT_ROOT/scripts/devarch/lib"
 cp "$SOURCE_SCRIPT_DIR/bootstrap.sh" "$SCRIPT_DIR/bootstrap.sh"
-cp "$SOURCE_PROJECT_ROOT/scripts/devarch/lib/dotenv.sh" "$PROJECT_ROOT/scripts/devarch/lib/dotenv.sh"
+cp "$SOURCE_PROJECT_ROOT/scripts/devarch/lib/dotenv.sh" "$SOURCE_PROJECT_ROOT/scripts/devarch/lib/platform.sh" "$PROJECT_ROOT/scripts/devarch/lib/"
 cp -R "$SOURCE_SCRIPT_DIR/profiles" "$SCRIPT_DIR/profiles"
 for compose_file in \
   services-library/backend/php/compose.yml \
@@ -51,7 +52,7 @@ done
 run_bootstrap() {
   local runtime="$1"
   shift
-  PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" CONTAINER_RUNTIME="$runtime" \
+  PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" DEVARCH_RUNTIME="$runtime" \
     bash "$BOOTSTRAP" "$@"
 }
 
@@ -120,17 +121,17 @@ expect_failure 'invalid Laravel version should fail' demo --version '12 |||| 13'
 printf 'feature redis\n' > "$TEST_TMP/invalid.packages"
 expect_failure 'package files must reject profile features' demo --packages-file "$TEST_TMP/invalid.packages" --dry-run
 
-if PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" CONTAINER_RUNTIME=podman \
+if PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" DEVARCH_RUNTIME=podman \
   LARAVEL_APP_URL='ftp://invalid.test' bash "$BOOTSTRAP" demo --dry-run >"$TEST_TMP/failure.out" 2>&1; then
   fail 'non-HTTP Laravel URL should fail'
 fi
 pass
-if PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" CONTAINER_RUNTIME=podman \
+if PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" DEVARCH_RUNTIME=podman \
   LARAVEL_CONTAINER_USER='1000' bash "$BOOTSTRAP" demo --dry-run >"$TEST_TMP/failure.out" 2>&1; then
   fail 'invalid container user should fail'
 fi
 pass
-if PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" CONTAINER_RUNTIME=invalid \
+if PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" DEVARCH_RUNTIME=invalid \
   bash "$BOOTSTRAP" demo --dry-run >"$TEST_TMP/failure.out" 2>&1; then
   fail 'invalid container runtime should fail'
 fi
@@ -143,7 +144,7 @@ composer-dev-package vendor/tool dev-main
 PACKAGES
 secret='laravel-regression-db-secret'
 loaded_output="$(
-  PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" CONTAINER_RUNTIME=podman \
+  PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" DEVARCH_RUNTIME=podman \
   LARAVEL_DB_ROOT_PASSWORD="$secret" \
   bash "$BOOTSTRAP" service-rich \
     --profile loaded \
@@ -186,7 +187,11 @@ done
 
 # Runtime user mapping and force backup planning are visible without changing fixtures.
 docker_output="$(run_bootstrap docker docker-app --database sqlite --dry-run)" || fail 'Docker dry-run should succeed'
-assert_contains "$docker_output" "runtime: docker; container user: $(id -u):$(id -g)" 'Docker should map the host UID/GID'
+assert_contains "$docker_output" "runtime: docker; container user: $(id -u):$(id -g)" 'Docker should exec as the invoking uid:gid'
+podman_output="$(run_bootstrap podman podman-app --database sqlite --dry-run)" || fail 'Podman dry-run should succeed'
+assert_contains "$podman_output" 'runtime: podman; container user: 0:0' 'rootless Podman should exec as 0:0'
+start_output="$(run_bootstrap podman start-app --with-redis --dry-run)" || fail 'service plan dry-run should succeed'
+assert_contains "$start_output" 'up backend/php proxy/nginx-proxy-manager database/mariadb database/redis --wait --no-hosts' 'services should start through devarch up'
 mkdir -p "$APP_TARGET"
 printf 'preserve me\n' > "$APP_TARGET/original.txt"
 expect_failure 'existing target without force should fail' "$APP_NAME" --database sqlite --dry-run

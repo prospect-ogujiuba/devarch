@@ -3,7 +3,7 @@ services:
     image: bitnami/mongodb-exporter:0.43
     restart: unless-stopped
     ports:
-    - 127.0.0.1:9216:9216
+    - 127.0.0.1:9220:9216
     environment:
       MONGODB_URI: mongodb://root:devarch@mongodb:27017
     healthcheck:
@@ -20,3 +20,4 @@ services:
 networks:
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}

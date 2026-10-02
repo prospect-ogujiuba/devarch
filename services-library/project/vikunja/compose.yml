@@ -1,3 +1,9 @@
+x-devarch:
+  title: Vikunja
+  description: To-do lists and kanban boards
+  tags: [project-management]
+  urls:
+    - https://vikunja.test
 services:
   vikunja-db:
     image: postgres:17-alpine
@@ -18,7 +24,7 @@ services:
     container_name: vikunja-db
 
   vikunja:
-    image: vikunja/vikunja:latest
+    image: vikunja/vikunja:2.6.0
     restart: unless-stopped
     ports:
       - 127.0.0.1:9218:3456
@@ -51,3 +57,4 @@ networks:
   vikunja-internal: null
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}

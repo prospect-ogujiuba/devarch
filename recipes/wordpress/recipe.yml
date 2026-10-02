@@ -1,0 +1,39 @@
+name: wordpress
+title: WordPress site
+description: WordPress in apps/<name> on the shared PHP-FPM, MariaDB and .test proxy, with optional plugin profiles and .wpress restore.
+entry: scripts/wordpress/bootstrap.sh
+requires: [backend/php, database/mariadb, proxy/nginx-proxy-manager]
+no_hosts_flag: [--no-hosts]
+args:
+  - name: name
+    positional: true
+    help: Site name; served as https://<name>.test
+    pattern: '^[a-z0-9][a-z0-9-]{0,59}$'
+  - name: profile
+    flag: --profile
+    help: Plugin profile
+    choices_from: scripts/wordpress/profiles/*.profile
+    default: bare
+    preview:
+      include: include
+      directives:
+        - {kind: github-mu-plugin, label: Must-use plugins from GitHub}
+        - {kind: github-plugin, label: Plugins from GitHub}
+        - {kind: wp-plugin, label: Plugins from WordPress.org}
+        - {kind: github-theme, label: Themes from GitHub}
+  - name: title
+    flag: --title
+    help: Site title (default title-cases the name)
+  - name: restore
+    flag: --restore
+    type: path
+    help: Restore this .wpress archive after installing
+  - name: build
+    flag: --build
+    type: bool
+    help: Rebuild the PHP image first
+  - name: force
+    flag: --force
+    type: bool
+    help: Back up and replace an existing site and database
+    confirm: Back up the existing site and replace it, resetting its database?

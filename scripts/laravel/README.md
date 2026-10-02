@@ -13,7 +13,8 @@ MariaDB applications receive an isolated database and user derived from the app 
 ## Prerequisites
 
 - Bash 4+
-- Podman with `podman compose` or `podman-compose`, or Docker with Compose
+- Rootless Podman with `podman compose` or `podman-compose`, or Docker Engine with the Compose plugin when `devarch config set runtime docker` is set
+- The `devarch` CLI ([`cli/README.md`](../../cli/README.md)); the bootstrap starts and waits for services and registers the hostname through it
 - `awk`, `tr`, `od`, and either `sha256sum` or `shasum`
 - `openssl` or `/dev/urandom` for real MariaDB provisioning
 - the Compose definitions under `services-library/`
@@ -27,8 +28,8 @@ The runtime user must be able to create `microservices-net`, start the selected 
 
 ```bash
 cp .env.example .env                    # optional overrides; fill required secrets
-scripts/laravel/bootstrap.sh demo --dry-run
-scripts/laravel/bootstrap.sh demo
+devarch new laravel demo --dry-run      # same as scripts/laravel/bootstrap.sh demo --dry-run
+devarch new laravel demo
 # Approve the hosts-file elevation prompt, then open https://demo.test
 ```
 
@@ -77,8 +78,7 @@ The script optionally parses the repository `.env` as data and reads only these 
 | `LARAVEL_APP_URL` | Laravel `APP_URL`. | `https://<app-name>.test` |
 | `LARAVEL_DB_ROOT_PASSWORD` | MariaDB administrative password used during provisioning. | `MARIADB_ROOT_PASSWORD`, then `devarch` |
 | `MARIADB_ROOT_PASSWORD` | Fallback MariaDB administrative password. | `devarch` |
-| `LARAVEL_CONTAINER_USER` | Explicit numeric `uid:gid` for container commands. | Runtime-specific mapping |
-| `CONTAINER_RUNTIME` | Force `podman` or `docker`. | Auto-detect Podman, then Docker |
+| `LARAVEL_CONTAINER_USER` | Explicit numeric `uid:gid` for container commands. | `DEVARCH_CONTAINER_USER`: `0:0` under rootless Podman, your `uid:gid` under Docker |
 
 Repository `.env` assignments are loaded after CLI parsing and replace inherited values for the same supported key. Command-line options control only their documented settings; there are no CLI forms for `APP_NAME`, `APP_URL`, the root password, runtime, or container user. For the root password, `LARAVEL_DB_ROOT_PASSWORD` takes precedence over `MARIADB_ROOT_PASSWORD` after `.env` loading.
 
@@ -136,30 +136,29 @@ Package names must use lowercase Composer `vendor/package` syntax. Constraints s
 
 ## Services and runtime mapping
 
-The script prefers Podman when no runtime is selected, then Docker. It uses the runtime's integrated `compose` command; Podman may fall back to `podman-compose`.
+The script uses the container runtime configured for `devarch` (`runtime` in `~/.config/devarch/config.yml`, Podman by default), passed as `DEVARCH_RUNTIME`. It starts the shared services with `devarch up <services> --wait --no-hosts`, which creates `microservices-net` when needed and waits for each compose healthcheck, and registers the hostname with `devarch hosts add`.
 
-- Podman defaults container commands to `--user 0:0`, which maps correctly for the rootless bind mount.
-- Docker defaults to the host's numeric `uid:gid`.
+- Podman defaults container commands to `--user 0:0`, which maps correctly for the rootless bind mount; Docker uses your own `uid:gid`. Both come from `DEVARCH_CONTAINER_USER`.
 - `LARAVEL_CONTAINER_USER=<uid>:<gid>` overrides either default.
 
 PHP is always selected. MariaDB is selected by the default database, Mailpit by `standard`, `loaded`, or `--with-mailpit`, and Redis by `loaded` or `--with-redis`. Redis uses `phpredis`, host `redis`, port `6379`, the shared Compose password, queue/default DB `0`, and cache DB `1`. Dry-run output redacts database and Redis credentials.
 
 ## Replacement and recovery safety
 
-An existing `apps/<app-name>` is refused unless `--force` is supplied. Before provisioning mutation, the script creates a durable guard in `apps/.devarch-recovery/`. Forced replacement moves the old tree beneath `apps/.devarch-backups/` rather than deleting it.
+An existing `apps/<app-name>` is refused unless `--force` is supplied. Before provisioning mutation, the script takes a guard with `devarch app guard`, a record in `apps/.devarch-recovery/` that blocks a second run. Forced replacement moves the old tree beneath `apps/.devarch-backups/` rather than deleting it, and the database created by `devarch db create --app` is added to the record.
 
-If provisioning fails after backup, the partial target is quarantined beneath `apps/.devarch-failed/`, database resources created by that run are removed, and the prior tree is restored. If recovery cannot complete, the guard remains and blocks retries for manual inspection. `--dry-run --force` only reports the chosen backup path; it does not move the target or create recovery state.
+If provisioning fails, the script runs `devarch app recover <app-name>`: the partial target is quarantined beneath `apps/.devarch-failed/`, database resources created by that run are removed, and the prior tree is restored. If recovery cannot complete, the guard remains, lists the problems, and blocks retries; fix the cause and rerun `devarch app recover <app-name>`, which skips the steps already done. `--dry-run --force` only reports the chosen backup path; it does not move the target or create recovery state.
 
 ## Regression tests
 
-The default regression suite is host-only. It copies the bootstrap assets into a trap-owned temporary project root, so repository `.env` values and existing `apps/` workspaces cannot affect it. It replaces Podman/Docker with rejecting fakes and permits only `compose version`, so it cannot create containers, networks, databases, or applications:
+The default regression suite is host-only. It copies the bootstrap assets into a trap-owned temporary project root, so repository `.env` values and existing `apps/` workspaces cannot affect it. It replaces Podman with a rejecting fake and permits only `compose version`, so it cannot create containers, networks, databases, or applications:
 
 ```bash
 bash -n scripts/laravel/bootstrap.sh scripts/laravel/bootstrap.test.sh
 bash scripts/laravel/bootstrap.test.sh
 ```
 
-Focused parser and rollback-contract checks are also available at `scripts/laravel/tests/bootstrap_test.sh`. They use temporary fixtures and fake commands; they do not perform real provisioning.
+Focused parser checks are also available at `scripts/laravel/tests/bootstrap_test.sh`; the guard and recovery logic is tested in Go (`cli/internal/replace`). They use temporary fixtures and fake commands; they do not perform real provisioning.
 
 ## Optional real-provisioning smoke test
 
@@ -179,16 +178,16 @@ podman exec mariadb sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -e "DROP DA
 rm -rf apps/laravel-smoke
 ```
 
-Review the commands and confirm the name is disposable before running them. Use `docker exec` instead when Docker owns the services.
+Review the commands and confirm the name is disposable before running them.
 
 ## Troubleshooting
 
-- **`Podman or Docker is required` / no Compose provider:** install the runtime and Compose integration, or set `CONTAINER_RUNTIME` correctly.
+- **`podman is required` / `docker is required` / `the devarch CLI is required`:** install the configured runtime with a Compose provider and the `devarch` CLI; `devarch doctor` checks the rest of the environment.
 - **Runtime cannot see an existing network/container:** run all DevArch services as the same rootless user.
 - **Proxy returns 503:** start the shared PHP service and verify it is attached to `microservices-net`.
 - **Wrong document root:** confirm `apps/<name>/public/index.php` exists; the wildcard proxy then selects `public` automatically.
 - **MariaDB readiness/authentication fails:** make `LARAVEL_DB_ROOT_PASSWORD` (or its fallback) match the shared MariaDB service.
 - **Target already exists:** use a different name or review `--force` replacement safety first.
-- **Unresolved recovery marker:** inspect the matching recovery, backup, and failed paths; do not delete the guard until the application/database state is understood.
+- **Unresolved recovery guard:** run `devarch app recover <app-name>`; it reports anything it still cannot undo. A guard written by an older bootstrap (plain text) must be resolved by hand: inspect the matching backup and failed paths before deleting it.
 - **Composer authentication fails:** configure credentials in the Composer environment used by the shared PHP container.
 - **Permission errors:** use the documented runtime mapping or a numeric `LARAVEL_CONTAINER_USER` that can write the bind mount.

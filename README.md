@@ -1,101 +1,86 @@
 # DevArch
 
-DevArch is now a simple local service library: a collection of Podman-compatible Compose service definitions plus application workspaces.
+DevArch is a local development environment built from a library of plain Compose services, with one front door: the `devarch` command. Start services by name, switch their versions, create WordPress, Laravel and JavaScript projects, and watch everything from one interactive screen, the way Laragon does on Windows.
 
-The old Go CLI, planning workflow, daemon/API code, and generated workspace surfaces have been removed. Use the compose files directly.
+`devarch` is a thin layer over native `podman compose` (or `docker compose`). Every action prints the exact command it runs, `--dry-run` prints without running, and nothing runs in the background: no daemon, API or database. The compose files stay usable on their own.
 
 ## Layout
 
-- `services-library/<category>/<service>/compose.yml` — service compose definitions.
-- `services-library/<category>/<service>/config/` — optional service configuration.
-- `apps/<app>/` — application workspaces, typically separate repositories ignored by the top-level DevArch repository.
-- `docs/plans/` — tracked implementation plans and completion checklists.
-- `.env.example` — example environment values.
+- `services-library/<category>/<service>/compose.yml` — the service catalog, with optional `x-devarch` metadata (title, tags, versions, URLs, readiness).
+- `cli/` — the `devarch` Go module. Its [README](cli/README.md) documents every command.
+- `recipes/<name>/recipe.yml` — project recipes for `devarch new`. See [`recipes/README.md`](recipes/README.md).
+- `scripts/` — the bootstraps behind the recipes (`wordpress/`, `laravel/`, `javascript/`), the shared Bash libraries (`devarch/lib/`), the read-only dashboard, and browser-testing setup.
+- `apps/<app>/` — your projects, usually separate repositories ignored by this one. `apps_dir` in the config can move them.
+- `docs/plans/` — design plans with as-built notes. The current one is [`2026-10-02-devarch-cli-and-tui.md`](docs/plans/2026-10-02-devarch-cli-and-tui.md).
 
-## Usage
+## Install
 
-Pick a service and run it with Podman and the configured Compose provider:
+Requires Go 1.24+ and rootless Podman with a Compose provider, or Docker Engine with the Compose plugin.
 
 ```bash
-cd services-library/database/postgres
-podman compose up -d
+cd cli && go install ./cmd/devarch && cd ..
+devarch completion zsh > "${fpath[1]}/_devarch"   # or bash, fish
+devarch doctor                                    # checks the runtime, network, ports, certificate and hosts
 ```
 
-Systems configured with the standalone provider may use `podman-compose up -d` instead. Do not mix rootless users: containers and networks created by one user are not visible to another.
+Run `devarch` once inside the checkout; it remembers the location. Reinstall after pulling changes, because the bootstraps call the installed binary.
 
-Most compose files attach to the external network `microservices-net`. Create it once as the same service user that runs the stack:
+## Daily use
 
 ```bash
-podman network create microservices-net
+devarch                                     # interactive screen: Services, Apps, Running, Doctor
+devarch ls database                         # catalog with version, state and URL
+devarch up php mariadb nginx-proxy-manager --wait
+devarch up --tag project-management
+devarch ps
+devarch logs mariadb -f
+devarch use php 8.3                         # switch a version (rebuilds, recreates if running)
+devarch down redis                          # volumes are kept; --volumes asks first
 ```
 
-For persistent production services, manage the containers with systemd/Quadlet (or reviewed generated units) and enable lingering for the rootless service user.
+`up` creates the shared network, starts each service's `requires` first, and registers missing `.test` hostnames. Services are named by ID (`database/redis`) or a unique short name (`redis`).
 
-## Environment configuration
-
-The root `.env` is optional host configuration for `scripts/wordpress/bootstrap.sh` and `scripts/laravel/bootstrap.sh`; it is not a central configuration file for the service catalog. Copy `.env.example`, set only the overrides you need, and replace blank required password values before a mutating run. The bootstraps parse recognized keys as data, ignore other entries, and do not automatically export newly loaded values to child processes. The former behavior that exported arbitrary `.env` entries has intentionally been removed as a security tightening.
-
-Compose substitution and container environment are separate. Compose can substitute a value only when the selected Compose file references `${NAME}`; a value reaches a container only through that service's `environment:` or `env_file:` configuration. Running Compose from a service directory therefore does not make the root `.env` configure every service. The WordPress and Laravel bootstraps explicitly forward only `MARIADB_ROOT_PASSWORD` to the MariaDB Compose invocation; host-only admin, GitHub, runtime, and container-user values are not forwarded.
-
-Set `DEVARCH_ENV_FILE=/absolute/or/relative/path` in the host shell to select a different regular dotenv file. It is a host control, is not read from dotenv, and is intentionally absent from `.env.example`. When unset, each bootstrap optionally reads the repository `.env`; neither bootstrap creates, migrates, or rewrites it.
-
-### Migrating an existing `.env`
-
-1. Back up the local file, copy the reduced `.env.example` separately, and compare them manually.
-2. Carry forward only overrides listed in the current `.env.example`. WordPress administrator settings must use `WP_ADMIN_USER`, `WP_ADMIN_PASSWORD`, and `WP_ADMIN_EMAIL`.
-3. Preserve the `MARIADB_ROOT_PASSWORD` used when the persistent MariaDB volume was initialized. Changing the file does not rotate the stored database password; intentionally recreate or migrate the volume separately if rotation is required.
-4. After a dry run, remove obsolete entries. Bootstraps ignore unsupported root dotenv keys; configure service-specific values at that service's reviewed Compose/configuration boundary instead.
-
-## DevArch Home dashboard
-
-Install the read-only local dashboard to search projects, running Podman containers, and the service catalog:
+## Creating projects
 
 ```bash
-scripts/dashboard/install-service.sh
-# open https://devarch.test
+devarch new                                              # list recipes
+devarch new wordpress shop --profile clean
+devarch new laravel api --profile standard
+devarch new javascript store --framework next --profile fullstack --start
+devarch --dry-run new wordpress shop                     # the bootstrap prints its plan
 ```
 
-The user service starts persistently and Nginx Proxy Manager provides the local HTTPS endpoint. Inventory loads on page open and refreshes only when requested—there is no polling. See [`scripts/dashboard/README.md`](scripts/dashboard/README.md) for service commands, Tailwind development, discovery behavior, and tests.
+In the screen, `n` opens the same thing as a form. It previews what a profile installs, shows the exact command, and follows the bootstrap's progress. `devarch new` validates names and choices, then runs the recipe's bootstrap with the platform settings it needs. The bootstraps can also be run directly (`scripts/wordpress/bootstrap.sh shop`); they call `devarch` for every platform step either way.
 
-## Local `.test` domains
+Provisioning is recoverable. Each run takes a guard (`devarch app guard`). `--force` moves an existing project to `apps/.devarch-backups/` and saves its database before replacing it. If a run fails, it is undone automatically: the partial project goes to `apps/.devarch-failed/`, new databases are dropped, and the previous project, database and database user come back. If recovery cannot finish, the guard stays and `devarch app recover <app>` resumes it.
 
-Synchronize every service `container_name`, routable `apps/*` workspace, and `devarch.test` into one managed hosts-file block:
+Related commands:
 
 ```bash
-scripts/hosts/sync-hosts.sh --dry-run
-scripts/hosts/sync-hosts.sh
+devarch db create shop                      # database + owning user on the shared MariaDB (or --engine postgres)
+devarch app start store                     # run a JavaScript app in its own Node container behind https://store.test
+devarch app stop store
+devarch app backup shop                     # copy a project to apps/.devarch-backups/
 ```
 
-The command requests elevation once and only replaces content between its DevArch markers. See [`scripts/hosts/README.md`](scripts/hosts/README.md) for discovery rules, cross-platform behavior, and tests.
+### WordPress
 
-## Rapid WordPress bootstrap
-
-`scripts/wordpress/bootstrap.sh` creates local sites in `apps/<site-name>` using the shared PHP-FPM, MariaDB, and Nginx Proxy Manager infrastructure. It creates `microservices-net` when needed, starts the PHP, MariaDB, and Nginx Proxy Manager Compose services, waits for their readiness, creates an isolated database and user, installs WordPress, and applies profiles or additional plugins. It never starts a separate `wp server` process.
+`devarch new wordpress <site>` (or `scripts/wordpress/bootstrap.sh <site>`) creates a site in `apps/<site>` on the shared PHP-FPM, MariaDB and Nginx Proxy Manager services. It never starts a separate `wp server`.
 
 ```bash
-cp .env.example .env                    # optional overrides; fill required secrets
-scripts/wordpress/bootstrap.sh my-site
+cp .env.example .env                        # set WP_ADMIN_PASSWORD; other keys are optional
+devarch new wordpress my-site
 # approve the hosts-file elevation prompt, then open https://my-site.test
 ```
 
-Each base install sets `FS_METHOD=direct`, disables date-based upload folders, deletes the default post and bundled sample plugins, and makes `wp-content` writable by the shared PHP container. The default database is `wp_<site_name>`, its password is generated per run and written only to `wp-config.php`, and the default URL/title are derived from the site name.
+Each install sets `FS_METHOD=direct`, disables date-based upload folders, deletes the default post and bundled sample plugins, and makes `wp-content` writable by the shared PHP container. The database is `wp_<site_name>`; its password is generated by `devarch db create` and written only to `wp-config.php`.
 
-Useful operations:
+Useful options: `--dry-run`, `--title`, `--url`, `--build` (rebuild PHP first), `--force` (back up and replace), `--no-hosts`, and `--list-profiles`.
 
-```bash
-scripts/wordpress/bootstrap.sh my-site --dry-run
-scripts/wordpress/bootstrap.sh my-site --title "My Site" --url https://custom.test
-scripts/wordpress/bootstrap.sh my-site --build
-scripts/wordpress/bootstrap.sh my-site --force
-scripts/wordpress/bootstrap.sh --list-profiles
-```
-
-`--dry-run` validates and prints a secret-safe plan. `--build` rebuilds PHP before service startup. `--force` moves an existing directory to `apps/.devarch-backups/<site>-<timestamp>` and recreates its database; without it, existing sites are preserved.
-
-### Profiles and plugins
+#### Profiles and plugins
 
 ```bash
-scripts/wordpress/bootstrap.sh my-site --profile clean
+devarch new wordpress my-site --profile clean
 scripts/wordpress/bootstrap.sh my-site \
   --plugin wp:query-monitor \
   --plugin git:git@github.com:your-user/private-plugin.git \
@@ -103,82 +88,108 @@ scripts/wordpress/bootstrap.sh my-site \
 ```
 
 - `bare` — All-in-One WP Migration, inactive.
-- `clean` — `bare` plus Admin Site Enhancements Pro.
+- `clean` — `bare` plus Admin Site Enhancements Pro and the TypeRocket must-use plugin.
 - `custom` — `clean` plus Manual Image Crop.
 - `loaded` — `custom` plus 12 WordPress.org development and debugging plugins.
 
 Profile repositories are shallow-cloned over SSH from `GITHUB_USER`; `--github-plugin NAME` provides the same shorthand for an extra active plugin. Git components with `composer.json` run Composer inside the PHP container. `--preset` remains an alias for `--profile`.
 
-### Restore workflow
+#### Restore
 
 ```bash
 scripts/wordpress/bootstrap.sh my-site --restore /path/to/site.wpress
 ```
 
-For an existing WordPress target, restore first installs/activates the established native-CLI `GITHUB_USER/all-in-one-wp-migration` repository, prepares writable backup/storage directories, and runs `wp ai1wm backup`. It then moves the old site aside, performs a fresh installation, copies the archive into `wp-content/ai1wm-backups`, runs `wp ai1wm restore`, and normalizes `home` and `siteurl` to the requested local URL. `--restore` implies replacement, so `--force` is unnecessary. Archives located inside the replaced site are staged under `apps/.devarch-backups/imports/` first.
+For an existing site, restore first runs a native All-in-One WP Migration backup inside it. It then replaces the site (with the same guard, backup and recovery as `--force`), installs fresh, restores the archive, and normalizes `home` and `siteurl`. `--restore` implies replacement. Archives inside the replaced site are staged under `apps/.devarch-backups/imports/` first. The WordPress.org build of the plugin is not used because it gates CLI restore behind a paid extension.
 
-The WordPress.org AIOWM build is intentionally not used because it gates CLI restore behind its Unlimited Extension. Site name can be omitted when the command runs beneath an existing `apps/<site-name>` WordPress tree.
+See [`scripts/wordpress/README.md`](scripts/wordpress/README.md) for every option, profile directive, and runtime detail.
 
-See [`scripts/wordpress/README.md`](scripts/wordpress/README.md) for prerequisites, environment-variable precedence, every option, exact profile contents/directives, plugin-source validation, runtime user mapping, restore safety details, troubleshooting, and tests. The wildcard proxy resolves `<site-name>.test`, serves `apps/<site-name>`, and sends PHP to `php:9000` over `microservices-net`.
+### Laravel
 
-## Rapid Laravel bootstrap
-
-`scripts/laravel/bootstrap.sh` creates a fresh Laravel application in `apps/<app-name>` using the shared PHP-FPM container and either an isolated MariaDB database/user or SQLite. The default `bare` profile uses MariaDB and runs migrations; `standard` adds Mailpit, while `loaded` adds Mailpit and Redis.
+`devarch new laravel <app>` creates a fresh Laravel application on the shared PHP-FPM container with an isolated MariaDB database (or SQLite). `bare` runs migrations; `standard` adds Mailpit; `loaded` adds Mailpit and Redis.
 
 ```bash
-scripts/laravel/bootstrap.sh demo --dry-run
-scripts/laravel/bootstrap.sh demo
-# approve the hosts-file elevation prompt, then open https://demo.test
+devarch new laravel demo --dry-run
+devarch new laravel demo
 ```
 
-The bootstrap starts Nginx Proxy Manager, whose wildcard proxy automatically detects `apps/<app-name>/public/index.php`, selects `public/` as the document root, and routes PHP to `php:9000`; no per-app proxy entry or standalone server is required. Both bootstraps idempotently register `127.0.0.1 <name>.test` through the shared cross-platform hosts helper; use `--no-hosts` to opt out. Use `--force` only after reviewing its backup/recovery behavior. See [`scripts/laravel/README.md`](scripts/laravel/README.md) for prerequisites, configuration precedence, CLI options, profiles, package syntax, runtime mapping, safety, regression tests, and the optional real-provisioning smoke test.
+The wildcard proxy detects `apps/<app>/public/index.php`, so no per-app proxy entry is needed. Existing database identifiers are refused rather than reused. See [`scripts/laravel/README.md`](scripts/laravel/README.md).
 
-## Rapid JavaScript framework bootstrap
+### JavaScript
 
-`scripts/javascript/bootstrap.sh` creates current, product-neutral starters for Angular, Astro, Next.js, Nuxt, Qwik, React Router, SvelteKit, and Vite with Lit, Preact, React, Solid, or Vue. It combines a framework with a curated project profile—such as minimal, SSR, content, API, tested, library, or React Compiler—and invokes the official `@latest` scaffolder before adding the shared runtime contract.
+`devarch new javascript <app> --framework <f> --profile <p>` runs the framework's official `@latest` scaffolder for Angular, Astro, Next.js, Nuxt, Qwik, React Router, SvelteKit, or Vite with Lit, Preact, React, Solid or Vue. It then adds the `devarch` package script the Node runtime needs. `--start` runs `devarch app start` afterwards.
+
+Each JavaScript app runs in its own `node-<app>` container; a shared `node` router maps `<app>.test` to it, so many apps coexist with the PHP projects. Static Next.js exports in `out/` are served by Nginx directly. See [`scripts/javascript/README.md`](scripts/javascript/README.md) and [`services-library/backend/node/README.md`](services-library/backend/node/README.md).
+
+## Configuration
+
+`~/.config/devarch/config.yml` holds a few optional settings. Each defaults to the behavior described here.
 
 ```bash
-scripts/javascript/bootstrap.sh --list-frameworks
-scripts/javascript/bootstrap.sh --list-profiles --framework next
-scripts/javascript/bootstrap.sh storefront --framework next --profile fullstack --dry-run
-scripts/javascript/bootstrap.sh storefront --framework next --profile fullstack --start
-# approve the hosts-file elevation prompt, then open https://storefront.test
+devarch config                              # effective values and where each came from
+devarch config set runtime docker           # podman (default) or docker
+devarch config set apps_dir ~/sites         # where projects live
+devarch config set hosts.manage false       # leave the hosts file alone (e.g. dnsmasq resolves *.test)
+devarch config set editor 'code -n'         # what `e` in the Apps view runs
 ```
 
-Existing apps are preserved unless `--force` explicitly backs them up and replaces them. The earlier `--profile next` form remains a compatibility alias for Next.js's default `fullstack` profile. See [`scripts/javascript/README.md`](scripts/javascript/README.md) for the combination matrix, safety behavior, and extension format.
+The other keys are `network` and `hosts.address`. The `.test` suffix and Nginx Proxy Manager are fixed. Podman and Docker differ only in a small table of behaviors (see [Docker](cli/README.md#docker)). Containers started under one runtime are invisible to the other, so stop the stack before switching.
 
-## Multi-app JavaScript runtime
+### Repository `.env`
 
-Existing applications in `apps/<app-name>` can run in isolated Node 22 containers behind the same wildcard proxy. A shared `node` router maps `<app-name>.test` to `node-<app-name>` on `microservices-net`, allowing multiple Next.js, Nuxt, Vite, Remix/React Router, Astro SSR, or generic Node applications to coexist with the shared PHP-FPM service.
+The root `.env` is optional host configuration for the WordPress and Laravel bootstraps; it does not configure the service catalog. Copy `.env.example` and set only the overrides you need. The bootstraps parse recognized keys as data, ignore other entries, and do not export what they load to child processes.
 
-Each app supplies a package script that binds to `0.0.0.0:3000`:
+Compose substitution and container environment are separate. Compose substitutes a value only where the selected compose file references `${NAME}`, and a value reaches a container only through that service's `environment:` or `env_file:`. The bootstraps pass only `MARIADB_ROOT_PASSWORD` to MariaDB; admin, GitHub and container-user values stay on the host.
+
+Set `DEVARCH_ENV_FILE=/path` in the host shell to read a different dotenv file. Keep the `MARIADB_ROOT_PASSWORD` the MariaDB volume was initialized with: changing the file does not rotate the stored password.
+
+## Local `.test` domains
 
 ```bash
-scripts/node/bootstrap.sh my-next-app --dry-run
-scripts/node/bootstrap.sh my-next-app
+devarch --dry-run hosts sync
+devarch hosts sync
 ```
 
-Static Next.js exports under `out/` continue to be served directly by Nginx and need no running Node container. See [`scripts/node/README.md`](scripts/node/README.md) for the package-script contract, framework examples, package-manager selection, routing behavior, and lifecycle commands.
+This writes every service `container_name`, every `.test` host in `x-devarch` URLs, every routable `apps/*` project, and `devarch.test` into one managed block. It requests elevation once and only replaces content between its markers. On WSL it edits the Windows hosts file, the one the browser uses. `up`, `new` and `app start` register missing names automatically unless `--no-hosts` is passed or `hosts.manage` is false. Details: [`cli/README.md`](cli/README.md#hosts).
+
+## Running compose directly
+
+Every service works without `devarch`:
+
+```bash
+podman network create microservices-net    # once, as the user that runs the stack
+cd services-library/database/postgres
+podman compose up -d
+```
+
+Defaults apply when DevArch's variables are unset (`${POSTGRES_VERSION:-18.2}`, `${DEVARCH_NETWORK:-microservices-net}`). Do not mix rootless users: containers and networks created by one are invisible to another. For persistent production services, manage containers with systemd/Quadlet and enable lingering for the service user.
+
+## DevArch Home dashboard
+
+A read-only page at `https://devarch.test` lists projects, running containers and the catalog, with copyable commands:
+
+```bash
+scripts/dashboard/install-service.sh
+```
+
+It follows the `runtime` setting, reading the Podman or Docker socket. See [`scripts/dashboard/README.md`](scripts/dashboard/README.md).
 
 ## AI-assisted browser testing
 
-DevArch includes a project-scoped [Playwright MCP](https://github.com/microsoft/playwright-mcp) configuration for visible, interactive browser testing by Pi. After opening this repository in Pi, run `/reload`, start an app, and ask the AI to open its URL and manually test it. The browser runs headed by default, so you can watch, take over, demonstrate a problem, and let the AI continue inspecting the same page.
-
-See [`scripts/browser/README.md`](scripts/browser/README.md) for setup, example prompts, safety notes, browser installation, and verification.
+The project configures [Playwright MCP](https://github.com/microsoft/playwright-mcp) for visible, interactive browser testing by an AI agent. See [`scripts/browser/README.md`](scripts/browser/README.md).
 
 ## Development checks
 
 ```bash
-# validate compose YAML structure
-python - <<'PY'
-from pathlib import Path
-import yaml
-for path in sorted(Path('services-library').glob('**/compose.yml')):
-    data = yaml.safe_load(path.read_text())
-    assert isinstance(data, dict) and 'services' in data, path
-print('compose yaml ok')
-PY
-
-# check PHP syntax
-php -l apps/serverinfo/index.php
+devarch lint                                # compose structure, x-devarch metadata, port collisions, image pins, network names
+devarch lint --native                       # also run compose config for every service (slow)
+(cd cli && go test ./... && go vet ./... && gofmt -l .)
+scripts/devarch/tests/run-tests.sh </dev/null
+bash scripts/wordpress/bootstrap.test.sh </dev/null
+bash scripts/laravel/bootstrap.test.sh </dev/null
+bash scripts/laravel/tests/bootstrap_test.sh </dev/null
+bash scripts/javascript/bootstrap.test.sh </dev/null
+bash scripts/javascript/scaffold-matrix.test.sh </dev/null
 ```
+
+Run the Bash suites with stdin from `/dev/null` so none can wait on a terminal. `services-library/backend/node/routing.test.sh` drives real containers and needs the PHP and proxy stack running.

@@ -1,3 +1,10 @@
+x-devarch:
+  title: GLPI
+  description: IT asset management and service desk
+  tags: [project-management]
+  urls:
+    - https://glpi.test
+  notes: "Login glpi; password: GLPI_ADMIN_PASSWORD in this directory's .env"
 services:
   glpi-db:
     image: mariadb:11.4
@@ -51,3 +58,4 @@ networks:
   glpi-internal: null
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}

@@ -1,3 +1,9 @@
+x-devarch:
+  title: Plane
+  description: Issue tracking and project planning
+  tags: [project-management]
+  urls:
+    - https://plane.test
 x-db-env: &db-environment
   PGHOST: plane-db
   PGDATABASE: plane
@@ -205,7 +211,9 @@ services:
     container_name: plane-mq
 
   plane-minio:
-    image: minio/minio:latest
+    # MinIO no longer publishes images; pgsty/minio is the community build
+    # upstream Plane uses. It reads existing MinIO data unchanged.
+    image: docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     restart: unless-stopped
     command: server /export --console-address ":9090"
     environment: *minio-environment
@@ -259,3 +267,4 @@ networks:
   plane-internal: null
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}

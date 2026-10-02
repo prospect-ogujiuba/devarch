@@ -1,3 +1,9 @@
+x-devarch:
+  title: Nginx Proxy Manager
+  description: Local HTTPS proxy that serves apps/ and services as <name>.test
+  tags: [proxy, core]
+  urls:
+    - https://npm.test
 services:
   nginx-proxy-manager:
     image: jc21/nginx-proxy-manager:2
@@ -9,7 +15,7 @@ services:
     volumes:
     - npm_data:/data
     - npm_letsencrypt:/etc/letsencrypt
-    - ../../../apps:/var/www/html:ro
+    - ${DEVARCH_APPS_DIR:-../../../apps}:/var/www/html:ro
     - ./config/custom/events.conf:/data/nginx/custom/events.conf
     - ./config/custom/http.conf:/data/nginx/custom/http.conf
     - ./config/custom/http_top.conf:/data/nginx/custom/http_top.conf
@@ -34,3 +40,4 @@ volumes:
 networks:
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}

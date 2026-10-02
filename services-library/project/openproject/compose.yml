@@ -1,3 +1,10 @@
+x-devarch:
+  title: OpenProject
+  description: Project management with Gantt charts and agile boards
+  tags: [project-management]
+  urls:
+    - https://openproject.test
+  notes: "Admin login and password: OPENPROJECT_ADMIN_LOGIN / OPENPROJECT_ADMIN_PASSWORD in this directory's .env"
 services:
   openproject-db:
     image: postgres:17-alpine
@@ -62,3 +69,4 @@ networks:
   openproject-internal: null
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}

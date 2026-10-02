@@ -1,0 +1,40 @@
+name: laravel
+title: Laravel app
+description: A fresh Laravel application in apps/<name> on the shared PHP-FPM container, with MariaDB or SQLite.
+entry: scripts/laravel/bootstrap.sh
+requires: [backend/php, proxy/nginx-proxy-manager, database/mariadb]
+no_hosts_flag: [--no-hosts]
+args:
+  - name: name
+    positional: true
+    required: true
+    help: App name; served as https://<name>.test
+    pattern: '^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$'
+  - name: profile
+    flag: --profile
+    help: Package profile
+    choices_from: scripts/laravel/profiles/*.profile
+    default: bare
+    preview:
+      directives:
+        - {kind: feature, label: Services}
+        - {kind: composer-package, label: Composer packages}
+        - {kind: composer-dev-package, label: Composer dev packages}
+  - name: database
+    flag: --database
+    help: Database backend
+    choices: [mariadb, sqlite]
+    default: mariadb
+  - name: mailpit
+    flag: --with-mailpit
+    type: bool
+    help: Configure Mailpit for outgoing mail
+  - name: redis
+    flag: --with-redis
+    type: bool
+    help: Use Redis for cache and queues
+  - name: force
+    flag: --force
+    type: bool
+    help: Preserve and replace an existing target
+    confirm: Move the existing app aside and replace it?

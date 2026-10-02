@@ -92,14 +92,8 @@ unset LARAVEL_APP_NAME
 load_repository_env
 assert_eq "$LARAVEL_APP_NAME" Accepted 'only supported repository dotenv values are validated'
 
-# A durable guard exists before mutation; failed state updates leave it blocking retries.
-RECOVERY_MARKER="$TEST_TMP/recovery/demo"
-create_recovery_guard
-assert_eq "$(<"$RECOVERY_MARKER")" 'provisioning in progress' 'durable recovery guard creation'
-LARAVEL_TEST_FAIL_RECOVERY_MARKER_WRITE=1
-expect_failure persist_recovery_state 'recovery incomplete'
-unset LARAVEL_TEST_FAIL_RECOVERY_MARKER_WRITE
-assert_eq "$(<"$RECOVERY_MARKER")" 'provisioning in progress' 'failed marker update preserves durable guard'
+# A guard left by an earlier run refuses a retry before anything changes.
+# Guard creation, replacement and recovery are tested in cli/internal/replace.
 APP_NAME=demo
 APPS_DIR="$TEST_TMP"
 TARGET="$APPS_DIR/demo"
@@ -108,31 +102,37 @@ FORCE=true
 DRY_RUN=true
 RECOVERY_MARKER="$APPS_DIR/.devarch-recovery/demo"
 mkdir -p "$(dirname "$RECOVERY_MARKER")"
-printf 'provisioning in progress\n' > "$RECOVERY_MARKER"
+printf '{"app":"demo"}\n' > "$RECOVERY_MARKER"
 expect_failure validate_config
 rm -f "$RECOVERY_MARKER"
-LARAVEL_TEST_FAIL_RECOVERY_MARKER_CREATE=1
-expect_failure create_recovery_guard
-unset LARAVEL_TEST_FAIL_RECOVERY_MARKER_CREATE
 
-# Persistent Docker/Podman detection and ordered-plan checks.
+# Podman detection delegates platform steps to the devarch CLI.
 mkdir -p "$TEST_TMP/bin"
-for runtime in docker podman; do
-  cat > "$TEST_TMP/bin/$runtime" <<'RUNTIME'
-#!/usr/bin/env bash
-[[ "$1 $2" == 'compose version' ]]
-RUNTIME
-  chmod +x "$TEST_TMP/bin/$runtime"
-done
+printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_TMP/bin/podman"
+chmod +x "$TEST_TMP/bin/podman"
 PATH="$TEST_TMP/bin:$PATH"
-for runtime in docker podman; do
-  RUNTIME="$runtime"
-  CONTAINER_USER=""
-  COMPOSE=()
-  detect_runtime
-  assert_eq "${COMPOSE[*]}" "$runtime compose" "$runtime Compose provider"
-  [[ "$runtime" != podman ]] || assert_eq "$CONTAINER_USER" '0:0' 'Podman bind-mount user'
-done
+printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_TMP/bin/docker"
+chmod +x "$TEST_TMP/bin/docker"
+CONTAINER_USER=""
+DEVARCH_RUNTIME=podman
+DEVARCH_CONTAINER_USER=""
+saved_dry_run="$DRY_RUN"
+DRY_RUN=false
+DEVARCH_BIN=/opt/fake/devarch detect_runtime
+assert_eq "$RUNTIME" podman 'Podman runtime'
+assert_eq "$CONTAINER_USER" '0:0' 'Podman bind-mount user'
+assert_eq "$DEVARCH" /opt/fake/devarch 'devarch CLI location'
+CONTAINER_USER=""
+DEVARCH_RUNTIME=docker
+DEVARCH_CONTAINER_USER=""
+DEVARCH_BIN=/opt/fake/devarch detect_runtime
+assert_eq "$RUNTIME" docker 'Docker runtime'
+assert_eq "$CONTAINER_USER" "$(id -u):$(id -g)" 'Docker bind-mount user'
+CONTAINER_USER='1000:1000'
+DEVARCH_BIN=/opt/fake/devarch detect_runtime
+assert_eq "$CONTAINER_USER" '1000:1000' 'LARAVEL_CONTAINER_USER overrides the runtime mapping'
+DRY_RUN="$saved_dry_run"
+
 TARGET="$TEST_TMP/demo"
 BACKUP_PATH="$TEST_TMP/backup"
 DATABASE=mariadb
@@ -145,7 +145,7 @@ APP_URL='https://demo.test'
 DB_NAME=laravel_demo
 DB_USER=lv_demo
 plan="$(print_plan)"
-assert_contains "$plan" 'ensure external network: microservices-net' 'ordered plan network step'
+assert_contains "$plan" 'up backend/php proxy/nginx-proxy-manager database/mariadb mail/mailpit database/redis --wait --no-hosts' 'ordered plan devarch step'
 assert_contains "$plan" 'start and wait: php' 'ordered plan PHP step'
 assert_contains "$plan" 'start and wait: nginx-proxy-manager' 'ordered plan proxy step'
 assert_contains "$plan" 'start and wait: mariadb' 'ordered plan MariaDB step'
@@ -158,8 +158,8 @@ assert_eq "$REDIS_PASSWORD" devarch 'Redis Compose password'
 assert_eq "$REDIS_PORT" 6379 'Redis container port'
 assert_eq "$REDIS_DB" 0 'Redis default DB'
 assert_eq "$REDIS_CACHE_DB" 1 'Redis cache DB'
-grep -Eq '127\.0\.0\.1:8504:6379' "$REDIS_COMPOSE" || fail 'Redis Compose port contract drifted'
-grep -Eq 'redis-server --requirepass devarch' "$REDIS_COMPOSE" || fail 'Redis Compose password contract drifted'
+grep -Eq '127\.0\.0\.1:8504:6379' "$PROJECT_ROOT/services-library/database/redis/compose.yml" || fail 'Redis Compose port contract drifted'
+grep -Eq 'redis-server --requirepass devarch' "$PROJECT_ROOT/services-library/database/redis/compose.yml" || fail 'Redis Compose password contract drifted'
 pass
 pass
 
@@ -207,8 +207,11 @@ saved_path="$PATH"
 PATH="$TEST_TMP/no-od-bin"
 expect_failure parse_directives_file "$TEST_TMP/packages.txt" false
 PATH="$saved_path"
-if ! ( PACKAGE_KINDS=(); PACKAGE_SPECS=(); parse_directives_file "$TEST_DIR/../packages.example" false; [[ ${#PACKAGE_SPECS[@]} -eq 0 ]] ); then
-  fail 'repository packages example must parse without selecting placeholders'
+# The example is directly usable: it selects its showcase packages and skips
+# the commented syntax placeholders.
+if ! ( PACKAGE_KINDS=(); PACKAGE_SPECS=(); parse_directives_file "$TEST_DIR/../packages.example" false
+       [[ "${PACKAGE_SPECS[*]}" == 'laravel/sanctum:^4.0 barryvdh/laravel-debugbar:^4.4' ]] ); then
+  fail 'repository packages example must select its showcase packages without placeholders'
 fi
 pass
 
@@ -258,5 +261,37 @@ assert_contains "$(<"$PACKAGE_COMMAND_LOG")" $'[acme/runtime:>=1 <2]' 'productio
 assert_contains "$(<"$PACKAGE_COMMAND_LOG")" $'[--dev]\n[acme/tool:^3.0]' 'development package uses composer require --dev'
 if grep -Eq '(^|[^[:alnum:]_])eval([^[:alnum:]_]|$)' "$BOOTSTRAP"; then fail 'bootstrap must not use eval'; fi
 pass
+
+# Guards, databases and recovery go through devarch.
+cat > "$TEST_TMP/bin/db-devarch" <<'DEVARCH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$DEVARCH_LOG"
+case "$1 $2" in
+  'db create') printf 'DB_NAME=%s\nDB_PASSWORD=s3cret\n' "$3" ;;
+  'app guard') [[ "$*" == *--replace* ]] && printf 'BACKUP_PATH=/apps/.devarch-backups/demo-1\n' || printf 'BACKUP_PATH=\n' ;;
+esac
+exit 0
+DEVARCH
+chmod +x "$TEST_TMP/bin/db-devarch"
+export DEVARCH_LOG="$TEST_TMP/devarch.log"
+DEVARCH="$TEST_TMP/bin/db-devarch"
+APP_NAME=demo
+FORCE=true
+take_guard >/dev/null
+assert_eq "$BACKUP_MOVED $BACKUP_PATH" 'true /apps/.devarch-backups/demo-1' '--force replaces through the guard'
+assert_contains "$(<"$DEVARCH_LOG")" 'app guard demo --replace' 'guard is taken with --replace under --force'
+FORCE=false
+BACKUP_MOVED=false
+take_guard >/dev/null
+assert_eq "$BACKUP_MOVED" false 'a new target has no backup'
+DATABASE=mariadb
+DB_NAME=laravel_demo
+DB_USER=lv_demo
+create_database >/dev/null
+assert_eq "$DB_PASSWORD" s3cret 'database password comes from devarch db create'
+assert_contains "$(<"$DEVARCH_LOG")" 'db create laravel_demo --user lv_demo --app demo --env' 'the database is recorded in the guard and existing identifiers are refused'
+( rollback 1 ) >/dev/null 2>&1 || true
+assert_contains "$(<"$DEVARCH_LOG")" 'app recover demo' 'a failed run recovers through devarch'
+DATABASE=sqlite
 
 printf 'PASS: %d assertions\n' "$passed"

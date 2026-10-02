@@ -22,12 +22,15 @@ cleanup() {
   rm -rf "$generic_profile_root" "$typerocket_install_root" "$boundary_repo" "$nested_site"
 }
 trap cleanup EXIT
+# Pin the runtime so a devarch on PATH cannot apply this machine's config.yml.
+export DEVARCH_RUNTIME=podman
+unset DEVARCH_CONTAINER_USER
 
 mkdir -p "$boundary_repo/scripts/wordpress" "$boundary_repo/scripts/devarch/lib"
 cp "$BOOTSTRAP" "$boundary_repo/scripts/wordpress/bootstrap.sh"
-if [[ -f "$SCRIPT_DIR/../devarch/lib/dotenv.sh" ]]; then
-  cp "$SCRIPT_DIR/../devarch/lib/dotenv.sh" "$boundary_repo/scripts/devarch/lib/dotenv.sh"
-fi
+for library in dotenv.sh platform.sh; do
+  cp "$SCRIPT_DIR/../devarch/lib/$library" "$boundary_repo/scripts/devarch/lib/$library"
+done
 cat >"$boundary_repo/.env" <<'EOF'
 WP_ADMIN_USER=fixture-admin
 UNRELATED_BOUNDARY=$(touch "$SENTINEL_PATH")
@@ -104,7 +107,8 @@ dry_run_output="$(
 for expected in \
   query-monitor example-plugin \
   'start PHP, MariaDB, and Nginx Proxy Manager services' \
-  'wait for PHP/WP-CLI, MariaDB, and Nginx Proxy Manager readiness' \
+  'MARIADB_ROOT_PASSWORD=\\<redacted\\>' \
+  'up backend/php database/mariadb proxy/nginx-proxy-manager --wait --no-hosts' \
   'URL: https://demo-site.test' \
   'register local host: 127.0.0.1 demo-site.test' \
   'config set FS_METHOD direct' \
@@ -122,8 +126,41 @@ grep -q -- '--user 0:0' <<<"$dry_run_output" || fail "Podman should use the bind
 no_hosts_output="$(bash "$BOOTSTRAP" no-hosts-site --no-hosts --dry-run)" || fail "hosts opt-out should succeed"
 grep -q 'hosts registration skipped: no-hosts-site.test' <<<"$no_hosts_output" || fail "hosts opt-out should be visible"
 
-docker_output="$(CONTAINER_RUNTIME=docker bash "$BOOTSTRAP" demo-docker --dry-run)" || fail "Docker dry-run should succeed"
-grep -q -- "--user $(id -u):$(id -g)" <<<"$docker_output" || fail "Docker should use the host UID/GID"
+docker_output="$(DEVARCH_RUNTIME=docker bash "$BOOTSTRAP" demo-docker --dry-run)" || fail "Docker dry-run should succeed"
+grep -q -- "+ docker exec -i --user $(id -u):$(id -g) php wp" <<<"$docker_output" || fail "Docker should exec WP-CLI as the invoking uid:gid"
+! grep -q 'podman' <<<"$docker_output" || fail "Docker dry-run should not mention podman"
+override_output="$(DEVARCH_RUNTIME=docker WORDPRESS_CONTAINER_USER=33:33 bash "$BOOTSTRAP" demo-docker --dry-run)" || fail "container user override should succeed"
+grep -q -- '--user 33:33' <<<"$override_output" || fail "WORDPRESS_CONTAINER_USER should override the runtime mapping"
+if DEVARCH_RUNTIME=lxc bash "$BOOTSTRAP" demo-lxc --dry-run >/dev/null 2>&1; then
+  fail "an unknown runtime should be rejected"
+fi
+config_devarch="$(mktemp)"
+printf '#!/usr/bin/env bash
+[[ "$*" == "config --env" ]] && printf "DEVARCH_RUNTIME=docker\\nDEVARCH_CONTAINER_USER=4242:4242\\n"
+' > "$config_devarch"
+chmod +x "$config_devarch"
+config_output="$(env -u DEVARCH_RUNTIME DEVARCH_BIN="$config_devarch" bash "$BOOTSTRAP" demo-config --dry-run)" || fail "direct run should read devarch config"
+rm -f "$config_devarch"
+grep -q -- '+ docker exec -i --user 4242:4242 php wp' <<<"$config_output" || fail "a direct run should take the runtime from devarch config --env"
+
+grep -q -- 'db create wp_demo_site --user wp_demo_site --existing reuse --app demo-site --env' <<<"$dry_run_output" || fail "the database should be created through devarch db"
+replace_output="$(bash "$BOOTSTRAP" demo-site --force --dry-run)" || fail "--force dry-run should succeed"
+grep -q -- '--existing replace --app demo-site --env' <<<"$replace_output" || fail "--force should replace the database through devarch, which saves the old one"
+grep -q -- 'app guard demo-site$' <<<"$dry_run_output" || fail "a new site should be guarded for recovery"
+
+build_output="$(bash "$BOOTSTRAP" build-site --build --dry-run)" || fail "--build dry-run should succeed"
+grep -q -- '--no-hosts --build' <<<"$build_output" || fail "--build should rebuild through devarch up"
+
+progress_events="$(mktemp)"
+DEVARCH_PROGRESS_FD=3 bash "$BOOTSTRAP" progress-site --dry-run >/dev/null 3>"$progress_events" || fail "progress dry-run should succeed"
+for expected in '"step":"services","state":"start"' '"step":"install-wordpress","state":"done"' '"step":"hosts","state":"done"'; do
+  grep -qF "$expected" "$progress_events" || fail "progress events should include $expected"
+done
+if DEVARCH_PROGRESS_FD=3 bash "$BOOTSTRAP" 'Bad_Name' --dry-run >/dev/null 2>&1 3>"$progress_events"; then
+  fail "invalid site names should fail"
+fi
+grep -qF '"state":"fail"' "$progress_events" || fail "a failure should emit a fail event"
+rm -f "$progress_events"
 
 profile_output="$(GITHUB_USER=example bash "$BOOTSTRAP" profile-site --profile clean --dry-run)" || fail "clean profile should succeed"
 for repo in all-in-one-wp-migration admin-site-enhancements-pro; do
