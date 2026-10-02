@@ -326,3 +326,34 @@ func TestSettingsReachTheScreen(t *testing.T) {
 		t.Fatalf("no explanation:\n%s", h.m.View())
 	}
 }
+
+func TestWizardPreviewsProfiles(t *testing.T) {
+	h := newHarness(t)
+	testutil.WriteFiles(t, h.root, map[string]string{
+		"recipes/zprof/recipe.yml": `name: zprof
+title: Profiled
+entry: scripts/demo.sh
+args:
+  - {name: name, positional: true}
+  - name: profile
+    flag: --profile
+    choices_from: profiles/*.profile
+    default: full
+    preview:
+      directives: [{kind: wp-plugin, label: WordPress.org plugins}]
+`,
+		"profiles/full.profile": "# All the tools.\nwp-plugin query-monitor\nwp-plugin debug-bar\n",
+		"profiles/bare.profile": "# Nothing extra.\n",
+	})
+	h.press("n", "down", "enter")
+	v := h.m.View()
+	for _, want := range []string{"profile full", "All the tools.", "WordPress.org plugins: query-monitor, debug-bar"} {
+		if !strings.Contains(v, want) {
+			t.Fatalf("missing %q in form:\n%s", want, v)
+		}
+	}
+	h.press("down", "left")
+	if v := h.m.View(); !strings.Contains(v, "profile bare") || !strings.Contains(v, "installs nothing extra") {
+		t.Fatalf("after choosing bare:\n%s", v)
+	}
+}

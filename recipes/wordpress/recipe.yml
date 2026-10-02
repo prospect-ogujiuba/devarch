@@ -14,6 +14,13 @@ args:
     help: Plugin profile
     choices_from: scripts/wordpress/profiles/*.profile
     default: bare
+    preview:
+      include: include
+      directives:
+        - {kind: github-mu-plugin, label: Must-use plugins from GitHub}
+        - {kind: github-plugin, label: Plugins from GitHub}
+        - {kind: wp-plugin, label: Plugins from WordPress.org}
+        - {kind: github-theme, label: Themes from GitHub}
   - name: title
     flag: --title
     help: Site title (default title-cases the name)

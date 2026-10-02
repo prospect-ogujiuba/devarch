@@ -3,6 +3,7 @@ package recipe
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -113,5 +114,61 @@ func TestLoadRejectsBadManifests(t *testing.T) {
 	testutil.WriteFiles(t, root, map[string]string{"recipes/x/recipe.yml": "name: x\nentry: a\nargs: [{name: n, pattern: '('}]\n"})
 	if _, err := Load(root, filepath.Join(root, "recipes")); err == nil {
 		t.Fatal("invalid pattern accepted")
+	}
+}
+
+func TestPreviewChoice(t *testing.T) {
+	root := t.TempDir()
+	write := func(rel, content string) {
+		os.MkdirAll(filepath.Dir(filepath.Join(root, rel)), 0o755)
+		os.WriteFile(filepath.Join(root, rel), []byte(content), 0o644)
+	}
+	write("profiles/base.profile", "# Base set.\nwp-plugin query-monitor\n")
+	write("profiles/full.profile", "# Everything.\ninclude base.profile\ngithub-plugin migrate inactive   # trailing note\n\nwp-plugin debug-bar\n")
+	write("profiles/bad.profile", "teleport now\n")
+	write("profiles/loop.profile", "include loop.profile\n")
+	arg := Arg{Name: "profile", ChoicesFrom: "profiles/*.profile", Preview: &Preview{Include: "include", Directives: []Directive{
+		{Kind: "github-plugin", Label: "GitHub plugins"}, {Kind: "wp-plugin", Label: "WordPress.org plugins"}}}}
+	r := Recipe{Root: root}
+	p, err := r.PreviewChoice(arg, nil, "full")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := ProfilePreview{Description: "Everything.", Groups: []Group{
+		{Label: "GitHub plugins", Items: []string{"migrate inactive"}},
+		{Label: "WordPress.org plugins", Items: []string{"query-monitor", "debug-bar"}},
+	}}
+	if fmt.Sprint(p) != fmt.Sprint(want) {
+		t.Fatalf("got %+v", p)
+	}
+	for _, choice := range []string{"bad", "loop", "missing", "../etc/passwd"} {
+		if _, err := r.PreviewChoice(arg, nil, choice); err == nil {
+			t.Errorf("%s: no error", choice)
+		}
+	}
+}
+
+func TestRepositoryProfilesPreview(t *testing.T) {
+	root, _ := filepath.Abs("../../..")
+	rs, err := Load(root, filepath.Join(root, "recipes"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	checked := 0
+	for _, r := range rs {
+		for _, a := range r.Args {
+			if a.Preview == nil {
+				continue
+			}
+			for _, c := range r.ChoicesFor(a, map[string]string{}) {
+				if _, err := r.PreviewChoice(a, nil, c); err != nil {
+					t.Errorf("%s %s: %v", r.Name, c, err)
+				}
+				checked++
+			}
+		}
+	}
+	if checked < 7 {
+		t.Fatalf("only %d profiles previewed", checked)
 	}
 }
