@@ -3,7 +3,6 @@ package tui
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -313,7 +312,7 @@ func (w *wizardModel) update(m *Model, msg tea.Msg) tea.Cmd {
 		} else {
 			m.setStatus(true, "created %s", w.url())
 		}
-		m.apps = discoverApps(filepath.Join(m.eng.Root, "apps"))
+		m.apps = discoverApps(m.eng.Settings.AppsDir)
 		return m.loadContainers()
 	}
 	return nil

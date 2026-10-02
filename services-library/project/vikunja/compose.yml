@@ -57,3 +57,4 @@ networks:
   vikunja-internal: null
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}

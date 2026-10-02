@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	"github.com/prospect-ogujiuba/devarch/cli/internal/doctor"
 	"github.com/prospect-ogujiuba/devarch/cli/internal/engine"
@@ -33,21 +35,21 @@ func (a *app) runTUI() error {
 		},
 		Exe:     exe,
 		OpenURL: openURL,
-		OpenDir: openDir,
-		Events:  podmanEvents,
+		OpenDir: func(dir string) error { return openDir(a.eng.Settings.Editor, dir) },
+		Events:  func(ctx context.Context) <-chan struct{} { return containerEvents(ctx, a.eng.Settings.Runtime) },
 	})
 }
 
-// podmanEvents signals container lifecycle changes and health transitions
+// containerEvents signals container lifecycle changes and health transitions
 // while the TUI is open. Healthcheck runs that do not change health are
 // ignored, so an idle stack causes no refreshes.
-func podmanEvents(ctx context.Context) <-chan struct{} {
+func containerEvents(ctx context.Context, runtime string) <-chan struct{} {
 	ch := make(chan struct{}, 1)
 	args := []string{"events", "--format", "json", "--filter", "type=container"}
 	for _, e := range []string{"create", "start", "stop", "died", "remove", "restart", "pause", "unpause", "health_status"} {
 		args = append(args, "--filter", "event="+e)
 	}
-	cmd := exec.CommandContext(ctx, "podman", args...)
+	cmd := exec.CommandContext(ctx, runtime, args...)
 	out, err := cmd.StdoutPipe()
 	if err != nil || cmd.Start() != nil {
 		close(ch)
@@ -107,12 +109,17 @@ func openURL(url string) error {
 	return startDetached(cmd)
 }
 
-func openDir(dir string) error {
-	code, err := exec.LookPath("code")
-	if err != nil {
-		return errors.New("VS Code's `code` command is not on PATH")
+// openDir runs the configured editor command with dir as its last argument.
+func openDir(editor, dir string) error {
+	argv := strings.Fields(editor)
+	if len(argv) == 0 {
+		return errors.New("no editor is configured; run: devarch config set editor code")
 	}
-	return startDetached(exec.Command(code, dir))
+	path, err := exec.LookPath(argv[0])
+	if err != nil {
+		return fmt.Errorf("editor %q is not on PATH; change it with: devarch config set editor <command>", argv[0])
+	}
+	return startDetached(exec.Command(path, append(argv[1:], dir)...))
 }
 
 func startDetached(cmd *exec.Cmd) error {

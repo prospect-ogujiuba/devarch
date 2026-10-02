@@ -10,8 +10,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-
-	"gopkg.in/yaml.v3"
 )
 
 // Dir returns $DEVARCH_CONFIG_HOME, else $XDG_CONFIG_HOME/devarch, else ~/.config/devarch.
@@ -27,34 +25,6 @@ func Dir() (string, error) {
 		return "", err
 	}
 	return filepath.Join(home, ".config", "devarch"), nil
-}
-
-// Config is config.yml.
-type Config struct {
-	Root string `yaml:"root,omitempty"`
-}
-
-func LoadConfig(dir string) (Config, error) {
-	var c Config
-	data, err := os.ReadFile(filepath.Join(dir, "config.yml"))
-	if errors.Is(err, os.ErrNotExist) {
-		return c, nil
-	}
-	if err != nil {
-		return c, err
-	}
-	if err := yaml.Unmarshal(data, &c); err != nil {
-		return c, fmt.Errorf("%s: %w", filepath.Join(dir, "config.yml"), err)
-	}
-	return c, nil
-}
-
-func SaveConfig(dir string, c Config) error {
-	data, err := yaml.Marshal(c)
-	if err != nil {
-		return err
-	}
-	return writeFile(filepath.Join(dir, "config.yml"), data)
 }
 
 var varRE = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)

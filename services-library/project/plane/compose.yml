@@ -265,3 +265,4 @@ networks:
   plane-internal: null
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}

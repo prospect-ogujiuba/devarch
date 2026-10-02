@@ -95,10 +95,11 @@ func Run(ctx context.Context, env Env) []Check {
 		}
 	}
 
-	if _, err := r.Output(ctx, runner.Cmd{Name: "podman", Args: []string{"network", "exists", engine.Network}}); err != nil {
-		add(Check{Name: "network", Status: Warn, Detail: engine.Network + " does not exist", Fix: "devarch up <service> creates it, or: podman network create " + engine.Network})
+	network := e.Settings.Network
+	if _, err := r.Output(ctx, e.Cmd("network", "exists", network)); err != nil {
+		add(Check{Name: "network", Status: Warn, Detail: network + " does not exist", Fix: "devarch up <service> creates it, or: " + e.Cmd("network", "create", network).String()})
 	} else {
-		add(Check{Name: "network", Status: OK, Detail: engine.Network})
+		add(Check{Name: "network", Status: OK, Detail: network})
 	}
 
 	if runtime.GOOS == "linux" && rootless {
@@ -221,6 +222,9 @@ func covers(names []string, host string) bool {
 }
 
 func hostsCheck(e *engine.Engine) Check {
+	if !e.Settings.HostsManage {
+		return Check{Name: "hosts", Status: OK, Detail: "not managed (hosts.manage: false in config.yml)"}
+	}
 	if e.Hosts == nil {
 		return Check{Name: "hosts", Status: Warn, Detail: "hosts management unavailable"}
 	}
@@ -232,7 +236,7 @@ func hostsCheck(e *engine.Engine) Check {
 	if current == "" {
 		return Check{Name: "hosts", Status: Warn, Detail: "no DevArch block in " + e.Hosts.Path(), Fix: "devarch hosts sync"}
 	}
-	want, _, err := e.HostsBlock(hosts.DefaultAddress)
+	want, _, err := e.HostsBlock(e.Settings.HostsAddress)
 	if err != nil {
 		return Check{Name: "hosts", Status: Warn, Detail: err.Error()}
 	}

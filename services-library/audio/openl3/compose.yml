@@ -49,3 +49,4 @@ volumes:
 networks:
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}

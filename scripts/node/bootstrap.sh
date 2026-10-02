@@ -4,7 +4,7 @@ export LC_ALL=C
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-APPS_DIR="$PROJECT_ROOT/apps"
+APPS_DIR="${DEVARCH_APPS_DIR:-$PROJECT_ROOT/apps}"
 APP_COMPOSE="$PROJECT_ROOT/services-library/backend/node/app.compose.yml"
 PLATFORM_LIBRARY="$PROJECT_ROOT/scripts/devarch/lib/platform.sh"
 

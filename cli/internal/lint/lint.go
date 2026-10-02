@@ -41,6 +41,8 @@ type Options struct {
 	// Native also runs `podman compose config --quiet` for every service.
 	Native bool
 	Runner runner.Runner
+	// Runtime is the container runtime for Native (default podman).
+	Runtime string
 }
 
 // Run lints the catalog. Findings are sorted by service then message.
@@ -59,6 +61,7 @@ func Run(ctx context.Context, cat *catalog.Catalog, problems []catalog.Problem, 
 
 	for _, s := range cat.Services {
 		lintMeta(cat, s, add)
+		lintNetwork(s, add)
 		for _, c := range s.Containers {
 			if c.ContainerName != "" {
 				if !labelRE.MatchString(c.ContainerName) {
@@ -83,9 +86,13 @@ func Run(ctx context.Context, cat *catalog.Catalog, problems []catalog.Problem, 
 			}
 		}
 		if opts.Native && opts.Runner != nil {
-			cmd := runner.Cmd{Name: "podman", Args: []string{"compose", "config", "--quiet"}, Dir: s.Dir}
+			rt := opts.Runtime
+			if rt == "" {
+				rt = "podman"
+			}
+			cmd := runner.Cmd{Name: rt, Args: []string{"compose", "config", "--quiet"}, Dir: s.Dir}
 			if _, err := opts.Runner.Output(ctx, cmd); err != nil {
-				add(Error, s.ID, "podman compose config failed: %v", err)
+				add(Error, s.ID, "%s compose config failed: %v", rt, err)
 			}
 		}
 	}
@@ -148,6 +155,22 @@ func lintMeta(cat *catalog.Catalog, s catalog.Service, add func(Severity, string
 		if !tagRE.MatchString(t) {
 			add(Warning, s.ID, "tag %q should be lower-case kebab-case", t)
 		}
+	}
+}
+
+// networkName is how compose files name the shared network, so the network
+// key in config.yml reaches them through DEVARCH_NETWORK.
+const networkName = "name: ${DEVARCH_NETWORK:-microservices-net}"
+
+var sharedNetworkRE = regexp.MustCompile(`(?m)^  microservices-net:\s*$`)
+
+func lintNetwork(s catalog.Service, add func(Severity, string, string, ...any)) {
+	data, err := os.ReadFile(s.ComposeFile)
+	if err != nil || !sharedNetworkRE.Match(data) {
+		return
+	}
+	if !strings.Contains(string(data), networkName) {
+		add(Error, s.ID, "the microservices-net network must declare %q so the network setting applies", networkName)
 	}
 }
 

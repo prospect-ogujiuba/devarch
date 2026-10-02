@@ -119,7 +119,7 @@ func (e *Engine) checkData(ctx context.Context, svc catalog.Service, from, to st
 	}
 	var existing []string
 	for _, vol := range svc.Volumes {
-		_, err := e.Runner.Output(ctx, runner.Cmd{Name: "podman", Args: []string{"volume", "exists", vol}})
+		_, err := e.Runner.Output(ctx, e.Cmd("volume", "exists", vol))
 		var exit *runner.ExitError
 		switch {
 		case err == nil:

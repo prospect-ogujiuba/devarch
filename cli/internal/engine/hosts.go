@@ -2,7 +2,6 @@ package engine
 
 import (
 	"context"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -34,7 +33,7 @@ func HostLabels(svc catalog.Service) []string {
 
 // HostsBlock discovers every DevArch domain and renders the managed block.
 func (e *Engine) HostsBlock(address string) (string, hosts.Domains, error) {
-	d, err := hosts.Discover(e.Catalog, filepath.Join(e.Root, "apps"))
+	d, err := hosts.Discover(e.Catalog, e.Settings.AppsDir)
 	if err != nil {
 		return "", d, err
 	}
@@ -43,8 +42,9 @@ func (e *Engine) HostsBlock(address string) (string, hosts.Domains, error) {
 
 // EnsureHosts syncs the managed block when any of svcs' hostnames is unmapped.
 // Failures are reported as warnings: the services are already running.
+// Nothing happens when config.yml sets hosts.manage: false.
 func (e *Engine) EnsureHosts(ctx context.Context, svcs []catalog.Service) {
-	if e.Hosts == nil {
+	if e.Hosts == nil || !e.Settings.HostsManage {
 		return
 	}
 	content, err := e.Hosts.Read()
@@ -64,7 +64,7 @@ func (e *Engine) EnsureHosts(ctx context.Context, svcs []catalog.Service) {
 	if len(missing) == 0 {
 		return
 	}
-	block, _, err := e.HostsBlock(hosts.DefaultAddress)
+	block, _, err := e.HostsBlock(e.Settings.HostsAddress)
 	if err != nil {
 		e.logf("warning: hosts not updated: %v", err)
 		return

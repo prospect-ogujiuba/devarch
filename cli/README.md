@@ -78,6 +78,36 @@ On WSL the hosts commands edit the Windows hosts file, the one the browser uses,
 
 Any `devarch-<name>` executable on `PATH` runs as `devarch <name>`, with `DEVARCH_ROOT` set.
 
+## Configuration
+
+`~/.config/devarch/config.yml` holds a few settings. Every key is optional and defaults to the behavior described in this README:
+
+```yaml
+root: /home/me/devarch        # remembered checkout; DEVARCH_ROOT overrides it
+runtime: podman               # podman or docker
+apps_dir: apps                # where projects live; relative to the checkout, or absolute
+network: microservices-net    # the shared external network every service joins
+hosts:
+  manage: true                # false: devarch never edits the hosts file
+  address: 127.0.0.1          # where .test names point
+editor: code                  # command that opens a project folder (Apps view, `e`)
+```
+
+```bash
+devarch config                      # effective values and where each came from
+devarch config get apps_dir
+devarch config set editor 'code -n' # validates, keeps the file's comments
+devarch config set hosts.manage false
+```
+
+How each setting travels:
+
+- **`network`** and **`apps_dir`** reach compose files as `DEVARCH_NETWORK` and `DEVARCH_APPS_DIR`. Every service declares `name: ${DEVARCH_NETWORK:-microservices-net}` on the shared network (`devarch lint` enforces it), and the PHP, Nginx Proxy Manager and Node runtime mounts use `${DEVARCH_APPS_DIR:-../../../apps}`. DevArch only sets these when they differ from the defaults, so plain `podman compose` in a service directory keeps working. `devarch new` always passes both to the bootstraps; when running a bootstrap directly with a non-default `apps_dir`, export `DEVARCH_APPS_DIR` yourself.
+- **`hosts.manage: false`** makes `up` skip registration, turns `hosts sync|add|remove` into no-ops that say so (bootstraps call `devarch hosts add`, so they follow the setting), and `doctor` reports the hosts file as not managed. Use it when DNS (dnsmasq, a router, Acrylic) already resolves `*.test`.
+- **`hosts.address`** is the default for `--address` and what `doctor` and `hosts list` compare against.
+
+Two things are deliberately not settings. The **`.test` suffix** is baked into the local certificate (`*.test`), the proxy's routing rules, every bootstrap's URLs and the hosts block, and `.test` is reserved (RFC 2606), so it never collides with real names. **Nginx Proxy Manager** is the one proxy because its config, the certificate path and the Node and PHP routing snippets are written for it; supporting a second proxy would mean a second copy of each.
+
 ## Hosts
 
 `devarch hosts sync` writes every `.test` domain into one managed block: each catalog `container_name`, `.test` hosts listed in `x-devarch.urls`, every `apps/*` directory containing `index.php`, `public/index.php`, `public/index.html`, or `package.json`, and `devarch.test`. Only content between `# BEGIN DEVARCH HOSTS` and `# END DEVARCH HOSTS` is replaced, and an already-current block is not rewritten. Catalog services are included whether or not they are running.

@@ -29,7 +29,7 @@ func setup(t *testing.T) (*engine.Engine, *runner.Fake, string) {
 		t.Fatal(problems)
 	}
 	f := &runner.Fake{Responses: map[string]runner.Response{}, RunErrors: map[string][]error{}}
-	e := &engine.Engine{Catalog: c, Runner: f, Versions: state.Versions{"PHP_VERSION": "8.3"}, Sleep: func(time.Duration) {}}
+	e := &engine.Engine{Catalog: c, Runner: f, Versions: state.Versions{"PHP_VERSION": "8.3"}, Sleep: func(time.Duration) {}, Settings: state.Defaults("")}
 	return e, f, lib
 }
 
@@ -167,5 +167,14 @@ func TestSelectedVersion(t *testing.T) {
 	}
 	if env := e.Env(php); env != nil {
 		t.Fatalf("no env expected without a selection, got %v", env)
+	}
+}
+
+func TestEnsureHostsRespectsHostsManage(t *testing.T) {
+	e, f, _ := setup(t)
+	e.Settings.HostsManage = false
+	e.EnsureHosts(context.Background(), []catalog.Service{get(t, e, "backend/php")})
+	if len(f.Cmds) != 0 {
+		t.Fatalf("ran %v", f.Lines())
 	}
 }

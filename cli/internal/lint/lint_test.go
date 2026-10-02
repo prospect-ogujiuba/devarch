@@ -116,3 +116,14 @@ func TestProblemsAreErrors(t *testing.T) {
 		t.Fatalf("%+v", fs)
 	}
 }
+
+func TestSharedNetworkMustBeNamed(t *testing.T) {
+	net := "networks:\n  microservices-net:\n    external: true\n"
+	fs := run(t, map[string]string{
+		"a/bare/compose.yml":  "services:\n  bare:\n    image: x:1\n" + net,
+		"a/named/compose.yml": "services:\n  named:\n    image: x:1\n" + net + "    name: ${DEVARCH_NETWORK:-microservices-net}\n",
+	})
+	if !has(fs, Error, "a/bare", "DEVARCH_NETWORK") || has(fs, Error, "a/named", "DEVARCH_NETWORK") {
+		t.Fatalf("findings: %+v", fs)
+	}
+}

@@ -46,7 +46,7 @@ func newHarness(t *testing.T) *harness {
 	  "Ports":[{"host_ip":"127.0.0.1","host_port":8502,"container_port":5432}]}]`
 	f := &runner.Fake{Responses: map[string]runner.Response{"podman ps": {Out: []byte(ps)}}, RunErrors: map[string][]error{}}
 	h := &harness{fake: f, root: root, saved: state.Versions{}}
-	eng := &engine.Engine{Root: root, Catalog: c, Runner: f, Versions: state.Versions{},
+	eng := &engine.Engine{Root: root, Catalog: c, Runner: f, Versions: state.Versions{}, Settings: state.Defaults(root),
 		SaveVersions: func(v state.Versions) error {
 			for k, val := range v {
 				h.saved[k] = val
@@ -305,5 +305,24 @@ func TestRefreshesAreCoalesced(t *testing.T) {
 		t.Fatal("a queued refresh should run once the first finishes")
 	} else if _, after := h.m.Update(next()); after != nil {
 		t.Fatal("only one refresh should have been queued")
+	}
+}
+
+func TestSettingsReachTheScreen(t *testing.T) {
+	h := newHarness(t)
+	testutil.WriteFiles(t, h.root, map[string]string{"sites/blog/index.php": ""})
+	h.m.eng.Settings.AppsDir = filepath.Join(h.root, "sites")
+	h.m.eng.Settings.HostsManage = false
+	h.m.deps.Exe = "/bin/devarch"
+	h.m.apps = discoverApps(h.m.eng.Settings.AppsDir)
+	h.press("2")
+	if v := h.m.View(); !strings.Contains(v, "blog") || strings.Contains(v, "shop") {
+		t.Fatalf("apps view:\n%s", v)
+	}
+	if cmd := h.press("H"); cmd != nil {
+		t.Fatal("H ran hosts sync with hosts.manage false")
+	}
+	if !strings.Contains(h.m.View(), "hosts.manage is false") {
+		t.Fatalf("no explanation:\n%s", h.m.View())
 	}
 }

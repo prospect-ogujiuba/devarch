@@ -187,7 +187,7 @@ func (m *Model) listView(w, h int) string {
 		rs := m.running()
 		if len(rs) == 0 {
 			if m.psErr != nil {
-				return errStyle.Render("podman: " + m.psErr.Error())
+				return errStyle.Render(m.eng.Settings.Runtime + ": " + m.psErr.Error())
 			}
 			return dimStyle.Render("no running containers")
 		}

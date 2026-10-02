@@ -95,6 +95,8 @@ services:
 
 **User library:** catalog search paths are `[~/.config/devarch/services, <root>/services-library]`, and the first match for an ID wins. The search path is built in Phase 1 but only documented and supported from Phase 6.
 
+> **As built (configuration, 2026-10-02):** `config.yml` gained six optional keys whose defaults are the behavior above: `runtime`, `apps_dir`, `network`, `hosts.manage`, `hosts.address` and `editor`. `devarch config` shows effective values with their source, and `get`/`set` change only these keys. Compose files read the network and apps directory as `${DEVARCH_NETWORK:-microservices-net}` and `${DEVARCH_APPS_DIR:-../../../apps}`, which DevArch sets only when they differ from the defaults. The `.test` suffix and Nginx Proxy Manager stay fixed (see `cli/README.md`).
+
 ## Command surface
 
 | Command | Behavior |

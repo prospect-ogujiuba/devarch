@@ -20,6 +20,7 @@ import (
 	"github.com/prospect-ogujiuba/devarch/cli/internal/engine"
 	"github.com/prospect-ogujiuba/devarch/cli/internal/hosts"
 	"github.com/prospect-ogujiuba/devarch/cli/internal/runner"
+	"github.com/prospect-ogujiuba/devarch/cli/internal/state"
 	"github.com/prospect-ogujiuba/devarch/cli/internal/testutil"
 )
 
@@ -56,7 +57,7 @@ func setup(t *testing.T) (Env, *runner.Fake, string) {
 	os.WriteFile(hostsFile, []byte("127.0.0.1 localhost\n"), 0o644)
 	portStart := filepath.Join(t.TempDir(), "port_start")
 	os.WriteFile(portStart, []byte("1024\n"), 0o644)
-	e := &engine.Engine{Root: repo, Catalog: c, Runner: f, Hosts: &hosts.Manager{Platform: hosts.Unix, File: hostsFile, Runner: f}}
+	e := &engine.Engine{Root: repo, Catalog: c, Runner: f, Settings: state.Defaults(repo), Hosts: &hosts.Manager{Platform: hosts.Unix, File: hostsFile, Runner: f}}
 	return Env{Engine: e, RootHow: "config", PortStartFile: portStart, PortFree: func(string, int) bool { return true }}, f, lib
 }
 
@@ -120,5 +121,19 @@ func TestCertificateStates(t *testing.T) {
 	writeCert(t, path, []string{"*.dev"}, now.Add(400*24*time.Hour))
 	if c := certificate(root, now); c.Status != Warn {
 		t.Fatalf("wrong names: %+v", c)
+	}
+}
+
+func TestDoctorUsesSettings(t *testing.T) {
+	env, f, _ := setup(t)
+	env.Engine.Settings.Network = "dev-net"
+	env.Engine.Settings.HostsManage = false
+	f.Responses["podman network exists dev-net"] = runner.Response{Err: &runner.ExitError{Code: 1}}
+	checks := byName(Run(context.Background(), env))
+	if c := checks["network"]; c.Status != Warn || !strings.Contains(c.Fix, "podman network create dev-net") {
+		t.Errorf("network: %+v", c)
+	}
+	if c := checks["hosts"]; c.Status != OK || !strings.Contains(c.Detail, "not managed") {
+		t.Errorf("hosts: %+v", c)
 	}
 }

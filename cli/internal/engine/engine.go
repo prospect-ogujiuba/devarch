@@ -19,9 +19,6 @@ import (
 	"github.com/prospect-ogujiuba/devarch/cli/internal/state"
 )
 
-// Network is the shared external network every catalog service joins.
-const Network = "microservices-net"
-
 // Engine is the shared operation layer.
 type Engine struct {
 	Root     string
@@ -38,6 +35,13 @@ type Engine struct {
 	SaveVersions func(state.Versions) error
 	// Hosts manages the hosts file; nil disables hostname registration.
 	Hosts *hosts.Manager
+	// Settings are the effective config.yml values (state.Defaults when unset).
+	Settings state.Settings
+}
+
+// Cmd builds a container-runtime command (podman or docker).
+func (e *Engine) Cmd(args ...string) runner.Cmd {
+	return runner.Cmd{Name: e.Settings.Runtime, Args: args}
 }
 
 func (e *Engine) logf(format string, args ...any) {
@@ -55,16 +59,24 @@ func (e *Engine) sleep(d time.Duration) {
 }
 
 // Env returns the environment DevArch adds when running compose for svc: the
-// selected version, if one is recorded in versions.env.
+// selected version, if one is recorded in versions.env, and the network and
+// apps directory when config.yml changes them. Compose files read these as
+// ${DEVARCH_NETWORK:-microservices-net} and ${DEVARCH_APPS_DIR:-../../../apps},
+// so defaults add nothing and plain compose keeps working.
 func (e *Engine) Env(svc catalog.Service) []string {
-	v := svc.Meta.Version
-	if v == nil || v.Var == "" {
-		return nil
+	var env []string
+	if v := svc.Meta.Version; v != nil && v.Var != "" {
+		if val, ok := e.Versions[v.Var]; ok && val != "" {
+			env = append(env, v.Var+"="+val)
+		}
 	}
-	if val, ok := e.Versions[v.Var]; ok && val != "" {
-		return []string{v.Var + "=" + val}
+	if n := e.Settings.Network; n != "" && n != state.DefaultNetwork {
+		env = append(env, "DEVARCH_NETWORK="+n)
 	}
-	return nil
+	if d := e.Settings.AppsDir; d != "" && d != filepath.Join(e.Root, "apps") {
+		env = append(env, "DEVARCH_APPS_DIR="+d)
+	}
+	return env
 }
 
 // SelectedVersion returns the version compose will use for svc.
@@ -83,7 +95,7 @@ func (e *Engine) SelectedVersion(svc catalog.Service) string {
 // exactly as the README documents running it by hand.
 func (e *Engine) Compose(svc catalog.Service, args ...string) runner.Cmd {
 	return runner.Cmd{
-		Name: "podman",
+		Name: e.Settings.Runtime,
 		Args: append([]string{"compose"}, args...),
 		Dir:  svc.Dir,
 		Env:  e.Env(svc),
@@ -92,16 +104,17 @@ func (e *Engine) Compose(svc catalog.Service, args ...string) runner.Cmd {
 
 // EnsureNetwork creates the shared network when it does not exist.
 func (e *Engine) EnsureNetwork(ctx context.Context) error {
-	_, err := e.Runner.Output(ctx, runner.Cmd{Name: "podman", Args: []string{"network", "exists", Network}})
+	network := e.Settings.Network
+	_, err := e.Runner.Output(ctx, e.Cmd("network", "exists", network))
 	if err == nil {
 		return nil
 	}
 	var exit *runner.ExitError
 	if !errors.As(err, &exit) {
-		return fmt.Errorf("podman is unavailable: %w", err)
+		return fmt.Errorf("%s is unavailable: %w", e.Settings.Runtime, err)
 	}
-	e.logf("creating network %s", Network)
-	return e.Runner.Run(ctx, runner.Cmd{Name: "podman", Args: []string{"network", "create", Network}})
+	e.logf("creating network %s", network)
+	return e.Runner.Run(ctx, e.Cmd("network", "create", network))
 }
 
 // UpOptions controls Up.
@@ -212,7 +225,7 @@ type psEntry struct {
 // Containers lists podman containers (all states) and maps each to a catalog
 // service through the compose working-directory label.
 func (e *Engine) Containers(ctx context.Context) ([]Container, error) {
-	out, err := e.Runner.Output(ctx, runner.Cmd{Name: "podman", Args: []string{"ps", "-a", "--format", "json"}})
+	out, err := e.Runner.Output(ctx, e.Cmd("ps", "-a", "--format", "json"))
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +363,7 @@ func (e *Engine) ready(ctx context.Context, svc catalog.Service) error {
 	if len(names) == 0 {
 		return errors.New("no containers found")
 	}
-	out, err := e.Runner.Output(ctx, runner.Cmd{Name: "podman", Args: append([]string{"inspect", "--format", "json"}, names...)})
+	out, err := e.Runner.Output(ctx, e.Cmd(append([]string{"inspect", "--format", "json"}, names...)...))
 	if err != nil {
 		return err
 	}
@@ -366,13 +379,13 @@ func (e *Engine) ready(ctx context.Context, svc catalog.Service) error {
 		if in.Config.Healthcheck == nil || string(*in.Config.Healthcheck) == "null" {
 			continue
 		}
-		if _, err := e.Runner.Output(ctx, runner.Cmd{Name: "podman", Args: []string{"healthcheck", "run", name}}); err != nil {
+		if _, err := e.Runner.Output(ctx, e.Cmd("healthcheck", "run", name)); err != nil {
 			return fmt.Errorf("%s is not healthy yet", name)
 		}
 	}
 	if r := svc.Meta.Ready; r != nil && len(r.Exec) > 0 {
 		primary := e.containerName(svc, cs)
-		if _, err := e.Runner.Output(ctx, runner.Cmd{Name: "podman", Args: append([]string{"exec", primary}, r.Exec...)}); err != nil {
+		if _, err := e.Runner.Output(ctx, e.Cmd(append([]string{"exec", primary}, r.Exec...)...)); err != nil {
 			return fmt.Errorf("readiness probe %q failed in %s", strings.Join(r.Exec, " "), primary)
 		}
 	}
