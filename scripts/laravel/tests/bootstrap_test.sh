@@ -92,14 +92,8 @@ unset LARAVEL_APP_NAME
 load_repository_env
 assert_eq "$LARAVEL_APP_NAME" Accepted 'only supported repository dotenv values are validated'
 
-# A durable guard exists before mutation; failed state updates leave it blocking retries.
-RECOVERY_MARKER="$TEST_TMP/recovery/demo"
-create_recovery_guard
-assert_eq "$(<"$RECOVERY_MARKER")" 'provisioning in progress' 'durable recovery guard creation'
-LARAVEL_TEST_FAIL_RECOVERY_MARKER_WRITE=1
-expect_failure persist_recovery_state 'recovery incomplete'
-unset LARAVEL_TEST_FAIL_RECOVERY_MARKER_WRITE
-assert_eq "$(<"$RECOVERY_MARKER")" 'provisioning in progress' 'failed marker update preserves durable guard'
+# A guard left by an earlier run refuses a retry before anything changes.
+# Guard creation, replacement and recovery are tested in cli/internal/replace.
 APP_NAME=demo
 APPS_DIR="$TEST_TMP"
 TARGET="$APPS_DIR/demo"
@@ -108,12 +102,9 @@ FORCE=true
 DRY_RUN=true
 RECOVERY_MARKER="$APPS_DIR/.devarch-recovery/demo"
 mkdir -p "$(dirname "$RECOVERY_MARKER")"
-printf 'provisioning in progress\n' > "$RECOVERY_MARKER"
+printf '{"app":"demo"}\n' > "$RECOVERY_MARKER"
 expect_failure validate_config
 rm -f "$RECOVERY_MARKER"
-LARAVEL_TEST_FAIL_RECOVERY_MARKER_CREATE=1
-expect_failure create_recovery_guard
-unset LARAVEL_TEST_FAIL_RECOVERY_MARKER_CREATE
 
 # Podman detection delegates platform steps to the devarch CLI.
 mkdir -p "$TEST_TMP/bin"
@@ -271,31 +262,36 @@ assert_contains "$(<"$PACKAGE_COMMAND_LOG")" $'[--dev]\n[acme/tool:^3.0]' 'devel
 if grep -Eq '(^|[^[:alnum:]_])eval([^[:alnum:]_]|$)' "$BOOTSTRAP"; then fail 'bootstrap must not use eval'; fi
 pass
 
-# Databases are created and dropped through devarch db.
+# Guards, databases and recovery go through devarch.
 cat > "$TEST_TMP/bin/db-devarch" <<'DEVARCH'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$DEVARCH_LOG"
-[[ "$1 $2" == "db create" ]] && printf 'DB_NAME=%s\nDB_PASSWORD=s3cret\n' "$3"
+case "$1 $2" in
+  'db create') printf 'DB_NAME=%s\nDB_PASSWORD=s3cret\n' "$3" ;;
+  'app guard') [[ "$*" == *--replace* ]] && printf 'BACKUP_PATH=/apps/.devarch-backups/demo-1\n' || printf 'BACKUP_PATH=\n' ;;
+esac
 exit 0
 DEVARCH
 chmod +x "$TEST_TMP/bin/db-devarch"
 export DEVARCH_LOG="$TEST_TMP/devarch.log"
 DEVARCH="$TEST_TMP/bin/db-devarch"
+APP_NAME=demo
+FORCE=true
+take_guard >/dev/null
+assert_eq "$BACKUP_MOVED $BACKUP_PATH" 'true /apps/.devarch-backups/demo-1' '--force replaces through the guard'
+assert_contains "$(<"$DEVARCH_LOG")" 'app guard demo --replace' 'guard is taken with --replace under --force'
+FORCE=false
+BACKUP_MOVED=false
+take_guard >/dev/null
+assert_eq "$BACKUP_MOVED" false 'a new target has no backup'
 DATABASE=mariadb
 DB_NAME=laravel_demo
 DB_USER=lv_demo
-DB_CREATED=false
-DB_USER_CREATED=false
 create_database >/dev/null
 assert_eq "$DB_PASSWORD" s3cret 'database password comes from devarch db create'
-assert_eq "$DB_CREATED $DB_USER_CREATED" 'true true' 'database and user are recorded for rollback'
-assert_contains "$(<"$DEVARCH_LOG")" 'db create laravel_demo --user lv_demo --env' 'create refuses existing identifiers by default'
-rollback_output="$(
-  TARGET="$TEST_TMP/no-target" BACKUP_MOVED=false RECOVERY_MARKER="$TEST_TMP/rollback-marker"
-  : > "$RECOVERY_MARKER"
-  rollback 1 2>&1
-)" || true
-assert_contains "$(<"$DEVARCH_LOG")" 'db drop laravel_demo --user lv_demo --yes' 'rollback drops the created database and user'
+assert_contains "$(<"$DEVARCH_LOG")" 'db create laravel_demo --user lv_demo --app demo --env' 'the database is recorded in the guard and existing identifiers are refused'
+( rollback 1 ) >/dev/null 2>&1 || true
+assert_contains "$(<"$DEVARCH_LOG")" 'app recover demo' 'a failed run recovers through devarch'
 DATABASE=sqlite
 
 printf 'PASS: %d assertions\n' "$passed"

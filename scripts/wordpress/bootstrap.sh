@@ -37,6 +37,8 @@ PROFILE=""
 PLUGINS_FILE=""
 RESTORE_FILE=""
 REPLACE_EXISTING=false
+GUARDED=false
+SUCCESS=false
 PLUGIN_SOURCES=()
 PLUGIN_ACTIVATIONS=()
 THEME_SOURCES=()
@@ -374,17 +376,41 @@ start_services() {
 }
 
 
+# prepare_site_dir takes the devarch guard, which moves an existing site to
+# the backups directory; a failed run is then undone by devarch app recover.
 prepare_site_dir() {
-  local site_dir="$APPS_DIR/$SITE_NAME"
+  local site_dir="$APPS_DIR/$SITE_NAME" args=(app guard "$SITE_NAME") output backup
   if [[ -e "$site_dir" ]]; then
     [[ "$FORCE" == true || -n "$RESTORE_FILE" ]] || die "$site_dir already exists; use --force to replace it"
     REPLACE_EXISTING=true
-    local backup_dir="$APPS_DIR/.devarch-backups/${SITE_NAME}-$(date +%Y%m%d-%H%M%S)"
-    log "move existing site to $backup_dir"
-    run mkdir -p "$(dirname "$backup_dir")"
-    run mv "$site_dir" "$backup_dir"
+    args+=(--replace)
+    log "move existing site to $APPS_DIR/.devarch-backups/"
+  fi
+  if [[ "$DRY_RUN" == true ]]; then
+    print_command "$DEVARCH" "${args[@]}"
+  else
+    output="$("$DEVARCH" "${args[@]}")" || die "could not guard $site_dir"
+    GUARDED=true
+    backup="$(devarch_env_value BACKUP_PATH <<<"$output")" || backup=""
+    [[ -z "$backup" ]] || log "previous site kept at $backup"
   fi
   run mkdir -p "$site_dir"
+}
+
+release_guard() {
+  [[ "$GUARDED" == true ]] || return 0
+  "$DEVARCH" app release "$SITE_NAME" || die "the site is ready but the guard could not be released: devarch app release $SITE_NAME"
+}
+
+on_exit() {
+  local status="$1"
+  if ((status != 0)) && [[ "$GUARDED" == true && "$SUCCESS" != true ]]; then
+    trap - EXIT
+    printf '[wordpress] failed; recovering with devarch app recover %s\n' "$SITE_NAME" >&2
+    "$DEVARCH" app recover "$SITE_NAME" ||
+      printf '[wordpress] recovery incomplete; fix the problems above, then rerun: devarch app recover %s\n' "$SITE_NAME" >&2
+    exit "$status"
+  fi
 }
 
 # create_database asks devarch for the site's database and user and sets
@@ -393,7 +419,7 @@ prepare_site_dir() {
 create_database() {
   local db_name="$1" db_user="$2" existing=reuse output
   [[ "$FORCE" == true || "$REPLACE_EXISTING" == true ]] && existing=replace
-  local args=(db create "$db_name" --user "$db_user" --existing "$existing" --env)
+  local args=(db create "$db_name" --user "$db_user" --existing "$existing" --app "$SITE_NAME" --env)
   log "create isolated database and user: $db_name / $db_user"
   if [[ "$DRY_RUN" == true ]]; then
     print_command "$DEVARCH" "${args[@]}"
@@ -675,6 +701,8 @@ main() {
   step permissions make_content_writable
   step restore restore_aiowm_archive
   step permissions make_content_writable
+  release_guard
+  SUCCESS=true
   step hosts register_site_host
 
   log "ready through the Nginx Proxy Manager .test reverse proxy: $SITE_URL"
@@ -682,5 +710,6 @@ main() {
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  trap 'on_exit $?' EXIT
   main "$@"
 fi

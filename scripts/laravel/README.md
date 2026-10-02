@@ -145,9 +145,9 @@ PHP is always selected. MariaDB is selected by the default database, Mailpit by 
 
 ## Replacement and recovery safety
 
-An existing `apps/<app-name>` is refused unless `--force` is supplied. Before provisioning mutation, the script creates a durable guard in `apps/.devarch-recovery/`. Forced replacement moves the old tree beneath `apps/.devarch-backups/` rather than deleting it.
+An existing `apps/<app-name>` is refused unless `--force` is supplied. Before provisioning mutation, the script takes a guard with `devarch app guard`, a record in `apps/.devarch-recovery/` that blocks a second run. Forced replacement moves the old tree beneath `apps/.devarch-backups/` rather than deleting it, and the database created by `devarch db create --app` is added to the record.
 
-If provisioning fails after backup, the partial target is quarantined beneath `apps/.devarch-failed/`, database resources created by that run are removed, and the prior tree is restored. If recovery cannot complete, the guard remains and blocks retries for manual inspection. `--dry-run --force` only reports the chosen backup path; it does not move the target or create recovery state.
+If provisioning fails, the script runs `devarch app recover <app-name>`: the partial target is quarantined beneath `apps/.devarch-failed/`, database resources created by that run are removed, and the prior tree is restored. If recovery cannot complete, the guard remains, lists the problems, and blocks retries; fix the cause and rerun `devarch app recover <app-name>`, which skips the steps already done. `--dry-run --force` only reports the chosen backup path; it does not move the target or create recovery state.
 
 ## Regression tests
 
@@ -158,7 +158,7 @@ bash -n scripts/laravel/bootstrap.sh scripts/laravel/bootstrap.test.sh
 bash scripts/laravel/bootstrap.test.sh
 ```
 
-Focused parser and rollback-contract checks are also available at `scripts/laravel/tests/bootstrap_test.sh`. They use temporary fixtures and fake commands; they do not perform real provisioning.
+Focused parser checks are also available at `scripts/laravel/tests/bootstrap_test.sh`; the guard and recovery logic is tested in Go (`cli/internal/replace`). They use temporary fixtures and fake commands; they do not perform real provisioning.
 
 ## Optional real-provisioning smoke test
 
@@ -188,6 +188,6 @@ Review the commands and confirm the name is disposable before running them.
 - **Wrong document root:** confirm `apps/<name>/public/index.php` exists; the wildcard proxy then selects `public` automatically.
 - **MariaDB readiness/authentication fails:** make `LARAVEL_DB_ROOT_PASSWORD` (or its fallback) match the shared MariaDB service.
 - **Target already exists:** use a different name or review `--force` replacement safety first.
-- **Unresolved recovery marker:** inspect the matching recovery, backup, and failed paths; do not delete the guard until the application/database state is understood.
+- **Unresolved recovery guard:** run `devarch app recover <app-name>`; it reports anything it still cannot undo. A guard written by an older bootstrap (plain text) must be resolved by hand: inspect the matching backup and failed paths before deleting it.
 - **Composer authentication fails:** configure credentials in the Composer environment used by the shared PHP container.
 - **Permission errors:** use the documented runtime mapping or a numeric `LARAVEL_CONTAINER_USER` that can write the bind mount.

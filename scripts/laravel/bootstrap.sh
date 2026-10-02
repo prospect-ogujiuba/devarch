@@ -57,11 +57,8 @@ DB_NAME=""
 DB_USER=""
 DB_PASSWORD=""
 BACKUP_PATH=""
-FAILED_PATH=""
 RECOVERY_MARKER=""
 BACKUP_MOVED=false
-DB_CREATED=false
-DB_USER_CREATED=false
 PROVISIONING_STARTED=false
 SUCCESS=false
 CLI_PACKAGE_KINDS=()
@@ -455,7 +452,7 @@ validate_config() {
   TARGET="$APPS_DIR/$APP_NAME"
   CONTAINER_APP="/var/www/html/$APP_NAME"
   RECOVERY_MARKER="$APPS_DIR/.devarch-recovery/$APP_NAME"
-  [[ ! -e "$RECOVERY_MARKER" && ! -L "$RECOVERY_MARKER" ]] || die "unresolved recovery marker exists: $RECOVERY_MARKER"
+  [[ ! -e "$RECOVERY_MARKER" && ! -L "$RECOVERY_MARKER" ]] || die "an earlier run left a guard at $RECOVERY_MARKER; run: devarch app recover $APP_NAME"
   if [[ ( -e "$TARGET" || -L "$TARGET" ) && "$FORCE" != true ]]; then
     die "$TARGET already exists; use --force to preserve and replace it"
   fi
@@ -463,7 +460,6 @@ validate_config() {
   local stamp
   stamp="$(date +%Y%m%d-%H%M%S)"
   BACKUP_PATH="$(choose_unique_path "$APPS_DIR/.devarch-backups/$APP_NAME-$stamp")"
-  FAILED_PATH="$(choose_unique_path "$APPS_DIR/.devarch-failed/$APP_NAME-$stamp")"
   [[ "$DATABASE" == mariadb ]] && derive_identifiers
 
   command -v awk >/dev/null 2>&1 || die 'awk is required'
@@ -536,15 +532,14 @@ start_services() {
 }
 
 
-# create_database asks devarch for an isolated database and user. devarch
-# refuses identifiers that already exist and undoes a partial creation itself.
+# create_database asks devarch for an isolated database and user, recorded in
+# the app's guard so recovery drops them. devarch refuses identifiers that
+# already exist and undoes a partial creation itself.
 create_database() {
   [[ "$DATABASE" == mariadb ]] || return 0
   local output
-  output="$("$DEVARCH" db create "$DB_NAME" --user "$DB_USER" --env)" || die "could not create database $DB_NAME / $DB_USER"
+  output="$("$DEVARCH" db create "$DB_NAME" --user "$DB_USER" --app "$APP_NAME" --env)" || die "could not create database $DB_NAME / $DB_USER"
   DB_PASSWORD="$(devarch_env_value DB_PASSWORD <<<"$output")" || die 'devarch did not report a database password'
-  DB_CREATED=true
-  DB_USER_CREATED=true
   log "created isolated MariaDB database/user: $DB_NAME / $DB_USER"
   if [[ "${LARAVEL_TEST_FAIL_AFTER_DATABASE:-0}" == 1 ]]; then
     die 'injected failure after database/user creation'
@@ -658,100 +653,31 @@ configure_application() {
   if [[ "$SEED" == true ]]; then log 'run Laravel database seeder'; artisan db:seed --force --no-interaction; fi
 }
 
-create_recovery_guard() {
-  [[ "${LARAVEL_TEST_FAIL_RECOVERY_MARKER_CREATE:-0}" != 1 ]] || die "could not create durable recovery marker: $RECOVERY_MARKER"
-  mkdir -p "$(dirname "$RECOVERY_MARKER")" || die "could not create recovery marker directory: $(dirname "$RECOVERY_MARKER")"
-  (set -o noclobber; printf 'provisioning in progress\n' > "$RECOVERY_MARKER") 2>/dev/null || \
-    die "could not create durable recovery marker: $RECOVERY_MARKER"
-  [[ "$(<"$RECOVERY_MARKER")" == 'provisioning in progress' ]] || die "could not verify durable recovery marker: $RECOVERY_MARKER"
-}
-
-persist_recovery_state() {
-  local tmp="$RECOVERY_MARKER.tmp.$$" message="$1"
-  if [[ "${LARAVEL_TEST_FAIL_RECOVERY_MARKER_WRITE:-0}" == 1 ]] || \
-     ! printf '%s\n' "$message" > "$tmp" || ! mv "$tmp" "$RECOVERY_MARKER" || \
-     [[ "$(<"$RECOVERY_MARKER")" != "$message" ]]; then
-    rm -f "$tmp"
-    printf '[laravel] recovery marker update failed; original durable guard remains: %s\n' "$RECOVERY_MARKER" >&2
-    return 1
-  fi
-}
-
-clear_recovery_guard() {
-  rm -f "$RECOVERY_MARKER" && [[ ! -e "$RECOVERY_MARKER" && ! -L "$RECOVERY_MARKER" ]]
-}
-
-move_existing_target() {
-  [[ -e "$TARGET" || -L "$TARGET" ]] || return 0
-  [[ ! -e "$BACKUP_PATH" && ! -L "$BACKUP_PATH" ]] || die "backup path was claimed concurrently: $BACKUP_PATH"
-  mkdir -p "$(dirname "$BACKUP_PATH")"
-  log "preserve existing target: $BACKUP_PATH"
-  mv "$TARGET" "$BACKUP_PATH"
-  BACKUP_MOVED=true
+# take_guard blocks concurrent or unrecovered runs and, with --force, moves an
+# existing target to the backups directory. devarch records everything it
+# does so `devarch app recover` can undo a failed run.
+take_guard() {
+  local args=(app guard "$APP_NAME") output
+  [[ "$FORCE" == true ]] && args+=(--replace)
+  output="$("$DEVARCH" "${args[@]}")" || die "could not guard $TARGET"
   PROVISIONING_STARTED=true
+  BACKUP_PATH="$(devarch_env_value BACKUP_PATH <<<"$output")" || BACKUP_PATH=""
+  if [[ -n "$BACKUP_PATH" ]]; then
+    BACKUP_MOVED=true
+    log "preserve existing target: $BACKUP_PATH"
+  fi
   if [[ "${LARAVEL_TEST_FAIL_AFTER_BACKUP:-0}" == 1 ]]; then
     die 'injected failure after target backup'
   fi
 }
 
 rollback() {
-  local original_status="$1" quarantine_status=not-present db_status=not-created user_status=not-created restore_status=not-needed incomplete=false
+  local original_status="$1"
   trap - EXIT ERR
   set +e
-  printf '[laravel] provisioning failed; starting recovery\n' >&2
-
-  if [[ -e "$TARGET" || -L "$TARGET" ]]; then
-    FAILED_PATH="$(choose_unique_path "$FAILED_PATH")"
-    mkdir -p "$(dirname "$FAILED_PATH")"
-    if [[ "${LARAVEL_TEST_FAIL_QUARANTINE:-0}" == 1 ]]; then
-      quarantine_status=failed
-      incomplete=true
-    elif mv "$TARGET" "$FAILED_PATH"; then
-      quarantine_status="quarantined:$FAILED_PATH"
-    else
-      quarantine_status=failed
-      incomplete=true
-    fi
-  fi
-
-  if [[ "$DB_CREATED" == true || "$DB_USER_CREATED" == true ]]; then
-    if [[ "${LARAVEL_TEST_FAIL_CLEANUP_DATABASE:-0}" == 1 ]]; then
-      db_status=failed; user_status=failed; incomplete=true
-    elif "$DEVARCH" db drop "$DB_NAME" --user "$DB_USER" --yes >/dev/null 2>&1; then
-      db_status=dropped; user_status=dropped
-    else
-      db_status=failed; user_status=failed; incomplete=true
-    fi
-  fi
-
-  if [[ "$BACKUP_MOVED" == true ]]; then
-    if [[ "${LARAVEL_TEST_FAIL_RESTORE:-0}" == 1 ]]; then
-      restore_status=failed; incomplete=true
-    elif [[ -e "$TARGET" ]]; then
-      restore_status='failed:target-occupied'; incomplete=true
-    elif mv "$BACKUP_PATH" "$TARGET"; then
-      restore_status=restored
-    else
-      restore_status=failed; incomplete=true
-    fi
-  fi
-
-  if [[ "$incomplete" == true ]]; then
-    persist_recovery_state 'recovery incomplete' || true
-    printf '[laravel] recovery incomplete; unsafe retry refused until resolved\n' >&2
-    printf '[laravel] recovery target=%s\n' "$TARGET" >&2
-    printf '[laravel] recovery backup=%s\n' "$BACKUP_PATH" >&2
-    printf '[laravel] recovery failed-target=%s status=%s\n' "$FAILED_PATH" "$quarantine_status" >&2
-    printf '[laravel] recovery database=%s status=%s\n' "${DB_NAME:-not-applicable}" "$db_status" >&2
-    printf '[laravel] recovery user=%s status=%s\n' "${DB_USER:-not-applicable}" "$user_status" >&2
-    printf '[laravel] recovery restore=%s\n' "$restore_status" >&2
-  else
-    if clear_recovery_guard; then
-      [[ "$BACKUP_MOVED" == true ]] && printf '[laravel] recovery complete; old target restored: %s\n' "$TARGET" >&2
-      [[ "$quarantine_status" == quarantined:* ]] && printf '[laravel] partial target quarantined: %s\n' "$FAILED_PATH" >&2
-    else
-      printf '[laravel] recovery complete, but durable marker removal failed; unsafe retry remains refused: %s\n' "$RECOVERY_MARKER" >&2
-    fi
+  printf '[laravel] provisioning failed; recovering with devarch app recover %s\n' "$APP_NAME" >&2
+  if ! "$DEVARCH" app recover "$APP_NAME"; then
+    printf '[laravel] recovery incomplete; fix the problems above, then rerun: devarch app recover %s\n' "$APP_NAME" >&2
   fi
   exit "$original_status"
 }
@@ -782,18 +708,15 @@ main() {
     return 0
   fi
 
-  create_recovery_guard
-  PROVISIONING_STARTED=true
-  step services start_services
   mkdir -p "$APPS_DIR"
-  step backup move_existing_target
-  PROVISIONING_STARTED=true
+  step backup take_guard
+  step services start_services
   step database create_database
   step scaffold scaffold_application
   step packages install_packages
   step permissions make_runtime_writable
   step configure configure_application
-  clear_recovery_guard || die "provisioning succeeded but durable recovery marker could not be removed: $RECOVERY_MARKER"
+  "$DEVARCH" app release "$APP_NAME" || die "provisioning succeeded but the guard could not be released: devarch app release $APP_NAME"
   SUCCESS=true
   step hosts register_app_host
   log "ready through the wildcard proxy: $APP_URL"
