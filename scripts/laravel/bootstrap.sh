@@ -6,14 +6,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 APPS_DIR="$PROJECT_ROOT/apps"
 ENV_FILE="$PROJECT_ROOT/.env"
-PHP_COMPOSE="$PROJECT_ROOT/services-library/backend/php/compose.yml"
-MARIADB_COMPOSE="$PROJECT_ROOT/services-library/database/mariadb/compose.yml"
-PROXY_COMPOSE="$PROJECT_ROOT/services-library/proxy/nginx-proxy-manager/compose.yml"
-REDIS_COMPOSE="$PROJECT_ROOT/services-library/database/redis/compose.yml"
-MAILPIT_COMPOSE="$PROJECT_ROOT/services-library/mail/mailpit/compose.yml"
 PROFILE_DIR="$SCRIPT_DIR/profiles"
-HOSTS_HELPER="$PROJECT_ROOT/scripts/hosts/register-host.sh"
 DOTENV_LIBRARY="$PROJECT_ROOT/scripts/devarch/lib/dotenv.sh"
+PLATFORM_LIBRARY="$PROJECT_ROOT/scripts/devarch/lib/platform.sh"
 LARAVEL_DOTENV_KEYS=(
   LARAVEL_APP_NAME LARAVEL_APP_URL LARAVEL_DB_ROOT_PASSWORD
   MARIADB_ROOT_PASSWORD LARAVEL_CONTAINER_USER CONTAINER_RUNTIME
@@ -21,6 +16,8 @@ LARAVEL_DOTENV_KEYS=(
 
 # shellcheck source=../devarch/lib/dotenv.sh
 source "$DOTENV_LIBRARY"
+# shellcheck source=../devarch/lib/platform.sh
+source "$PLATFORM_LIBRARY"
 ENV_FILE="${DEVARCH_ENV_FILE:-$PROJECT_ROOT/.env}"
 if [[ -n "${DEVARCH_ENV_FILE:-}" && ! -f "$ENV_FILE" ]]; then
   printf '[laravel] error: env file is not a regular file: %s\n' "$ENV_FILE" >&2
@@ -52,7 +49,8 @@ REGISTER_HOSTS=true
 RUNTIME=""
 CONTAINER_USER=""
 DB_ROOT_PASSWORD=""
-COMPOSE=()
+DEVARCH=devarch
+CURRENT_STEP=bootstrap
 TARGET=""
 CONTAINER_APP=""
 DB_NAME=""
@@ -72,7 +70,19 @@ PACKAGE_KINDS=()
 PACKAGE_SPECS=()
 
 log() { printf '[laravel] %s\n' "$*"; }
-die() { printf '[laravel] error: %s\n' "$*" >&2; exit 1; }
+die() {
+  devarch_progress "$CURRENT_STEP" fail "$*"
+  printf '[laravel] error: %s\n' "$*" >&2
+  exit 1
+}
+
+# step NAME FUNCTION: run one provisioning step and report its progress.
+step() {
+  CURRENT_STEP="$1"
+  devarch_progress "$1" start
+  "$2"
+  devarch_progress "$1" done
+}
 
 usage() {
   cat <<'EOF'
@@ -436,9 +446,9 @@ validate_config() {
   APP_URL="${LARAVEL_APP_URL:-https://$APP_NAME.test}"
   validate_url "$APP_URL"
 
-  RUNTIME="${CONTAINER_RUNTIME:-}"
+  RUNTIME="${CONTAINER_RUNTIME:-podman}"
   validate_no_controls 'CONTAINER_RUNTIME' "$RUNTIME"
-  [[ -z "$RUNTIME" || "$RUNTIME" == podman || "$RUNTIME" == docker ]] || die 'CONTAINER_RUNTIME must be podman or docker'
+  [[ "$RUNTIME" == podman ]] || die "only Podman is supported (CONTAINER_RUNTIME=$RUNTIME)"
   CONTAINER_USER="${LARAVEL_CONTAINER_USER:-}"
   validate_no_controls 'LARAVEL_CONTAINER_USER' "$CONTAINER_USER"
   [[ -z "$CONTAINER_USER" || "$CONTAINER_USER" =~ ^[0-9]+:[0-9]+$ ]] || die 'LARAVEL_CONTAINER_USER must match numeric uid:gid'
@@ -459,11 +469,6 @@ validate_config() {
   FAILED_PATH="$(choose_unique_path "$APPS_DIR/.devarch-failed/$APP_NAME-$stamp")"
   [[ "$DATABASE" == mariadb ]] && derive_identifiers
 
-  [[ -f "$PHP_COMPOSE" ]] || die "required Compose file not found: $PHP_COMPOSE"
-  [[ -f "$PROXY_COMPOSE" ]] || die "required Compose file not found: $PROXY_COMPOSE"
-  [[ "$DATABASE" != mariadb || -f "$MARIADB_COMPOSE" ]] || die "required Compose file not found: $MARIADB_COMPOSE"
-  [[ "$WITH_REDIS" != true || -f "$REDIS_COMPOSE" ]] || die "required Compose file not found: $REDIS_COMPOSE"
-  [[ "$WITH_MAILPIT" != true || -f "$MAILPIT_COMPOSE" ]] || die "required Compose file not found: $MAILPIT_COMPOSE"
   command -v awk >/dev/null 2>&1 || die 'awk is required'
   command -v tr >/dev/null 2>&1 || die 'tr is required'
   if [[ "$DRY_RUN" != true ]]; then
@@ -472,25 +477,23 @@ validate_config() {
 }
 
 detect_runtime() {
-  if [[ -z "$RUNTIME" ]]; then
-    if command -v podman >/dev/null 2>&1; then RUNTIME=podman
-    elif command -v docker >/dev/null 2>&1; then RUNTIME=docker
-    else die 'Podman or Docker is required'
-    fi
+  # Root in a rootless Podman container maps to the invoking host user and owns
+  # bind-mounted files.
+  CONTAINER_USER="${CONTAINER_USER:-0:0}"
+  if [[ "$DRY_RUN" == true ]]; then
+    DEVARCH="$(devarch_bin 2>/dev/null)" || DEVARCH=devarch
+    return
   fi
-  command -v "$RUNTIME" >/dev/null 2>&1 || die "container runtime not found: $RUNTIME"
-  if "$RUNTIME" compose version >/dev/null 2>&1; then
-    COMPOSE=("$RUNTIME" compose)
-  elif [[ "$RUNTIME" == podman ]] && command -v podman-compose >/dev/null 2>&1; then
-    COMPOSE=(podman-compose)
-  else
-    die "no Compose provider found for $RUNTIME"
-  fi
-  if [[ -z "$CONTAINER_USER" ]]; then
-    if [[ "$RUNTIME" == podman ]]; then CONTAINER_USER='0:0'
-    else CONTAINER_USER="$(id -u):$(id -g)"
-    fi
-  fi
+  command -v podman >/dev/null 2>&1 || die 'Podman is required'
+  DEVARCH="$(devarch_bin)" || die 'the devarch CLI is required: (cd cli && go install ./cmd/devarch)'
+}
+
+# required_services prints the catalog IDs this app needs, one per line.
+required_services() {
+  printf '%s\n' backend/php proxy/nginx-proxy-manager
+  [[ "$DATABASE" != mariadb ]] || printf '%s\n' database/mariadb
+  [[ "$WITH_MAILPIT" != true ]] || printf '%s\n' mail/mailpit
+  [[ "$WITH_REDIS" != true ]] || printf '%s\n' database/redis
 }
 
 print_plan() {
@@ -499,7 +502,7 @@ print_plan() {
   if [[ -e "$TARGET" || -L "$TARGET" ]]; then log "backup existing target: $BACKUP_PATH"; else log 'target is new'; fi
   log "runtime: $RUNTIME; container user: $CONTAINER_USER"
   log "profile: $PROFILE"
-  log 'ensure external network: microservices-net'
+  log "start through: $DEVARCH up $(required_services | tr '\n' ' ')--wait --no-hosts"
   log 'start and wait: php'
   log 'start and wait: nginx-proxy-manager'
   [[ "$DATABASE" == mariadb ]] && log "start and wait: mariadb; create isolated database/user: $DB_NAME / $DB_USER"
@@ -524,55 +527,15 @@ print_plan() {
   return 0
 }
 
-ensure_network() {
-  if ! "$RUNTIME" network inspect microservices-net >/dev/null 2>&1; then
-    "$RUNTIME" network create microservices-net >/dev/null
-  fi
-}
 
-compose_up() {
-  local file="$1"
-  shift
-  "${COMPOSE[@]}" -f "$file" up -d "$@"
-}
 
 start_services() {
-  log 'start shared PHP service'
-  compose_up "$PHP_COMPOSE"
-  log 'start shared Nginx Proxy Manager service'
-  compose_up "$PROXY_COMPOSE"
-  if [[ "$DATABASE" == mariadb ]]; then
-    log 'start shared MariaDB service'
-    env MARIADB_ROOT_PASSWORD="$DB_ROOT_PASSWORD" "${COMPOSE[@]}" -f "$MARIADB_COMPOSE" up -d
-  fi
-  if [[ "$WITH_MAILPIT" == true ]]; then log 'start shared Mailpit service'; compose_up "$MAILPIT_COMPOSE"; fi
-  if [[ "$WITH_REDIS" == true ]]; then log 'start shared Redis service'; compose_up "$REDIS_COMPOSE"; fi
+  local services=()
+  mapfile -t services < <(required_services)
+  log "start and wait: ${services[*]}"
+  env MARIADB_ROOT_PASSWORD="$DB_ROOT_PASSWORD" "$DEVARCH" up "${services[@]}" --wait --no-hosts
 }
 
-wait_for_services() {
-  local ready
-  log 'wait for required services'
-  for _ in {1..90}; do
-    ready=true
-    "$RUNTIME" exec php php -v >/dev/null 2>&1 || ready=false
-    "$RUNTIME" exec php composer --version >/dev/null 2>&1 || ready=false
-    "$RUNTIME" exec nginx-proxy-manager curl -fsS http://localhost:81/api/ >/dev/null 2>&1 || ready=false
-    if [[ "$DATABASE" == mariadb ]]; then
-      # The password expands in the container shell, not on the host.
-      # shellcheck disable=SC2016
-      "$RUNTIME" exec mariadb sh -c 'mariadb-admin ping -uroot -p"$MARIADB_ROOT_PASSWORD" --silent' >/dev/null 2>&1 || ready=false
-    fi
-    if [[ "$WITH_REDIS" == true ]]; then
-      "$RUNTIME" exec redis redis-cli -a "$REDIS_PASSWORD" ping >/dev/null 2>&1 || ready=false
-    fi
-    if [[ "$WITH_MAILPIT" == true ]]; then
-      "$RUNTIME" exec mailpit wget --spider -q http://localhost:8025/ >/dev/null 2>&1 || ready=false
-    fi
-    [[ "$ready" == true ]] && return 0
-    sleep 1
-  done
-  die 'required services did not become ready within 90 seconds'
-}
 
 db_exec() {
   local sql="$1"
@@ -848,11 +811,7 @@ on_exit() {
 register_app_host() {
   local hostname="$APP_NAME.test"
   [[ "$REGISTER_HOSTS" == true ]] || { log "hosts registration skipped: $hostname"; return 0; }
-  if [[ ! -x "$HOSTS_HELPER" ]]; then
-    log "warning: hosts helper is unavailable; manually map 127.0.0.1 $hostname"
-    return 0
-  fi
-  if ! "$HOSTS_HELPER" "$hostname"; then
+  if ! "$DEVARCH" hosts add "$hostname"; then
     log "warning: could not register $hostname; manually map it to 127.0.0.1"
   fi
 }
@@ -871,21 +830,19 @@ main() {
 
   create_recovery_guard
   PROVISIONING_STARTED=true
-  ensure_network
-  start_services
-  wait_for_services
-  assert_database_available
+  step services start_services
+  step database-check assert_database_available
   mkdir -p "$APPS_DIR"
-  move_existing_target
+  step backup move_existing_target
   PROVISIONING_STARTED=true
-  create_database
-  scaffold_application
-  install_packages
-  make_runtime_writable
-  configure_application
+  step database create_database
+  step scaffold scaffold_application
+  step packages install_packages
+  step permissions make_runtime_writable
+  step configure configure_application
   clear_recovery_guard || die "provisioning succeeded but durable recovery marker could not be removed: $RECOVERY_MARKER"
   SUCCESS=true
-  register_app_host
+  step hosts register_app_host
   log "ready through the wildcard proxy: $APP_URL"
   [[ "$BACKUP_MOVED" != true ]] || log "previous target preserved at: $BACKUP_PATH"
   return 0

@@ -115,24 +115,18 @@ LARAVEL_TEST_FAIL_RECOVERY_MARKER_CREATE=1
 expect_failure create_recovery_guard
 unset LARAVEL_TEST_FAIL_RECOVERY_MARKER_CREATE
 
-# Persistent Docker/Podman detection and ordered-plan checks.
+# Podman detection delegates platform steps to the devarch CLI.
 mkdir -p "$TEST_TMP/bin"
-for runtime in docker podman; do
-  cat > "$TEST_TMP/bin/$runtime" <<'RUNTIME'
-#!/usr/bin/env bash
-[[ "$1 $2" == 'compose version' ]]
-RUNTIME
-  chmod +x "$TEST_TMP/bin/$runtime"
-done
+printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_TMP/bin/podman"
+chmod +x "$TEST_TMP/bin/podman"
 PATH="$TEST_TMP/bin:$PATH"
-for runtime in docker podman; do
-  RUNTIME="$runtime"
-  CONTAINER_USER=""
-  COMPOSE=()
-  detect_runtime
-  assert_eq "${COMPOSE[*]}" "$runtime compose" "$runtime Compose provider"
-  [[ "$runtime" != podman ]] || assert_eq "$CONTAINER_USER" '0:0' 'Podman bind-mount user'
-done
+CONTAINER_USER=""
+saved_dry_run="$DRY_RUN"
+DRY_RUN=false
+DEVARCH_BIN=/opt/fake/devarch detect_runtime
+DRY_RUN="$saved_dry_run"
+assert_eq "$CONTAINER_USER" '0:0' 'Podman bind-mount user'
+assert_eq "$DEVARCH" /opt/fake/devarch 'devarch CLI location' 
 TARGET="$TEST_TMP/demo"
 BACKUP_PATH="$TEST_TMP/backup"
 DATABASE=mariadb
@@ -145,7 +139,7 @@ APP_URL='https://demo.test'
 DB_NAME=laravel_demo
 DB_USER=lv_demo
 plan="$(print_plan)"
-assert_contains "$plan" 'ensure external network: microservices-net' 'ordered plan network step'
+assert_contains "$plan" 'up backend/php proxy/nginx-proxy-manager database/mariadb mail/mailpit database/redis --wait --no-hosts' 'ordered plan devarch step'
 assert_contains "$plan" 'start and wait: php' 'ordered plan PHP step'
 assert_contains "$plan" 'start and wait: nginx-proxy-manager' 'ordered plan proxy step'
 assert_contains "$plan" 'start and wait: mariadb' 'ordered plan MariaDB step'
@@ -158,8 +152,8 @@ assert_eq "$REDIS_PASSWORD" devarch 'Redis Compose password'
 assert_eq "$REDIS_PORT" 6379 'Redis container port'
 assert_eq "$REDIS_DB" 0 'Redis default DB'
 assert_eq "$REDIS_CACHE_DB" 1 'Redis cache DB'
-grep -Eq '127\.0\.0\.1:8504:6379' "$REDIS_COMPOSE" || fail 'Redis Compose port contract drifted'
-grep -Eq 'redis-server --requirepass devarch' "$REDIS_COMPOSE" || fail 'Redis Compose password contract drifted'
+grep -Eq '127\.0\.0\.1:8504:6379' "$PROJECT_ROOT/services-library/database/redis/compose.yml" || fail 'Redis Compose port contract drifted'
+grep -Eq 'redis-server --requirepass devarch' "$PROJECT_ROOT/services-library/database/redis/compose.yml" || fail 'Redis Compose password contract drifted'
 pass
 pass
 
@@ -207,8 +201,11 @@ saved_path="$PATH"
 PATH="$TEST_TMP/no-od-bin"
 expect_failure parse_directives_file "$TEST_TMP/packages.txt" false
 PATH="$saved_path"
-if ! ( PACKAGE_KINDS=(); PACKAGE_SPECS=(); parse_directives_file "$TEST_DIR/../packages.example" false; [[ ${#PACKAGE_SPECS[@]} -eq 0 ]] ); then
-  fail 'repository packages example must parse without selecting placeholders'
+# The example is directly usable: it selects its showcase packages and skips
+# the commented syntax placeholders.
+if ! ( PACKAGE_KINDS=(); PACKAGE_SPECS=(); parse_directives_file "$TEST_DIR/../packages.example" false
+       [[ "${PACKAGE_SPECS[*]}" == 'laravel/sanctum:^4.0 barryvdh/laravel-debugbar:^4.4' ]] ); then
+  fail 'repository packages example must select its showcase packages without placeholders'
 fi
 pass
 

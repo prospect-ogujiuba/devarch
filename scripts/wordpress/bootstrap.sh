@@ -4,12 +4,9 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 APPS_DIR="${DEVARCH_APPS_DIR:-$PROJECT_ROOT/apps}"
-PHP_COMPOSE="$PROJECT_ROOT/services-library/backend/php/compose.yml"
-MARIADB_COMPOSE="$PROJECT_ROOT/services-library/database/mariadb/compose.yml"
-PROXY_COMPOSE="$PROJECT_ROOT/services-library/proxy/nginx-proxy-manager/compose.yml"
 PROFILE_DIR="$SCRIPT_DIR/profiles"
-HOSTS_HELPER="$PROJECT_ROOT/scripts/hosts/register-host.sh"
 DOTENV_LIBRARY="$PROJECT_ROOT/scripts/devarch/lib/dotenv.sh"
+PLATFORM_LIBRARY="$PROJECT_ROOT/scripts/devarch/lib/platform.sh"
 WORDPRESS_DOTENV_KEYS=(
   WP_ADMIN_USER WP_ADMIN_PASSWORD WP_ADMIN_EMAIL
   MARIADB_ROOT_PASSWORD GITHUB_USER AIOWM_GIT_URL
@@ -18,6 +15,8 @@ WORDPRESS_DOTENV_KEYS=(
 
 # shellcheck source=../devarch/lib/dotenv.sh
 source "$DOTENV_LIBRARY"
+# shellcheck source=../devarch/lib/platform.sh
+source "$PLATFORM_LIBRARY"
 ENV_FILE="${DEVARCH_ENV_FILE:-$PROJECT_ROOT/.env}"
 if [[ -n "${DEVARCH_ENV_FILE:-}" && ! -f "$ENV_FILE" ]]; then
   printf '[wordpress] error: env file is not a regular file: %s\n' "$ENV_FILE" >&2
@@ -42,7 +41,7 @@ PLUGIN_SOURCES=()
 PLUGIN_ACTIVATIONS=()
 THEME_SOURCES=()
 MU_PLUGIN_SOURCES=()
-RUNTIME="${CONTAINER_RUNTIME:-}"
+RUNTIME="${CONTAINER_RUNTIME:-podman}"
 CONTAINER_USER="${WORDPRESS_CONTAINER_USER:-}"
 PHP_CONTAINER="php"
 MARIADB_CONTAINER="mariadb"
@@ -51,15 +50,25 @@ WP_ADMIN_PASSWORD="${WP_ADMIN_PASSWORD:-}"
 WP_ADMIN_EMAIL="${WP_ADMIN_EMAIL:-admin@devarch.test}"
 DB_ROOT_PASSWORD="${MARIADB_ROOT_PASSWORD:-devarch}"
 AIOWM_GIT_URL="${AIOWM_GIT_URL:-${GITHUB_USER:+git@github.com:${GITHUB_USER}/all-in-one-wp-migration.git}}"
-COMPOSE=()
+DEVARCH=devarch
+CURRENT_STEP=bootstrap
 
 log() {
   printf '[wordpress] %s\n' "$*"
 }
 
 die() {
+  devarch_progress "$CURRENT_STEP" fail "$*"
   printf '[wordpress] error: %s\n' "$*" >&2
   exit 1
+}
+
+# step NAME FUNCTION: run one provisioning step and report its progress.
+step() {
+  CURRENT_STEP="$1"
+  devarch_progress "$1" start
+  "$2"
+  devarch_progress "$1" done
 }
 
 usage() {
@@ -331,9 +340,6 @@ validate_config() {
     fi
   done
 
-  [[ -f "$PHP_COMPOSE" ]] || die "required Compose file not found: $PHP_COMPOSE"
-  [[ -f "$MARIADB_COMPOSE" ]] || die "required Compose file not found: $MARIADB_COMPOSE"
-  [[ -f "$PROXY_COMPOSE" ]] || die "required Compose file not found: $PROXY_COMPOSE"
 
   if [[ "$DRY_RUN" != true ]]; then
     [[ -n "$WP_ADMIN_PASSWORD" ]] || die "set WP_ADMIN_PASSWORD in .env"
@@ -342,71 +348,30 @@ validate_config() {
 }
 
 detect_runtime() {
+  [[ "$RUNTIME" == podman ]] || die "only Podman is supported (CONTAINER_RUNTIME=$RUNTIME)"
+  # Root in a rootless Podman container maps to the invoking host user and owns
+  # bind-mounted files.
+  CONTAINER_USER="${CONTAINER_USER:-0:0}"
   if [[ "$DRY_RUN" == true ]]; then
-    RUNTIME="${RUNTIME:-podman}"
-    CONTAINER_USER="${CONTAINER_USER:-$([[ "$RUNTIME" == podman ]] && printf '0:0' || printf '%s:%s' "$(id -u)" "$(id -g)")}"
-    COMPOSE=("$RUNTIME" compose)
+    DEVARCH="$(devarch_bin 2>/dev/null)" || DEVARCH=devarch
     return
   fi
-
-  if [[ -z "$RUNTIME" ]]; then
-    if command -v podman >/dev/null 2>&1; then
-      RUNTIME=podman
-    elif command -v docker >/dev/null 2>&1; then
-      RUNTIME=docker
-    else
-      die "Podman or Docker is required"
-    fi
-  fi
-
-  command -v "$RUNTIME" >/dev/null 2>&1 || die "container runtime not found: $RUNTIME"
-  # Root in a rootless Podman container maps to the invoking host user and owns
-  # bind-mounted files. Docker needs the explicit host UID/GID instead.
-  CONTAINER_USER="${CONTAINER_USER:-$([[ "$RUNTIME" == podman ]] && printf '0:0' || printf '%s:%s' "$(id -u)" "$(id -g)")}"
-  if "$RUNTIME" compose version >/dev/null 2>&1; then
-    COMPOSE=("$RUNTIME" compose)
-  elif [[ "$RUNTIME" == podman ]] && command -v podman-compose >/dev/null 2>&1; then
-    COMPOSE=(podman-compose)
-  else
-    die "no Compose provider found for $RUNTIME"
-  fi
+  command -v podman >/dev/null 2>&1 || die "Podman is required"
+  DEVARCH="$(devarch_bin)" || die "the devarch CLI is required: (cd cli && go install ./cmd/devarch)"
 }
 
-ensure_network() {
-  if [[ "$DRY_RUN" == true ]]; then
-    run "$RUNTIME" network create microservices-net
-  elif ! "$RUNTIME" network inspect microservices-net >/dev/null 2>&1; then
-    run "$RUNTIME" network create microservices-net >/dev/null
-  fi
-}
 
 start_services() {
-  log "start PHP, MariaDB, and Nginx Proxy Manager services"
-  local php_args=(-f "$PHP_COMPOSE" up -d)
-  [[ "$BUILD" == true ]] && php_args+=(--build)
-  run "${COMPOSE[@]}" "${php_args[@]}"
+  log "start PHP, MariaDB, and Nginx Proxy Manager services and wait until they are healthy"
+  local args=(up backend/php database/mariadb proxy/nginx-proxy-manager --wait --no-hosts)
+  [[ "$BUILD" == true ]] && args+=(--build)
   if [[ "$DRY_RUN" == true ]]; then
-    print_command env 'MARIADB_ROOT_PASSWORD=<redacted>' "${COMPOSE[@]}" -f "$MARIADB_COMPOSE" up -d
+    print_command env 'MARIADB_ROOT_PASSWORD=<redacted>' "$DEVARCH" "${args[@]}"
   else
-    env MARIADB_ROOT_PASSWORD="$DB_ROOT_PASSWORD" "${COMPOSE[@]}" -f "$MARIADB_COMPOSE" up -d
+    env MARIADB_ROOT_PASSWORD="$DB_ROOT_PASSWORD" "$DEVARCH" "${args[@]}"
   fi
-  run "${COMPOSE[@]}" -f "$PROXY_COMPOSE" up -d
 }
 
-wait_for_services() {
-  [[ "$DRY_RUN" == true ]] && { log "wait for PHP/WP-CLI, MariaDB, and Nginx Proxy Manager readiness"; return; }
-
-  local attempt
-  for attempt in {1..90}; do
-    if "$RUNTIME" exec "$PHP_CONTAINER" wp --info >/dev/null 2>&1 && \
-       "$RUNTIME" exec "$MARIADB_CONTAINER" sh -c 'mariadb-admin ping -uroot -p"$MARIADB_ROOT_PASSWORD" --silent' >/dev/null 2>&1 && \
-       "$RUNTIME" exec nginx-proxy-manager curl -fsS http://localhost:81/api/ >/dev/null 2>&1; then
-      return
-    fi
-    sleep 1
-  done
-  die "PHP, MariaDB, or Nginx Proxy Manager did not become ready within 90 seconds"
-}
 
 prepare_site_dir() {
   local site_dir="$APPS_DIR/$SITE_NAME"
@@ -692,11 +657,7 @@ register_site_host() {
     log "register local host: 127.0.0.1 $hostname"
     return 0
   fi
-  if [[ ! -x "$HOSTS_HELPER" ]]; then
-    log "warning: hosts helper is unavailable; manually map 127.0.0.1 $hostname"
-    return 0
-  fi
-  if ! "$HOSTS_HELPER" "$hostname"; then
+  if ! "$DEVARCH" hosts add "$hostname"; then
     log "warning: could not register $hostname; manually map it to 127.0.0.1"
   fi
 }
@@ -713,20 +674,18 @@ main() {
   [[ -z "$RESTORE_FILE" ]] || log "restore: $RESTORE_FILE (native AIOWM)"
   [[ "$DRY_RUN" == true ]] && log "dry run; no changes will be made"
 
-  ensure_network
-  start_services
-  wait_for_services
-  stage_restore_archive
-  backup_existing_site
-  prepare_site_dir
-  install_wordpress
-  install_mu_plugins
-  install_plugins
-  install_themes
-  make_content_writable
-  restore_aiowm_archive
-  make_content_writable
-  register_site_host
+  step services start_services
+  step stage-restore stage_restore_archive
+  step backup backup_existing_site
+  step prepare prepare_site_dir
+  step install-wordpress install_wordpress
+  step mu-plugins install_mu_plugins
+  step plugins install_plugins
+  step themes install_themes
+  step permissions make_content_writable
+  step restore restore_aiowm_archive
+  step permissions make_content_writable
+  step hosts register_site_host
 
   log "ready through the Nginx Proxy Manager .test reverse proxy: $SITE_URL"
   log "admin: $SITE_URL/wp-admin (user: $WP_ADMIN_USER)"

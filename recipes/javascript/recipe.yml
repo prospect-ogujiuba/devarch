@@ -1,0 +1,31 @@
+name: javascript
+title: JavaScript app
+description: A framework starter (Next.js, Nuxt, SvelteKit, Astro, Vite and more) in apps/<name>, optionally started in its own Node container.
+entry: scripts/javascript/bootstrap.sh
+requires: [backend/node, proxy/nginx-proxy-manager]
+args:
+  - name: name
+    positional: true
+    required: true
+    help: App name; served as https://<name>.test
+    pattern: '^[a-z0-9]([a-z0-9-]{0,56}[a-z0-9])?$'
+  - name: framework
+    flag: --framework
+    required: true
+    help: Framework
+    choices_from: scripts/javascript/profiles/*/framework.conf
+    choice_is: dir
+  - name: profile
+    flag: --profile
+    required: true
+    help: Project profile for the framework
+    choices_from: scripts/javascript/profiles/{framework}/*.profile
+  - name: start
+    flag: --start
+    type: bool
+    help: Start the app in its Node container afterwards
+  - name: force
+    flag: --force
+    type: bool
+    help: Back up and replace an existing app
+    confirm: Back up the existing app and replace it?
