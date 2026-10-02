@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -236,5 +237,25 @@ func TestNew(t *testing.T) {
 	last = h.fake.Cmds[len(h.fake.Cmds)-1]
 	if strings.Join(last.Args, " ") != "shop --dry-run" {
 		t.Fatalf("dry run should be forwarded to the script: %v", last.Args)
+	}
+}
+
+func TestUserServiceOverlay(t *testing.T) {
+	h := newHarness(t)
+	testutil.WriteFiles(t, os.Getenv("DEVARCH_CONFIG_HOME"), map[string]string{
+		"services/custom/tool/compose.yml":       testutil.Compose("tool", "x-devarch:\n  title: My Tool\n"),
+		"services/database/postgres/compose.yml": testutil.Compose("postgres", "x-devarch:\n  title: My Postgres\n"),
+	})
+	if err := h.run(t, "ls", "--json"); err != nil {
+		t.Fatal(err)
+	}
+	var rows []map[string]any
+	json.Unmarshal([]byte(h.out.String()), &rows)
+	got := map[string]string{}
+	for _, r := range rows {
+		got[fmt.Sprint(r["id"])] = fmt.Sprint(r["source"]) + ":" + fmt.Sprint(r["meta"].(map[string]any)["title"])
+	}
+	if got["custom/tool"] != "user:My Tool" || got["database/postgres"] != "user:My Postgres" {
+		t.Fatalf("overlay rows = %v", got)
 	}
 }

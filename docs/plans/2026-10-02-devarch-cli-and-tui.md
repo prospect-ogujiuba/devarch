@@ -289,6 +289,7 @@ Each phase can ship on its own and has a clear exit check.
 - Document and support the user service library and external commands.
 - Optionally, the dashboard reads `devarch ls --json` and `devarch ps --json` instead of doing its own discovery.
 - **Exit check:** `scripts/node/` is deleted, WordPress and Laravel create their databases through `devarch db create`, and a user service in `~/.config/devarch/services/` shows up in `ls` and the TUI.
+- **Status (2026-10-02):** the extensibility half is done: user services and recipes overlay the built-in ones, `devarch-<name>` commands run, and all three are documented and tested. The Layer 2 moves (`db`, `replace`, profile previews, `app start|stop`) have not started; they rewrite data-safety code in the WordPress and Laravel bootstraps and should follow real use of Phases 1–5.
 
 ## Testing
 

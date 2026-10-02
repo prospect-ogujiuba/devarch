@@ -113,6 +113,16 @@ services:
 
 Selected versions are stored in `~/.config/devarch/versions.env` and passed to `podman compose` as process environment, so running `podman compose up -d` by hand in the service directory still uses the default.
 
+## Extending
+
+Everything extends by adding a folder; there is no plugin API.
+
+- **Services:** put `~/.config/devarch/services/<category>/<name>/compose.yml` (optionally with `x-devarch` metadata). It appears in `devarch ls` and the screen with source `user`, and a user service with the same ID as a built-in one replaces it, so you can customize a service without editing the repository.
+- **Recipes:** put `~/.config/devarch/recipes/<name>/recipe.yml`; see [`recipes/README.md`](../recipes/README.md). A personal recipe with a built-in name replaces it.
+- **Commands:** any executable named `devarch-<name>` on `PATH` runs as `devarch <name>` with `DEVARCH_ROOT` set, the way `git` runs `git-<name>`.
+
+`DEVARCH_CONFIG_HOME` moves the whole `~/.config/devarch` directory, which is useful for trying changes in isolation.
+
 ## Development
 
 ```bash
