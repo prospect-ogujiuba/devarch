@@ -22,7 +22,7 @@ func (a *app) recipes() ([]recipe.Recipe, error) {
 
 // recipeEnv is the environment every recipe script receives.
 func (a *app) recipeEnv() []string {
-	env := []string{"DEVARCH_ROOT=" + a.eng.Root}
+	env := []string{"DEVARCH_ROOT=" + a.eng.Root, "DEVARCH_APPS_DIR=" + a.eng.Settings.AppsDir, "DEVARCH_NETWORK=" + a.eng.Settings.Network}
 	if self, err := os.Executable(); err == nil {
 		env = append(env, "DEVARCH_BIN="+self)
 	}

@@ -19,7 +19,7 @@ services:
       - "127.0.0.1:8080:8080"
     working_dir: /var/www/html
     volumes:
-      - ../../../apps:/var/www/html
+      - ${DEVARCH_APPS_DIR:-../../../apps}:/var/www/html
       - ./config/php.ini:/usr/local/etc/php/php.ini:ro
     environment:
       COMPOSER_ALLOW_SUPERUSER: "1"
@@ -38,3 +38,4 @@ services:
 networks:
   microservices-net:
     external: true
+    name: ${DEVARCH_NETWORK:-microservices-net}

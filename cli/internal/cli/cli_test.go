@@ -259,3 +259,106 @@ func TestUserServiceOverlay(t *testing.T) {
 		t.Fatalf("overlay rows = %v", got)
 	}
 }
+
+func (h *harness) config(t *testing.T, yml string) {
+	t.Helper()
+	testutil.WriteFiles(t, os.Getenv("DEVARCH_CONFIG_HOME"), map[string]string{"config.yml": yml})
+}
+
+func TestConfigShowGetSet(t *testing.T) {
+	h := newHarness(t)
+	if err := h.run(t, "config"); err != nil {
+		t.Fatal(err)
+	}
+	fields := func() string { return strings.Join(strings.Fields(h.out.String()), " ") }
+	for _, want := range []string{"root " + h.repo + " DEVARCH_ROOT", "runtime podman default", "apps_dir " + filepath.Join(h.repo, "apps") + " default", "hosts.manage true default"} {
+		if !strings.Contains(fields(), want) {
+			t.Fatalf("missing %q in:\n%s", want, h.out.String())
+		}
+	}
+	if err := h.run(t, "config", "set", "network", "dev-net"); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.run(t, "config", "set", "colour", "blue"); err == nil || !strings.Contains(err.Error(), "settable keys") {
+		t.Fatalf("unknown key: %v", err)
+	}
+	if err := h.run(t, "config", "set", "runtime", "lxc"); err == nil {
+		t.Fatal("accepted runtime lxc")
+	}
+	if err := h.run(t, "config", "get", "network"); err != nil || h.out.String() != "dev-net\n" {
+		t.Fatalf("get: %q %v", h.out.String(), err)
+	}
+	if err := h.run(t, "config"); err != nil || !strings.Contains(fields(), "network dev-net config.yml") {
+		t.Fatalf("show after set:\n%s", h.out.String())
+	}
+}
+
+func TestConfigReachesComposeAndRecipes(t *testing.T) {
+	h := newHarness(t)
+	h.config(t, "network: dev-net\napps_dir: sites\n")
+	if err := h.run(t, "up", "postgres", "--no-hosts"); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(h.fake.Lines(), "\n")
+	for _, want := range []string{
+		"podman network exists dev-net",
+		"POSTGRES_VERSION=17 DEVARCH_NETWORK=dev-net DEVARCH_APPS_DIR=" + filepath.Join(h.repo, "sites") + " podman compose up -d",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("missing %q in\n%s", want, joined)
+		}
+	}
+	if err := h.run(t, "new", "demo", "shop"); err != nil {
+		t.Fatal(err)
+	}
+	last := h.fake.Lines()[len(h.fake.Lines())-1]
+	if !strings.Contains(last, "DEVARCH_APPS_DIR="+filepath.Join(h.repo, "sites")) || !strings.Contains(last, "DEVARCH_NETWORK=dev-net") {
+		t.Fatalf("recipe env: %s", last)
+	}
+}
+
+func TestDefaultConfigAddsNoEnvironment(t *testing.T) {
+	h := newHarness(t)
+	if err := h.run(t, "up", "glpi", "--no-hosts"); err != nil {
+		t.Fatal(err)
+	}
+	if joined := strings.Join(h.fake.Lines(), "\n"); strings.Contains(joined, "DEVARCH_") {
+		t.Fatalf("defaults leaked into compose:\n%s", joined)
+	}
+}
+
+func TestHostsManageFalse(t *testing.T) {
+	h := newHarness(t)
+	h.config(t, "hosts:\n  manage: false\n")
+	before, _ := os.ReadFile(os.Getenv("HOSTS_FILE"))
+	for _, args := range [][]string{{"up", "postgres"}, {"hosts", "sync"}, {"hosts", "add", "demo.test"}, {"hosts", "remove", "demo.test"}} {
+		if err := h.run(t, args...); err != nil {
+			t.Fatalf("%v: %v", args, err)
+		}
+	}
+	if after, _ := os.ReadFile(os.Getenv("HOSTS_FILE")); string(after) != string(before) {
+		t.Fatalf("hosts file changed:\n%s", after)
+	}
+	if !strings.Contains(h.err.String(), "hosts.manage is false") {
+		t.Fatalf("no explanation: %s", h.err.String())
+	}
+}
+
+func TestHostsAddressSetting(t *testing.T) {
+	h := newHarness(t)
+	h.config(t, "hosts:\n  address: 127.0.0.2\n")
+	if err := h.run(t, "hosts", "add", "demo.test"); err != nil || !strings.Contains(h.out.String(), "registered 127.0.0.2 demo.test") {
+		t.Fatalf("add: %v %s", err, h.out.String())
+	}
+	if err := h.run(t, "--dry-run", "hosts", "sync"); err != nil || !strings.Contains(h.out.String(), "127.0.0.2 glpi.test") {
+		t.Fatalf("sync: %v %s", err, h.out.String())
+	}
+}
+
+func TestInvalidConfigIsReported(t *testing.T) {
+	h := newHarness(t)
+	h.config(t, "runtime: lxc\n")
+	if err := h.run(t, "ls"); err == nil || !strings.Contains(err.Error(), "config.yml") {
+		t.Fatalf("got %v", err)
+	}
+}

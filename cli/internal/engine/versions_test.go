@@ -27,7 +27,7 @@ func useSetup(t *testing.T) (*engine.Engine, *runner.Fake, *state.Versions, stri
 	c, _ := catalog.Load([]catalog.Path{{Dir: lib}})
 	f := &runner.Fake{Responses: map[string]runner.Response{"podman ps": {Out: []byte("[]")}}, RunErrors: map[string][]error{}}
 	saved := &state.Versions{}
-	e := &engine.Engine{Catalog: c, Runner: f, Versions: state.Versions{}, Sleep: func(time.Duration) {},
+	e := &engine.Engine{Catalog: c, Runner: f, Versions: state.Versions{}, Sleep: func(time.Duration) {}, Settings: state.Defaults(""),
 		SaveVersions: func(v state.Versions) error {
 			cp := state.Versions{}
 			for k, val := range v {

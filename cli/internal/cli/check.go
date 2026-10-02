@@ -20,7 +20,7 @@ func lintCmd(a *app) *cobra.Command {
 			if err := a.load(); err != nil {
 				return err
 			}
-			findings := lint.Run(contextOrBackground(cmd), a.eng.Catalog, a.problems, lint.Options{Native: native, Runner: a.eng.Runner})
+			findings := lint.Run(contextOrBackground(cmd), a.eng.Catalog, a.problems, lint.Options{Native: native, Runner: a.eng.Runner, Runtime: a.eng.Settings.Runtime})
 			errs, warns := lint.Count(findings)
 			if asJSON {
 				if findings == nil {

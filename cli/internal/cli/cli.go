@@ -59,10 +59,13 @@ func (a *app) load() error {
 	if err != nil {
 		return err
 	}
+	settings, err := cfg.Resolve(rootDir)
+	if err != nil {
+		return fmt.Errorf("%s: %w", filepath.Join(dir, "config.yml"), err)
+	}
 	a.rootHow = how
 	if how == root.FromWalk && cfg.Root == "" && !a.dryRun {
-		cfg.Root = rootDir
-		if err := state.SaveConfig(dir, cfg); err == nil {
+		if err := state.SetRoot(dir, rootDir); err == nil {
 			fmt.Fprintf(a.err, "devarch: remembered checkout %s in %s\n", rootDir, filepath.Join(dir, "config.yml"))
 		}
 	}
@@ -89,6 +92,7 @@ func (a *app) load() error {
 		Root: rootDir, Catalog: cat, Runner: r, Versions: versions, Log: a.err, DryRun: a.dryRun,
 		SaveVersions: func(v state.Versions) error { return state.SaveVersions(dir, v) },
 		Hosts:        hosts.NewManager(r, filepath.Join(dir, "windows")),
+		Settings:     settings,
 	}
 	return nil
 }
@@ -129,7 +133,7 @@ Run devarch without arguments in a terminal for the interactive screen.`,
 	newC := newCmd(a)
 	newC.GroupID = "projects"
 	rootCmd.AddCommand(newC)
-	for _, c := range []*cobra.Command{doctorCmd(a), hostsCmd(a), lintCmd(a)} {
+	for _, c := range []*cobra.Command{doctorCmd(a), hostsCmd(a), lintCmd(a), configCmd(a)} {
 		c.GroupID = "env"
 		rootCmd.AddCommand(c)
 	}

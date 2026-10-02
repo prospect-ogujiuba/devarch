@@ -155,7 +155,7 @@ func New(deps Deps) *Model {
 	m := &Model{deps: deps, eng: &eng, ctx: ctx, cancel: cancel, out: out, filter: f, spin: sp,
 		states: map[string]engine.ServiceState{}}
 	m.services = eng.Catalog.Services
-	m.apps = discoverApps(filepath.Join(eng.Root, "apps"))
+	m.apps = discoverApps(eng.Settings.AppsDir)
 	if deps.Events != nil {
 		m.events = deps.Events(ctx)
 	}
@@ -391,7 +391,7 @@ func (m *Model) handleKey(k tea.KeyMsg) tea.Cmd {
 		m.move(10)
 		return nil
 	case "ctrl+r":
-		m.apps = discoverApps(filepath.Join(m.eng.Root, "apps"))
+		m.apps = discoverApps(m.eng.Settings.AppsDir)
 		return m.loadContainers()
 	case "n":
 		return m.openWizard()
@@ -562,7 +562,7 @@ func (m *Model) askConfirm(prompt string, yes, no func() tea.Cmd) {
 // noteMissingHosts tells the user when a started service's hostnames are not
 // mapped yet. Registration may need sudo or UAC, so it runs interactively (H).
 func (m *Model) noteMissingHosts(svc catalog.Service) {
-	if m.eng.Hosts == nil {
+	if m.eng.Hosts == nil || !m.eng.Settings.HostsManage {
 		return
 	}
 	content, err := m.eng.Hosts.Read()
@@ -583,6 +583,10 @@ func (m *Model) noteMissingHosts(svc catalog.Service) {
 
 func (m *Model) syncHosts() tea.Cmd {
 	if m.deps.Exe == "" {
+		return nil
+	}
+	if !m.eng.Settings.HostsManage {
+		m.setStatus(false, "hosts.manage is false in config.yml; DevArch leaves the hosts file alone")
 		return nil
 	}
 	m.addActivity("$ devarch hosts sync")
@@ -620,10 +624,10 @@ func (m *Model) handleRunningKey(key string) tea.Cmd {
 	ct := rs[c]
 	switch key {
 	case "l", "enter":
-		return m.openLogs("Logs: "+ct.Name, runner.Cmd{Name: "podman", Args: []string{"logs", "-f", "--tail", "200", ct.Name}})
+		return m.openLogs("Logs: "+ct.Name, m.eng.Cmd("logs", "-f", "--tail", "200", ct.Name))
 	case "r":
 		return m.runAction("restart "+ct.Name, func(ctx context.Context) error {
-			return m.eng.Runner.Run(ctx, runner.Cmd{Name: "podman", Args: []string{"restart", ct.Name}})
+			return m.eng.Runner.Run(ctx, m.eng.Cmd("restart", ct.Name))
 		}, nil)
 	}
 	return nil

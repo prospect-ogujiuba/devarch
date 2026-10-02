@@ -4,7 +4,7 @@ export LC_ALL=C
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-APPS_DIR="$PROJECT_ROOT/apps"
+APPS_DIR="${DEVARCH_APPS_DIR:-$PROJECT_ROOT/apps}"
 ENV_FILE="$PROJECT_ROOT/.env"
 PROFILE_DIR="$SCRIPT_DIR/profiles"
 DOTENV_LIBRARY="$PROJECT_ROOT/scripts/devarch/lib/dotenv.sh"
