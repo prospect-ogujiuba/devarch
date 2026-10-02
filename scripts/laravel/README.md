@@ -28,8 +28,8 @@ The runtime user must be able to create `microservices-net`, start the selected 
 
 ```bash
 cp .env.example .env                    # optional overrides; fill required secrets
-scripts/laravel/bootstrap.sh demo --dry-run
-scripts/laravel/bootstrap.sh demo
+devarch new laravel demo --dry-run      # same as scripts/laravel/bootstrap.sh demo --dry-run
+devarch new laravel demo
 # Approve the hosts-file elevation prompt, then open https://demo.test
 ```
 

@@ -1,7 +1,7 @@
 # DevArch CLI, Bash Migration, and TUI Plan
 
 - Date: 2026-10-02
-- Status: Proposed
+- Status: Implemented through Phase 6 on `feat/devarch-cli`. "As built" notes record where the result differs from the plan; where they disagree with the original text, the note wins.
 
 ## Goal
 
@@ -21,7 +21,7 @@ Both were removed on 2026-05-16 (`cfeaa91`, about 40k lines). Each time, the pla
 - No daemon, no HTTP API, no database, no background polling.
 - No desired-state engine, plan/apply, or lock files. Compose files are the desired state.
 - No GUI or TUI editing of compose overrides. Changing a service means editing its file.
-- No per-subcommand Podman wrappers and no reformatting of native output. Every mutating action runs one visible `podman compose …` or `podman …` command, which `--dry-run` prints.
+- No per-subcommand Podman wrappers and no reformatting of native output. Every mutating action runs one visible `podman compose …` or `podman …` command (`docker` when configured), which `--dry-run` prints.
 - Podman by default; Docker is a setting, not an adapter layer. The differences live in one table (`cli/internal/engine/runtime.go`), and everything else runs the configured binary with identical arguments.
 - State lives in plain files under `~/.config/devarch/`.
 
@@ -316,7 +316,7 @@ Each phase can ship on its own and has a clear exit check.
 - **Go module in `cli/`, not the repo root.** Keeps Go tooling out of `apps/` and keeps the repo's identity as a service library.
 - **YAML for `x-devarch` and `recipe.yml`.** One format, the same as compose.
 - **Versions passed as process environment, not `--env-file`.** This preserves per-service `.env` credentials and avoids differences in multi-env-file support between Compose providers.
-- **Podman by default, Docker as a setting.** Originally Podman only. Reversed on 2026-10-02: `runtime: docker` in `config.yml` switches the compose command, existence checks, readiness, the bootstrap container user, `ps`/events parsing and the doctor checks, all from one table. No per-runtime code paths exist outside it and the bootstraps’ `DEVARCH_RUNTIME`/`DEVARCH_CONTAINER_USER`.
+- **Podman by default, Docker as a setting.** Originally Podman only. Reversed on 2026-10-02: `runtime: docker` in `config.yml` switches the compose command, existence checks, readiness, the bootstrap container user, `ps`/events parsing and the doctor checks, all from one table. Other code reads the table's fields and never branches on the runtime name; the bootstraps receive the result as `DEVARCH_RUNTIME`/`DEVARCH_CONTAINER_USER`.
 
 ## Open questions
 

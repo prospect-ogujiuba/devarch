@@ -1,6 +1,6 @@
 # devarch CLI
 
-`devarch` runs the service library by name. It is a thin layer over native `podman compose` (or `docker compose`, see [Docker](#docker)): every action prints the command it runs, `--dry-run` prints without running, and nothing runs in the background. There is no daemon, API, or database; the only state is two small files under `~/.config/devarch/`.
+`devarch` runs the service library by name. It is a thin layer over native `podman compose` (or `docker compose`, see [Docker](#docker)): every action prints the command it runs, `--dry-run` prints without running, and nothing runs in the background. There is no daemon, API, or database. State is two small files under `~/.config/devarch/` (`config.yml` and `versions.env`), plus a guard record in `<apps_dir>/.devarch-recovery/` only while a project bootstrap runs or awaits recovery.
 
 The design and roadmap are in [`docs/plans/2026-10-02-devarch-cli-and-tui.md`](../docs/plans/2026-10-02-devarch-cli-and-tui.md).
 

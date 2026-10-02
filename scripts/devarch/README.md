@@ -1,30 +1,41 @@
-# DevArch scripts
+# DevArch Bash libraries
 
-These Bash helpers add only DevArch repository discovery and safety checks that native commands cannot provide. They are not a container-runtime framework.
+The `devarch` CLI owns platform work: starting services, readiness, hosts, databases, provisioning guards and app runtimes. These libraries are what the bootstraps still need in Bash. They are not a container-runtime framework.
 
-## Shared foundation contract
+## `lib/platform.sh` (sourced by every bootstrap)
 
-Source `lib/catalog.sh` for catalog operations; it sources `lib/common.sh`. Public functions are:
+- `devarch_bin` — print the `devarch` executable: `$DEVARCH_BIN` (set by `devarch new`), else the one on `PATH`.
+- `devarch_runtime_env [DEVARCH]` — set `DEVARCH_RUNTIME` (podman or docker) and `DEVARCH_CONTAINER_USER` (the uid:gid for container exec calls). `devarch new` passes both; a bootstrap run directly reads them from `devarch config --env`. The Podman/Docker differences themselves live in one table in `cli/internal/engine/runtime.go`.
+- `devarch_env_value KEY` — read one value from `NAME=value` output on stdin, such as `devarch db create --env` or `devarch app guard`.
+- `devarch_progress STEP STATE [MESSAGE]` — report progress as a JSON line on `DEVARCH_PROGRESS_FD` when a reader (the TUI) provided one; otherwise do nothing.
 
-- `devarch_repo_root` — print the physical repository root. Set `DEVARCH_REPO_ROOT` only when intentionally targeting another checkout (including tests).
-- `devarch_require_podman` — require Podman without inventing a Docker fallback.
-- `devarch_require_compose` — run `podman compose --help`, allowing Podman to select and diagnose its configured external Compose provider.
-- `devarch_run [--exec] -- command [args...]` — log a shell-escaped argv vector and invoke it unchanged. Use `--exec` for the final native process when no post-processing is required.
-- `devarch_catalog_root` — print the validated physical `services-library` path.
-- `devarch_catalog_list` — print validated canonical `category/name` IDs in deterministic order.
-- `devarch_catalog_resolve ID_OR_UNIQUE_NAME` — resolve an exact canonical ID or an unambiguous short name.
-- `devarch_catalog_compose_file ID_OR_UNIQUE_NAME` — print the validated absolute Compose file path.
+## `lib/dotenv.sh`
 
-Keep native behavior native: do not wrap individual Podman subcommands, reformat native output, or add runtime adapters. The few differences between Podman and Docker live in one table in `cli/internal/engine/runtime.go`; bootstraps receive its result as `DEVARCH_RUNTIME` and `DEVARCH_CONTAINER_USER` through `devarch_runtime_env` in `lib/platform.sh`. Wrapper-owned options end at `--`; forward every later argument unchanged. Prefer `exec` for the final process so stdin, stdout, stderr, TTY state, signals, and exit status remain native.
+`devarch_load_dotenv FILE KEY...` parses only the named keys from a dotenv file as data: no command substitution, no export, and controls rejected. The WordPress and Laravel bootstraps use it for the repository `.env`.
 
-DevArch dry-run behavior is limited to filesystem changes owned by a wrapper. Compose simulation must be forwarded to `podman compose --dry-run` when the installed provider supports it. Reuse native `--format`, `--filter`, JSON, `--watch`, and completion support.
+## Legacy: `lib/catalog.sh` and `lib/common.sh`
 
-## Foundation tests
+These predate the CLI and no bootstrap uses them. They are kept, with their tests, for personal scripts that already source them. They are Podman-only and know nothing about `config.yml`, user services or versions. In new scripts use the CLI instead:
+
+| Legacy function | Use instead |
+|---|---|
+| `devarch_catalog_list`, `devarch_catalog_resolve` | `devarch ls --json` |
+| `devarch_catalog_compose_file`, `devarch_run` | `devarch compose <service> -- <args>` |
+| `devarch_require_podman`, `devarch_require_compose` | `devarch doctor` |
+
+## Rules for bootstrap code
+
+- Call `devarch` for platform steps: `devarch up … --wait --no-hosts`, `devarch hosts add`, `devarch db create --app`, `devarch app guard|release|recover`, `devarch app start`. Do not reimplement them in Bash.
+- Run container commands with `"$DEVARCH_RUNTIME" exec --user "$DEVARCH_CONTAINER_USER" …`, never a hard-coded `podman`.
+- Keep native behavior native: do not wrap individual runtime subcommands or reformat native output. Wrapper-owned options end at `--`; forward later arguments unchanged.
+- A bootstrap's `--dry-run` covers its own steps and prints the `devarch` commands it would run.
+
+## Tests
 
 ```bash
-scripts/devarch/tests/run-tests.sh
+scripts/devarch/tests/run-tests.sh </dev/null
 bash -n scripts/devarch/lib/*.sh scripts/devarch/tests/*.sh
 shellcheck scripts/devarch/lib/*.sh
 ```
 
-The fixture helper creates temporary repositories and recording `podman`, database CLI (`psql`), launcher (`devarch-launcher`), and certificate (`mkcert`) executables for later script phases.
+Run the suite with stdin from `/dev/null`; `common_test.sh` hangs on an interactive terminal.

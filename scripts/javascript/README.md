@@ -10,6 +10,7 @@ scripts/javascript/bootstrap.sh --list-profiles --framework next
 scripts/javascript/bootstrap.sh storefront --framework next --profile fullstack --dry-run
 scripts/javascript/bootstrap.sh storefront --framework next --profile fullstack --start
 # open https://storefront.test
+# equivalently: devarch new javascript storefront --framework next --profile fullstack --start
 ```
 
 The app name must be lowercase DNS-safe text, such as `storefront` or `admin-ui`. Creation uses npm and requires Node/npm on the host. Generated apps run in DevArch's isolated Node 22 container started with `devarch app start <app-name>` (see [the Node runtime](../../services-library/backend/node/README.md)).

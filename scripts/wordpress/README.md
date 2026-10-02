@@ -6,7 +6,7 @@
 
 ```bash
 cp .env.example .env
-scripts/wordpress/bootstrap.sh my-site
+devarch new wordpress my-site        # same as scripts/wordpress/bootstrap.sh my-site
 ```
 
 The site is available at `https://my-site.test`; its document root is `apps/my-site` and its database is `wp_my_site`.

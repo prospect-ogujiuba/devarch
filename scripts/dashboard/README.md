@@ -34,7 +34,7 @@ The responsive navigation provides separate **Apps**, **Containers**, and **Serv
 
 The folder action uses the `vscode://file` URL scheme supported by VS Code and compatible editors. Container port links are best-effort HTTP links; not every published port speaks HTTP.
 
-If Podman is unavailable, projects and catalog services remain usable and the page shows the runtime error.
+If Podman is unavailable, projects and catalog services remain usable and the page shows the runtime error. The dashboard reads containers from the rootless Podman socket only and does not follow `runtime: docker`; use `devarch ps` or the `devarch` screen in that case. Its copyable commands are plain `podman compose` lines; `devarch up <service>` is equivalent and also applies selected versions.
 
 ## Tailwind development
 
