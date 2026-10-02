@@ -104,10 +104,18 @@ func newRoot(a *app) *cobra.Command {
 		Use:   "devarch",
 		Short: "Run the DevArch service library by name",
 		Long: `DevArch runs services from services-library/ by name with native podman compose.
-Every action prints the command it runs; --dry-run prints without running.`,
+Every action prints the command it runs; --dry-run prints without running.
+Run devarch without arguments in a terminal for the interactive screen.`,
 		Version:       Version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Without a subcommand: the TUI on a terminal, help otherwise.
+			if f, ok := a.out.(*os.File); ok && isTerminal(f) && !a.dryRun {
+				return a.runTUI()
+			}
+			return cmd.Help()
+		},
 	}
 	rootCmd.SetIn(a.in)
 	rootCmd.SetOut(a.out)

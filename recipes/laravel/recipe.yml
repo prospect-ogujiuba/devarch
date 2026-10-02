@@ -3,6 +3,7 @@ title: Laravel app
 description: A fresh Laravel application in apps/<name> on the shared PHP-FPM container, with MariaDB or SQLite.
 entry: scripts/laravel/bootstrap.sh
 requires: [backend/php, proxy/nginx-proxy-manager, database/mariadb]
+no_hosts_flag: [--no-hosts]
 args:
   - name: name
     positional: true

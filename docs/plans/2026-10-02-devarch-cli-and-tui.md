@@ -238,6 +238,13 @@ Write down which trigger applied in the PR that moves it.
 - **No editing:** the TUI never edits compose files or overrides.
 - **Graceful degradation:** if Podman is unavailable, the catalog and apps still render and the Doctor tab is selected.
 
+> **As built (Phase 5):**
+> - Logs are followed inside the screen (streamed, filterable, Esc stops the process) rather than by suspending it, so a Ctrl-C meant for the log never reaches the TUI.
+> - Hostname registration is never run in the background, because `sudo` cannot prompt inside a full-screen app: `up` and the wizard pass `--no-hosts`/`no_hosts_flag`, report missing hostnames, and `H` runs `devarch hosts sync` interactively.
+> - The grouped-by-category toggle and the `s` shell key were left out; the shell remains `devarch compose <svc> -- exec …`.
+> - Views are tested by driving the model directly with synthetic messages (including a real recipe run with progress events) instead of `teatest`; the screen was also exercised in an isolated tmux server.
+> - Container refreshes are coalesced (one `podman ps` in flight, one queued) because `podman ps` takes one to five seconds on WSL.
+
 ## Phases
 
 Each phase can ship on its own and has a clear exit check.

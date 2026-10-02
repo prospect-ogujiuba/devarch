@@ -16,6 +16,31 @@ devarch completion zsh > "${fpath[1]}/_devarch"   # or: bash, fish
 
 Run `devarch` once from inside the checkout; it remembers the location in `~/.config/devarch/config.yml`. `DEVARCH_ROOT` overrides it.
 
+## Interactive screen
+
+Run `devarch` with no arguments in a terminal:
+
+```text
+DevArch  1 Services  2 Apps  3 Running  4 Doctor                       /maria
+● database/mariadb  12.3    running            
+──────────────────────────────────────────────────────────────────────────────
+MariaDB · Shared MySQL-compatible database for WordPress and Laravel apps
+database, sql, mysql · version 12.3 (MARIADB_VERSION; choices 12.3 11.8 11.4 10.11)
+services-library/database/mariadb/compose.yml  (builtin)
+containers: mariadb :8501
+──────────────────────────────────────────────────────────────────────────────
+$ (cd services-library/database/mariadb && podman compose up -d)
+u up · d down · r restart · v version · l logs · o open · / filter · n new · H hosts · ? help · q quit
+```
+
+- **Services**: the whole catalog with live state. `/` filters, `u` `d` `r` start, stop and restart, `v` switches the version (asking before it recreates a running service), `l` follows logs inside the screen, `o` opens the service URL.
+- **Apps**: `apps/` directories with their detected framework; `o` opens `https://<name>.test`, `e` opens the folder in VS Code.
+- **Running**: every running container, including ones outside the catalog; `l` logs, `r` restart.
+- **Doctor**: `devarch doctor` plus the catalog lint summary; `r` reruns it.
+- **New project** (`n`): pick a recipe, fill in a form built from its `recipe.yml`, review the exact command, and watch its steps complete. Destructive flags such as `--force` need an explicit `y`.
+
+The activity pane shows every native command and its output. State updates come from `podman events` while the screen is open; nothing runs after you quit. Hostname registration may need `sudo` or UAC, so the screen never runs it in the background: when a started service or new app is missing from the hosts file, it says so, and `H` runs `devarch hosts sync` interactively.
+
 ## Commands
 
 ```bash

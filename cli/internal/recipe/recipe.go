@@ -53,6 +53,10 @@ type Recipe struct {
 	Entry       string   `yaml:"entry" json:"entry"`
 	Requires    []string `yaml:"requires" json:"requires,omitempty"`
 	Args        []Arg    `yaml:"args" json:"args,omitempty"`
+	// NoHostsFlag are the arguments that skip hostname registration. The TUI
+	// adds them because sudo cannot prompt inside it, then offers to register
+	// hostnames interactively.
+	NoHostsFlag []string `yaml:"no_hosts_flag" json:"no_hosts_flag,omitempty"`
 	// Dir is the recipe directory; Root is the checkout entry paths resolve from.
 	Dir  string `yaml:"-" json:"dir"`
 	Root string `yaml:"-" json:"-"`
