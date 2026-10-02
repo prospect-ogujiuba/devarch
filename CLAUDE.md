@@ -45,6 +45,7 @@ Move Bash into Go only when it is platform logic or blocks the CLI/TUI. Domain l
 
 ## Conventions
 
+- Never add `Co-Authored-By` trailers naming Claude or any other AI assistant to commits. Commit authorship and attribution must reflect the human contributor.
 - Commit messages use conventional prefixes (`feat:`, `fix:`, `docs:`, `chore:`), with an optional scope such as `feat(cli):` or `fix(catalog):`.
 - When behavior changes, update the user docs in the same change. Use `README.md` for the overview, `cli/README.md` for commands, the script's README for bootstrap details, and an "As built" note in the plan for design changes. Keep this file consistent with them.
 - `apps/` holds the user's projects (separate repositories, ignored here). Never modify them as a side effect.
