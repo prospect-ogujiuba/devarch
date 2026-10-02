@@ -22,7 +22,7 @@ Both were removed on 2026-05-16 (`cfeaa91`, about 40k lines). Each time, the pla
 - No desired-state engine, plan/apply, or lock files. Compose files are the desired state.
 - No GUI or TUI editing of compose overrides. Changing a service means editing its file.
 - No per-subcommand Podman wrappers and no reformatting of native output. Every mutating action runs one visible `podman compose …` or `podman …` command, which `--dry-run` prints.
-- Podman only, matching the `scripts/devarch/lib/common.sh` contract. The Docker detection still present in the bootstraps goes away during migration.
+- Podman by default; Docker is a setting, not an adapter layer. The differences live in one table (`cli/internal/engine/runtime.go`), and everything else runs the configured binary with identical arguments.
 - State lives in plain files under `~/.config/devarch/`.
 
 If a feature needs something on this list, it is out of scope.
@@ -175,7 +175,7 @@ Bash code moves only when it is platform logic duplicated across scripts, or whe
 | `dotenv.sh` | `state` (reads the root `.env` with the same data-only rules) | 4 | Kept while any Bash consumer remains. |
 | `print_plan` / dry-run plumbing | `--dry-run` on every command | 1–4 | Bootstrap dry-run keeps covering only its own filesystem steps. |
 
-**Phase 4 cut-over:** once the binary is the supported entry point, the bootstraps drop their copies of the Layer 1 functions and call `devarch up … --wait` and `devarch hosts add` instead. The duplication is removed for real, not just hidden behind the binary. (Done: WordPress, Laravel and the Node runtime now require the `devarch` CLI; Docker support was removed from them.)
+**Phase 4 cut-over:** once the binary is the supported entry point, the bootstraps drop their copies of the Layer 1 functions and call `devarch up … --wait` and `devarch hosts add` instead. The duplication is removed for real, not just hidden behind the binary. (Done: WordPress, Laravel and the Node runtime now require the `devarch` CLI. Their ad hoc Docker detection was removed; Docker returned later as the `runtime` setting, which they receive as `DEVARCH_RUNTIME` and `DEVARCH_CONTAINER_USER`.)
 
 ### Layer 2: shared provisioning (Phase 6, only once Layer 1 has landed)
 
@@ -312,7 +312,7 @@ Each phase can ship on its own and has a clear exit check.
 - **Go module in `cli/`, not the repo root.** Keeps Go tooling out of `apps/` and keeps the repo's identity as a service library.
 - **YAML for `x-devarch` and `recipe.yml`.** One format, the same as compose.
 - **Versions passed as process environment, not `--env-file`.** This preserves per-service `.env` credentials and avoids differences in multi-env-file support between Compose providers.
-- **Podman only.** Matches the existing foundation contract.
+- **Podman by default, Docker as a setting.** Originally Podman only. Reversed on 2026-10-02: `runtime: docker` in `config.yml` switches the compose command, existence checks, readiness, the bootstrap container user, `ps`/events parsing and the doctor checks, all from one table. No per-runtime code paths exist outside it and the bootstraps’ `DEVARCH_RUNTIME`/`DEVARCH_CONTAINER_USER`.
 
 ## Open questions
 

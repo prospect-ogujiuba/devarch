@@ -3,7 +3,6 @@ package cli
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -36,20 +35,16 @@ func (a *app) runTUI() error {
 		Exe:     exe,
 		OpenURL: openURL,
 		OpenDir: func(dir string) error { return openDir(a.eng.Settings.Editor, dir) },
-		Events:  func(ctx context.Context) <-chan struct{} { return containerEvents(ctx, a.eng.Settings.Runtime) },
+		Events:  func(ctx context.Context) <-chan struct{} { return containerEvents(ctx, a.eng) },
 	})
 }
 
 // containerEvents signals container lifecycle changes and health transitions
 // while the TUI is open. Healthcheck runs that do not change health are
 // ignored, so an idle stack causes no refreshes.
-func containerEvents(ctx context.Context, runtime string) <-chan struct{} {
+func containerEvents(ctx context.Context, e *engine.Engine) <-chan struct{} {
 	ch := make(chan struct{}, 1)
-	args := []string{"events", "--format", "json", "--filter", "type=container"}
-	for _, e := range []string{"create", "start", "stop", "died", "remove", "restart", "pause", "unpause", "health_status"} {
-		args = append(args, "--filter", "event="+e)
-	}
-	cmd := exec.CommandContext(ctx, runtime, args...)
+	cmd := exec.CommandContext(ctx, e.Settings.Runtime, e.EventsCmd()...)
 	out, err := cmd.StdoutPipe()
 	if err != nil || cmd.Start() != nil {
 		close(ch)
@@ -61,19 +56,15 @@ func containerEvents(ctx context.Context, runtime string) <-chan struct{} {
 		health := map[string]string{}
 		sc := bufio.NewScanner(out)
 		for sc.Scan() {
-			var ev struct {
-				Name         string `json:"Name"`
-				Status       string `json:"Status"`
-				HealthStatus string `json:"HealthStatus"`
-			}
-			if json.Unmarshal(sc.Bytes(), &ev) != nil {
+			ev, ok := engine.ParseEvent(sc.Bytes())
+			if !ok {
 				continue
 			}
-			if ev.Status == "health_status" {
-				if health[ev.Name] == ev.HealthStatus {
+			if ev.Action == "health_status" {
+				if health[ev.Name] == ev.Health {
 					continue
 				}
-				health[ev.Name] = ev.HealthStatus
+				health[ev.Name] = ev.Health
 			}
 			select {
 			case ch <- struct{}{}:

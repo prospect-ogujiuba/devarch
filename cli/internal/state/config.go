@@ -97,9 +97,7 @@ func (c Config) Resolve(root string) (Settings, error) {
 	s.AppsDir = filepath.Clean(s.AppsDir)
 
 	switch s.Runtime {
-	case "podman":
-	case "docker":
-		return s, errors.New("runtime: docker is not supported yet")
+	case "podman", "docker":
 	default:
 		return s, fmt.Errorf("runtime must be podman or docker, not %q", s.Runtime)
 	}

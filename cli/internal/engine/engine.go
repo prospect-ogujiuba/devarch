@@ -105,7 +105,7 @@ func (e *Engine) Compose(svc catalog.Service, args ...string) runner.Cmd {
 // EnsureNetwork creates the shared network when it does not exist.
 func (e *Engine) EnsureNetwork(ctx context.Context) error {
 	network := e.Settings.Network
-	_, err := e.Runner.Output(ctx, e.Cmd("network", "exists", network))
+	_, err := e.Runner.Output(ctx, e.Cmd(e.Runtime().NetworkExists(network)...))
 	if err == nil {
 		return nil
 	}
@@ -225,15 +225,14 @@ type psEntry struct {
 // Containers lists podman containers (all states) and maps each to a catalog
 // service through the compose working-directory label.
 func (e *Engine) Containers(ctx context.Context) ([]Container, error) {
-	out, err := e.Runner.Output(ctx, e.Cmd("ps", "-a", "--format", "json"))
+	rt := e.Runtime()
+	out, err := e.Runner.Output(ctx, e.Cmd(rt.PS...))
 	if err != nil {
 		return nil, err
 	}
-	var entries []psEntry
-	if len(strings.TrimSpace(string(out))) > 0 {
-		if err := json.Unmarshal(out, &entries); err != nil {
-			return nil, fmt.Errorf("parse podman ps: %w", err)
-		}
+	entries, err := rt.ParsePS(out)
+	if err != nil {
+		return nil, err
 	}
 	byDir := map[string]catalog.Service{}
 	for _, s := range e.Catalog.Services {
@@ -261,7 +260,8 @@ func (e *Engine) Containers(ctx context.Context) ([]Container, error) {
 
 func healthFromStatus(status string) string {
 	for _, h := range []string{"unhealthy", "healthy", "starting"} {
-		if strings.Contains(status, "("+h+")") {
+		// Docker writes "(health: starting)".
+		if strings.Contains(status, "("+h+")") || strings.Contains(status, "(health: "+h+")") {
 			return h
 		}
 	}
@@ -320,6 +320,9 @@ type inspectEntry struct {
 	Name  string `json:"Name"`
 	State struct {
 		Status string `json:"Status"`
+		Health *struct {
+			Status string `json:"Status"`
+		} `json:"Health"`
 	} `json:"State"`
 	Config struct {
 		Healthcheck *json.RawMessage `json:"Healthcheck"`
@@ -369,14 +372,21 @@ func (e *Engine) ready(ctx context.Context, svc catalog.Service) error {
 	}
 	var entries []inspectEntry
 	if err := json.Unmarshal(out, &entries); err != nil {
-		return fmt.Errorf("parse podman inspect: %w", err)
+		return fmt.Errorf("parse %s inspect: %w", e.Settings.Runtime, err)
 	}
+	rt := e.Runtime()
 	for _, in := range entries {
 		name := strings.TrimPrefix(in.Name, "/")
 		if in.State.Status != "running" {
 			return fmt.Errorf("%s is %s", name, in.State.Status)
 		}
 		if in.Config.Healthcheck == nil || string(*in.Config.Healthcheck) == "null" {
+			continue
+		}
+		if !rt.RunHealthcheck {
+			if in.State.Health == nil || in.State.Health.Status != "healthy" {
+				return fmt.Errorf("%s is not healthy yet", name)
+			}
 			continue
 		}
 		if _, err := e.Runner.Output(ctx, e.Cmd("healthcheck", "run", name)); err != nil {
@@ -403,7 +413,8 @@ func (e *Engine) containerName(svc catalog.Service, cs []Container) string {
 			return c.Name
 		}
 	}
-	return svc.Name + "_" + p.Service + "_1"
+	sep := e.Runtime().ReplicaSep
+	return svc.Name + sep + p.Service + sep + "1"
 }
 
 // LogsCmd returns the native logs command for svc.

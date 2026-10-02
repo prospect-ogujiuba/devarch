@@ -13,7 +13,7 @@ MariaDB applications receive an isolated database and user derived from the app 
 ## Prerequisites
 
 - Bash 4+
-- Rootless Podman with `podman compose` or `podman-compose`
+- Rootless Podman with `podman compose` or `podman-compose`, or Docker Engine with the Compose plugin when `devarch config set runtime docker` is set
 - The `devarch` CLI ([`cli/README.md`](../../cli/README.md)); the bootstrap starts and waits for services and registers the hostname through it
 - `awk`, `tr`, `od`, and either `sha256sum` or `shasum`
 - `openssl` or `/dev/urandom` for real MariaDB provisioning
@@ -78,8 +78,7 @@ The script optionally parses the repository `.env` as data and reads only these 
 | `LARAVEL_APP_URL` | Laravel `APP_URL`. | `https://<app-name>.test` |
 | `LARAVEL_DB_ROOT_PASSWORD` | MariaDB administrative password used during provisioning. | `MARIADB_ROOT_PASSWORD`, then `devarch` |
 | `MARIADB_ROOT_PASSWORD` | Fallback MariaDB administrative password. | `devarch` |
-| `LARAVEL_CONTAINER_USER` | Explicit numeric `uid:gid` for container commands. | Runtime-specific mapping |
-| `CONTAINER_RUNTIME` | Only `podman` is supported; any other value is rejected. | `podman` |
+| `LARAVEL_CONTAINER_USER` | Explicit numeric `uid:gid` for container commands. | `DEVARCH_CONTAINER_USER`: `0:0` under rootless Podman, your `uid:gid` under Docker |
 
 Repository `.env` assignments are loaded after CLI parsing and replace inherited values for the same supported key. Command-line options control only their documented settings; there are no CLI forms for `APP_NAME`, `APP_URL`, the root password, runtime, or container user. For the root password, `LARAVEL_DB_ROOT_PASSWORD` takes precedence over `MARIADB_ROOT_PASSWORD` after `.env` loading.
 
@@ -137,9 +136,9 @@ Package names must use lowercase Composer `vendor/package` syntax. Constraints s
 
 ## Services and runtime mapping
 
-The script uses Podman. It starts the shared services with `devarch up <services> --wait --no-hosts`, which creates `microservices-net` when needed and waits for each compose healthcheck, and registers the hostname with `devarch hosts add`.
+The script uses the container runtime configured for `devarch` (`runtime` in `~/.config/devarch/config.yml`, Podman by default), passed as `DEVARCH_RUNTIME`. It starts the shared services with `devarch up <services> --wait --no-hosts`, which creates `microservices-net` when needed and waits for each compose healthcheck, and registers the hostname with `devarch hosts add`.
 
-- Podman defaults container commands to `--user 0:0`, which maps correctly for the rootless bind mount.
+- Podman defaults container commands to `--user 0:0`, which maps correctly for the rootless bind mount; Docker uses your own `uid:gid`. Both come from `DEVARCH_CONTAINER_USER`.
 - `LARAVEL_CONTAINER_USER=<uid>:<gid>` overrides either default.
 
 PHP is always selected. MariaDB is selected by the default database, Mailpit by `standard`, `loaded`, or `--with-mailpit`, and Redis by `loaded` or `--with-redis`. Redis uses `phpredis`, host `redis`, port `6379`, the shared Compose password, queue/default DB `0`, and cache DB `1`. Dry-run output redacts database and Redis credentials.
@@ -183,7 +182,7 @@ Review the commands and confirm the name is disposable before running them.
 
 ## Troubleshooting
 
-- **`Podman is required` / `the devarch CLI is required`:** install Podman with a Compose provider and the `devarch` CLI; `devarch doctor` checks the rest of the environment.
+- **`podman is required` / `docker is required` / `the devarch CLI is required`:** install the configured runtime with a Compose provider and the `devarch` CLI; `devarch doctor` checks the rest of the environment.
 - **Runtime cannot see an existing network/container:** run all DevArch services as the same rootless user.
 - **Proxy returns 503:** start the shared PHP service and verify it is attached to `microservices-net`.
 - **Wrong document root:** confirm `apps/<name>/public/index.php` exists; the wildcard proxy then selects `public` automatically.

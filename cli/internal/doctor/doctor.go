@@ -45,7 +45,10 @@ type Env struct {
 	PortStartFile string
 	// PortFree reports whether a host TCP port can be bound.
 	PortFree func(ip string, port int) bool
-	Now      func() time.Time
+	// DockerGroup reports whether the docker group exists and whether the
+	// current user is in it.
+	DockerGroup func() (exists, member bool)
+	Now         func() time.Time
 }
 
 // Run executes every check in order.
@@ -59,6 +62,9 @@ func Run(ctx context.Context, env Env) []Check {
 	if env.Now == nil {
 		env.Now = time.Now
 	}
+	if env.DockerGroup == nil {
+		env.DockerGroup = dockerGroup
+	}
 	e := env.Engine
 	r := e.Runner
 	var out []Check
@@ -71,32 +77,37 @@ func Run(ctx context.Context, env Env) []Check {
 		add(Check{Name: "catalog", Status: OK, Detail: fmt.Sprintf("%d services", len(e.Catalog.Services))})
 	}
 
-	version, err := r.Output(ctx, runner.Cmd{Name: "podman", Args: []string{"--version"}})
+	rt := e.Runtime()
+	version, err := r.Output(ctx, e.Cmd("--version"))
 	if err != nil {
-		add(Check{Name: "podman", Status: Fail, Detail: err.Error(), Fix: "install Podman: https://podman.io/docs/installation"})
-		return out // everything else needs podman
+		add(Check{Name: rt.Name, Status: Fail, Detail: err.Error(), Fix: rt.InstallHint})
+		return out // everything else needs the runtime
 	}
-	add(Check{Name: "podman", Status: OK, Detail: strings.TrimSpace(string(version))})
+	add(Check{Name: rt.Name, Status: OK, Detail: strings.TrimSpace(string(version))})
 
-	if _, err := r.Output(ctx, runner.Cmd{Name: "podman", Args: []string{"compose", "version"}}); err != nil {
-		add(Check{Name: "compose provider", Status: Fail, Detail: err.Error(), Fix: "install podman-compose or docker-compose"})
+	if _, err := r.Output(ctx, e.Cmd("compose", "version")); err != nil {
+		add(Check{Name: "compose provider", Status: Fail, Detail: err.Error(), Fix: rt.ComposeHint})
 	} else {
-		add(Check{Name: "compose provider", Status: OK, Detail: "podman compose works"})
+		add(Check{Name: "compose provider", Status: OK, Detail: rt.Name + " compose works"})
 	}
 
 	rootless := false
-	if out, err := r.Output(ctx, runner.Cmd{Name: "podman", Args: []string{"info", "--format", "{{.Host.Security.Rootless}}"}}); err == nil {
-		rootless = strings.TrimSpace(string(out)) == "true"
-		if rootless {
-			add(Check{Name: "rootless", Status: OK, Detail: "running as " + currentUser()})
-		} else {
-			add(Check{Name: "rootless", Status: Warn, Detail: "podman is running rootful; containers are not visible to your rootless user",
-				Fix: "run devarch as the same non-root user that owns the stack"})
+	if rt.Rootless {
+		if out, err := r.Output(ctx, e.Cmd("info", "--format", "{{.Host.Security.Rootless}}")); err == nil {
+			rootless = strings.TrimSpace(string(out)) == "true"
+			if rootless {
+				add(Check{Name: "rootless", Status: OK, Detail: "running as " + currentUser()})
+			} else {
+				add(Check{Name: "rootless", Status: Warn, Detail: "podman is running rootful; containers are not visible to your rootless user",
+					Fix: "run devarch as the same non-root user that owns the stack"})
+			}
 		}
+	} else {
+		add(dockerAccess(ctx, env))
 	}
 
 	network := e.Settings.Network
-	if _, err := r.Output(ctx, e.Cmd("network", "exists", network)); err != nil {
+	if _, err := r.Output(ctx, e.Cmd(rt.NetworkExists(network)...)); err != nil {
 		add(Check{Name: "network", Status: Warn, Detail: network + " does not exist", Fix: "devarch up <service> creates it, or: " + e.Cmd("network", "create", network).String()})
 	} else {
 		add(Check{Name: "network", Status: OK, Detail: network})
@@ -119,10 +130,50 @@ func Run(ctx context.Context, env Env) []Check {
 
 	add(certificate(e.Root, env.Now()))
 	add(hostsCheck(e))
-	if runtime.GOOS == "linux" {
+	if runtime.GOOS == "linux" && rt.Rootless {
 		add(linger(ctx, r))
 	}
 	return out
+}
+
+// dockerAccess checks that the Docker daemon answers. The usual cause when it
+// does not is a user outside the docker group.
+func dockerAccess(ctx context.Context, env Env) Check {
+	e := env.Engine
+	_, err := e.Runner.Output(ctx, e.Cmd("info", "--format", "{{.ServerVersion}}"))
+	exists, member := env.DockerGroup()
+	switch {
+	case err == nil && member:
+		return Check{Name: "docker access", Status: OK, Detail: currentUser() + " is in the docker group"}
+	case err == nil:
+		return Check{Name: "docker access", Status: OK, Detail: "the Docker daemon answers"}
+	case exists && !member:
+		return Check{Name: "docker access", Status: Fail, Detail: currentUser() + " is not in the docker group, so the daemon refuses connections",
+			Fix: "sudo usermod -aG docker " + currentUser() + ", then log out and back in"}
+	}
+	fix := "start it (sudo systemctl start docker, or Docker Desktop) and check docker info"
+	if member {
+		fix = "if you were just added to the docker group, log out and back in; otherwise " + fix
+	}
+	return Check{Name: "docker access", Status: Fail, Detail: "the Docker daemon does not answer: " + err.Error(), Fix: fix}
+}
+
+func dockerGroup() (exists, member bool) {
+	g, err := user.LookupGroup("docker")
+	if err != nil {
+		return false, false
+	}
+	u, err := user.Current()
+	if err != nil {
+		return true, false
+	}
+	ids, _ := u.GroupIds()
+	for _, id := range ids {
+		if id == g.Gid {
+			return true, true
+		}
+	}
+	return true, u.Uid == "0"
 }
 
 func currentUser() string {

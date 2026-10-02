@@ -45,3 +45,35 @@ devarch_progress() {
         "$(_devarch_json_escape "$1")" "$(_devarch_json_escape "$2")" "$(_devarch_json_escape "${3:-}")" \
         2>/dev/null >&"$fd" || true
 }
+
+# devarch_runtime_env [DEVARCH]
+# Sets DEVARCH_RUNTIME (podman or docker) and DEVARCH_CONTAINER_USER, the
+# uid:gid that container exec calls use so bind-mounted files belong to the
+# invoking user. `devarch new` passes both; a bootstrap run directly asks
+# `DEVARCH config --env`. Without either, the runtime is podman. The user
+# mapping mirrors cli/internal/engine/runtime.go: root inside a rootless Podman
+# container is the invoking user, while Docker needs the user's own ids.
+devarch_runtime_env() {
+    local bin=${1:-} key value
+    if [[ -z ${DEVARCH_RUNTIME:-} && -n $bin ]]; then
+        while IFS='=' read -r key value; do
+            case $key in
+                DEVARCH_RUNTIME) DEVARCH_RUNTIME=$value ;;
+                DEVARCH_CONTAINER_USER) DEVARCH_CONTAINER_USER=${DEVARCH_CONTAINER_USER:-$value} ;;
+            esac
+        done < <("$bin" config --env 2>/dev/null || true)
+    fi
+    DEVARCH_RUNTIME=${DEVARCH_RUNTIME:-podman}
+    case $DEVARCH_RUNTIME in
+        podman) DEVARCH_CONTAINER_USER=${DEVARCH_CONTAINER_USER:-0:0} ;;
+        docker) DEVARCH_CONTAINER_USER=${DEVARCH_CONTAINER_USER:-$(id -u):$(id -g)} ;;
+        *)
+            printf 'devarch: DEVARCH_RUNTIME must be podman or docker, not %s\n' "$DEVARCH_RUNTIME" >&2
+            return 1
+            ;;
+    esac
+    [[ $DEVARCH_CONTAINER_USER =~ ^[0-9]+:[0-9]+$ ]] || {
+        printf 'devarch: DEVARCH_CONTAINER_USER must be a numeric uid:gid, not %s\n' "$DEVARCH_CONTAINER_USER" >&2
+        return 1
+    }
+}

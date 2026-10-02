@@ -25,7 +25,7 @@ func (m *Model) View() string {
 	case modeLogs:
 		return m.logs.view(w)
 	case modeHelp:
-		return helpView()
+		return helpView(m.eng.Settings.Runtime)
 	}
 
 	header := m.headerView(w)
@@ -358,7 +358,7 @@ func (m *Model) versionView() string {
 	return b.String()
 }
 
-func helpView() string {
+func helpView(runtime string) string {
 	return boxStyle.Render(strings.Join([]string{
 		titleStyle.Render("DevArch keys"),
 		"",
@@ -369,7 +369,7 @@ func helpView() string {
 		"n          new project                H         sync .test hosts",
 		"e          open app in editor         q         quit",
 		"",
-		"Every action runs native podman commands; they appear",
+		"Every action runs native " + runtime + " commands; they appear",
 		"in the activity pane. Nothing keeps running after you quit.",
 		"",
 		dimStyle.Render("press any key"),

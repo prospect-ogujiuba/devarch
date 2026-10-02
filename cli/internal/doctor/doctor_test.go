@@ -137,3 +137,42 @@ func TestDoctorUsesSettings(t *testing.T) {
 		t.Errorf("hosts: %+v", c)
 	}
 }
+
+func TestDoctorDocker(t *testing.T) {
+	env, f, lib := setup(t)
+	env.Engine.Settings.Runtime = "docker"
+	f.Responses["docker --version"] = runner.Response{Out: []byte("Docker version 28.1.1\n")}
+	f.Responses["docker info"] = runner.Response{Err: errors.New("permission denied while trying to connect to the Docker daemon socket")}
+	f.Responses["docker ps"] = runner.Response{Out: []byte(`{"Names":"nginx-proxy-manager","State":"running","Status":"Up","Labels":"com.docker.compose.project=nginx-proxy-manager,com.docker.compose.project.working_dir=` + lib + `/proxy/nginx-proxy-manager","Ports":""}` + "\n")}
+	env.DockerGroup = func() (bool, bool) { return true, false }
+	checks := byName(Run(context.Background(), env))
+	if c := checks["docker"]; c.Status != OK || !strings.Contains(c.Detail, "Docker version") {
+		t.Errorf("docker: %+v", c)
+	}
+	if c := checks["docker access"]; c.Status != Fail || !strings.Contains(c.Fix, "usermod -aG docker") {
+		t.Errorf("docker access: %+v", c)
+	}
+	if c := checks["proxy"]; c.Status != OK {
+		t.Errorf("proxy: %+v", c)
+	}
+	for _, podmanOnly := range []string{"podman", "rootless", "ports 80/443", "lingering"} {
+		if _, ok := checks[podmanOnly]; ok {
+			t.Errorf("docker doctor ran the %s check", podmanOnly)
+		}
+	}
+	for _, l := range f.Lines() {
+		if strings.HasPrefix(l, "podman ") {
+			t.Errorf("ran %s", l)
+		}
+	}
+
+	f.Responses["docker info"] = runner.Response{Out: []byte("28.1.1\n")}
+	env.DockerGroup = func() (bool, bool) { return true, true }
+	if c := byName(Run(context.Background(), env))["docker access"]; c.Status != OK {
+		t.Errorf("member: %+v", c)
+	}
+	env.DockerGroup = func() (bool, bool) { return false, false }
+	if c := byName(Run(context.Background(), env))["docker access"]; c.Status != OK {
+		t.Errorf("Docker Desktop without a docker group: %+v", c)
+	}
+}

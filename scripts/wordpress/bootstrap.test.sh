@@ -22,6 +22,9 @@ cleanup() {
   rm -rf "$generic_profile_root" "$typerocket_install_root" "$boundary_repo" "$nested_site"
 }
 trap cleanup EXIT
+# Pin the runtime so a devarch on PATH cannot apply this machine's config.yml.
+export DEVARCH_RUNTIME=podman
+unset DEVARCH_CONTAINER_USER
 
 mkdir -p "$boundary_repo/scripts/wordpress" "$boundary_repo/scripts/devarch/lib"
 cp "$BOOTSTRAP" "$boundary_repo/scripts/wordpress/bootstrap.sh"
@@ -123,9 +126,22 @@ grep -q -- '--user 0:0' <<<"$dry_run_output" || fail "Podman should use the bind
 no_hosts_output="$(bash "$BOOTSTRAP" no-hosts-site --no-hosts --dry-run)" || fail "hosts opt-out should succeed"
 grep -q 'hosts registration skipped: no-hosts-site.test' <<<"$no_hosts_output" || fail "hosts opt-out should be visible"
 
-if CONTAINER_RUNTIME=docker bash "$BOOTSTRAP" demo-docker --dry-run >/dev/null 2>&1; then
-  fail "only Podman should be accepted"
+docker_output="$(DEVARCH_RUNTIME=docker bash "$BOOTSTRAP" demo-docker --dry-run)" || fail "Docker dry-run should succeed"
+grep -q -- "+ docker exec -i --user $(id -u):$(id -g) php wp" <<<"$docker_output" || fail "Docker should exec WP-CLI as the invoking uid:gid"
+! grep -q 'podman' <<<"$docker_output" || fail "Docker dry-run should not mention podman"
+override_output="$(DEVARCH_RUNTIME=docker WORDPRESS_CONTAINER_USER=33:33 bash "$BOOTSTRAP" demo-docker --dry-run)" || fail "container user override should succeed"
+grep -q -- '--user 33:33' <<<"$override_output" || fail "WORDPRESS_CONTAINER_USER should override the runtime mapping"
+if DEVARCH_RUNTIME=lxc bash "$BOOTSTRAP" demo-lxc --dry-run >/dev/null 2>&1; then
+  fail "an unknown runtime should be rejected"
 fi
+config_devarch="$(mktemp)"
+printf '#!/usr/bin/env bash
+[[ "$*" == "config --env" ]] && printf "DEVARCH_RUNTIME=docker\\nDEVARCH_CONTAINER_USER=4242:4242\\n"
+' > "$config_devarch"
+chmod +x "$config_devarch"
+config_output="$(env -u DEVARCH_RUNTIME DEVARCH_BIN="$config_devarch" bash "$BOOTSTRAP" demo-config --dry-run)" || fail "direct run should read devarch config"
+rm -f "$config_devarch"
+grep -q -- '+ docker exec -i --user 4242:4242 php wp' <<<"$config_output" || fail "a direct run should take the runtime from devarch config --env"
 
 build_output="$(bash "$BOOTSTRAP" build-site --build --dry-run)" || fail "--build dry-run should succeed"
 grep -q -- '--no-hosts --build' <<<"$build_output" || fail "--build should rebuild through devarch up"
