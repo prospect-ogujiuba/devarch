@@ -43,6 +43,8 @@ type Arg struct {
 	// without extension, default) or "dir" (parent directory name).
 	ChoiceIs string `yaml:"choice_is" json:"choice_is,omitempty"`
 	Confirm  string `yaml:"confirm" json:"confirm,omitempty"`
+	// Preview describes ChoicesFrom files so the TUI can show their content.
+	Preview *Preview `yaml:"preview" json:"preview,omitempty"`
 }
 
 // Recipe is a parsed recipe.yml.

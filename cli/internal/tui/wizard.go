@@ -318,6 +318,27 @@ func (w *wizardModel) update(m *Model, msg tea.Msg) tea.Cmd {
 	return nil
 }
 
+// previewView lists what a profile choice installs.
+func (w *wizardModel) previewView(a recipe.Arg, vals map[string]string, choice string) string {
+	var b strings.Builder
+	b.WriteString("\n" + titleStyle.Render(a.Name+" "+choice))
+	p, err := w.r.PreviewChoice(a, vals, choice)
+	if err != nil {
+		return b.String() + "  " + errStyle.Render(err.Error()) + "\n"
+	}
+	if p.Description != "" {
+		b.WriteString("  " + dimStyle.Render(p.Description))
+	}
+	b.WriteString("\n")
+	if len(p.Groups) == 0 {
+		b.WriteString("  " + dimStyle.Render("installs nothing extra") + "\n")
+	}
+	for _, g := range p.Groups {
+		b.WriteString("  " + g.Label + ": " + dimStyle.Render(strings.Join(g.Items, ", ")) + "\n")
+	}
+	return b.String()
+}
+
 func (w *wizardModel) view(m *Model) string {
 	var b strings.Builder
 	title := "New project"
@@ -366,6 +387,11 @@ func (w *wizardModel) view(m *Model) string {
 				label = cursorStyle.Render(label)
 			}
 			b.WriteString("  " + label + "  " + val + "\n")
+		}
+		for _, f := range w.fields {
+			if f.arg.Preview != nil && f.value != "" {
+				b.WriteString(w.previewView(f.arg, vals, f.value))
+			}
 		}
 		if w.err != "" {
 			b.WriteString("\n" + errStyle.Render(w.err) + "\n")

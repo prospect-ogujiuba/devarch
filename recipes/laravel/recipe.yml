@@ -15,6 +15,11 @@ args:
     help: Package profile
     choices_from: scripts/laravel/profiles/*.profile
     default: bare
+    preview:
+      directives:
+        - {kind: feature, label: Services}
+        - {kind: composer-package, label: Composer packages}
+        - {kind: composer-dev-package, label: Composer dev packages}
   - name: database
     flag: --database
     help: Database backend

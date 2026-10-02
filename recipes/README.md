@@ -20,6 +20,7 @@ The script is the authority on its interface: flags the manifest does not declar
 | `args[].type` | `string` (default), `bool`, or `path` |
 | `args[].pattern`, `choices`, `choices_from` | Validation; `choices_from` globs files and may reference other args as `{name}` |
 | `args[].confirm` | Question the TUI asks before passing a destructive flag |
+| `args[].preview` | The `choices_from` files are line-oriented profiles (`directive value [option]`, `#` comments). `directives` lists `{kind, label}` in display order and `include` names the directive that pulls in another file; the TUI wizard then shows what the chosen profile installs. Go only groups the lines; the script still interprets them. |
 | `no_hosts_flag` | Arguments that skip hostname registration; the TUI adds them and offers `H` afterwards, because `sudo` cannot prompt inside it |
 
 Scripts run with `DEVARCH_BIN` (the running `devarch`) and `DEVARCH_ROOT` set. They report progress through `devarch_progress STEP STATE MESSAGE` from `scripts/devarch/lib/platform.sh`, which writes JSON lines to `DEVARCH_PROGRESS_FD` when a reader such as the TUI provides one and does nothing otherwise.
