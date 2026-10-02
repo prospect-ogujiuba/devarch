@@ -165,11 +165,12 @@ Existing applications in `apps/<app-name>` can run in isolated Node 22 container
 Each app supplies a package script that binds to `0.0.0.0:3000`:
 
 ```bash
-scripts/node/bootstrap.sh my-next-app --dry-run
-scripts/node/bootstrap.sh my-next-app
+devarch --dry-run app start my-next-app
+devarch app start my-next-app
+devarch app stop my-next-app
 ```
 
-Static Next.js exports under `out/` continue to be served directly by Nginx and need no running Node container. See [`scripts/node/README.md`](scripts/node/README.md) for the package-script contract, framework examples, package-manager selection, routing behavior, and lifecycle commands.
+Static Next.js exports under `out/` continue to be served directly by Nginx and need no running Node container. See [`services-library/backend/node/README.md`](services-library/backend/node/README.md) for the package-script contract, framework examples, package-manager selection, routing behavior, and lifecycle commands.
 
 ## AI-assisted browser testing
 

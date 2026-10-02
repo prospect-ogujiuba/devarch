@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/prospect-ogujiuba/devarch/cli/internal/engine"
 	"github.com/prospect-ogujiuba/devarch/cli/internal/replace"
 	"github.com/prospect-ogujiuba/devarch/cli/internal/runner"
 )
@@ -20,7 +21,7 @@ func (a *app) appPaths(name string) replace.Paths {
 func appCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "app",
-		Short: "Back up projects and keep their provisioning recoverable",
+		Short: "Start JavaScript apps, back up projects, recover failed bootstraps",
 		Long: `Bootstraps take a guard before changing a project and release it when they
 succeed. If they fail, ` + "`devarch app recover <app>`" + ` moves the partial project to
 <apps_dir>/.devarch-failed, drops the databases created for it, restores any
@@ -130,7 +131,51 @@ database it replaced, and moves the previous project back from
 			return nil
 		},
 	}
-	c.AddCommand(guard, release, recover, backup)
+	var startOpts engine.AppOptions
+	start := &cobra.Command{
+		Use:   "start <app>",
+		Short: "Run a JavaScript app in its own Node container behind https://<app>.test",
+		Long: `Run apps/<app> in its own node-<app> container. The app's package.json script
+(default devarch) must serve HTTP on 0.0.0.0:3000. start brings up the shared
+node router and the proxy, recreates the app container so changed options
+apply, reloads the proxy, and registers <app>.test.`,
+		Example: "  devarch app start storefront\n  devarch app start api --script dev --package-manager pnpm",
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := a.load(); err != nil {
+				return err
+			}
+			plan, err := a.eng.PlanApp(args[0], startOpts)
+			if err != nil {
+				return err
+			}
+			if err := a.eng.StartApp(contextOrBackground(cmd), plan, startOpts); err != nil {
+				return err
+			}
+			if !a.dryRun {
+				fmt.Fprintf(a.out, "%s: https://%s.test\n", plan.Container, plan.App)
+			}
+			return nil
+		},
+	}
+	start.Flags().StringVar(&startOpts.Script, "script", "devarch", "package.json script to run")
+	start.Flags().StringVar(&startOpts.PackageManager, "package-manager", "auto", "auto (from the lock file), npm, pnpm or yarn")
+	start.Flags().BoolVar(&startOpts.NoHosts, "no-hosts", false, "do not register <app>.test")
+
+	var stopVolumes bool
+	stop := &cobra.Command{
+		Use:   "stop <app>",
+		Short: "Remove a JavaScript app's Node container",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := a.load(); err != nil {
+				return err
+			}
+			return a.eng.StopApp(contextOrBackground(cmd), args[0], stopVolumes)
+		},
+	}
+	stop.Flags().BoolVar(&stopVolumes, "volumes", false, "also delete the app's cached node_modules volume")
+	c.AddCommand(start, stop, guard, release, recover, backup)
 	return c
 }
 

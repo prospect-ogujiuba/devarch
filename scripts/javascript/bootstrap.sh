@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PROFILES_DIR="$SCRIPT_DIR/profiles"
 APPS_DIR="${DEVARCH_APPS_DIR:-$PROJECT_ROOT/apps}"
+# shellcheck source=../devarch/lib/platform.sh
+source "$PROJECT_ROOT/scripts/devarch/lib/platform.sh"
 
 usage() {
   cat <<'EOF'
@@ -18,7 +20,7 @@ Create a current JavaScript framework starter under apps/<app-name>.
 Options:
   --framework NAME  JavaScript framework or framework/tool combination
   --profile NAME    Project profile for the selected framework
-  --start           Start the generated app through scripts/node/bootstrap.sh
+  --start           Start the generated app with devarch app start
   --force           Back up and replace an existing app
   --no-hosts        With --start, skip hosts-file registration
   --dry-run         Validate and print the plan without changing files
@@ -176,7 +178,7 @@ printf '\n  normalize package script: devarch=%q\n' "$DEVARCH_SCRIPT"
 declare -F configure_app >/dev/null && printf '  apply profile-specific runtime configuration\n'
 [[ ${POST_INSTALL:-0} == 1 ]] && printf '  install dependencies with npm\n'
 if ((start)); then
-  printf '  start isolated Node runtime through scripts/node/bootstrap.sh%s\n' "$([[ $no_hosts -eq 1 ]] && printf ' (without hosts registration)')"
+  printf '  start isolated Node runtime: devarch app start %s%s\n' "$app_name" "$([[ $no_hosts -eq 1 ]] && printf ' --no-hosts')"
 fi
 
 ((dry_run)) && exit 0
@@ -222,9 +224,10 @@ mv -- "$staging/app" "$app_dir"
 printf 'Created %s with %s/%s.\n' "$app_dir" "$framework" "$profile"
 
 if ((start)); then
-  runtime_args=("$app_name")
+  runtime_args=(app start "$app_name")
   ((no_hosts)) && runtime_args+=(--no-hosts)
-  "$PROJECT_ROOT/scripts/node/bootstrap.sh" "${runtime_args[@]}"
+  devarch="$(devarch_bin)" || die 'the devarch CLI is required to start the app'
+  "$devarch" "${runtime_args[@]}"
 else
-  printf 'Start it with: scripts/node/bootstrap.sh %s\n' "$app_name"
+  printf 'Start it with: devarch app start %s\n' "$app_name"
 fi

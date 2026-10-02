@@ -1,6 +1,6 @@
 # Multi-app JavaScript runtime
 
-`scripts/node/bootstrap.sh` runs an existing `apps/<app-name>` JavaScript application in its own Node 22 container. A shared `node` router receives wildcard Nginx traffic and forwards `<app-name>.test` to the isolated `node-<app-name>` container over `microservices-net`.
+`devarch app start <app-name>` runs an existing `apps/<app-name>` JavaScript application in its own Node 22 container. A shared `node` router receives wildcard Nginx traffic and forwards `<app-name>.test` to the isolated `node-<app-name>` container over `microservices-net`.
 
 This design can run multiple Next.js, Nuxt, Vite, Remix/React Router, Astro SSR, or generic Node HTTP applications concurrently. It does not combine Node with PHP-FPM and does not publish per-app host ports, so it works alongside WordPress and Laravel applications.
 
@@ -46,19 +46,22 @@ A generic Node server should read `HOST` and `PORT` or otherwise bind the same a
 ## Usage
 
 ```bash
-scripts/node/bootstrap.sh my-next-app --dry-run
-scripts/node/bootstrap.sh my-next-app
+devarch --dry-run app start my-next-app
+devarch app start my-next-app
+devarch app stop my-next-app            # --volumes also deletes the cached node_modules
 ```
+
+The screen's Apps view starts and stops JavaScript apps with `u` and `d`.
 
 Package manager selection is inferred from `pnpm-lock.yaml`, `yarn.lock`, or npm by default:
 
 ```bash
-scripts/node/bootstrap.sh my-app --package-manager pnpm
-scripts/node/bootstrap.sh my-app --script dev
-scripts/node/bootstrap.sh my-app --no-hosts
+devarch app start my-app --package-manager pnpm
+devarch app start my-app --script dev
+devarch app start my-app --no-hosts
 ```
 
-The bootstrap:
+`devarch app start`:
 
 1. Validates the app name, `package.json`, and selected script.
 2. Creates `microservices-net` when absent.
@@ -67,19 +70,15 @@ The bootstrap:
 5. Recreates `node-<app-name>` with an isolated `node_modules` volume so runtime environment changes are applied.
 6. Registers `<app-name>.test` unless `--no-hosts` is used.
 
-Use the selected runtime's Compose project to inspect or stop one app:
+To inspect an app's Compose project directly, run from this directory:
 
 ```bash
 DEVARCH_NODE_APP_NAME=my-app \
   podman compose -p devarch-node-my-app \
-  -f services-library/backend/node/app.compose.yml ps
-
-DEVARCH_NODE_APP_NAME=my-app \
-  podman compose -p devarch-node-my-app \
-  -f services-library/backend/node/app.compose.yml down
+  -f app.compose.yml ps
 ```
 
-Pass the same `DEVARCH_NODE_PACKAGE_MANAGER`, `DEVARCH_NODE_SCRIPT`, and `DEVARCH_NODE_CONTAINER_USER` values when recreating directly through Compose. The bootstrap is preferred because it supplies these consistently.
+Pass the same `DEVARCH_NODE_PACKAGE_MANAGER`, `DEVARCH_NODE_SCRIPT`, and `DEVARCH_NODE_CONTAINER_USER` values when recreating directly through Compose. `devarch app start` is preferred because it supplies these consistently.
 
 ## Routing behavior
 
@@ -103,8 +102,8 @@ A Next.js project using `output: "export"` generates `out/` and can be served di
 
 ```bash
 node --test services-library/backend/node/config/router.test.js
-bash scripts/node/bootstrap.test.sh
-bash scripts/node/routing.test.sh
+(cd cli && go test ./internal/engine -run App)
+bash services-library/backend/node/routing.test.sh
 ```
 
 The routing integration test uses the active Podman development stack and skips when Nginx Proxy Manager is not running. It verifies two concurrent runtimes, API and metadata routes, accepted/rejected WebSocket upgrades, static clean URLs/assets/404s, and PHP coexistence.
