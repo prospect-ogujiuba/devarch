@@ -25,7 +25,7 @@ services:
     container_name: leantime-db
 
   leantime:
-    image: leantime/leantime:latest
+    image: leantime/leantime:3.9.8
     restart: unless-stopped
     ports:
       - 127.0.0.1:9217:8080

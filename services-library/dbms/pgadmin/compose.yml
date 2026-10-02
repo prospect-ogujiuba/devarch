@@ -1,6 +1,6 @@
 services:
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:9.18.0
     restart: unless-stopped
     ports:
     - 127.0.0.1:8087:80
