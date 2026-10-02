@@ -10,7 +10,7 @@ Install the persistent user service and reload the running Nginx Proxy Manager c
 scripts/dashboard/install-service.sh
 ```
 
-Then open <https://devarch.test>. The installer enables `devarch-dashboard.service` for the current user, so no terminal needs to remain open. Useful service commands are:
+Then open <https://devarch.test>. The installer enables `devarch-dashboard.service` for the current user, so no terminal needs to remain open. It follows `devarch config get runtime`: under Podman it also enables the user `podman.socket` the dashboard reads, and it reloads the proxy through `devarch compose nginx-proxy-manager`. Start the proxy first with `devarch up nginx-proxy-manager`. Useful service commands are:
 
 ```bash
 systemctl --user status devarch-dashboard.service

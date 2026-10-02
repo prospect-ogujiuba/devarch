@@ -7,6 +7,12 @@ template="$script_dir/devarch-dashboard.service.in"
 unit_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 unit_file="$unit_dir/devarch-dashboard.service"
 python_bin="$(command -v python3 || true)"
+devarch_bin="$(command -v devarch || true)"
+# Follow devarch's runtime setting; without devarch, assume Podman.
+runtime=podman
+if [[ -n "$devarch_bin" ]]; then
+  runtime="$("$devarch_bin" config get runtime 2>/dev/null || printf podman)"
+fi
 
 if [[ -z "$python_bin" ]]; then
   printf 'python3 is required to install DevArch Home.\n' >&2
@@ -36,7 +42,9 @@ PY
 
 install -m 0644 "$temporary" "$unit_file"
 systemctl --user daemon-reload
-if command -v podman >/dev/null 2>&1; then
+# The dashboard reads containers from the runtime's API socket. Rootless
+# Podman provides it through a user unit; Docker's daemon provides its own.
+if [[ "$runtime" == podman ]] && command -v podman >/dev/null 2>&1; then
   systemctl --user enable --now podman.socket >/dev/null 2>&1 || \
     printf 'Warning: Podman API socket could not be enabled; container inventory may be unavailable.\n' >&2
 fi
@@ -62,11 +70,13 @@ else:
     raise SystemExit("DevArch Home did not begin listening on port 7411.")
 PY
 
-if command -v podman >/dev/null 2>&1 && podman container exists nginx-proxy-manager; then
-  podman exec nginx-proxy-manager nginx -t
-  podman exec nginx-proxy-manager nginx -s reload
+# Reload the proxy so it serves devarch.test, through devarch so the
+# configured runtime is used.
+if [[ -n "$devarch_bin" ]] && "$runtime" container inspect nginx-proxy-manager >/dev/null 2>&1; then
+  "$devarch_bin" compose nginx-proxy-manager -- exec -T nginx-proxy-manager nginx -t
+  "$devarch_bin" compose nginx-proxy-manager -- exec -T nginx-proxy-manager nginx -s reload
 else
-  printf 'Warning: Nginx Proxy Manager is not running; start it before opening devarch.test.\n' >&2
+  printf 'Warning: Nginx Proxy Manager is not running (start it with: devarch up nginx-proxy-manager); then open devarch.test.\n' >&2
 fi
 
 printf 'DevArch Home is running at https://devarch.test\n'

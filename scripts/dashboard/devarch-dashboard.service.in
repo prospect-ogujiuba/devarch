@@ -1,6 +1,7 @@
 [Unit]
 Description=DevArch Home dashboard
 Documentation=file://@REPO_ROOT@/scripts/dashboard/README.md
+# Harmless under Docker: the unit is simply absent.
 Wants=podman.socket
 After=network.target podman.socket
 
