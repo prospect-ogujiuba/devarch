@@ -5,7 +5,7 @@ x-devarch:
   version:
     var: PHP_VERSION
     default: "8.4"
-    choices: ["8.5", "8.4", "8.3", "8.2"]
+    choices: ["8.4", "8.3", "8.2"]
     rebuild: true
 services:
   php:

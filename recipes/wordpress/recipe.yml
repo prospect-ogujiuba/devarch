@@ -3,6 +3,7 @@ title: WordPress site
 description: WordPress in apps/<name> on the shared PHP-FPM, MariaDB and .test proxy, with optional plugin profiles and .wpress restore.
 entry: scripts/wordpress/bootstrap.sh
 requires: [backend/php, database/mariadb, proxy/nginx-proxy-manager]
+no_hosts_flag: [--no-hosts]
 args:
   - name: name
     positional: true
