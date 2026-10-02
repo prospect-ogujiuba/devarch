@@ -14,7 +14,18 @@ The old Go CLI, planning workflow, daemon/API code, and generated workspace surf
 
 ## Usage
 
-Pick a service and run it with Podman and the configured Compose provider:
+The `devarch` CLI runs services by name and prints every native command it runs:
+
+```bash
+cd cli && go install ./cmd/devarch && cd ..
+devarch ls database
+devarch up php mariadb nginx-proxy-manager --wait
+devarch --dry-run up --tag project-management
+```
+
+It creates `microservices-net` when needed and keeps no state beyond `~/.config/devarch/`. See [`cli/README.md`](cli/README.md) for every command and the optional `x-devarch` service metadata.
+
+The compose files remain directly usable. Pick a service and run it with Podman and the configured Compose provider:
 
 ```bash
 cd services-library/database/postgres
