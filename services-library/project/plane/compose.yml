@@ -211,7 +211,9 @@ services:
     container_name: plane-mq
 
   plane-minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # MinIO no longer publishes images; pgsty/minio is the community build
+    # upstream Plane uses. It reads existing MinIO data unchanged.
+    image: docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     restart: unless-stopped
     command: server /export --console-address ":9090"
     environment: *minio-environment
