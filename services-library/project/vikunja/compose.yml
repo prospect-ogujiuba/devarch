@@ -24,7 +24,7 @@ services:
     container_name: vikunja-db
 
   vikunja:
-    image: vikunja/vikunja:latest
+    image: vikunja/vikunja:2.6.0
     restart: unless-stopped
     ports:
       - 127.0.0.1:9218:3456
