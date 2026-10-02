@@ -292,6 +292,7 @@ Each phase can ship on its own and has a clear exit check.
 - Optionally, the dashboard reads `devarch ls --json` and `devarch ps --json` instead of doing its own discovery.
 - **Exit check:** `scripts/node/` is deleted, WordPress and Laravel create their databases through `devarch db create`, and a user service in `~/.config/devarch/services/` shows up in `ls` and the TUI.
 - **As built (`db`):** `devarch db create|drop` covers MariaDB and PostgreSQL with `--existing fail|reuse|replace`; replace dumps the old database and saves the user's definition (password hash and grants) so it can be restored. Identifier derivation stays in each bootstrap, which is domain logic.
+- **As built (replace):** `internal/replace` owns the Laravel recovery model for both bootstraps. `devarch app guard|release|recover` operate on a JSON record at the old marker path, `db create --app` adds databases to it, and recovery saves each finished step so it can resume. WordPress gained rollback; its `--force` no longer loses the replaced database. `devarch app backup` copies a project with `cp -a`.
 - **Status (2026-10-02):** the extensibility half is done: user services and recipes overlay the built-in ones, `devarch-<name>` commands run, and all three are documented and tested. The Layer 2 moves (`db`, `replace`, profile previews, `app start|stop`) have not started; they rewrite data-safety code in the WordPress and Laravel bootstraps and should follow real use of Phases 1–5.
 
 ## Testing

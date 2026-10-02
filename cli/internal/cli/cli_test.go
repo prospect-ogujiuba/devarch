@@ -410,3 +410,33 @@ func TestDBCommands(t *testing.T) {
 		t.Fatalf("dry-run drop: %v %s", err, h.out.String())
 	}
 }
+
+func TestAppGuardRecover(t *testing.T) {
+	h := newHarness(t)
+	testutil.WriteFiles(t, h.repo, map[string]string{
+		"services-library/database/mariadb/compose.yml": testutil.Compose("mariadb", ""),
+		"apps/shop/index.php":                           "original",
+	})
+	if err := h.run(t, "app", "guard", "shop"); err == nil || !strings.Contains(err.Error(), "--force") {
+		t.Fatalf("guard over an existing project: %v", err)
+	}
+	if err := h.run(t, "app", "guard", "shop", "--replace"); err != nil || !strings.Contains(h.out.String(), "BACKUP_PATH="+filepath.Join(h.repo, "apps", ".devarch-backups", "shop-")) {
+		t.Fatalf("guard: %v %s", err, h.out.String())
+	}
+	if err := h.run(t, "db", "create", "shop", "--app", "shop", "--env"); err != nil {
+		t.Fatal(err)
+	}
+	testutil.WriteFiles(t, h.repo, map[string]string{"apps/shop/half.txt": ""})
+	if err := h.run(t, "app", "recover", "shop"); err != nil {
+		t.Fatalf("recover: %v %s", err, h.err.String())
+	}
+	if data, _ := os.ReadFile(filepath.Join(h.repo, "apps/shop/index.php")); string(data) != "original" {
+		t.Fatal("previous project not restored")
+	}
+	if last := h.fake.Stdin[len(h.fake.Stdin)-1]; !strings.Contains(last, "DROP DATABASE IF EXISTS `shop`") || !strings.Contains(last, "DROP USER IF EXISTS 'shop'@'%'") {
+		t.Fatalf("recovery sql: %q", last)
+	}
+	if err := h.run(t, "db", "create", "x", "--app", "nope"); err == nil || !strings.Contains(err.Error(), "app guard nope") {
+		t.Fatalf("db create for an unguarded app: %v", err)
+	}
+}

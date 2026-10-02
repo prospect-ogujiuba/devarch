@@ -130,7 +130,7 @@ Run devarch without arguments in a terminal for the interactive screen.`,
 		c.GroupID = "services"
 		rootCmd.AddCommand(c)
 	}
-	for _, c := range []*cobra.Command{newCmd(a), dbCmd(a)} {
+	for _, c := range []*cobra.Command{newCmd(a), dbCmd(a), appCmd(a)} {
 		c.GroupID = "projects"
 		rootCmd.AddCommand(c)
 	}

@@ -66,6 +66,9 @@ devarch db create api --engine postgres --env   # DB_* lines for scripts
 devarch db create wp_blog --existing replace    # saves the old database, then recreates
 devarch db drop shop --user shop    # asks first (--yes to skip)
 
+devarch app backup shop             # copy apps/shop to apps/.devarch-backups/shop-<stamp>
+devarch app recover shop            # undo a failed bootstrap run (see below)
+
 devarch hosts sync                  # write every .test domain into the managed hosts block
 devarch hosts add demo.test
 devarch hosts list                  # show the block and whether it is current
@@ -78,6 +81,8 @@ Services are named by canonical ID (`database/redis`) or a unique short name (`r
 `up` creates the `microservices-net` network when it is missing, starts each service's `requires` first, retries a failed start once, and registers any unmapped `.test` hostname by synchronizing the hosts block (`--no-hosts` skips this). `--wait` blocks until every container passes its compose healthcheck and the optional `ready` probe.
 
 `db` works on the shared `mariadb` and `postgres` services, which must be running. SQL is piped to one visible `podman exec -i … sh -c 'mariadb …'` (or `psql`), and the admin password expands inside the container, so no password appears in an argument list. `create` refuses an existing database or user unless `--existing reuse` (keep the database, reset the user's password) or `--existing replace` (dump the old database to `<apps_dir>/.devarch-backups`, save the user's definition, drop both, create fresh). A failed `create` undoes its own changes and restores what it replaced. The WordPress and Laravel bootstraps create their databases this way.
+
+Bootstraps make provisioning recoverable with `devarch app guard <app> [--replace]`, `db create --app <app>` and `devarch app release <app>`. The guard is a record in `<apps_dir>/.devarch-recovery/<app>` that blocks a second run; `--replace` moves an existing project to `.devarch-backups`, and each database created for the run is added to the record. When a run fails, `devarch app recover <app>` moves the partial project to `.devarch-failed`, drops the new databases, restores replaced ones from their dumps (user, password hash and grants included), and moves the previous project back. Every finished step is saved, so a recovery that stops part-way (a busy target, a stopped database) can simply be rerun.
 
 `use` protects data volumes: a downgrade of an `upgrade-only` service, or a major-version change of a `same-major` service, is refused while its volume exists. Built services (`rebuild: true`) are rebuilt immediately, because `podman compose up -d` does not rebuild an existing image.
 

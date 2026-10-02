@@ -92,7 +92,7 @@ New sites use direct filesystem access, post-name permalinks, flat uploads, and 
 
 ## Replacing or restoring a site
 
-`--force` moves an existing site to `apps/.devarch-backups/` before recreating its database and files.
+`--force` moves an existing site to `apps/.devarch-backups/` before recreating its database and files; `devarch db` saves the old database there too, along with the user's password hash. Every run takes a `devarch app guard`, so a failed run is undone by `devarch app recover <site>`: the partial site goes to `apps/.devarch-failed/`, the new database is dropped, and the previous site, database and user are restored.
 
 ```bash
 scripts/wordpress/bootstrap.sh my-site --force

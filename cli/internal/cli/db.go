@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/prospect-ogujiuba/devarch/cli/internal/engine"
+	"github.com/prospect-ogujiuba/devarch/cli/internal/replace"
 )
 
 func dbCmd(a *app) *cobra.Command {
@@ -22,6 +23,7 @@ appear in arguments. The service must be running (devarch up mariadb).`,
 	}
 	var spec engine.DBSpec
 	var asEnv, asJSON bool
+	var forApp string
 	create := &cobra.Command{
 		Use:   "create <name>",
 		Short: "Create a database and its user with a generated password",
@@ -34,6 +36,16 @@ appear in arguments. The service must be running (devarch up mariadb).`,
 				return err
 			}
 			spec.Name = args[0]
+			var guard *replace.Record
+			if forApp != "" && !a.dryRun {
+				var err error
+				if guard, err = a.guardFor(forApp); err != nil {
+					return err
+				}
+				if spec.BackupDir == "" {
+					spec.BackupDir = guard.DumpDir()
+				}
+			}
 			if spec.Existing == engine.ExistingReplace && spec.BackupDir == "" {
 				spec.BackupDir = filepath.Join(a.eng.Settings.AppsDir, ".devarch-backups",
 					"db-"+spec.Engine+"-"+spec.Name+"-"+time.Now().Format("20060102-150405"))
@@ -41,6 +53,11 @@ appear in arguments. The service must be running (devarch up mariadb).`,
 			res, err := a.eng.CreateDB(contextOrBackground(cmd), spec)
 			if err != nil {
 				return err
+			}
+			if guard != nil {
+				if err := guard.AddDatabase(res); err != nil {
+					return fmt.Errorf("created %s but could not record it for recovery: %w", res.Name, err)
+				}
 			}
 			switch {
 			case asJSON:
@@ -61,6 +78,7 @@ appear in arguments. The service must be running (devarch up mariadb).`,
 	create.Flags().StringVar(&spec.User, "user", "", "user name (default: the database name)")
 	create.Flags().StringVar(&spec.Existing, "existing", engine.ExistingFail, "when the database or user exists: fail, reuse (reset the password) or replace (dump, drop, recreate)")
 	create.Flags().StringVar(&spec.BackupDir, "backup-dir", "", "where --existing replace saves the old database (default under <apps_dir>/.devarch-backups)")
+	create.Flags().StringVar(&forApp, "app", "", "record the database in this app's guard so `devarch app recover` can undo it")
 	create.Flags().BoolVar(&asEnv, "env", false, "print DB_* NAME=value lines for scripts")
 	create.Flags().BoolVar(&asJSON, "json", false, "print JSON")
 
