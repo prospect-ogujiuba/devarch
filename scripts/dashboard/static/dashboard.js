@@ -1,5 +1,5 @@
 const state = {
-  inventory: { projects: [], containers: [], services: [], runtimeError: null },
+  inventory: { runtime: "podman", projects: [], containers: [], services: [], runtimeError: null },
   query: "",
   loaded: false,
 };
@@ -204,7 +204,7 @@ function renderHome() {
 
   const containers = filtered(state.inventory.containers).slice(0, 6);
   const containerSection = node("section", "mb-10");
-  containerSection.append(sectionHeader("Podman", "Running containers", state.inventory.containers.length, "/containers"));
+  containerSection.append(sectionHeader(runtimeLabel(), "Running containers", state.inventory.containers.length, "/containers"));
   const list = node("div", "surface divide-y divide-white/5 overflow-hidden");
   if (!containers.length) list.append(emptyState("No running containers match your search."));
   else for (const container of containers) list.append(containerRow(container));
@@ -228,9 +228,14 @@ function renderApps() {
   elements.view.replaceChildren(content);
 }
 
+// runtimeLabel names the container runtime devarch is configured to use.
+function runtimeLabel() {
+  return state.inventory.runtime === "docker" ? "Docker" : "Podman";
+}
+
 function renderContainers() {
   const containers = filtered(state.inventory.containers);
-  setPage("Podman", "Running containers", "Inspect the current runtime inventory and open published ports.", { search: true, nav: "containers" });
+  setPage(runtimeLabel(), "Running containers", "Inspect the current runtime inventory and open published ports.", { search: true, nav: "containers" });
   const content = node("section");
   content.append(sectionHeader("Runtime", "Containers", containers.length));
   const list = node("div", "surface divide-y divide-white/5 overflow-hidden");
@@ -304,7 +309,7 @@ function renderServiceDetail(category, name) {
   const main = node("section", "surface p-5 sm:p-7");
   const top = node("div", "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between");
   const copy = node("div");
-  copy.append(node("p", "text-sm leading-6 text-slate-400", "Start this service with native Podman Compose from its catalog directory."));
+  copy.append(node("p", "text-sm leading-6 text-slate-400", `Start this service with native ${runtimeLabel()} Compose from its catalog directory, or with devarch up ${service.name}, which also applies a selected version.`));
   top.append(copy, node("span", "badge capitalize", service.category));
   const command = node("div", "mt-6 rounded-xl border border-white/10 bg-slate-950/80 p-4");
   command.append(node("p", "break-all font-mono text-sm text-violet-200", service.command));
