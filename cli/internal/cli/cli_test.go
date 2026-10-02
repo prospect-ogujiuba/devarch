@@ -391,3 +391,22 @@ func TestDockerRuntimeReachesCommandsAndRecipes(t *testing.T) {
 		}
 	}
 }
+
+func TestDBCommands(t *testing.T) {
+	h := newHarness(t)
+	testutil.WriteFiles(t, filepath.Join(h.repo, "services-library"), map[string]string{
+		"database/mariadb/compose.yml": testutil.Compose("mariadb", ""),
+	})
+	if err := h.run(t, "db", "create", "shop", "--env"); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(h.out.String(), "DB_HOST=mariadb\nDB_PORT=3306\nDB_NAME=shop\nDB_USER=shop\nDB_PASSWORD=") {
+		t.Fatalf("env output:\n%s", h.out.String())
+	}
+	if err := h.run(t, "db", "drop", "shop"); err == nil || !strings.Contains(err.Error(), "--yes") {
+		t.Fatalf("drop without a terminal: %v", err)
+	}
+	if err := h.run(t, "--dry-run", "db", "drop", "shop", "--user", "shop"); err != nil || !strings.Contains(h.out.String(), "would run: podman exec -i mariadb") {
+		t.Fatalf("dry-run drop: %v %s", err, h.out.String())
+	}
+}

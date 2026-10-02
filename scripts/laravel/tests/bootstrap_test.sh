@@ -271,4 +271,31 @@ assert_contains "$(<"$PACKAGE_COMMAND_LOG")" $'[--dev]\n[acme/tool:^3.0]' 'devel
 if grep -Eq '(^|[^[:alnum:]_])eval([^[:alnum:]_]|$)' "$BOOTSTRAP"; then fail 'bootstrap must not use eval'; fi
 pass
 
+# Databases are created and dropped through devarch db.
+cat > "$TEST_TMP/bin/db-devarch" <<'DEVARCH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$DEVARCH_LOG"
+[[ "$1 $2" == "db create" ]] && printf 'DB_NAME=%s\nDB_PASSWORD=s3cret\n' "$3"
+exit 0
+DEVARCH
+chmod +x "$TEST_TMP/bin/db-devarch"
+export DEVARCH_LOG="$TEST_TMP/devarch.log"
+DEVARCH="$TEST_TMP/bin/db-devarch"
+DATABASE=mariadb
+DB_NAME=laravel_demo
+DB_USER=lv_demo
+DB_CREATED=false
+DB_USER_CREATED=false
+create_database >/dev/null
+assert_eq "$DB_PASSWORD" s3cret 'database password comes from devarch db create'
+assert_eq "$DB_CREATED $DB_USER_CREATED" 'true true' 'database and user are recorded for rollback'
+assert_contains "$(<"$DEVARCH_LOG")" 'db create laravel_demo --user lv_demo --env' 'create refuses existing identifiers by default'
+rollback_output="$(
+  TARGET="$TEST_TMP/no-target" BACKUP_MOVED=false RECOVERY_MARKER="$TEST_TMP/rollback-marker"
+  : > "$RECOVERY_MARKER"
+  rollback 1 2>&1
+)" || true
+assert_contains "$(<"$DEVARCH_LOG")" 'db drop laravel_demo --user lv_demo --yes' 'rollback drops the created database and user'
+DATABASE=sqlite
+
 printf 'PASS: %d assertions\n' "$passed"

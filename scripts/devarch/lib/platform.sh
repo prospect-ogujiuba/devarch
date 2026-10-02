@@ -46,6 +46,19 @@ devarch_progress() {
         2>/dev/null >&"$fd" || true
 }
 
+# devarch_env_value KEY < NAME=value lines
+# Prints the value of KEY from `devarch ... --env` output.
+devarch_env_value() {
+    local key=$1 k v
+    while IFS='=' read -r k v; do
+        if [[ $k == "$key" ]]; then
+            printf '%s\n' "$v"
+            return 0
+        fi
+    done
+    return 1
+}
+
 # devarch_runtime_env [DEVARCH]
 # Sets DEVARCH_RUNTIME (podman or docker) and DEVARCH_CONTAINER_USER, the
 # uid:gid that container exec calls use so bind-mounted files belong to the

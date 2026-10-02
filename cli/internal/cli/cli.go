@@ -130,9 +130,10 @@ Run devarch without arguments in a terminal for the interactive screen.`,
 		c.GroupID = "services"
 		rootCmd.AddCommand(c)
 	}
-	newC := newCmd(a)
-	newC.GroupID = "projects"
-	rootCmd.AddCommand(newC)
+	for _, c := range []*cobra.Command{newCmd(a), dbCmd(a)} {
+		c.GroupID = "projects"
+		rootCmd.AddCommand(c)
+	}
 	for _, c := range []*cobra.Command{doctorCmd(a), hostsCmd(a), lintCmd(a), configCmd(a)} {
 		c.GroupID = "env"
 		rootCmd.AddCommand(c)
