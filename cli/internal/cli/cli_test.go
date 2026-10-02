@@ -26,6 +26,10 @@ func newHarness(t *testing.T) *harness {
 		"project/glpi/compose.yml":      testutil.Compose("glpi", "x-devarch:\n  tags: [project-management]\n"),
 		"project/redmine/compose.yml":   testutil.Compose("redmine", "x-devarch:\n  tags: [project-management]\n"),
 	})
+	testutil.WriteFiles(t, repo, map[string]string{
+		"recipes/demo/recipe.yml": "name: demo\ntitle: Demo\nentry: scripts/demo.sh\nargs:\n  - {name: name, positional: true, pattern: '^[a-z]+$'}\n",
+		"scripts/demo.sh":         "#!/bin/sh\necho demo \"$@\"\n",
+	})
 	cfg := t.TempDir()
 	testutil.WriteFiles(t, cfg, map[string]string{"versions.env": "POSTGRES_VERSION=17\n"})
 	hostsFile := filepath.Join(t.TempDir(), "hosts")
@@ -201,5 +205,36 @@ func TestHostsCommands(t *testing.T) {
 	}
 	if err := h.run(t, "hosts", "add", "Bad Name"); err == nil {
 		t.Fatal("accepted invalid hostname")
+	}
+}
+
+func TestNew(t *testing.T) {
+	h := newHarness(t)
+	if err := h.run(t, "new"); err != nil || !strings.Contains(h.out.String(), "demo    Demo") {
+		t.Fatalf("list: %v\n%s", err, h.out.String())
+	}
+	if err := h.run(t, "new", "demo", "Bad"); err == nil {
+		t.Fatal("invalid name accepted")
+	}
+	if err := h.run(t, "new", "nope", "x"); err == nil || !strings.Contains(err.Error(), "available: demo") {
+		t.Fatalf("unknown recipe: %v", err)
+	}
+	if err := h.run(t, "new", "demo", "shop", "--extra", "flag"); err != nil {
+		t.Fatal(err)
+	}
+	last := h.fake.Cmds[len(h.fake.Cmds)-1]
+	if !strings.HasSuffix(last.Name, "scripts/demo.sh") || strings.Join(last.Args, " ") != "shop --extra flag" {
+		t.Fatalf("exec = %+v", last)
+	}
+	env := strings.Join(last.Env, " ")
+	if !strings.Contains(env, "DEVARCH_ROOT="+h.repo) || !strings.Contains(env, "DEVARCH_BIN=") {
+		t.Fatalf("env = %s", env)
+	}
+	if err := h.run(t, "new", "--dry-run", "demo", "shop"); err != nil {
+		t.Fatal(err)
+	}
+	last = h.fake.Cmds[len(h.fake.Cmds)-1]
+	if strings.Join(last.Args, " ") != "shop --dry-run" {
+		t.Fatalf("dry run should be forwarded to the script: %v", last.Args)
 	}
 }

@@ -13,7 +13,8 @@ The site is available at `https://my-site.test`; its document root is `apps/my-s
 
 Requirements:
 
-- Podman or Docker with Compose
+- Rootless Podman with a Compose provider
+- The `devarch` CLI ([`cli/README.md`](../../cli/README.md)); the bootstrap starts services, waits for them, and registers the hostname through it
 - Git
 - the repository's local wildcard certificate files
 - `sudo` or Windows UAC for automatic hosts-file registration
@@ -30,8 +31,8 @@ The script optionally parses the repository `.env` as data and accepts only the 
 | `MARIADB_ROOT_PASSWORD` | MariaDB root password explicitly forwarded to MariaDB Compose | `devarch`; must match an initialized volume |
 | `GITHUB_USER` | Owner used by profiles and `--github-plugin` | Required for private GitHub plugins |
 | `AIOWM_GIT_URL` | All-in-One WP Migration repository used by `--restore` | `git@github.com:$GITHUB_USER/all-in-one-wp-migration.git` |
-| `CONTAINER_RUNTIME` | Force `podman` or `docker` | Auto-detected |
-| `WORDPRESS_CONTAINER_USER` | User for WP-CLI and Composer | `0:0` for Podman; host UID/GID for Docker |
+| `CONTAINER_RUNTIME` | Only `podman` is supported; any other value is rejected | `podman` |
+| `WORDPRESS_CONTAINER_USER` | User for WP-CLI and Composer | `0:0` (the bind-mount owner under rootless Podman) |
 
 Use the `WP_ADMIN_*` variables for WordPress administrator settings. Passwords are supplied to WP-CLI through standard input and are redacted in dry runs.
 
@@ -106,7 +107,7 @@ When invoked below an existing `apps/<site-name>` WordPress tree, the script can
 ## Runtime notes
 
 - The script creates `microservices-net` and starts the shared PHP, MariaDB, and proxy services.
-- Podman defaults WP-CLI to `0:0`; Docker uses the host UID/GID.
+- WP-CLI runs as `0:0`, which rootless Podman maps to the invoking host user.
 - Use `--no-hosts` when host registration is managed separately.
 - Use `--dry-run` to validate and print a secret-safe plan.
 

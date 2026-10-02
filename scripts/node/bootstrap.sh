@@ -5,10 +5,11 @@ export LC_ALL=C
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 APPS_DIR="$PROJECT_ROOT/apps"
-ROUTER_COMPOSE="$PROJECT_ROOT/services-library/backend/node/compose.yml"
 APP_COMPOSE="$PROJECT_ROOT/services-library/backend/node/app.compose.yml"
-PROXY_COMPOSE="$PROJECT_ROOT/services-library/proxy/nginx-proxy-manager/compose.yml"
-HOSTS_HELPER="$PROJECT_ROOT/scripts/hosts/register-host.sh"
+PLATFORM_LIBRARY="$PROJECT_ROOT/scripts/devarch/lib/platform.sh"
+
+# shellcheck source=../devarch/lib/platform.sh
+source "$PLATFORM_LIBRARY"
 
 APP_NAME=""
 PACKAGE_SCRIPT=devarch
@@ -19,9 +20,23 @@ RUNTIME=""
 CONTAINER_USER=""
 TARGET=""
 COMPOSE=()
+DEVARCH=devarch
+CURRENT_STEP=bootstrap
 
 log() { printf '[node] %s\n' "$*"; }
-die() { printf '[node] error: %s\n' "$*" >&2; exit 1; }
+die() {
+  devarch_progress "$CURRENT_STEP" fail "$*"
+  printf '[node] error: %s\n' "$*" >&2
+  exit 1
+}
+
+# step NAME FUNCTION: run one provisioning step and report its progress.
+step() {
+  CURRENT_STEP="$1"
+  devarch_progress "$1" start
+  "$2"
+  devarch_progress "$1" done
+}
 
 usage() {
   cat <<'EOF'
@@ -109,19 +124,14 @@ PY
 }
 
 detect_runtime() {
-  if [[ -n "${CONTAINER_RUNTIME:-}" ]]; then
-    case "$CONTAINER_RUNTIME" in podman|docker) RUNTIME="$CONTAINER_RUNTIME" ;; *) die 'CONTAINER_RUNTIME must be podman or docker' ;; esac
-  elif command -v podman >/dev/null 2>&1; then RUNTIME=podman
-  elif command -v docker >/dev/null 2>&1; then RUNTIME=docker
-  else die 'Podman or Docker is required'
-  fi
-
-  command -v "$RUNTIME" >/dev/null 2>&1 || die "$RUNTIME is not installed"
-  "$RUNTIME" compose version >/dev/null 2>&1 || die "$RUNTIME compose is unavailable"
-  COMPOSE=("$RUNTIME" compose)
-  if [[ "$RUNTIME" == docker ]]; then CONTAINER_USER="$(id -u):$(id -g)"
-  else CONTAINER_USER="0:0"
-  fi
+  RUNTIME="${CONTAINER_RUNTIME:-podman}"
+  [[ "$RUNTIME" == podman ]] || die "only Podman is supported (CONTAINER_RUNTIME=$RUNTIME)"
+  command -v podman >/dev/null 2>&1 || die 'Podman is required'
+  podman compose version >/dev/null 2>&1 || die 'podman compose is unavailable'
+  COMPOSE=(podman compose)
+  # Root in a rootless Podman container maps to the invoking host user.
+  CONTAINER_USER="0:0"
+  DEVARCH="$(devarch_bin)" || die 'the devarch CLI is required: (cd cli && go install ./cmd/devarch)'
 }
 
 print_plan() {
@@ -136,29 +146,22 @@ print_plan() {
   fi
 }
 
-ensure_network() {
-  if ! "$RUNTIME" network inspect microservices-net >/dev/null 2>&1; then
-    "$RUNTIME" network create microservices-net >/dev/null
-  fi
-}
 
 start_services() {
-  "${COMPOSE[@]}" -f "$ROUTER_COMPOSE" up -d --build
-  "${COMPOSE[@]}" -f "$PROXY_COMPOSE" up -d
+  "$DEVARCH" up backend/node proxy/nginx-proxy-manager --build --no-hosts
   DEVARCH_NODE_APP_NAME="$APP_NAME" \
   DEVARCH_NODE_SCRIPT="$PACKAGE_SCRIPT" \
   DEVARCH_NODE_PACKAGE_MANAGER="$PACKAGE_MANAGER" \
   DEVARCH_NODE_CONTAINER_USER="$CONTAINER_USER" \
     "${COMPOSE[@]}" -p "devarch-node-$APP_NAME" -f "$APP_COMPOSE" up -d --build --force-recreate
 
-  "${COMPOSE[@]}" -f "$PROXY_COMPOSE" exec -T nginx-proxy-manager nginx -t >/dev/null
-  "${COMPOSE[@]}" -f "$PROXY_COMPOSE" exec -T nginx-proxy-manager nginx -s reload >/dev/null
+  "$DEVARCH" compose nginx-proxy-manager -- exec -T nginx-proxy-manager nginx -t >/dev/null
+  "$DEVARCH" compose nginx-proxy-manager -- exec -T nginx-proxy-manager nginx -s reload >/dev/null
 }
 
 register_host() {
   [[ "$REGISTER_HOSTS" == true ]] || return 0
-  [[ -x "$HOSTS_HELPER" ]] || die "hosts helper is not executable: $HOSTS_HELPER"
-  "$HOSTS_HELPER" "$APP_NAME.test"
+  "$DEVARCH" hosts add "$APP_NAME.test"
 }
 
 main() {
@@ -167,9 +170,8 @@ main() {
   print_plan
   [[ "$DRY_RUN" == true ]] && return 0
   detect_runtime
-  ensure_network
-  start_services
-  register_host
+  step services start_services
+  step hosts register_host
   log "ready: https://$APP_NAME.test"
 }
 

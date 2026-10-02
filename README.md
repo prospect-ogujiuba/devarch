@@ -77,7 +77,7 @@ devarch --dry-run hosts sync
 devarch hosts sync
 ```
 
-The command requests elevation once and only replaces content between its DevArch markers. `devarch up` runs the same synchronization automatically when a started service's hostname is unmapped (`--no-hosts` opts out). See [`scripts/hosts/README.md`](scripts/hosts/README.md) for discovery rules and cross-platform behavior.
+The command requests elevation once and only replaces content between its DevArch markers. `devarch up` runs the same synchronization automatically when a started service's hostname is unmapped (`--no-hosts` opts out). See the [hosts section of `cli/README.md`](cli/README.md#hosts) for discovery rules and cross-platform behavior.
 
 ## Rapid WordPress bootstrap
 

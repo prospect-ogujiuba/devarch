@@ -112,6 +112,8 @@ type UpOptions struct {
 	NoRequires bool
 	// NoHosts skips hostname registration.
 	NoHosts bool
+	// Build passes --build to compose up (rebuild Dockerfile-based services).
+	Build bool
 }
 
 // Up starts services (dependencies first), retrying a failed start once:
@@ -126,12 +128,16 @@ func (e *Engine) Up(ctx context.Context, svcs []catalog.Service, opts UpOptions)
 	if err := e.EnsureNetwork(ctx); err != nil {
 		return err
 	}
+	args := []string{"up", "-d"}
+	if opts.Build {
+		args = append(args, "--build")
+	}
 	for _, svc := range svcs {
 		e.logf("starting %s", svc.ID)
-		if err := e.Runner.Run(ctx, e.Compose(svc, "up", "-d")); err != nil {
+		if err := e.Runner.Run(ctx, e.Compose(svc, args...)); err != nil {
 			e.logf("first start of %s was incomplete; retrying once", svc.ID)
 			e.sleep(2 * time.Second)
-			if err := e.Runner.Run(ctx, e.Compose(svc, "up", "-d")); err != nil {
+			if err := e.Runner.Run(ctx, e.Compose(svc, args...)); err != nil {
 				return fmt.Errorf("start %s: %w", svc.ID, err)
 			}
 		}

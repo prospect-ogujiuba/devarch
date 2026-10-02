@@ -150,6 +150,8 @@ args:
 4. Read JSON lines from fd 3, for example `{"step":"install_plugins","state":"start","message":"Installing 4 plugins"}`. Valid `state` values are `start`, `done`, `warn` and `fail`.
 5. Register the host and print the URL.
 
+> **As built (Phase 4):** the two-mode design above was simplified. Bootstraps always perform their platform steps by calling `devarch up <services> --wait --no-hosts` and `devarch hosts add`, whether they are run directly or through `devarch new`, so there is one code path and no `DEVARCH_MANAGED` flag. `devarch new` validates arguments, sets `DEVARCH_BIN` and `DEVARCH_ROOT`, and execs the entry script; environment such as `MARIADB_ROOT_PASSWORD` reaches compose because the script passes it to `devarch`. `requires` in `recipe.yml` is descriptive (shown by `devarch new` and the TUI). The progress helper lives in `scripts/devarch/lib/platform.sh`, not `common.sh`, so bootstraps can source it without the catalog library.
+
 **Bash side:** add `devarch_progress STEP STATE MESSAGE` to `scripts/devarch/lib/common.sh`. It writes to fd 3 only when `DEVARCH_PROGRESS_FD` is set and is a no-op otherwise. **Every bootstrap keeps working when run directly**, and its existing `*.test.sh` suites keep passing throughout.
 
 ## Moving logic out of Bash
@@ -171,7 +173,7 @@ Bash code moves only when it is platform logic duplicated across scripts, or whe
 | `dotenv.sh` | `state` (reads the root `.env` with the same data-only rules) | 4 | Kept while any Bash consumer remains. |
 | `print_plan` / dry-run plumbing | `--dry-run` on every command | 1–4 | Bootstrap dry-run keeps covering only its own filesystem steps. |
 
-**Phase 4 cut-over:** once the binary is the supported entry point, the bootstraps drop their copies of the Layer 1 functions. In standalone mode they call `devarch up … --wait` and `devarch hosts add`. The duplication is removed for real, not just hidden behind the binary.
+**Phase 4 cut-over:** once the binary is the supported entry point, the bootstraps drop their copies of the Layer 1 functions and call `devarch up … --wait` and `devarch hosts add` instead. The duplication is removed for real, not just hidden behind the binary. (Done: WordPress, Laravel and the Node runtime now require the `devarch` CLI; Docker support was removed from them.)
 
 ### Layer 2: shared provisioning (Phase 6, only once Layer 1 has landed)
 

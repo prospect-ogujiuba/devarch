@@ -53,6 +53,14 @@ On WSL the hosts commands edit the Windows hosts file, the one the browser uses,
 
 Any `devarch-<name>` executable on `PATH` runs as `devarch <name>`, with `DEVARCH_ROOT` set.
 
+## Hosts
+
+`devarch hosts sync` writes every `.test` domain into one managed block: each catalog `container_name`, `.test` hosts listed in `x-devarch.urls`, every `apps/*` directory containing `index.php`, `public/index.php`, `public/index.html`, or `package.json`, and `devarch.test`. Only content between `# BEGIN DEVARCH HOSTS` and `# END DEVARCH HOSTS` is replaced, and an already-current block is not rewritten. Catalog services are included whether or not they are running.
+
+`devarch hosts add NAME` idempotently maps one hostname to `127.0.0.1`: other mappings of that name are removed without touching other aliases on the same line, then one canonical line is appended. `devarch hosts remove NAME` unmaps one (Linux and macOS).
+
+On Linux and macOS the commands edit `/etc/hosts` (or `HOSTS_FILE`) in place, using `sudo tee` when the file is not writable. Under WSL and Git Bash/MSYS they update `%SystemRoot%\System32\drivers\etc\hosts` through embedded PowerShell helpers that request UAC elevation and preserve the file's encoding and line endings. Run `devarch` as your normal user rather than with `sudo`; it calls Windows PowerShell through WSL's `/init` interop host so Wine or another `.exe` binfmt handler cannot intercept it. Set `DEVARCH_HOSTS_PLATFORM=unix|windows` to override detection.
+
 ## Service metadata (`x-devarch`)
 
 Compose ignores top-level `x-` keys, so metadata lives in each service's `compose.yml`. Every field is optional; a service without the block still works with every command.

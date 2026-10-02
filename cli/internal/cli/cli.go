@@ -33,7 +33,10 @@ type app struct {
 	configDir string
 	rootHow   root.How
 	eng       *engine.Engine
-	problems  []catalog.Problem
+	// base is the runner without the --dry-run wrapper; recipes get --dry-run
+	// forwarded so the script prints its own plan.
+	base     runner.Runner
+	problems []catalog.Problem
 	// newRunner is replaceable in tests.
 	newRunner func(log io.Writer) runner.Runner
 }
@@ -77,6 +80,7 @@ func (a *app) load() error {
 	} else {
 		r = runner.System{Log: a.err}
 	}
+	a.base = r
 	if a.dryRun {
 		r = runner.DryRun{Inner: r, Log: a.out}
 	}
@@ -109,11 +113,14 @@ Every action prints the command it runs; --dry-run prints without running.`,
 	rootCmd.SetOut(a.out)
 	rootCmd.SetErr(a.err)
 	rootCmd.PersistentFlags().BoolVar(&a.dryRun, "dry-run", false, "print native commands instead of running them")
-	rootCmd.AddGroup(&cobra.Group{ID: "services", Title: "Services:"}, &cobra.Group{ID: "env", Title: "Environment:"})
+	rootCmd.AddGroup(&cobra.Group{ID: "services", Title: "Services:"}, &cobra.Group{ID: "projects", Title: "Projects:"}, &cobra.Group{ID: "env", Title: "Environment:"})
 	for _, c := range []*cobra.Command{lsCmd(a), upCmd(a), downCmd(a), restartCmd(a), psCmd(a), logsCmd(a), useCmd(a), composeCmd(a)} {
 		c.GroupID = "services"
 		rootCmd.AddCommand(c)
 	}
+	newC := newCmd(a)
+	newC.GroupID = "projects"
+	rootCmd.AddCommand(newC)
 	for _, c := range []*cobra.Command{doctorCmd(a), hostsCmd(a), lintCmd(a)} {
 		c.GroupID = "env"
 		rootCmd.AddCommand(c)
@@ -256,6 +263,7 @@ func upCmd(a *app) *cobra.Command {
 	c.Flags().DurationVar(&opts.Timeout, "timeout", 120*time.Second, "how long --wait waits per service")
 	c.Flags().BoolVar(&opts.NoRequires, "no-requires", false, "do not start x-devarch requires first")
 	c.Flags().BoolVar(&opts.NoHosts, "no-hosts", false, "do not register missing .test hostnames")
+	c.Flags().BoolVar(&opts.Build, "build", false, "rebuild Dockerfile-based services before starting")
 	return c
 }
 

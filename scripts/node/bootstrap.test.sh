@@ -16,9 +16,9 @@ pass() { ((passed += 1)); }
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 assert_contains() { grep -Fq -- "$2" <<<"$1" || fail "$3 (missing '$2')"; pass; }
 
-mkdir -p "$SCRIPT_DIR" "$PROJECT_ROOT/apps/demo" "$PROJECT_ROOT/scripts/hosts"
+mkdir -p "$SCRIPT_DIR" "$PROJECT_ROOT/apps/demo" "$PROJECT_ROOT/scripts/devarch/lib"
 cp "$SOURCE_SCRIPT_DIR/bootstrap.sh" "$BOOTSTRAP"
-cp "$SOURCE_PROJECT_ROOT/scripts/hosts/register-host.sh" "$PROJECT_ROOT/scripts/hosts/register-host.sh"
+cp "$SOURCE_PROJECT_ROOT/scripts/devarch/lib/platform.sh" "$PROJECT_ROOT/scripts/devarch/lib/platform.sh"
 for file in \
   services-library/backend/node/compose.yml \
   services-library/backend/node/app.compose.yml \
@@ -43,11 +43,16 @@ if [[ "$1 $2" == "network inspect" ]]; then exit 0; fi
 exit 0
 RUNTIME
 chmod +x "$TEST_TMP/bin/podman"
+cat > "$TEST_TMP/bin/fake-devarch" <<'DEVARCH'
+#!/usr/bin/env bash
+printf 'devarch %s\n' "$*" >> "${FAKE_RUNTIME_LOG:?}"
+DEVARCH
+chmod +x "$TEST_TMP/bin/fake-devarch"
 : > "$RUNTIME_LOG"
 
 run_bootstrap() {
   PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" CONTAINER_RUNTIME=podman \
-    bash "$BOOTSTRAP" "$@"
+    DEVARCH_BIN="$TEST_TMP/bin/fake-devarch" bash "$BOOTSTRAP" "$@"
 }
 
 help_output="$(PATH="$TEST_TMP/bin:$PATH" bash "$BOOTSTRAP" --help)" || fail '--help should succeed'
@@ -94,7 +99,18 @@ assert_contains "$runtime_calls" '-p devarch-node-demo' 'app runtime must use an
 assert_contains "$runtime_calls" 'up -d --build --force-recreate' 'app runtime must apply Compose environment changes'
 app_compose="$(<"$PROJECT_ROOT/services-library/backend/node/app.compose.yml")"
 assert_contains "$app_compose" '__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS' 'app runtime must trust its proxied Vite hostname'
-assert_contains "$runtime_calls" 'nginx -t' 'proxy configuration must be validated before reload'
+assert_contains "$runtime_calls" 'devarch up backend/node proxy/nginx-proxy-manager --build --no-hosts' 'shared services must start through devarch'
+assert_contains "$runtime_calls" 'devarch compose nginx-proxy-manager -- exec -T nginx-proxy-manager nginx -t' 'proxy configuration must be validated before reload'
 assert_contains "$runtime_calls" 'nginx -s reload' 'proxy configuration must be reloaded'
+if grep -q 'hosts add' <<<"$runtime_calls"; then fail '--no-hosts must skip hosts registration'; fi
+pass
+
+: > "$RUNTIME_LOG"
+run_bootstrap demo >/dev/null || fail 'provisioning with hosts registration should succeed'
+assert_contains "$(<"$RUNTIME_LOG")" 'devarch hosts add demo.test' 'hosts registration must go through devarch'
+if run_bootstrap demo --dry-run >/dev/null 2>&1 && CONTAINER_RUNTIME=docker PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" bash "$BOOTSTRAP" demo >/dev/null 2>&1; then
+  fail 'only Podman should be accepted'
+fi
+pass
 
 printf 'node bootstrap tests passed (%d assertions)\n' "$passed"

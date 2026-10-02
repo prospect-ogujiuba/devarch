@@ -19,7 +19,7 @@ trap cleanup EXIT
 
 mkdir -p "$SCRIPT_DIR" "$PROJECT_ROOT/scripts/devarch/lib"
 cp "$SOURCE_SCRIPT_DIR/bootstrap.sh" "$SCRIPT_DIR/bootstrap.sh"
-cp "$SOURCE_PROJECT_ROOT/scripts/devarch/lib/dotenv.sh" "$PROJECT_ROOT/scripts/devarch/lib/dotenv.sh"
+cp "$SOURCE_PROJECT_ROOT/scripts/devarch/lib/dotenv.sh" "$SOURCE_PROJECT_ROOT/scripts/devarch/lib/platform.sh" "$PROJECT_ROOT/scripts/devarch/lib/"
 cp -R "$SOURCE_SCRIPT_DIR/profiles" "$SCRIPT_DIR/profiles"
 for compose_file in \
   services-library/backend/php/compose.yml \
@@ -185,8 +185,12 @@ for unexpected in 'start and wait: mariadb' 'start and wait: mailpit' 'start and
 done
 
 # Runtime user mapping and force backup planning are visible without changing fixtures.
-docker_output="$(run_bootstrap docker docker-app --database sqlite --dry-run)" || fail 'Docker dry-run should succeed'
-assert_contains "$docker_output" "runtime: docker; container user: $(id -u):$(id -g)" 'Docker should map the host UID/GID'
+if run_bootstrap docker docker-app --database sqlite --dry-run >"$TEST_TMP/failure.out" 2>&1; then
+  fail 'only Podman should be accepted'
+fi
+assert_contains "$(<"$TEST_TMP/failure.out")" 'only Podman is supported' 'Docker rejection should explain itself'
+start_output="$(run_bootstrap podman start-app --with-redis --dry-run)" || fail 'service plan dry-run should succeed'
+assert_contains "$start_output" 'up backend/php proxy/nginx-proxy-manager database/mariadb database/redis --wait --no-hosts' 'services should start through devarch up'
 mkdir -p "$APP_TARGET"
 printf 'preserve me\n' > "$APP_TARGET/original.txt"
 expect_failure 'existing target without force should fail' "$APP_NAME" --database sqlite --dry-run
