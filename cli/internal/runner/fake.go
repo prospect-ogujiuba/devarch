@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"io"
 	"strings"
 	"sync"
 )
@@ -11,6 +12,8 @@ import (
 type Fake struct {
 	mu   sync.Mutex
 	Cmds []Cmd
+	// Stdin holds what each recorded command received on stdin, by index.
+	Stdin []string
 	// Responses maps a command-line prefix (Cmd.String without Dir) to output.
 	Responses map[string]Response
 	// RunErrors maps a command-line prefix to errors returned by Run, consumed in order.
@@ -31,7 +34,13 @@ func plain(c Cmd) string {
 func (f *Fake) record(c Cmd) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	in := ""
+	if c.Stdin != nil {
+		data, _ := io.ReadAll(c.Stdin)
+		in = string(data)
+	}
 	f.Cmds = append(f.Cmds, c)
+	f.Stdin = append(f.Stdin, in)
 }
 
 func (f *Fake) Run(_ context.Context, c Cmd) error {

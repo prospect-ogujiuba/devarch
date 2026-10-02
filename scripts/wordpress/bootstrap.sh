@@ -387,30 +387,21 @@ prepare_site_dir() {
   run mkdir -p "$site_dir"
 }
 
-generate_db_password() {
-  if [[ "$DRY_RUN" == true ]]; then
-    printf 'dry-run-password'
-  elif command -v openssl >/dev/null 2>&1; then
-    openssl rand -hex 18
-  else
-    od -An -N18 -tx1 /dev/urandom | tr -d ' \n'
-  fi
-}
-
-reset_database() {
-  local db_name="$1" db_user="$2" db_password="$3"
+# create_database asks devarch for the site's database and user and sets
+# DB_PASSWORD. When replacing a site, devarch saves the old database before
+# dropping it; otherwise an existing database is reused with a new password.
+create_database() {
+  local db_name="$1" db_user="$2" existing=reuse output
+  [[ "$FORCE" == true || "$REPLACE_EXISTING" == true ]] && existing=replace
+  local args=(db create "$db_name" --user "$db_user" --existing "$existing" --env)
   log "create isolated database and user: $db_name / $db_user"
-  [[ "$DRY_RUN" == true ]] && return
-
-  local drop_sql=""
-  [[ "$FORCE" == true || "$REPLACE_EXISTING" == true ]] && drop_sql="DROP DATABASE IF EXISTS \`$db_name\`;"
-  local sql="$drop_sql
-CREATE DATABASE IF NOT EXISTS \`$db_name\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER IF NOT EXISTS '$db_user'@'%' IDENTIFIED BY '$db_password';
-ALTER USER '$db_user'@'%' IDENTIFIED BY '$db_password';
-GRANT ALL PRIVILEGES ON \`$db_name\`.* TO '$db_user'@'%';
-FLUSH PRIVILEGES;"
-  printf '%s\n' "$sql" | "$RUNTIME" exec -i "$MARIADB_CONTAINER" sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' >/dev/null
+  if [[ "$DRY_RUN" == true ]]; then
+    print_command "$DEVARCH" "${args[@]}"
+    DB_PASSWORD='dry-run-password'
+    return
+  fi
+  output="$("$DEVARCH" "${args[@]}")" || die "could not create database $db_name"
+  DB_PASSWORD="$(devarch_env_value DB_PASSWORD <<<"$output")" || die "devarch did not report a database password"
 }
 
 wp_exec() {
@@ -453,10 +444,8 @@ install_wordpress() {
   local container_site="/var/www/html/$SITE_NAME"
   local db_name="wp_${SITE_NAME//-/_}"
   local db_user="${db_name:0:32}"
-  local db_password
-  db_password="$(generate_db_password)"
-
-  reset_database "$db_name" "$db_user" "$db_password"
+  create_database "$db_name" "$db_user"
+  local db_password="$DB_PASSWORD"
   log "download and install WordPress"
   wp_exec "$container_site" core download
   wp_prompt_secret "$db_password" "create wp-config.php" "$container_site" \

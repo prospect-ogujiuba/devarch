@@ -536,47 +536,15 @@ start_services() {
 }
 
 
-db_exec() {
-  local sql="$1"
-  # The password expands in the container shell, not on the host.
-  # shellcheck disable=SC2016
-  if ! printf '%s\n' "$sql" | "$RUNTIME" exec -i mariadb sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' >/dev/null; then
-    die 'MariaDB operation failed (SQL and credentials suppressed)'
-  fi
-}
-
-db_query() {
-  local sql="$1"
-  # The password expands in the container shell, not on the host.
-  # shellcheck disable=SC2016
-  printf '%s\n' "$sql" | "$RUNTIME" exec -i mariadb sh -c 'mariadb -N -B -uroot -p"$MARIADB_ROOT_PASSWORD"' 2>/dev/null
-}
-
-assert_database_available() {
-  [[ "$DATABASE" == mariadb ]] || return 0
-  local found
-  found="$(db_query "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='$DB_NAME';")" || die 'could not check derived database identifier'
-  [[ -z "$found" ]] || die "derived database identifier already exists; refusing: $DB_NAME"
-  found="$(db_query "SELECT User FROM mysql.user WHERE User='$DB_USER' LIMIT 1;")" || die 'could not check derived database user identifier'
-  [[ -z "$found" ]] || die "derived database user identifier already exists; refusing: $DB_USER"
-}
-
-generate_db_password() {
-  if command -v openssl >/dev/null 2>&1; then
-    openssl rand -hex 24
-  else
-    od -An -N24 -tx1 /dev/urandom | tr -d ' \n'
-  fi
-}
-
+# create_database asks devarch for an isolated database and user. devarch
+# refuses identifiers that already exist and undoes a partial creation itself.
 create_database() {
   [[ "$DATABASE" == mariadb ]] || return 0
-  DB_PASSWORD="$(generate_db_password)"
-  db_exec "CREATE DATABASE \`$DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+  local output
+  output="$("$DEVARCH" db create "$DB_NAME" --user "$DB_USER" --env)" || die "could not create database $DB_NAME / $DB_USER"
+  DB_PASSWORD="$(devarch_env_value DB_PASSWORD <<<"$output")" || die 'devarch did not report a database password'
   DB_CREATED=true
-  db_exec "CREATE USER '$DB_USER'@'%' IDENTIFIED BY '$DB_PASSWORD';"
   DB_USER_CREATED=true
-  db_exec "GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'%'; FLUSH PRIVILEGES;"
   log "created isolated MariaDB database/user: $DB_NAME / $DB_USER"
   if [[ "${LARAVEL_TEST_FAIL_AFTER_DATABASE:-0}" == 1 ]]; then
     die 'injected failure after database/user creation'
@@ -746,26 +714,13 @@ rollback() {
     fi
   fi
 
-  if [[ "$DB_CREATED" == true ]]; then
-    # SQL backticks are literal; the password expands in the container shell.
-    # shellcheck disable=SC2016
+  if [[ "$DB_CREATED" == true || "$DB_USER_CREATED" == true ]]; then
     if [[ "${LARAVEL_TEST_FAIL_CLEANUP_DATABASE:-0}" == 1 ]]; then
-      db_status=failed; incomplete=true
-    elif printf 'DROP DATABASE `%s`;\n' "$DB_NAME" | "$RUNTIME" exec -i mariadb sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' >/dev/null 2>&1; then
-      db_status=dropped
+      db_status=failed; user_status=failed; incomplete=true
+    elif "$DEVARCH" db drop "$DB_NAME" --user "$DB_USER" --yes >/dev/null 2>&1; then
+      db_status=dropped; user_status=dropped
     else
-      db_status=failed; incomplete=true
-    fi
-  fi
-  if [[ "$DB_USER_CREATED" == true ]]; then
-    # The password expands in the container shell, not on the host.
-    # shellcheck disable=SC2016
-    if [[ "${LARAVEL_TEST_FAIL_CLEANUP_USER:-0}" == 1 ]]; then
-      user_status=failed; incomplete=true
-    elif printf "DROP USER '%s'@'%%';\n" "$DB_USER" | "$RUNTIME" exec -i mariadb sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' >/dev/null 2>&1; then
-      user_status=dropped
-    else
-      user_status=failed; incomplete=true
+      db_status=failed; user_status=failed; incomplete=true
     fi
   fi
 
@@ -830,7 +785,6 @@ main() {
   create_recovery_guard
   PROVISIONING_STARTED=true
   step services start_services
-  step database-check assert_database_available
   mkdir -p "$APPS_DIR"
   step backup move_existing_target
   PROVISIONING_STARTED=true

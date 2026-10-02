@@ -143,6 +143,10 @@ config_output="$(env -u DEVARCH_RUNTIME DEVARCH_BIN="$config_devarch" bash "$BOO
 rm -f "$config_devarch"
 grep -q -- '+ docker exec -i --user 4242:4242 php wp' <<<"$config_output" || fail "a direct run should take the runtime from devarch config --env"
 
+grep -q -- 'db create wp_demo_site --user wp_demo_site --existing reuse --env' <<<"$dry_run_output" || fail "the database should be created through devarch db"
+replace_output="$(bash "$BOOTSTRAP" demo-site --force --dry-run)" || fail "--force dry-run should succeed"
+grep -q -- '--existing replace --env' <<<"$replace_output" || fail "--force should replace the database through devarch, which saves the old one"
+
 build_output="$(bash "$BOOTSTRAP" build-site --build --dry-run)" || fail "--build dry-run should succeed"
 grep -q -- '--no-hosts --build' <<<"$build_output" || fail "--build should rebuild through devarch up"
 

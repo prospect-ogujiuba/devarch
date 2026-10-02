@@ -61,6 +61,11 @@ devarch use php                     # list versions; * marks the selected one
 devarch use php 8.3                 # record, rebuild, and recreate if running
 devarch use postgres 17             # refused while a postgres volume exists (--force overrides)
 
+devarch db create shop              # database + owning user with a generated password
+devarch db create api --engine postgres --env   # DB_* lines for scripts
+devarch db create wp_blog --existing replace    # saves the old database, then recreates
+devarch db drop shop --user shop    # asks first (--yes to skip)
+
 devarch hosts sync                  # write every .test domain into the managed hosts block
 devarch hosts add demo.test
 devarch hosts list                  # show the block and whether it is current
@@ -71,6 +76,8 @@ devarch lint                        # catalog contract checks (--native, --stric
 Services are named by canonical ID (`database/redis`) or a unique short name (`redis`). An ambiguous short name lists its candidates.
 
 `up` creates the `microservices-net` network when it is missing, starts each service's `requires` first, retries a failed start once, and registers any unmapped `.test` hostname by synchronizing the hosts block (`--no-hosts` skips this). `--wait` blocks until every container passes its compose healthcheck and the optional `ready` probe.
+
+`db` works on the shared `mariadb` and `postgres` services, which must be running. SQL is piped to one visible `podman exec -i … sh -c 'mariadb …'` (or `psql`), and the admin password expands inside the container, so no password appears in an argument list. `create` refuses an existing database or user unless `--existing reuse` (keep the database, reset the user's password) or `--existing replace` (dump the old database to `<apps_dir>/.devarch-backups`, save the user's definition, drop both, create fresh). A failed `create` undoes its own changes and restores what it replaced. The WordPress and Laravel bootstraps create their databases this way.
 
 `use` protects data volumes: a downgrade of an `upgrade-only` service, or a major-version change of a `same-major` service, is refused while its volume exists. Built services (`rebuild: true`) are rebuilt immediately, because `podman compose up -d` does not rebuild an existing image.
 
