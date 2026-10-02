@@ -3,7 +3,7 @@ services:
     image: dbeaver/cloudbeaver:24.3
     restart: unless-stopped
     ports:
-    - 127.0.0.1:8091:8978
+    - 127.0.0.1:8094:8978
     volumes:
     - cloudbeaver_data:/opt/cloudbeaver/workspace
     healthcheck:

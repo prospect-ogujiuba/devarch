@@ -1,3 +1,9 @@
+x-devarch:
+  title: Nginx Proxy Manager
+  description: Local HTTPS proxy that serves apps/ and services as <name>.test
+  tags: [proxy, core]
+  urls:
+    - https://npm.test
 services:
   nginx-proxy-manager:
     image: jc21/nginx-proxy-manager:2

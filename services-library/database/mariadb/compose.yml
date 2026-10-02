@@ -1,6 +1,15 @@
+x-devarch:
+  title: MariaDB
+  description: Shared MySQL-compatible database for WordPress and Laravel apps
+  tags: [database, sql, mysql]
+  version:
+    var: MARIADB_VERSION
+    default: "12.3"
+    choices: ["12.3", "11.8", "11.4", "10.11"]
+    data: upgrade-only
 services:
   mariadb:
-    image: mariadb
+    image: mariadb:${MARIADB_VERSION:-12.3}
     restart: unless-stopped
     ports:
     - 127.0.0.1:8501:3306

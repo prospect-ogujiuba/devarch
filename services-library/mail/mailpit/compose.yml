@@ -1,6 +1,16 @@
+x-devarch:
+  title: Mailpit
+  description: Catches outgoing mail from apps; SMTP on mailpit:1025
+  tags: [mail, testing]
+  urls:
+    - https://mailpit.test
+  version:
+    var: MAILPIT_VERSION
+    default: v1.22
+    choices: [v1.29, v1.22]
 services:
   mailpit:
-    image: axllent/mailpit:v1.22
+    image: axllent/mailpit:${MAILPIT_VERSION:-v1.22}
     restart: unless-stopped
     ports:
     - 127.0.0.1:9200:8025

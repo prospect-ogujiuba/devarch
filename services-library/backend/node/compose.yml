@@ -1,3 +1,7 @@
+x-devarch:
+  title: Node router
+  description: Routes <app>.test to per-app Node containers on microservices-net
+  tags: [runtime, node, javascript, core]
 services:
   node:
     build:

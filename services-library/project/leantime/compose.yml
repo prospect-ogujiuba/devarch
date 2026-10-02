@@ -1,3 +1,9 @@
+x-devarch:
+  title: Leantime
+  description: Project management for non-project managers
+  tags: [project-management]
+  urls:
+    - https://leantime.test
 services:
   leantime-db:
     image: mariadb:11.4

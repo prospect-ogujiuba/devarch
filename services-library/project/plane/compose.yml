@@ -1,3 +1,9 @@
+x-devarch:
+  title: Plane
+  description: Issue tracking and project planning
+  tags: [project-management]
+  urls:
+    - https://plane.test
 x-db-env: &db-environment
   PGHOST: plane-db
   PGDATABASE: plane
