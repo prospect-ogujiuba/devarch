@@ -22,7 +22,7 @@ A feature that needs anything on this list is out of scope.
 - `cli/internal/cli` — cobra transport only; `cli/internal/tui` — Bubble Tea screen calling the same engine functions.
 - `scripts/{wordpress,laravel,javascript}/bootstrap.sh` — domain logic stays in Bash (WP-CLI, Composer, Artisan, framework scaffolders, profiles). Platform steps call `devarch`: `up … --wait --no-hosts`, `hosts add`, `db create --app`, `app guard|release|recover`, `app start`. Container commands use `"$DEVARCH_RUNTIME" exec --user "$DEVARCH_CONTAINER_USER"` from `devarch_runtime_env`. Rules: `scripts/devarch/README.md`.
 - `recipes/*/recipe.yml` — describe a bootstrap's arguments for `devarch new` and the TUI wizard; the script stays the authority on its interface.
-- `scripts/devarch/lib/catalog.sh` and `common.sh` are legacy and Podman-only; nothing uses them. Do not build on them.
+- Scripts get catalog and runtime facts from the CLI (`devarch ls --json`, `devarch compose`, `devarch config --env`), not from Bash reimplementations.
 
 Move Bash into Go only when it is platform logic or blocks the CLI/TUI. Domain logic moves only for a recorded trigger (the TUI needs structured data, a recurring quoting or parsing bug class, or native Windows/macOS support).
 
@@ -37,7 +37,7 @@ Move Bash into Go only when it is platform logic or blocks the CLI/TUI. Domain l
 ## Testing
 
 - Go: `cd cli && go test ./... && go vet ./... && gofmt -l .`. Tests drive commands through `runner.Fake` and assert the exact native argv; never run real containers in Go tests.
-- Bash suites (WordPress, Laravel, JavaScript, foundation; listed in `README.md` under "Development checks") must be run with `</dev/null`, because `scripts/devarch/tests/common_test.sh` hangs on a terminal. Bootstrap tests fake `devarch` with `DEVARCH_BIN` and pin `DEVARCH_RUNTIME` so a real `devarch` on `PATH` cannot apply the machine's config.
+- Bash suites (WordPress, Laravel, JavaScript, foundation; listed in `README.md` under "Development checks") are run with `</dev/null` so none can wait on a terminal. Bootstrap tests fake `devarch` with `DEVARCH_BIN` and pin `DEVARCH_RUNTIME` so a real `devarch` on `PATH` cannot apply the machine's config.
 - Port a script's test cases before deleting the script.
 - `services-library/backend/node/routing.test.sh` drives real containers. Run it only deliberately.
 - Drive the TUI on an isolated tmux server, never the user's default one: wrap `tmux -L devarch-test -f /dev/null` in a shell function (zsh does not word-split a `$VAR`), and set `DEVARCH_CONFIG_HOME` to a scratch directory.
