@@ -25,3 +25,5 @@ dist/
 gentic.json
 .mcp.json
 /.pi/pi-gate/pi-gate-audit.jsonl
+__pycache__/
+*.pyc
