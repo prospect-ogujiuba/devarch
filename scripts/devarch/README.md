@@ -13,15 +13,7 @@ The `devarch` CLI owns platform work: starting services, readiness, hosts, datab
 
 `devarch_load_dotenv FILE KEY...` parses only the named keys from a dotenv file as data: no command substitution, no export, and controls rejected. The WordPress and Laravel bootstraps use it for the repository `.env`.
 
-## Legacy: `lib/catalog.sh` and `lib/common.sh`
-
-These predate the CLI and no bootstrap uses them. They are kept, with their tests, for personal scripts that already source them. They are Podman-only and know nothing about `config.yml`, user services or versions. In new scripts use the CLI instead:
-
-| Legacy function | Use instead |
-|---|---|
-| `devarch_catalog_list`, `devarch_catalog_resolve` | `devarch ls --json` |
-| `devarch_catalog_compose_file`, `devarch_run` | `devarch compose <service> -- <args>` |
-| `devarch_require_podman`, `devarch_require_compose` | `devarch doctor` |
+Catalog lookups and runtime checks belong to the CLI: use `devarch ls --json`, `devarch compose <service> -- <args>` and `devarch doctor` from scripts. (The earlier `catalog.sh` and `common.sh` libraries were removed once nothing used them.)
 
 ## Rules for bootstrap code
 
@@ -38,4 +30,4 @@ bash -n scripts/devarch/lib/*.sh scripts/devarch/tests/*.sh
 shellcheck scripts/devarch/lib/*.sh
 ```
 
-Run the suite with stdin from `/dev/null`; `common_test.sh` hangs on an interactive terminal.
+Running Bash suites with stdin from `/dev/null` keeps them from waiting on a terminal.

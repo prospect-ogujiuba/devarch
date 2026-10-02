@@ -172,7 +172,7 @@ A read-only page at `https://devarch.test` lists projects, running containers an
 scripts/dashboard/install-service.sh
 ```
 
-It reads containers from the Podman socket only. See [`scripts/dashboard/README.md`](scripts/dashboard/README.md).
+It follows the `runtime` setting, reading the Podman or Docker socket. See [`scripts/dashboard/README.md`](scripts/dashboard/README.md).
 
 ## AI-assisted browser testing
 
@@ -192,4 +192,4 @@ bash scripts/javascript/bootstrap.test.sh </dev/null
 bash scripts/javascript/scaffold-matrix.test.sh </dev/null
 ```
 
-Run the Bash suites with stdin from `/dev/null`: some read stdin and hang in an interactive shell. `services-library/backend/node/routing.test.sh` drives real containers and needs the PHP and proxy stack running.
+Run the Bash suites with stdin from `/dev/null` so none can wait on a terminal. `services-library/backend/node/routing.test.sh` drives real containers and needs the PHP and proxy stack running.

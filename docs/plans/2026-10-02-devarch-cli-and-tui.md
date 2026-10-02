@@ -166,6 +166,8 @@ Bash code moves only when it is platform logic duplicated across scripts, or whe
 |---|---|---|---|
 | `common.sh`: `devarch_require_podman`, `devarch_require_compose`, `devarch_run` | `runner`, `doctor` | 1 | Library stays for scripts until Phase 4. |
 | `catalog.sh`: list, resolve, compose_file, validation | `catalog`, `lint` | 1 | `catalog.sh` becomes `devarch ls --json`/`devarch compose` calls, then is deleted. |
+
+> **As built (2026-10-02):** `catalog.sh`, `common.sh` and their tests were deleted once no bootstrap used them; `platform.sh` and `dotenv.sh` remain.
 | `detect_runtime` (wordpress, laravel, node) | `runner` | 1 | Deleted from scripts in Phase 4. |
 | `ensure_network` (wordpress, laravel, node) | `compose` (`up`) | 1 | Same. |
 | `start_services` / `compose_up` | `compose` (`up`) | 1 | Same. |
