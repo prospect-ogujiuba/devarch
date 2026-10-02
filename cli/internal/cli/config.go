@@ -11,6 +11,7 @@ import (
 )
 
 func configCmd(a *app) *cobra.Command {
+	var asEnv bool
 	c := &cobra.Command{
 		Use:   "config",
 		Short: "Show the effective settings and where each came from",
@@ -29,6 +30,12 @@ the proxy's routing rules and the bootstraps all assume them.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := a.load(); err != nil {
 				return err
+			}
+			if asEnv {
+				for _, kv := range a.platformEnv() {
+					fmt.Fprintln(a.out, kv)
+				}
+				return nil
 			}
 			s := a.eng.Settings
 			tw := tabwriter.NewWriter(a.out, 0, 0, 2, ' ', 0)
@@ -83,6 +90,7 @@ the proxy's routing rules and the bootstraps all assume them.`,
 			return nil
 		},
 	}
+	c.Flags().BoolVar(&asEnv, "env", false, "print the DEVARCH_* environment bootstraps use, as NAME=value lines")
 	c.AddCommand(get, set)
 	return c
 }

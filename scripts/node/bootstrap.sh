@@ -123,15 +123,16 @@ PY
   fi
 }
 
+# detect_runtime takes the runtime (podman or docker) and the bind-mount owner
+# from devarch.
 detect_runtime() {
-  RUNTIME="${CONTAINER_RUNTIME:-podman}"
-  [[ "$RUNTIME" == podman ]] || die "only Podman is supported (CONTAINER_RUNTIME=$RUNTIME)"
-  command -v podman >/dev/null 2>&1 || die 'Podman is required'
-  podman compose version >/dev/null 2>&1 || die 'podman compose is unavailable'
-  COMPOSE=(podman compose)
-  # Root in a rootless Podman container maps to the invoking host user.
-  CONTAINER_USER="0:0"
   DEVARCH="$(devarch_bin)" || die 'the devarch CLI is required: (cd cli && go install ./cmd/devarch)'
+  devarch_runtime_env "$DEVARCH" || die 'cannot determine the container runtime'
+  RUNTIME="$DEVARCH_RUNTIME"
+  CONTAINER_USER="$DEVARCH_CONTAINER_USER"
+  command -v "$RUNTIME" >/dev/null 2>&1 || die "$RUNTIME is required"
+  "$RUNTIME" compose version >/dev/null 2>&1 || die "$RUNTIME compose is unavailable"
+  COMPOSE=("$RUNTIME" compose)
 }
 
 print_plan() {

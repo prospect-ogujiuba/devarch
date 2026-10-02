@@ -15,7 +15,7 @@ Source `lib/catalog.sh` for catalog operations; it sources `lib/common.sh`. Publ
 - `devarch_catalog_resolve ID_OR_UNIQUE_NAME` — resolve an exact canonical ID or an unambiguous short name.
 - `devarch_catalog_compose_file ID_OR_UNIQUE_NAME` — print the validated absolute Compose file path.
 
-Keep native behavior native: do not wrap individual Podman subcommands, reformat native output, maintain a Podman/Docker feature matrix, or add runtime adapters. Wrapper-owned options end at `--`; forward every later argument unchanged. Prefer `exec` for the final process so stdin, stdout, stderr, TTY state, signals, and exit status remain native.
+Keep native behavior native: do not wrap individual Podman subcommands, reformat native output, or add runtime adapters. The few differences between Podman and Docker live in one table in `cli/internal/engine/runtime.go`; bootstraps receive its result as `DEVARCH_RUNTIME` and `DEVARCH_CONTAINER_USER` through `devarch_runtime_env` in `lib/platform.sh`. Wrapper-owned options end at `--`; forward every later argument unchanged. Prefer `exec` for the final process so stdin, stdout, stderr, TTY state, signals, and exit status remain native.
 
 DevArch dry-run behavior is limited to filesystem changes owned by a wrapper. Compose simulation must be forwarded to `podman compose --dry-run` when the installed provider supports it. Reuse native `--format`, `--filter`, JSON, `--watch`, and completion support.
 

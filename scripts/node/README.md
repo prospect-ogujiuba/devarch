@@ -95,7 +95,7 @@ A Next.js project using `output: "export"` generates `out/` and can be served di
 
 - These definitions target local development, not production deployment.
 - Dependency installation runs when the app container starts and is cached in its named volume.
-- Rootless Podman uses `0:0` inside the user namespace, which maps to the invoking host user.
+- Rootless Podman uses `0:0` inside the user namespace, which maps to the invoking host user; Docker uses your own `uid:gid`. The runtime is the one configured for `devarch`.
 - File watching defaults to polling for bind-mount compatibility; set `WATCHPACK_POLLING=false` when native filesystem events work reliably.
 - Vite-based servers receive `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=<app-name>.test`, allowing only their matching wildcard-proxy hostname.
 

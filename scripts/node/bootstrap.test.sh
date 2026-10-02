@@ -43,6 +43,7 @@ if [[ "$1 $2" == "network inspect" ]]; then exit 0; fi
 exit 0
 RUNTIME
 chmod +x "$TEST_TMP/bin/podman"
+cp "$TEST_TMP/bin/podman" "$TEST_TMP/bin/docker"
 cat > "$TEST_TMP/bin/fake-devarch" <<'DEVARCH'
 #!/usr/bin/env bash
 printf 'devarch %s\n' "$*" >> "${FAKE_RUNTIME_LOG:?}"
@@ -51,7 +52,7 @@ chmod +x "$TEST_TMP/bin/fake-devarch"
 : > "$RUNTIME_LOG"
 
 run_bootstrap() {
-  PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" CONTAINER_RUNTIME=podman \
+  PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" DEVARCH_RUNTIME="${RUNTIME_UNDER_TEST:-podman}" \
     DEVARCH_BIN="$TEST_TMP/bin/fake-devarch" bash "$BOOTSTRAP" "$@"
 }
 
@@ -108,9 +109,12 @@ pass
 : > "$RUNTIME_LOG"
 run_bootstrap demo >/dev/null || fail 'provisioning with hosts registration should succeed'
 assert_contains "$(<"$RUNTIME_LOG")" 'devarch hosts add demo.test' 'hosts registration must go through devarch'
-if run_bootstrap demo --dry-run >/dev/null 2>&1 && CONTAINER_RUNTIME=docker PATH="$TEST_TMP/bin:$PATH" FAKE_RUNTIME_LOG="$RUNTIME_LOG" bash "$BOOTSTRAP" demo >/dev/null 2>&1; then
-  fail 'only Podman should be accepted'
-fi
+: > "$RUNTIME_LOG"
+RUNTIME_UNDER_TEST=docker run_bootstrap demo >/dev/null || fail 'provisioning with Docker should succeed'
+docker_calls="$(<"$RUNTIME_LOG")"
+assert_contains "$docker_calls" "user=$(id -u):$(id -g) | compose -p devarch-node-demo" 'Docker app runtime must run as the invoking uid:gid'
+if grep -q 'user=0:0' <<<"$docker_calls"; then fail 'Docker must not use the rootless Podman mapping'; fi
+if RUNTIME_UNDER_TEST=lxc run_bootstrap demo >/dev/null 2>&1; then fail 'an unknown runtime should be rejected'; fi
 pass
 
 printf 'node bootstrap tests passed (%d assertions)\n' "$passed"

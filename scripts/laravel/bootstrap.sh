@@ -11,7 +11,7 @@ DOTENV_LIBRARY="$PROJECT_ROOT/scripts/devarch/lib/dotenv.sh"
 PLATFORM_LIBRARY="$PROJECT_ROOT/scripts/devarch/lib/platform.sh"
 LARAVEL_DOTENV_KEYS=(
   LARAVEL_APP_NAME LARAVEL_APP_URL LARAVEL_DB_ROOT_PASSWORD
-  MARIADB_ROOT_PASSWORD LARAVEL_CONTAINER_USER CONTAINER_RUNTIME
+  MARIADB_ROOT_PASSWORD LARAVEL_CONTAINER_USER
 )
 
 # shellcheck source=../devarch/lib/dotenv.sh
@@ -446,9 +446,6 @@ validate_config() {
   APP_URL="${LARAVEL_APP_URL:-https://$APP_NAME.test}"
   validate_url "$APP_URL"
 
-  RUNTIME="${CONTAINER_RUNTIME:-podman}"
-  validate_no_controls 'CONTAINER_RUNTIME' "$RUNTIME"
-  [[ "$RUNTIME" == podman ]] || die "only Podman is supported (CONTAINER_RUNTIME=$RUNTIME)"
   CONTAINER_USER="${LARAVEL_CONTAINER_USER:-}"
   validate_no_controls 'LARAVEL_CONTAINER_USER' "$CONTAINER_USER"
   [[ -z "$CONTAINER_USER" || "$CONTAINER_USER" =~ ^[0-9]+:[0-9]+$ ]] || die 'LARAVEL_CONTAINER_USER must match numeric uid:gid'
@@ -476,16 +473,18 @@ validate_config() {
   fi
 }
 
+# detect_runtime takes the runtime (podman or docker) and the bind-mount owner
+# for exec calls from devarch; LARAVEL_CONTAINER_USER overrides the owner.
 detect_runtime() {
-  # Root in a rootless Podman container maps to the invoking host user and owns
-  # bind-mounted files.
-  CONTAINER_USER="${CONTAINER_USER:-0:0}"
   if [[ "$DRY_RUN" == true ]]; then
     DEVARCH="$(devarch_bin 2>/dev/null)" || DEVARCH=devarch
-    return
+  else
+    DEVARCH="$(devarch_bin)" || die 'the devarch CLI is required: (cd cli && go install ./cmd/devarch)'
   fi
-  command -v podman >/dev/null 2>&1 || die 'Podman is required'
-  DEVARCH="$(devarch_bin)" || die 'the devarch CLI is required: (cd cli && go install ./cmd/devarch)'
+  devarch_runtime_env "$DEVARCH" || die 'cannot determine the container runtime'
+  RUNTIME="$DEVARCH_RUNTIME"
+  CONTAINER_USER="${CONTAINER_USER:-$DEVARCH_CONTAINER_USER}"
+  [[ "$DRY_RUN" == true ]] || command -v "$RUNTIME" >/dev/null 2>&1 || die "$RUNTIME is required"
 }
 
 # required_services prints the catalog IDs this app needs, one per line.

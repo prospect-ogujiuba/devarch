@@ -362,3 +362,32 @@ func TestInvalidConfigIsReported(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+func TestDockerRuntimeReachesCommandsAndRecipes(t *testing.T) {
+	h := newHarness(t)
+	h.config(t, "runtime: docker\n")
+	h.fake.Responses["docker ps"] = runner.Response{}
+	if err := h.run(t, "up", "postgres", "--no-hosts"); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(h.fake.Lines(), "\n")
+	if !strings.Contains(joined, "POSTGRES_VERSION=17 docker compose up -d") || strings.Contains(joined, "podman") {
+		t.Fatalf("commands:\n%s", joined)
+	}
+	if err := h.run(t, "new", "demo", "shop"); err != nil {
+		t.Fatal(err)
+	}
+	last := h.fake.Lines()[len(h.fake.Lines())-1]
+	user := fmt.Sprintf("DEVARCH_CONTAINER_USER=%d:%d", os.Getuid(), os.Getgid())
+	if !strings.Contains(last, "DEVARCH_RUNTIME=docker") || !strings.Contains(last, user) {
+		t.Fatalf("recipe env: %s", last)
+	}
+	if err := h.run(t, "config", "--env"); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"DEVARCH_RUNTIME=docker\n", user + "\n", "DEVARCH_APPS_DIR=" + filepath.Join(h.repo, "apps") + "\n", "DEVARCH_NETWORK=microservices-net\n"} {
+		if !strings.Contains(h.out.String(), want) {
+			t.Errorf("config --env missing %q:\n%s", want, h.out.String())
+		}
+	}
+}

@@ -120,13 +120,28 @@ mkdir -p "$TEST_TMP/bin"
 printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_TMP/bin/podman"
 chmod +x "$TEST_TMP/bin/podman"
 PATH="$TEST_TMP/bin:$PATH"
+printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_TMP/bin/docker"
+chmod +x "$TEST_TMP/bin/docker"
 CONTAINER_USER=""
+DEVARCH_RUNTIME=podman
+DEVARCH_CONTAINER_USER=""
 saved_dry_run="$DRY_RUN"
 DRY_RUN=false
 DEVARCH_BIN=/opt/fake/devarch detect_runtime
-DRY_RUN="$saved_dry_run"
+assert_eq "$RUNTIME" podman 'Podman runtime'
 assert_eq "$CONTAINER_USER" '0:0' 'Podman bind-mount user'
-assert_eq "$DEVARCH" /opt/fake/devarch 'devarch CLI location' 
+assert_eq "$DEVARCH" /opt/fake/devarch 'devarch CLI location'
+CONTAINER_USER=""
+DEVARCH_RUNTIME=docker
+DEVARCH_CONTAINER_USER=""
+DEVARCH_BIN=/opt/fake/devarch detect_runtime
+assert_eq "$RUNTIME" docker 'Docker runtime'
+assert_eq "$CONTAINER_USER" "$(id -u):$(id -g)" 'Docker bind-mount user'
+CONTAINER_USER='1000:1000'
+DEVARCH_BIN=/opt/fake/devarch detect_runtime
+assert_eq "$CONTAINER_USER" '1000:1000' 'LARAVEL_CONTAINER_USER overrides the runtime mapping'
+DRY_RUN="$saved_dry_run"
+
 TARGET="$TEST_TMP/demo"
 BACKUP_PATH="$TEST_TMP/backup"
 DATABASE=mariadb

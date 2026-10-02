@@ -20,9 +20,22 @@ func (a *app) recipes() ([]recipe.Recipe, error) {
 	return recipe.Load(a.eng.Root, filepath.Join(a.configDir, "recipes"), filepath.Join(a.eng.Root, "recipes"))
 }
 
+// platformEnv is what bootstraps need to know about the platform; `devarch
+// config --env` prints it for bootstraps run directly.
+func (a *app) platformEnv() []string {
+	s := a.eng.Settings
+	return []string{
+		"DEVARCH_ROOT=" + a.eng.Root,
+		"DEVARCH_RUNTIME=" + s.Runtime,
+		"DEVARCH_CONTAINER_USER=" + a.eng.Runtime().ContainerUser(),
+		"DEVARCH_APPS_DIR=" + s.AppsDir,
+		"DEVARCH_NETWORK=" + s.Network,
+	}
+}
+
 // recipeEnv is the environment every recipe script receives.
 func (a *app) recipeEnv() []string {
-	env := []string{"DEVARCH_ROOT=" + a.eng.Root, "DEVARCH_APPS_DIR=" + a.eng.Settings.AppsDir, "DEVARCH_NETWORK=" + a.eng.Settings.Network}
+	env := a.platformEnv()
 	if self, err := os.Executable(); err == nil {
 		env = append(env, "DEVARCH_BIN="+self)
 	}

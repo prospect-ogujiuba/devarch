@@ -1,12 +1,12 @@
 # devarch CLI
 
-`devarch` runs the service library by name. It is a thin layer over native `podman compose`: every action prints the command it runs, `--dry-run` prints without running, and nothing runs in the background. There is no daemon, API, or database; the only state is two small files under `~/.config/devarch/`.
+`devarch` runs the service library by name. It is a thin layer over native `podman compose` (or `docker compose`, see [Docker](#docker)): every action prints the command it runs, `--dry-run` prints without running, and nothing runs in the background. There is no daemon, API, or database; the only state is two small files under `~/.config/devarch/`.
 
 The design and roadmap are in [`docs/plans/2026-10-02-devarch-cli-and-tui.md`](../docs/plans/2026-10-02-devarch-cli-and-tui.md).
 
 ## Install
 
-Requires Go 1.24+ and rootless Podman with a Compose provider.
+Requires Go 1.24+ and rootless Podman with a Compose provider, or Docker Engine with the Compose plugin.
 
 ```bash
 cd cli
@@ -107,6 +107,21 @@ How each setting travels:
 - **`hosts.address`** is the default for `--address` and what `doctor` and `hosts list` compare against.
 
 Two things are deliberately not settings. The **`.test` suffix** is baked into the local certificate (`*.test`), the proxy's routing rules, every bootstrap's URLs and the hosts block, and `.test` is reserved (RFC 2606), so it never collides with real names. **Nginx Proxy Manager** is the one proxy because its config, the certificate path and the Node and PHP routing snippets are written for it; supporting a second proxy would mean a second copy of each.
+
+## Docker
+
+Podman is the default and the reference runtime. `devarch config set runtime docker` switches every command, the screen, `doctor` and the bootstraps to Docker; the commands DevArch prints become `docker …` with the same arguments. Only these behaviors differ, and they are kept in one table in `internal/engine/runtime.go`:
+
+| | Podman | Docker |
+|---|---|---|
+| Compose | `podman compose` | `docker compose` |
+| Network and volume checks | `network exists`, `volume exists` | `network inspect`, `volume inspect` |
+| Readiness | `podman healthcheck run` (rootless Podman may have no timer running healthchecks) | `State.Health.Status` from `docker inspect` |
+| Container user for bootstrap `exec` | `0:0`, which rootless Podman maps to you | your own `uid:gid` |
+| `ps` and events output | JSON array; `died`, `remove` | one JSON object per line; `die`, `destroy` |
+| `doctor` | rootless mode, ports 80/443, lingering | daemon access and `docker` group membership |
+
+`devarch new` passes `DEVARCH_RUNTIME` and `DEVARCH_CONTAINER_USER` to the bootstraps, and a bootstrap run directly reads them from `devarch config --env`. `WORDPRESS_CONTAINER_USER` and `LARAVEL_CONTAINER_USER` still override the user. Containers started under one runtime are invisible to the other, so stop the stack before switching.
 
 ## Hosts
 
