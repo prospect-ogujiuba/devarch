@@ -1,3 +1,9 @@
+x-devarch:
+  title: Adminer
+  description: Single-page database manager (defaults to the postgres server)
+  tags: [dbms, database-ui]
+  urls:
+    - https://adminer.test
 services:
   adminer:
     image: adminer:latest

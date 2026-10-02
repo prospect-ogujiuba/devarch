@@ -1,3 +1,9 @@
+x-devarch:
+  title: phpMyAdmin
+  description: Web UI for MySQL-compatible databases
+  tags: [dbms, database-ui, mysql]
+  urls:
+    - https://phpmyadmin.test
 services:
   phpmyadmin:
     image: phpmyadmin:5

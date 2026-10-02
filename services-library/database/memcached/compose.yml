@@ -1,3 +1,7 @@
+x-devarch:
+  title: Memcached
+  description: In-memory object cache
+  tags: [database, cache]
 services:
   memcached:
     image: memcached:1-alpine

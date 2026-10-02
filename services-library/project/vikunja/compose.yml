@@ -1,3 +1,9 @@
+x-devarch:
+  title: Vikunja
+  description: To-do lists and kanban boards
+  tags: [project-management]
+  urls:
+    - https://vikunja.test
 services:
   vikunja-db:
     image: postgres:17-alpine

@@ -1,6 +1,17 @@
+x-devarch:
+  title: Redis
+  description: In-memory cache and key-value store (password devarch)
+  tags: [database, cache, key-value]
+  urls:
+    - https://redis.test
+  version:
+    var: REDIS_VERSION
+    default: "8.6"
+    choices: ["8.6", "8.4", "8.2", "7.4"]
+    data: upgrade-only
 services:
   redis:
-    image: redis:8.6.0-alpine
+    image: redis:${REDIS_VERSION:-8.6}-alpine
     restart: unless-stopped
     ports:
     - 127.0.0.1:8504:6379
