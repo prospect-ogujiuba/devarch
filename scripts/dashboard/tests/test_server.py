@@ -99,7 +99,7 @@ class InventoryTests(unittest.TestCase):
     def test_podman_socket_inventory_avoids_cli_namespace_requirements(self):
         raw = [{"Id": "1234567890abcdef", "Names": ["redis"], "Image": "redis:latest", "State": "running", "Status": "running", "Ports": []}]
         cli = Mock(side_effect=AssertionError("CLI should not be used"))
-        with patch.object(server, "_read_podman_socket", return_value=(raw, None)):
+        with patch.object(server, "_read_runtime_socket", return_value=(raw, None)):
             containers, error = server.read_containers(
                 run=cli,
                 socket_path=Path("/run/user/1000/podman/podman.sock"),
@@ -108,6 +108,86 @@ class InventoryTests(unittest.TestCase):
         self.assertIsNone(error)
         self.assertEqual(containers[0]["name"], "redis")
         cli.assert_not_called()
+
+    def test_docker_socket_payload_is_normalized(self):
+        raw = [
+            {
+                "Id": "fedcba0987654321",
+                "Names": ["/plane-minio"],
+                "Image": "pgsty/minio",
+                "State": "running",
+                "Status": "Up 3 minutes (healthy)",
+                "Ports": [
+                    {"PrivatePort": 9000, "Type": "tcp"},
+                    {"IP": "0.0.0.0", "PrivatePort": 9001, "PublicPort": 9501, "Type": "tcp"},
+                ],
+            }
+        ]
+        with patch.object(server, "_read_runtime_socket", return_value=(raw, None)) as read:
+            containers, error = server.read_containers(
+                run=Mock(side_effect=AssertionError("CLI should not be used")),
+                socket_path=Path("/var/run/docker.sock"),
+                runtime="docker",
+            )
+
+        read.assert_called_once_with(Path("/var/run/docker.sock"), "docker")
+        self.assertIsNone(error)
+        self.assertEqual(containers[0]["name"], "plane-minio")
+        self.assertEqual(containers[0]["openUrl"], "http://127.0.0.1:9501")
+        self.assertEqual(len(containers[0]["ports"]), 1)
+
+    def test_docker_cli_lines_are_normalized(self):
+        lines = "\n".join(
+            json.dumps(item)
+            for item in [
+                {"ID": "111122223333", "Names": "mailpit", "Image": "axllent/mailpit", "State": "running", "Status": "Up", "Ports": "127.0.0.1:8025->8025/tcp, 1025/tcp"},
+                {"ID": "444455556666", "Names": "redis", "Image": "redis:8", "State": "running", "Status": "Up", "Ports": ""},
+            ]
+        )
+        calls = []
+
+        def run(command, **kwargs):
+            calls.append(command)
+            return Mock(returncode=0, stdout=lines + "\n", stderr="")
+
+        containers, error = server.read_containers(run=run, runtime="docker")
+
+        self.assertIsNone(error)
+        self.assertEqual(calls[0][0], "docker")
+        self.assertEqual([c["name"] for c in containers], ["mailpit", "redis"])
+        self.assertEqual(containers[0]["ports"][0]["hostPort"], 8025)
+        self.assertEqual(containers[1]["ports"], [])
+
+    def test_missing_docker_names_the_runtime(self):
+        def missing(*args, **kwargs):
+            raise FileNotFoundError("docker")
+
+        _, error = server.read_containers(run=missing, runtime="docker")
+        self.assertEqual(error, "Docker is not installed or is not available on PATH.")
+
+    def test_runtime_follows_devarch_config(self):
+        config = self.root / "config"
+        config.mkdir()
+        self.assertEqual(server.configured_runtime(config), "podman")
+        (config / "config.yml").write_text("# mine\nroot: /x\nruntime: docker # switched\nhosts:\n  manage: false\n")
+        self.assertEqual(server.configured_runtime(config), "docker")
+        (config / "config.yml").write_text("runtime: lxc\n")
+        self.assertEqual(server.configured_runtime(config), "podman")
+        with patch.dict(server.os.environ, {"DEVARCH_CONFIG_HOME": str(config)}):
+            self.assertEqual(server.devarch_config_dir(), config)
+
+    def test_docker_socket_honours_docker_host(self):
+        with patch.dict(server.os.environ, {"DOCKER_HOST": "unix:///tmp/d.sock"}):
+            self.assertEqual(server.runtime_socket_path("docker"), Path("/tmp/d.sock"))
+
+    def test_service_commands_use_the_runtime(self):
+        service = self.root / "services-library" / "database" / "postgres"
+        service.mkdir(parents=True)
+        (service / "compose.yml").write_text("services: {}\n")
+        self.assertEqual(
+            server.discover_services(self.root, "docker")[0]["command"],
+            "cd services-library/database/postgres && docker compose up -d",
+        )
 
     def test_missing_podman_is_reported_without_failing_inventory(self):
         def missing(*args, **kwargs):
@@ -159,7 +239,12 @@ class InventoryTests(unittest.TestCase):
         thread = threading.Thread(target=httpd.serve_forever, daemon=True)
         thread.start()
         try:
-            with patch.object(server, "read_containers", return_value=([], None)):
+            config = self.root / "cfg"
+            config.mkdir()
+            (config / "config.yml").write_text("runtime: docker\n")
+            with patch.object(server, "read_containers", return_value=([], None)), patch.dict(
+                server.os.environ, {"DEVARCH_CONFIG_HOME": str(config)}
+            ):
                 with urlopen(
                     f"http://127.0.0.1:{httpd.server_port}/api/inventory"
                 ) as response:
@@ -169,6 +254,7 @@ class InventoryTests(unittest.TestCase):
             self.assertEqual(payload["projects"], [])
             self.assertEqual(payload["services"], [])
             self.assertIsNone(payload["runtimeError"])
+            self.assertEqual(payload["runtime"], "docker")
         finally:
             httpd.shutdown()
             httpd.server_close()

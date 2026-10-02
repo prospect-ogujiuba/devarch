@@ -1,6 +1,6 @@
 # DevArch Home
 
-DevArch Home is a small, read-only localhost dashboard for discovering DevArch projects, running Podman containers, and Compose services. It helps you open a local site or port and copy native commands; it does not manage containers.
+DevArch Home is a small, read-only localhost dashboard for discovering DevArch projects, running containers (Podman or Docker, whichever devarch is configured for), and Compose services. It helps you open a local site or port and copy native commands; it does not manage containers.
 
 ## Install and open
 
@@ -18,7 +18,7 @@ systemctl --user restart devarch-dashboard.service
 journalctl --user -u devarch-dashboard.service
 ```
 
-The compiled Tailwind CSS is tracked, so normal use needs only Python 3, Podman, and user-systemd. `devarch.test` must resolve to `127.0.0.1`; `devarch hosts sync` manages that entry. The existing Nginx Proxy Manager container terminates local HTTPS and proxies the domain to the host service.
+The compiled Tailwind CSS is tracked, so normal use needs only Python 3, Podman or Docker, and user-systemd. `devarch.test` must resolve to `127.0.0.1`; `devarch hosts sync` manages that entry. The existing Nginx Proxy Manager container terminates local HTTPS and proxies the domain to the host service.
 
 For temporary direct development, run `scripts/dashboard/start.sh` and open <http://127.0.0.1:7411>. The direct server binds to `127.0.0.1` by default; use `--port` to choose another port.
 
@@ -29,12 +29,12 @@ The responsive navigation provides separate **Apps**, **Containers**, and **Serv
 ## What it discovers
 
 - **Projects** — directories directly under `apps/`, with common framework detection and an inferred `https://<name>.test` URL.
-- **Running containers** — the secret-safe subset of `podman ps --format json`: name, image, state, status, ID, and published ports.
+- **Running containers** — a secret-safe subset of the configured runtime's container list: name, image, state, status, ID, and published ports.
 - **Service library** — `services-library/<category>/<service>/compose.yml` entries with a copyable native startup command.
 
 The folder action uses the `vscode://file` URL scheme supported by VS Code and compatible editors. Container port links are best-effort HTTP links; not every published port speaks HTTP.
 
-If Podman is unavailable, projects and catalog services remain usable and the page shows the runtime error. The dashboard reads containers from the rootless Podman socket only and does not follow `runtime: docker`; use `devarch ps` or the `devarch` screen in that case. Its copyable commands are plain `podman compose` lines; `devarch up <service>` is equivalent and also applies selected versions.
+The dashboard follows the `runtime` key in devarch's `config.yml` (`DEVARCH_CONFIG_HOME`, else `~/.config/devarch`). Under Podman it reads the rootless libpod socket in `$XDG_RUNTIME_DIR/podman/`; under Docker it reads the Engine API at `DOCKER_HOST` (a `unix://` path), the rootless `$XDG_RUNTIME_DIR/docker.sock`, or `/var/run/docker.sock`. If the socket is unavailable it falls back to `podman ps` or `docker ps`. If the runtime is unavailable altogether, projects and catalog services remain usable and the page shows the error. Copyable commands use the configured runtime (`docker compose up -d`); `devarch up <service>` is equivalent and also applies selected versions.
 
 ## Tailwind development
 
