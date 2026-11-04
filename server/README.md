@@ -15,7 +15,7 @@ and run `git pull` on the server. Changes that only apply to the server go on th
 | Name | What | Started by |
 | --- | --- | --- |
 | `nginx-proxy-manager` | The proxy on ports 80 and 443, on `microservices-net` | `~/.config/systemd/user/container-nginx-proxy-manager.service` |
-| `prospect-app`, `prospect-db` | prospectogujiuba.com (repo `prospect-ogujiuba`) | Quadlets in `~/.config/containers/systemd/` |
+| `prospect-app`, `prospect-db` | prospectogujiuba.com (repo `prospect-ogujiuba`; settings in `~/prospect/app.env`) | Quadlets in `~/.config/containers/systemd/` |
 | `mxcro-web` | mxcro.com, the static build of `growth-partner` in `~/mxcro/dist` | Quadlet `mxcro-web.container` |
 | `flowstate-*` | FlowState: **stopped** on 2026-11-04 (data kept; dump in `~/backups/`) | `podman start` by hand |
 | `devarch-db`, `devarch-api`, `devarch-app` | The old devarch dashboard: stopped since March 2026 | none |
@@ -34,6 +34,22 @@ Server blocks are written by hand, not in the nginx-proxy-manager UI:
   `1.conf.off-flowstate-stopped`: it named a stopped container, which stops nginx from starting.
 
 After a change: `podman exec nginx-proxy-manager nginx -t && podman exec nginx-proxy-manager nginx -s reload`.
+For `sites.conf`, use `npm run deploy:proxy` in the `prospect-ogujiuba` repo: it copies the file,
+tests it and reloads, and puts the previous file back if the test fails.
+
+## Deploy the apps
+
+The apps are not deployed from this repo and not built on the server. Each app has a deploy
+script that you run on the laptop, from its folder in `~/projects/devarch/apps/`. A push to
+GitHub does not deploy. Commit first: the scripts refuse uncommitted changes.
+
+| App | Folder on the laptop | Command | Local URL |
+| --- | --- | --- | --- |
+| prospectogujiuba.com | `apps/prospect-ogujiuba` | `npm run deploy` (settings: `npm run deploy:env -- NAME`) | https://prospect-ogujiuba.test |
+| mxcro.com | `apps/growth-partner` | `npm run deploy` | https://growth-partner.test |
+| Proxy server blocks | `apps/prospect-ogujiuba` | `npm run deploy:proxy` | none |
+
+Details: `docs/hosting.md` in the `prospect-ogujiuba` repo.
 
 ## Still to do (needs sudo)
 
